@@ -77,11 +77,11 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                 <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
                     <Link
                         href="/dashboard"
-                        className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0"
+                        className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0 md:mr-2"
                     >
                         <IntersnackLogo className="h-8 w-8" />
-                        <span className="hidden lg:inline text-red-600 font-bold tracking-tight">Intersnack Cashew Company</span>
-                        <span className="lg:hidden text-red-600 font-bold">Intersnack</span>
+                        <span className="hidden lg:inline text-red-600 font-bold tracking-tight whitespace-nowrap">Intersnack Cashew Company</span>
+                        <span className="lg:hidden text-red-600 font-bold whitespace-nowrap">Intersnack</span>
                     </Link>
                     {navItems
                         .filter((item) => item.roles.includes(role))
@@ -92,7 +92,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    className={`transition-colors hover:text-foreground flex items-center gap-2 ${isActive ? "text-foreground font-semibold" : "text-muted-foreground"
+                                    className={`transition-colors hover:text-foreground flex items-center gap-2 whitespace-nowrap shrink-0 ${isActive ? "text-foreground font-semibold" : "text-muted-foreground"
                                         }`}
                                 >
                                     <Icon className="h-4 w-4" />
@@ -127,7 +127,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                     </DropdownMenu>
                 </div>
 
-                <div className="flex w-full items-center gap-4 md:ml-auto md:gap-4 lg:gap-6 justify-end">
+                <div className="flex flex-1 items-center justify-end gap-3 md:ml-auto md:gap-4 lg:gap-6 shrink-0">
                     <LanguageToggle />
 
                     <DropdownMenu>
