@@ -12,32 +12,21 @@ import {
     BatteryWarning,
     Download
 } from "lucide-react"
-import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-    Legend,
-    AreaChart,
-    Area
-} from "recharts"
+import { AreaChart, Area, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { createClient } from "@/lib/supabase/client"
 
 export default function DashboardPage() {
     const supabase = createClient()
     const [dateRange, setDateRange] = useState("month") // default current month
     const [selectedDept, setSelectedDept] = useState("all")
-    const [departments, setDepartments] = useState<{ id: string, name_vi: string }[]>([])
+    const [selectedTab, setSelectedTab] = useState("stations") // "stations" or "regions"
+    const [departments, setDepartments] = useState<{ id: string, name_vi: string, code: string }[]>([])
 
     const [dailyData, setDailyData] = useState<any[]>([])
     const [deptData, setDeptData] = useState<any[]>([])
@@ -54,7 +43,7 @@ export default function DashboardPage() {
     // Load Departments
     useEffect(() => {
         async function loadDepts() {
-            const { data } = await supabase.from("departments").select("id, name_vi").order("sort_order")
+            const { data } = await supabase.from("departments").select("id, name_vi, code").order("sort_order")
             if (data) setDepartments(data)
         }
         loadDepts()
@@ -112,22 +101,51 @@ export default function DashboardPage() {
                 .order("work_date")
 
             if (dData) {
-                // Group by department ID
+                // Determine regions mapping
+                // Map RCN: RCN
+                // Map LCA: STEAM, SHELL, BORMA
+                // Map HCA: PEEL_MC, CS, HAND, PACK
+                const mappingLCA = ["STEAM", "SHELL", "BORMA"];
+                const mappingHCA = ["PEEL_MC", "CS", "HAND", "PACK"];
+
                 const grouped = dData.reduce((acc: any, curr: any) => {
+                    // Group by stations setup
                     if (!acc[curr.department_id]) acc[curr.department_id] = [];
                     acc[curr.department_id].push(curr);
+
+                    // Group by Regions
+                    let regionCode = "OTHER";
+                    if (curr.dept_code === "RCN") regionCode = "RCN";
+                    else if (mappingLCA.includes(curr.dept_code)) regionCode = "LCA";
+                    else if (mappingHCA.includes(curr.dept_code)) regionCode = "HCA";
+
+                    if (!acc[`region-${regionCode}`]) acc[`region-${regionCode}`] = [];
+                    acc[`region-${regionCode}`].push(curr);
+
                     return acc;
                 }, {});
 
-                // Build summary and history for each department
-                Object.keys(grouped).forEach(deptId => {
-                    const records = grouped[deptId];
-                    const history = records.map((d: any) => ({
-                        name: format(new Date(d.work_date), 'dd/MM'),
-                        Actual: Number(d.actual_ton),
-                        Plan: Number(d.plan_ton)
+                // Build summary and history
+                Object.keys(grouped).forEach(key => {
+                    const records = grouped[key];
+                    // Some regions contain multiple departments ON THE SAME DATE.
+                    // To build an accurate history (Actual vs Plan per day), we must group regions by Work_Date!
+                    const recordsByDay = records.reduce((dayAcc: any, r: any) => {
+                        if (!dayAcc[r.work_date]) {
+                            dayAcc[r.work_date] = { plan: 0, actual: 0 };
+                        }
+                        dayAcc[r.work_date].plan += Number(r.plan_ton);
+                        dayAcc[r.work_date].actual += Number(r.actual_ton);
+                        return dayAcc;
+                    }, {});
+
+                    const history = Object.keys(recordsByDay).sort().map(d => ({
+                        name: format(new Date(d), 'dd/MM'),
+                        Actual: recordsByDay[d].actual,
+                        Plan: recordsByDay[d].plan
                     }));
-                    dashboards[deptId] = {
+
+                    dashboards[key] = {
                         summary: buildSummary(records, false),
                         history
                     };
@@ -249,38 +267,56 @@ export default function DashboardPage() {
 
     return (
         <div className="flex-col md:flex">
-            <div className="flex items-center justify-between space-y-2 border-b pb-4 mb-4">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Command Center</h2>
-                    <p className="text-muted-foreground">Theo dõi toàn cảnh tất cả phòng ban</p>
+            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 border-b pb-4 mb-4">
+                    <div>
+                        <h2 className="text-3xl font-bold tracking-tight">Command Center</h2>
+                        <p className="text-muted-foreground">Theo dõi toàn cảnh tất cả phòng ban</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+                        <TabsList>
+                            <TabsTrigger value="stations">9 Trạm Chế Biến</TabsTrigger>
+                            <TabsTrigger value="regions">3 Khu Vực</TabsTrigger>
+                        </TabsList>
+                        <div className="flex space-x-2">
+                            <Select value={selectedDept} onValueChange={setSelectedDept}>
+                                <SelectTrigger className="w-[180px] hidden md:flex">
+                                    <SelectValue placeholder="Bảng Data phía dưới" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Toàn bộ Nhà Máy</SelectItem>
+                                    {departments.map(d => (
+                                        <SelectItem key={d.id} value={d.id}>{d.name_vi}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button variant="outline" onClick={handleExportCSV}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Export <span className="hidden sm:inline">&nbsp;CSV</span>
+                            </Button>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex space-x-2">
-                    <Select value={selectedDept} onValueChange={setSelectedDept}>
-                        <SelectTrigger className="w-[180px] hidden md:flex">
-                            <SelectValue placeholder="Bảng Data phía dưới" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Toàn bộ Nhà Máy</SelectItem>
-                            {departments.map(d => (
-                                <SelectItem key={d.id} value={d.id}>{d.name_vi}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button variant="outline" onClick={handleExportCSV}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Export <span className="hidden sm:inline">&nbsp;CSV</span>
-                    </Button>
-                </div>
-            </div>
 
-            {/* 9 MINI DASHBOARDS GRID */}
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {/* Total Factory Card */}
-                {renderMiniDashboard("all", "CẢ NHÀ MÁY (TỔNG HỢP)", true)}
+                <TabsContent value="stations" className="mt-0">
+                    {/* 9 MINI DASHBOARDS GRID */}
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {/* Total Factory Card */}
+                        {renderMiniDashboard("all", "CẢ NHÀ MÁY (TỔNG HỢP)", true)}
 
-                {/* Department Cards */}
-                {departments.map(d => renderMiniDashboard(d.id, d.name_vi))}
-            </div>
+                        {/* Department Cards */}
+                        {departments.map(d => renderMiniDashboard(d.id, d.name_vi))}
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="regions" className="mt-0">
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                        {renderMiniDashboard("region-RCN", "KHO RCN", true)}
+                        {renderMiniDashboard("region-LCA", "VÙNG LCA (Steaming -> Borma)", true)}
+                        {renderMiniDashboard("region-HCA", "VÙNG HCA (Peeling MC -> Packing)", true)}
+                    </div>
+                </TabsContent>
+            </Tabs>
 
             <div className="grid gap-4 mt-4">
                 <Card className="bg-white">
