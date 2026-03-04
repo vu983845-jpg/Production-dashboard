@@ -33,6 +33,7 @@ import { createClient } from "@/lib/supabase/client"
 // Schemas
 const actualSchema = z.object({
     actual_ton: z.coerce.number().min(0, "Giá trị phải >= 0"),
+    actual_container: z.coerce.number().min(0, "Container >= 0").int(),
     note: z.string().optional(),
 })
 
@@ -59,6 +60,7 @@ export default function InputPage() {
         resolver: zodResolver(actualSchema),
         defaultValues: {
             actual_ton: 0,
+            actual_container: 0,
             note: "",
         },
     })
@@ -115,10 +117,11 @@ export default function InputPage() {
             if (actualData) {
                 formActual.reset({
                     actual_ton: Number(actualData.actual_ton),
+                    actual_container: Number(actualData.actual_container || 0),
                     note: actualData.note || "",
                 })
             } else {
-                formActual.reset({ actual_ton: 0, note: "" })
+                formActual.reset({ actual_ton: 0, actual_container: 0, note: "" })
             }
 
             // Fetch KPI
@@ -160,6 +163,7 @@ export default function InputPage() {
                 department_id: selectedDept,
                 work_date: formattedDate,
                 actual_ton: values.actual_ton,
+                actual_container: values.actual_container,
                 note: values.note,
                 updated_by: userId,
                 updated_at: new Date().toISOString()
@@ -268,19 +272,34 @@ export default function InputPage() {
                         <div className="p-6">
                             <Form {...formActual}>
                                 <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-lg">
-                                    <FormField
-                                        control={formActual.control}
-                                        name="actual_ton"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Sản lượng thực tế (Tấn)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" step="0.001" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormField
+                                            control={formActual.control}
+                                            name="actual_ton"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Sản lượng thực tế (Tấn)</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" step="0.001" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={formActual.control}
+                                            name="actual_container"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Sản lượng xuất (Container)</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" step="1" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
                                     <FormField
                                         control={formActual.control}
                                         name="note"

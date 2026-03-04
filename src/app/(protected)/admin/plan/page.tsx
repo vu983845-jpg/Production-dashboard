@@ -57,6 +57,7 @@ export default function AdminPlanPage() {
                     work_date: dStr,
                     display_date: format(d, "EEEE, dd/MM", { locale: vi }),
                     plan_ton: existing ? Number(existing.plan_ton) : 0,
+                    plan_container: existing ? Number(existing.plan_container || 0) : 0,
                     id: existing ? existing.id : undefined
                 }
             })
@@ -67,9 +68,9 @@ export default function AdminPlanPage() {
     }, [selectedDept, weekStart])
 
     // Handle Input change
-    const handlePlanChange = (index: number, value: string) => {
+    const handlePlanChange = (index: number, field: "plan_ton" | "plan_container", value: string) => {
         const newData = [...planData]
-        newData[index].plan_ton = value === "" ? 0 : Number(value)
+        newData[index][field] = value === "" ? 0 : Number(value)
         setPlanData(newData)
     }
 
@@ -86,6 +87,7 @@ export default function AdminPlanPage() {
             department_id: selectedDept,
             work_date: d.work_date,
             plan_ton: d.plan_ton,
+            plan_container: d.plan_container,
             updated_at: new Date().toISOString()
         }))
 
@@ -160,7 +162,8 @@ export default function AdminPlanPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-[200px]">Ngày</TableHead>
-                            <TableHead>Kế hoạch Plan (Tấn)</TableHead>
+                            <TableHead>Kế hoạch (Tấn)</TableHead>
+                            <TableHead>Kế hoạch (Container)</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -172,9 +175,19 @@ export default function AdminPlanPage() {
                                         type="number"
                                         step="0.1"
                                         min="0"
-                                        className="max-w-[200px]"
+                                        className="max-w-[150px]"
                                         value={row.plan_ton}
-                                        onChange={(e) => handlePlanChange(idx, e.target.value)}
+                                        onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Input
+                                        type="number"
+                                        step="1"
+                                        min="0"
+                                        className="max-w-[150px]"
+                                        value={row.plan_container}
+                                        onChange={(e) => handlePlanChange(idx, "plan_container", e.target.value)}
                                     />
                                 </TableCell>
                             </TableRow>

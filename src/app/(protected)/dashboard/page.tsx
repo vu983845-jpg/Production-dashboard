@@ -25,7 +25,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 export default function DashboardPage() {
     const supabase = createClient()
     const { t, language } = useLanguage()
-    const [dateRange, setDateRange] = useState("month") // default current month
+    const [selectedMonth, setSelectedMonth] = useState<Date>(new Date()) // Current month by default
     const [selectedDept, setSelectedDept] = useState("all")
     const [selectedTab, setSelectedTab] = useState("stations") // "stations" or "regions"
     const [departments, setDepartments] = useState<{ id: string, name_vi: string, name_en: string, code: string }[]>([])
@@ -52,12 +52,19 @@ export default function DashboardPage() {
     }, [])
 
     // Optional helper to get working days left this month (excluding Sundays)
-    const getRemainingWorkingDays = () => {
-        let current = new Date();
-        const end = endOfMonth(current);
+    const getRemainingWorkingDays = (monthDate: Date) => {
+        const today = new Date();
+        const startOfSelected = startOfMonth(monthDate);
+        const endOfSelected = endOfMonth(monthDate);
+
+        // If viewing a past month, no remaining days
+        if (today > endOfSelected) return 0;
+
+        // If viewing a future month, start from the 1st of that month
+        let current = today < startOfSelected ? startOfSelected : today;
         let remainingDays = 0;
 
-        while (current <= end) {
+        while (current <= endOfSelected) {
             if (!isSunday(current)) {
                 remainingDays++;
             }
@@ -69,17 +76,22 @@ export default function DashboardPage() {
     // Helper function to build summary object
     const buildSummary = (records: any[], isTotal: boolean) => {
         let tPlan = 0, tActual = 0, tDown = 0, tInput = 0, tOutput = 0, tWip = 0;
+        let tPlanCont = 0, tActualCont = 0;
         records.forEach(r => {
-            tPlan += Number(isTotal ? r.total_plan_ton : r.plan_ton);
-            tActual += Number(isTotal ? r.total_actual_ton : r.actual_ton);
-            tDown += Number(isTotal ? r.total_downtime_min : r.downtime_min);
-            tInput += Number(isTotal ? r.total_input_ton : r.input_ton);
-            tOutput += Number(isTotal ? r.total_good_output_ton : r.good_output_ton);
-            tWip = Number(isTotal ? r.total_wip_close_ton : r.wip_close_ton);
+            tPlan += Number(isTotal ? r.total_plan_ton : r.plan_ton || 0);
+            tPlanCont += Number(isTotal ? r.total_plan_container : r.plan_container || 0);
+            tActual += Number(isTotal ? r.total_actual_ton : r.actual_ton || 0);
+            tActualCont += Number(isTotal ? r.total_actual_container : r.actual_container || 0);
+            tDown += Number(isTotal ? r.total_downtime_min : r.downtime_min || 0);
+            tInput += Number(isTotal ? r.total_input_ton : r.input_ton || 0);
+            tOutput += Number(isTotal ? r.total_good_output_ton : r.good_output_ton || 0);
+            tWip = Number(isTotal ? r.total_wip_close_ton : r.wip_close_ton || 0);
         });
         return {
             totalPlan: tPlan,
+            totalPlanCont: tPlanCont,
             totalActual: tActual,
+            totalActualCont: tActualCont,
             achivementPct: tPlan > 0 ? (tActual / tPlan) * 100 : 0,
             variance: tActual - tPlan,
             downtime: tDown,
@@ -92,11 +104,15 @@ export default function DashboardPage() {
     useEffect(() => {
         async function fetchDashboard() {
             const dashboards: any = {};
+            const startFilter = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
+            const endFilter = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
 
             // 1. Fetch Total Factory Data
             const { data: totalData } = await supabase
                 .from("v_dashboard_total_daily")
                 .select("*")
+                .gte("work_date", startFilter)
+                .lte("work_date", endFilter)
                 .order("work_date")
 
             if (totalData) {
@@ -115,6 +131,8 @@ export default function DashboardPage() {
             const { data: dData } = await supabase
                 .from("v_dashboard_daily")
                 .select("*")
+                .gte("work_date", startFilter)
+                .lte("work_date", endFilter)
                 .order("work_date")
 
             if (dData) {
@@ -189,7 +207,7 @@ export default function DashboardPage() {
             }
         }
         fetchDashboard()
-    }, [selectedDept, dateRange])
+    }, [selectedDept, selectedMonth])
 
     const handleExportCSV = () => {
         let headers = [];
@@ -226,10 +244,11 @@ export default function DashboardPage() {
         if (!data) return null; // Loading or no data
         const { summary, history } = data;
 
-        const remainingDays = getRemainingWorkingDays();
+        const remainingDays = getRemainingWorkingDays(selectedMonth);
         const remainingTarget = Math.max(0, summary.totalPlan - summary.totalActual);
         const dailyNeeded = remainingDays > 0 ? (remainingTarget / remainingDays).toFixed(2) : "0";
         const isReached = summary.totalActual >= summary.totalPlan && summary.totalPlan > 0;
+        const hasContainerData = summary.totalPlanCont > 0 || summary.totalActualCont > 0;
 
         return (
             <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col ${isTotal ? 'border-primary/50 border-2' : ''}`}>
@@ -261,13 +280,30 @@ export default function DashboardPage() {
                                 {isReached ? 'Đạt' : `${dailyNeeded} T`}
                             </div>
                         </div>
-                        <div>
+                        {hasContainerData ? (
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-1">{t('container') || 'Container'}</p>
+                                <div className="text-md font-bold text-blue-600 flex items-center gap-1">
+                                    {summary.totalActualCont} <span className="text-sm text-muted-foreground font-normal">/ {summary.totalPlanCont} Cont</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
+                                <div className="text-md font-bold text-amber-600 flex items-center gap-1">
+                                    <Clock className="h-3 w-3" /> {summary.downtime}p
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {hasContainerData && (
+                        <div className="mb-4">
                             <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
                             <div className="text-md font-bold text-amber-600 flex items-center gap-1">
                                 <Clock className="h-3 w-3" /> {summary.downtime}p
                             </div>
                         </div>
-                    </div>
+                    )}
                     {/* Sparkline chart */}
                     <div className="h-16 w-full mt-auto border-t pt-2">
                         <ResponsiveContainer width="100%" height="100%">
@@ -303,6 +339,14 @@ export default function DashboardPage() {
                             <TabsTrigger value="regions">{t('tab_regions')}</TabsTrigger>
                         </TabsList>
                         <div className="flex space-x-2">
+                            <input
+                                type="month"
+                                value={format(selectedMonth, "yyyy-MM")}
+                                onChange={(e) => {
+                                    if (e.target.value) setSelectedMonth(new Date(e.target.value))
+                                }}
+                                className="border rounded-md px-3 py-1 text-sm bg-background border-input ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            />
                             <Select value={selectedDept} onValueChange={setSelectedDept}>
                                 <SelectTrigger className="w-[180px] hidden md:flex">
                                     <SelectValue placeholder={t('dropdown_placeholder')} />

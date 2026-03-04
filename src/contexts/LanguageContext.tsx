@@ -32,6 +32,7 @@ const translations: Record<string, Record<Language, string>> = {
     "achv_pct": { vi: "Mức đạt (%)", en: "Target Achieved (%)" },
     "downtime": { vi: "Thời gian Chết máy", en: "Machine Downtime" },
     "daily_needed": { vi: "Cân đối Target (Cần đạt/Ngày)", en: "Daily Target Needed" },
+    "container": { vi: "Số Lượng Xuất (Container)", en: "Exported Containers" },
 
     // Regions
     "region_rcn": { vi: "KHO ĐIỀU THÔ (RCN)", en: "RCN WAREHOUSE" },
