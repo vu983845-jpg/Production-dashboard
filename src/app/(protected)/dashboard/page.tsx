@@ -22,7 +22,9 @@ import {
     Tooltip,
     XAxis,
     YAxis,
-    Legend
+    Legend,
+    AreaChart,
+    Area
 } from "recharts"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,23 +39,17 @@ export default function DashboardPage() {
     const [selectedDept, setSelectedDept] = useState("all")
     const [departments, setDepartments] = useState<{ id: string, name_vi: string }[]>([])
 
-    // Data States
     const [dailyData, setDailyData] = useState<any[]>([])
     const [deptData, setDeptData] = useState<any[]>([])
     const [dailyRecords, setDailyRecords] = useState<any[]>([]) // For specific dept table
-    const [summary, setSummary] = useState({
-        totalActual: 0,
-        totalPlan: 0,
-        achivementPct: 0,
-        variance: 0,
-        mtdActual: 0,
-        mtdPlan: 0,
-        wtdActual: 0,
-        wtdPlan: 0,
-        downtime: 0,
-        wipClose: 0,
-        yieldPct: 0
-    })
+
+    // Store data per department for mini-dashboards
+    const [dashboardsData, setDashboardsData] = useState<{
+        [key: string]: {
+            summary: any,
+            history: any[]
+        }
+    }>({})
 
     // Load Departments
     useEffect(() => {
@@ -64,104 +60,96 @@ export default function DashboardPage() {
         loadDepts()
     }, [])
 
+    // Helper function to build summary object
+    const buildSummary = (records: any[], isTotal: boolean) => {
+        let tPlan = 0, tActual = 0, tDown = 0, tInput = 0, tOutput = 0, tWip = 0;
+        records.forEach(r => {
+            tPlan += Number(isTotal ? r.total_plan_ton : r.plan_ton);
+            tActual += Number(isTotal ? r.total_actual_ton : r.actual_ton);
+            tDown += Number(isTotal ? r.total_downtime_min : r.downtime_min);
+            tInput += Number(isTotal ? r.total_input_ton : r.input_ton);
+            tOutput += Number(isTotal ? r.total_good_output_ton : r.good_output_ton);
+            tWip = Number(isTotal ? r.total_wip_close_ton : r.wip_close_ton);
+        });
+        return {
+            totalPlan: tPlan,
+            totalActual: tActual,
+            achivementPct: tPlan > 0 ? (tActual / tPlan) * 100 : 0,
+            variance: tActual - tPlan,
+            downtime: tDown,
+            wipClose: tWip,
+            yieldPct: tInput > 0 ? (tOutput / tInput) * 100 : 0
+        };
+    };
+
     // Load Dashboard Data
     useEffect(() => {
         async function fetchDashboard() {
-            // For a real app, date logic would filter properly, using simple logic here
-            const today = new Date()
-            // Let's assume view returns the total directly for all
+            const dashboards: any = {};
 
-            if (selectedDept === "all") {
-                const { data: totalData } = await supabase
-                    .from("v_dashboard_total_daily")
-                    .select("*")
-                    .order("work_date")
+            // 1. Fetch Total Factory Data
+            const { data: totalData } = await supabase
+                .from("v_dashboard_total_daily")
+                .select("*")
+                .order("work_date")
 
-                if (totalData) {
-                    setDailyData(totalData.map(d => ({
-                        name: format(new Date(d.work_date), 'dd/MM'),
-                        Actual: Number(d.total_actual_ton),
-                        Plan: Number(d.total_plan_ton)
-                    })))
+            if (totalData) {
+                const history = totalData.map(d => ({
+                    name: format(new Date(d.work_date), 'dd/MM'),
+                    Actual: Number(d.total_actual_ton),
+                    Plan: Number(d.total_plan_ton)
+                }));
+                dashboards["all"] = {
+                    summary: buildSummary(totalData, true),
+                    history
+                };
+            }
 
-                    let tPlan = 0, tActual = 0, tDown = 0, tInput = 0, tOutput = 0, tWip = 0
-                    totalData.forEach(r => {
-                        tPlan += Number(r.total_plan_ton)
-                        tActual += Number(r.total_actual_ton)
-                        tDown += Number(r.total_downtime_min)
-                        tInput += Number(r.total_input_ton)
-                        tOutput += Number(r.total_good_output_ton)
-                        tWip = Number(r.total_wip_close_ton) // Taking last day WIP for total approx
-                    })
+            // 2. Fetch All Individual Dept Data
+            const { data: dData } = await supabase
+                .from("v_dashboard_daily")
+                .select("*")
+                .order("work_date")
 
-                    setSummary({
-                        totalPlan: tPlan,
-                        totalActual: tActual,
-                        achivementPct: tPlan > 0 ? (tActual / tPlan) * 100 : 0,
-                        variance: tActual - tPlan,
-                        mtdActual: tActual, mtdPlan: tPlan, // simplified demo
-                        wtdActual: tActual, wtdPlan: tPlan, // simplified demo
-                        downtime: tDown,
-                        wipClose: tWip,
-                        yieldPct: tInput > 0 ? (tOutput / tInput) * 100 : 0
-                    })
-                }
+            if (dData) {
+                // Group by department ID
+                const grouped = dData.reduce((acc: any, curr: any) => {
+                    if (!acc[curr.department_id]) acc[curr.department_id] = [];
+                    acc[curr.department_id].push(curr);
+                    return acc;
+                }, {});
 
-                // Aggregate by Dept for Table/BarChart
-                const { data: dData } = await supabase
-                    .from("v_dashboard_daily")
-                    .select("dept_name_vi, actual_ton, plan_ton, downtime_min")
-
-                if (dData) {
-                    const map = new Map()
-                    dData.forEach(r => {
-                        if (!map.has(r.dept_name_vi)) map.set(r.dept_name_vi, { name: r.dept_name_vi, Actual: 0, Plan: 0, Down: 0 })
-                        const current = map.get(r.dept_name_vi)
-                        current.Actual += Number(r.actual_ton)
-                        current.Plan += Number(r.plan_ton)
-                        current.Down += Number(r.downtime_min)
-                    })
-                    setDeptData(Array.from(map.values()))
-                }
-
-            } else {
-                // Individual Dept
-                const { data: dData } = await supabase
-                    .from("v_dashboard_daily")
-                    .select("*")
-                    .eq("department_id", selectedDept)
-                    .order("work_date")
-
-                if (dData) {
-                    setDailyData(dData.map(d => ({
+                // Build summary and history for each department
+                Object.keys(grouped).forEach(deptId => {
+                    const records = grouped[deptId];
+                    const history = records.map((d: any) => ({
                         name: format(new Date(d.work_date), 'dd/MM'),
                         Actual: Number(d.actual_ton),
                         Plan: Number(d.plan_ton)
-                    })))
+                    }));
+                    dashboards[deptId] = {
+                        summary: buildSummary(records, false),
+                        history
+                    };
+                });
+            }
 
-                    setDailyRecords(dData)
+            setDashboardsData(dashboards);
 
-                    let tPlan = 0, tActual = 0, tDown = 0, tInput = 0, tOutput = 0, tWip = 0
-                    dData.forEach(r => {
-                        tPlan += Number(r.plan_ton)
-                        tActual += Number(r.actual_ton)
-                        tDown += Number(r.downtime_min)
-                        tInput += Number(r.input_ton)
-                        tOutput += Number(r.good_output_ton)
-                        tWip = Number(r.wip_close_ton)
-                    })
+            // Still populate legacy states for the Master Table if needed
+            if (dData) {
+                const map = new Map()
+                dData.forEach(r => {
+                    if (!map.has(r.dept_name_vi)) map.set(r.dept_name_vi, { name: r.dept_name_vi, Actual: 0, Plan: 0, Down: 0 })
+                    const current = map.get(r.dept_name_vi)
+                    current.Actual += Number(r.actual_ton)
+                    current.Plan += Number(r.plan_ton)
+                    current.Down += Number(r.downtime_min)
+                })
+                setDeptData(Array.from(map.values()))
 
-                    setSummary({
-                        totalPlan: tPlan,
-                        totalActual: tActual,
-                        achivementPct: tPlan > 0 ? (tActual / tPlan) * 100 : 0,
-                        variance: tActual - tPlan,
-                        mtdActual: tActual, mtdPlan: tPlan,
-                        wtdActual: tActual, wtdPlan: tPlan,
-                        downtime: tDown,
-                        wipClose: tWip,
-                        yieldPct: tInput > 0 ? (tOutput / tInput) * 100 : 0
-                    })
+                if (selectedDept !== 'all') {
+                    setDailyRecords(dData.filter(d => d.department_id === selectedDept));
                 }
             }
         }
@@ -198,14 +186,78 @@ export default function DashboardPage() {
     }
 
 
+    const renderMiniDashboard = (id: string, name: string, isTotal: boolean = false) => {
+        const data = dashboardsData[id];
+        if (!data) return null; // Loading or no data
+        const { summary, history } = data;
+
+        return (
+            <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col ${isTotal ? 'border-primary/50 border-2' : ''}`}>
+                <CardHeader className="pb-2 bg-gray-50/50 border-b">
+                    <CardTitle className={`text-md font-bold flex justify-between items-center ${isTotal ? 'text-primary' : ''}`}>
+                        {name}
+                        {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 flex-1">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <p className="text-xs text-muted-foreground mb-1">Actual / Plan</p>
+                            <div className="text-lg font-bold">{summary.totalActual.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlan.toFixed(1)} T</span></div>
+                            <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
+                                {summary.variance >= 0 ? `+${summary.variance.toFixed(1)} Tấn` : `${summary.variance.toFixed(1)} Tấn`}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground mb-1">Tỷ lệ (Achv %)</p>
+                            <div className="text-lg font-bold flex items-center gap-1">
+                                {summary.achivementPct.toFixed(1)}%
+                                {summary.achivementPct >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground mb-1">Yield (Thu hồi)</p>
+                            <div className="text-md font-bold text-gray-700">{summary.yieldPct > 0 ? `${summary.yieldPct.toFixed(1)}%` : 'N/A'}</div>
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground mb-1">Downtime</p>
+                            <div className="text-md font-bold text-amber-600 flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> {summary.downtime}p
+                            </div>
+                        </div>
+                    </div>
+                    {/* Sparkline chart */}
+                    <div className="h-16 w-full mt-auto border-t pt-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id={`colorActual-${id}`} x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} />
+                                <Area type="monotone" dataKey="Actual" stroke="var(--color-primary)" fillOpacity={1} fill={`url(#colorActual-${id})`} />
+                                <Line type="monotone" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    };
+
     return (
         <div className="flex-col md:flex">
             <div className="flex items-center justify-between space-y-2 border-b pb-4 mb-4">
-                <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tight">Command Center</h2>
+                    <p className="text-muted-foreground">Theo dõi toàn cảnh tất cả phòng ban</p>
+                </div>
                 <div className="flex space-x-2">
                     <Select value={selectedDept} onValueChange={setSelectedDept}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Bộ phận" />
+                        <SelectTrigger className="w-[180px] hidden md:flex">
+                            <SelectValue placeholder="Bảng Data phía dưới" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Toàn bộ Nhà Máy</SelectItem>
@@ -216,103 +268,18 @@ export default function DashboardPage() {
                     </Select>
                     <Button variant="outline" onClick={handleExportCSV}>
                         <Download className="h-4 w-4 mr-2" />
-                        Export CSV
+                        Export <span className="hidden sm:inline">&nbsp;CSV</span>
                     </Button>
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-white shadow-sm hover:shadow-md transition-all">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">Actual vs Plan</CardTitle>
-                        <FileSymlink className="h-4 w-4 text-primary" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{summary.totalActual.toFixed(2)} / {summary.totalPlan.toFixed(2)} T</div>
-                        <p className="text-xs text-muted-foreground mt-1 text-primary">
-                            {summary.variance >= 0 ? `Vượt: +${summary.variance.toFixed(2)}` : `Thiếu: ${summary.variance.toFixed(2)}`} Tấn
-                        </p>
-                    </CardContent>
-                </Card>
+            {/* 9 MINI DASHBOARDS GRID */}
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {/* Total Factory Card */}
+                {renderMiniDashboard("all", "CẢ NHÀ MÁY (TỔNG HỢP)", true)}
 
-                <Card className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 border-l border-b border-primary/20 rounded-bl-3xl bg-primary/5">
-                        <Percent className="h-4 w-4 text-primary" />
-                    </div>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">Tỷ lệ Đạt (Achievement)</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{summary.achivementPct.toFixed(1)}%</div>
-                        <p className="text-xs text-muted-foreground mt-1">MTD: {summary.achivementPct.toFixed(1)}%</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-white shadow-sm hover:shadow-md transition-all">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">Yield (Thu hồi/Hao hụt)</CardTitle>
-                        {summary.yieldPct > 80 ? <TrendingUp className="h-4 w-4 text-green-500" /> : <TrendingDown className="h-4 w-4 text-red-500" />}
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{summary.yieldPct > 0 ? `${summary.yieldPct.toFixed(2)}%` : 'N/A'}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Trung bình Weighted
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-white shadow-sm hover:shadow-md transition-all">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">Tổng Downtime</CardTitle>
-                        <Clock className="h-4 w-4 text-amber-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{summary.downtime} Phút</div>
-                        <p className="text-xs text-muted-foreground mt-1">WIP Tồn cuối: {summary.wipClose.toFixed(2)} Tấn</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className={`grid gap-4 mt-4 ${selectedDept === 'all' ? 'md:grid-cols-2 lg:grid-cols-7' : 'grid-cols-1'}`}>
-                <Card className={`${selectedDept === 'all' ? 'lg:col-span-4' : ''} bg-white`}>
-                    <CardHeader>
-                        <CardTitle>Biểu đồ Sản Lượng Ngày (Actual vs Plan)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pl-2">
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={dailyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} />
-                                <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                                <Tooltip />
-                                <Legend />
-                                <Line type="monotone" dataKey="Actual" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="Plan" stroke="#94a3b8" strokeDasharray="5 5" strokeWidth={2} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-
-                {selectedDept === 'all' && (
-                    <Card className="lg:col-span-3 bg-white">
-                        <CardHeader>
-                            <CardTitle>Phân bổ theo Bộ phận</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={deptData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} fontSize={10} />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Bar dataKey="Actual" fill="var(--color-primary)" radius={[0, 4, 4, 0]} barSize={15} />
-                                    <Bar dataKey="Plan" fill="#cbd5e1" radius={[0, 4, 4, 0]} barSize={15} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-                )}
+                {/* Department Cards */}
+                {departments.map(d => renderMiniDashboard(d.id, d.name_vi))}
             </div>
 
             <div className="grid gap-4 mt-4">
