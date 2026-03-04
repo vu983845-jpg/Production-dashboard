@@ -40,6 +40,7 @@ export default function LoginPage() {
                 .single();
 
             toast.success("Đăng nhập thành công!");
+            router.refresh();
             if (profile?.role === "admin") {
                 router.push("/dashboard");
             } else {
