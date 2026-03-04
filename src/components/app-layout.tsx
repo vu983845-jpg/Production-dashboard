@@ -22,6 +22,9 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
+import { IntersnackLogo } from "@/components/intersnack-logo"
+import { LanguageToggle } from "@/components/language-toggle"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface AppLayoutProps {
     children: ReactNode
@@ -39,27 +42,29 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
         router.push("/login")
     }
 
+    const { t } = useLanguage()
+
     const navItems = [
         {
-            title: "Dashboard",
+            title: t("nav.dashboard"),
             href: "/dashboard",
             icon: LayoutDashboard,
             roles: ["admin", "dept_user", "viewer"],
         },
         {
-            title: "Nhập liệu",
+            title: t("nav.input"),
             href: "/input",
             icon: ClipboardEdit,
             roles: ["admin", "dept_user"],
         },
         {
-            title: "Kế hoạch",
+            title: t("nav.plan"),
             href: "/admin/plan",
             icon: FileSpreadsheet,
             roles: ["admin"],
         },
         {
-            title: "Nhân viên",
+            title: t("nav.users"),
             href: "/admin/users",
             icon: Users,
             roles: ["admin"],
@@ -74,10 +79,9 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                         href="/dashboard"
                         className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0"
                     >
-                        <div className="h-6 w-6 bg-primary rounded-md flex items-center justify-center text-primary-foreground">
-                            <span className="font-bold text-xs">P</span>
-                        </div>
-                        <span>Factory KPI</span>
+                        <IntersnackLogo className="h-8 w-8" />
+                        <span className="hidden lg:inline text-red-600 font-bold tracking-tight">Intersnack Cashew VN</span>
+                        <span className="lg:hidden text-red-600 font-bold">Intersnack</span>
                     </Link>
                     {navItems
                         .filter((item) => item.roles.includes(role))
@@ -123,8 +127,9 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                     </DropdownMenu>
                 </div>
 
-                <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-                    <div className="ml-auto flex-1 sm:flex-initial" />
+                <div className="flex w-full items-center gap-4 md:ml-auto md:gap-4 lg:gap-6 justify-end">
+                    <LanguageToggle />
+
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="secondary" size="icon" className="rounded-full">
@@ -137,14 +142,14 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                                 <div className="flex flex-col space-y-1">
                                     <p className="text-sm font-medium leading-none">{fullName}</p>
                                     <p className="text-xs leading-none text-muted-foreground mt-1">
-                                        Role: <span className="uppercase text-primary font-semibold">{role}</span>
+                                        {t("role")}: <span className="uppercase text-primary font-semibold">{role}</span>
                                     </p>
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleSignOut} className="text-red-500 cursor-pointer">
                                 <LogOut className="mr-2 h-4 w-4" />
-                                Đăng xuất
+                                {t("logout")}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

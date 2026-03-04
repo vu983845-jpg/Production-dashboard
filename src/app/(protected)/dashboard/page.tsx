@@ -20,13 +20,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { createClient } from "@/lib/supabase/client"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 export default function DashboardPage() {
     const supabase = createClient()
+    const { t, language } = useLanguage()
     const [dateRange, setDateRange] = useState("month") // default current month
     const [selectedDept, setSelectedDept] = useState("all")
     const [selectedTab, setSelectedTab] = useState("stations") // "stations" or "regions"
-    const [departments, setDepartments] = useState<{ id: string, name_vi: string, code: string }[]>([])
+    const [departments, setDepartments] = useState<{ id: string, name_vi: string, name_en: string, code: string }[]>([])
 
     const [dailyData, setDailyData] = useState<any[]>([])
     const [deptData, setDeptData] = useState<any[]>([])
@@ -43,7 +45,7 @@ export default function DashboardPage() {
     // Load Departments
     useEffect(() => {
         async function loadDepts() {
-            const { data } = await supabase.from("departments").select("id, name_vi, code").order("sort_order")
+            const { data } = await supabase.from("departments").select("id, name_vi, name_en, code").order("sort_order")
             if (data) setDepartments(data)
         }
         loadDepts()
@@ -220,25 +222,21 @@ export default function DashboardPage() {
                 <CardContent className="pt-4 flex-1">
                     <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <p className="text-xs text-muted-foreground mb-1">Actual / Plan</p>
+                            <p className="text-xs text-muted-foreground mb-1">{t('actual_vs_plan')}</p>
                             <div className="text-lg font-bold">{summary.totalActual.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlan.toFixed(1)} T</span></div>
                             <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
-                                {summary.variance >= 0 ? `+${summary.variance.toFixed(1)} Tấn` : `${summary.variance.toFixed(1)} Tấn`}
+                                {summary.variance >= 0 ? `+${summary.variance.toFixed(1)} T` : `${summary.variance.toFixed(1)} T`}
                             </p>
                         </div>
                         <div>
-                            <p className="text-xs text-muted-foreground mb-1">Tỷ lệ (Achv %)</p>
+                            <p className="text-xs text-muted-foreground mb-1">{t('achv_pct')}</p>
                             <div className="text-lg font-bold flex items-center gap-1">
                                 {summary.achivementPct.toFixed(1)}%
                                 {summary.achivementPct >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
                             </div>
                         </div>
-                        <div>
-                            <p className="text-xs text-muted-foreground mb-1">Yield (Thu hồi)</p>
-                            <div className="text-md font-bold text-gray-700">{summary.yieldPct > 0 ? `${summary.yieldPct.toFixed(1)}%` : 'N/A'}</div>
-                        </div>
-                        <div>
-                            <p className="text-xs text-muted-foreground mb-1">Downtime</p>
+                        <div className="col-span-2">
+                            <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
                             <div className="text-md font-bold text-amber-600 flex items-center gap-1">
                                 <Clock className="h-3 w-3" /> {summary.downtime}p
                             </div>
@@ -270,29 +268,29 @@ export default function DashboardPage() {
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 border-b pb-4 mb-4">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">Command Center</h2>
-                        <p className="text-muted-foreground">Theo dõi toàn cảnh tất cả phòng ban</p>
+                        <h2 className="text-3xl font-bold tracking-tight">{t('command_center')}</h2>
+                        <p className="text-muted-foreground">{t('command_desc')}</p>
                     </div>
                     <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
                         <TabsList>
-                            <TabsTrigger value="stations">9 Trạm Chế Biến</TabsTrigger>
-                            <TabsTrigger value="regions">3 Khu Vực</TabsTrigger>
+                            <TabsTrigger value="stations">{t('tab_stations')}</TabsTrigger>
+                            <TabsTrigger value="regions">{t('tab_regions')}</TabsTrigger>
                         </TabsList>
                         <div className="flex space-x-2">
                             <Select value={selectedDept} onValueChange={setSelectedDept}>
                                 <SelectTrigger className="w-[180px] hidden md:flex">
-                                    <SelectValue placeholder="Bảng Data phía dưới" />
+                                    <SelectValue placeholder={t('dropdown_placeholder')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Toàn bộ Nhà Máy</SelectItem>
+                                    <SelectItem value="all">{t('all_factory')}</SelectItem>
                                     {departments.map(d => (
-                                        <SelectItem key={d.id} value={d.id}>{d.name_vi}</SelectItem>
+                                        <SelectItem key={d.id} value={d.id}>{language === 'en' && d.name_en ? d.name_en : d.name_vi}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                             <Button variant="outline" onClick={handleExportCSV}>
                                 <Download className="h-4 w-4 mr-2" />
-                                Export <span className="hidden sm:inline">&nbsp;CSV</span>
+                                {t('export_btn')} <span className="hidden sm:inline">&nbsp;CSV</span>
                             </Button>
                         </div>
                     </div>
@@ -302,18 +300,18 @@ export default function DashboardPage() {
                     {/* 9 MINI DASHBOARDS GRID */}
                     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {/* Total Factory Card */}
-                        {renderMiniDashboard("all", "CẢ NHÀ MÁY (TỔNG HỢP)", true)}
+                        {renderMiniDashboard("all", t('all_factory_card'), true)}
 
                         {/* Department Cards */}
-                        {departments.map(d => renderMiniDashboard(d.id, d.name_vi))}
+                        {departments.map(d => renderMiniDashboard(d.id, language === 'en' && d.name_en ? d.name_en : d.name_vi))}
                     </div>
                 </TabsContent>
 
                 <TabsContent value="regions" className="mt-0">
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-                        {renderMiniDashboard("region-RCN", "KHO RCN", true)}
-                        {renderMiniDashboard("region-LCA", "VÙNG LCA (Steaming -> Borma)", true)}
-                        {renderMiniDashboard("region-HCA", "VÙNG HCA (Peeling MC -> Packing)", true)}
+                        {renderMiniDashboard("region-RCN", t('region_rcn'), true)}
+                        {renderMiniDashboard("region-LCA", t('region_lca'), true)}
+                        {renderMiniDashboard("region-HCA", t('region_hca'), true)}
                     </div>
                 </TabsContent>
             </Tabs>
@@ -321,28 +319,28 @@ export default function DashboardPage() {
             <div className="grid gap-4 mt-4">
                 <Card className="bg-white">
                     <CardHeader>
-                        <CardTitle className="text-xl">{selectedDept === 'all' ? 'Chi tiết Báo cáo Tổng hợp' : 'Chi tiết Báo cáo Theo Ngày'}</CardTitle>
+                        <CardTitle className="text-xl">{t('master_data_table')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 {selectedDept === 'all' ? (
                                     <TableRow>
-                                        <TableHead>Bộ phận</TableHead>
-                                        <TableHead className="text-right">Plan (T)</TableHead>
-                                        <TableHead className="text-right">Actual (T)</TableHead>
-                                        <TableHead className="text-right">% Đạt</TableHead>
-                                        <TableHead className="text-right">Variance</TableHead>
-                                        <TableHead className="text-right">Downtime (Phút)</TableHead>
+                                        <TableHead>{t('col_dept')}</TableHead>
+                                        <TableHead className="text-right">{t('col_plan')}</TableHead>
+                                        <TableHead className="text-right">{t('col_actual')}</TableHead>
+                                        <TableHead className="text-right">{t('col_achv')}</TableHead>
+                                        <TableHead className="text-right">{t('col_variance')}</TableHead>
+                                        <TableHead className="text-right">{t('col_downtime')}</TableHead>
                                     </TableRow>
                                 ) : (
                                     <TableRow>
-                                        <TableHead>Ngày</TableHead>
-                                        <TableHead className="text-right">Plan (T)</TableHead>
-                                        <TableHead className="text-right">Actual (T)</TableHead>
+                                        <TableHead>Ngày / Date</TableHead>
+                                        <TableHead className="text-right">{t('col_plan')}</TableHead>
+                                        <TableHead className="text-right">{t('col_actual')}</TableHead>
                                         <TableHead className="text-right">Input (T)</TableHead>
                                         <TableHead className="text-right">Output (T)</TableHead>
-                                        <TableHead className="text-right">Downtime (Phút)</TableHead>
+                                        <TableHead className="text-right">{t('col_downtime')}</TableHead>
                                     </TableRow>
                                 )}
                             </TableHeader>
