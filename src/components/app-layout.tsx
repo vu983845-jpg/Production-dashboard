@@ -80,7 +80,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                         className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0"
                     >
                         <IntersnackLogo className="h-8 w-8" />
-                        <span className="hidden lg:inline text-red-600 font-bold tracking-tight">Intersnack Cashew VN</span>
+                        <span className="hidden lg:inline text-red-600 font-bold tracking-tight">Intersnack Cashew Company</span>
                         <span className="lg:hidden text-red-600 font-bold">Intersnack</span>
                     </Link>
                     {navItems

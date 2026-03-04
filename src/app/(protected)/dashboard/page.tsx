@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, startOfMonth, startOfWeek } from "date-fns"
+import { format, startOfMonth, startOfWeek, isSunday, endOfMonth, addDays } from "date-fns"
 import { vi } from "date-fns/locale"
 import {
     FileSymlink,
@@ -50,6 +50,21 @@ export default function DashboardPage() {
         }
         loadDepts()
     }, [])
+
+    // Optional helper to get working days left this month (excluding Sundays)
+    const getRemainingWorkingDays = () => {
+        let current = new Date();
+        const end = endOfMonth(current);
+        let remainingDays = 0;
+
+        while (current <= end) {
+            if (!isSunday(current)) {
+                remainingDays++;
+            }
+            current = addDays(current, 1);
+        }
+        return remainingDays;
+    }
 
     // Helper function to build summary object
     const buildSummary = (records: any[], isTotal: boolean) => {
@@ -211,6 +226,11 @@ export default function DashboardPage() {
         if (!data) return null; // Loading or no data
         const { summary, history } = data;
 
+        const remainingDays = getRemainingWorkingDays();
+        const remainingTarget = Math.max(0, summary.totalPlan - summary.totalActual);
+        const dailyNeeded = remainingDays > 0 ? (remainingTarget / remainingDays).toFixed(2) : "0";
+        const isReached = summary.totalActual >= summary.totalPlan && summary.totalPlan > 0;
+
         return (
             <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col ${isTotal ? 'border-primary/50 border-2' : ''}`}>
                 <CardHeader className="pb-2 bg-gray-50/50 border-b">
@@ -235,7 +255,13 @@ export default function DashboardPage() {
                                 {summary.achivementPct >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
                             </div>
                         </div>
-                        <div className="col-span-2">
+                        <div>
+                            <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
+                            <div className={`text-md font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
+                                {isReached ? 'Đạt' : `${dailyNeeded} T`}
+                            </div>
+                        </div>
+                        <div>
                             <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
                             <div className="text-md font-bold text-amber-600 flex items-center gap-1">
                                 <Clock className="h-3 w-3" /> {summary.downtime}p

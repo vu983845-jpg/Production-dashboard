@@ -20,10 +20,10 @@ const translations: Record<string, Record<Language, string>> = {
     "logout": { vi: "Đăng xuất", en: "Logout" },
 
     // Dashboard general
-    "command_center": { vi: "Phòng Điều hành Trung tâm", en: "Central Control Room" },
+    "command_center": { vi: "Production Dashboard", en: "Production Dashboard" },
     "command_desc": { vi: "Theo dõi toàn cảnh tiến độ của nhà máy", en: "Overall view of factory operations" },
-    "tab_stations": { vi: "9 Trạm Sản Xuất", en: "9 Workstations" },
-    "tab_regions": { vi: "3 Phân Khu Cốt Lõi", en: "3 Core Regions" },
+    "tab_stations": { vi: "9 Table", en: "9 Table" },
+    "tab_regions": { vi: "3 Table", en: "3 Table" },
     "dropdown_placeholder": { vi: "Chọn để Lọc Dữ liệu", en: "Select to Filter Data" },
     "all_factory": { vi: "Tổng Hợp Toàn Nhà Máy", en: "Total Factory Aggregate" },
     "all_factory_card": { vi: "CẢ NHÀ MÁY (TỔNG HỢP)", en: "FACTORY (AGGREGATE)" },
@@ -31,6 +31,7 @@ const translations: Record<string, Record<Language, string>> = {
     "actual_vs_plan": { vi: "Thực tế / Kế hoạch (T)", en: "Actual / Plan (T)" },
     "achv_pct": { vi: "Mức đạt (%)", en: "Target Achieved (%)" },
     "downtime": { vi: "Thời gian Chết máy", en: "Machine Downtime" },
+    "daily_needed": { vi: "Cân đối Target (Cần đạt/Ngày)", en: "Daily Target Needed" },
 
     // Regions
     "region_rcn": { vi: "KHO ĐIỀU THÔ (RCN)", en: "RCN WAREHOUSE" },
