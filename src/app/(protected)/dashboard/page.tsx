@@ -40,6 +40,7 @@ export default function DashboardPage() {
     // Data States
     const [dailyData, setDailyData] = useState<any[]>([])
     const [deptData, setDeptData] = useState<any[]>([])
+    const [dailyRecords, setDailyRecords] = useState<any[]>([]) // For specific dept table
     const [summary, setSummary] = useState({
         totalActual: 0,
         totalPlan: 0,
@@ -138,6 +139,8 @@ export default function DashboardPage() {
                         Plan: Number(d.plan_ton)
                     })))
 
+                    setDailyRecords(dData)
+
                     let tPlan = 0, tActual = 0, tDown = 0, tInput = 0, tOutput = 0, tWip = 0
                     dData.forEach(r => {
                         tPlan += Number(r.plan_ton)
@@ -166,12 +169,23 @@ export default function DashboardPage() {
     }, [selectedDept, dateRange])
 
     const handleExportCSV = () => {
-        const headers = ["Bộ phận", "Plan (Tấn)", "Actual (Tấn)", "% Đạt", "Variance (Tấn)", "Downtime (Phút)"];
-        const rows = deptData.map(d => {
-            const pct = d.Plan > 0 ? ((d.Actual / d.Plan) * 100).toFixed(1) : "0.0";
-            const variance = (d.Actual - d.Plan).toFixed(2);
-            return `"${d.name}",${d.Plan},${d.Actual},${pct},${variance},${d.Down}`;
-        });
+        let headers = [];
+        let rows = [];
+
+        if (selectedDept === 'all') {
+            headers = ["Bộ phận", "Plan (Tấn)", "Actual (Tấn)", "% Đạt", "Variance (Tấn)", "Downtime (Phút)"];
+            rows = deptData.map(d => {
+                const pct = d.Plan > 0 ? ((d.Actual / d.Plan) * 100).toFixed(1) : "0.0";
+                const variance = (d.Actual - d.Plan).toFixed(2);
+                return `"${d.name}",${d.Plan},${d.Actual},${pct},${variance},${d.Down}`;
+            });
+        } else {
+            headers = ["Ngày", "Mã BP", "Plan (Tấn)", "Actual (Tấn)", "Input (Tấn)", "Output (Tấn)", "Downtime (Phút)"];
+            rows = dailyRecords.map(d => {
+                return `"${format(new Date(d.work_date), 'dd/MM/yyyy')}",${d.dept_code},${d.plan_ton},${d.actual_ton},${d.input_ton},${d.good_output_ton},${d.downtime_min}`;
+            });
+        }
+
         const csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
@@ -259,8 +273,8 @@ export default function DashboardPage() {
                 </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
-                <Card className="lg:col-span-4 bg-white">
+            <div className={`grid gap-4 mt-4 ${selectedDept === 'all' ? 'md:grid-cols-2 lg:grid-cols-7' : 'grid-cols-1'}`}>
+                <Card className={`${selectedDept === 'all' ? 'lg:col-span-4' : ''} bg-white`}>
                     <CardHeader>
                         <CardTitle>Biểu đồ Sản Lượng Ngày (Actual vs Plan)</CardTitle>
                     </CardHeader>
@@ -279,60 +293,86 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="lg:col-span-3 bg-white">
-                    <CardHeader>
-                        <CardTitle>Phân bổ theo Bộ phận</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={deptData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} fontSize={10} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="Actual" fill="var(--color-primary)" radius={[0, 4, 4, 0]} barSize={15} />
-                                <Bar dataKey="Plan" fill="#cbd5e1" radius={[0, 4, 4, 0]} barSize={15} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                {selectedDept === 'all' && (
+                    <Card className="lg:col-span-3 bg-white">
+                        <CardHeader>
+                            <CardTitle>Phân bổ theo Bộ phận</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={deptData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={100} fontSize={10} />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="Actual" fill="var(--color-primary)" radius={[0, 4, 4, 0]} barSize={15} />
+                                    <Bar dataKey="Plan" fill="#cbd5e1" radius={[0, 4, 4, 0]} barSize={15} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
 
             <div className="grid gap-4 mt-4">
                 <Card className="bg-white">
                     <CardHeader>
-                        <CardTitle className="text-xl">Chi tiết Báo cáo Bộ Phận</CardTitle>
+                        <CardTitle className="text-xl">{selectedDept === 'all' ? 'Chi tiết Báo cáo Tổng hợp' : 'Chi tiết Báo cáo Theo Ngày'}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Bộ phận</TableHead>
-                                    <TableHead className="text-right">Plan (T)</TableHead>
-                                    <TableHead className="text-right">Actual (T)</TableHead>
-                                    <TableHead className="text-right">% Đạt</TableHead>
-                                    <TableHead className="text-right">Variance</TableHead>
-                                    <TableHead className="text-right">Downtime (Phút)</TableHead>
-                                </TableRow>
+                                {selectedDept === 'all' ? (
+                                    <TableRow>
+                                        <TableHead>Bộ phận</TableHead>
+                                        <TableHead className="text-right">Plan (T)</TableHead>
+                                        <TableHead className="text-right">Actual (T)</TableHead>
+                                        <TableHead className="text-right">% Đạt</TableHead>
+                                        <TableHead className="text-right">Variance</TableHead>
+                                        <TableHead className="text-right">Downtime (Phút)</TableHead>
+                                    </TableRow>
+                                ) : (
+                                    <TableRow>
+                                        <TableHead>Ngày</TableHead>
+                                        <TableHead className="text-right">Plan (T)</TableHead>
+                                        <TableHead className="text-right">Actual (T)</TableHead>
+                                        <TableHead className="text-right">Input (T)</TableHead>
+                                        <TableHead className="text-right">Output (T)</TableHead>
+                                        <TableHead className="text-right">Downtime (Phút)</TableHead>
+                                    </TableRow>
+                                )}
                             </TableHeader>
                             <TableBody>
-                                {deptData.map((d) => {
-                                    const pct = d.Plan > 0 ? ((d.Actual / d.Plan) * 100).toFixed(1) : "0.0";
-                                    const variance = (d.Actual - d.Plan).toFixed(2);
-                                    return (
-                                        <TableRow key={d.name}>
-                                            <TableCell className="font-medium">{d.name}</TableCell>
-                                            <TableCell className="text-right">{d.Plan.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right text-primary font-bold">{d.Actual.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">{pct}%</TableCell>
-                                            <TableCell className={`text-right ${Number(variance) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                {Number(variance) > 0 ? '+' : ''}{variance}
-                                            </TableCell>
-                                            <TableCell className="text-right">{d.Down}</TableCell>
+                                {selectedDept === 'all' ? (
+                                    deptData.map((d) => {
+                                        const pct = d.Plan > 0 ? ((d.Actual / d.Plan) * 100).toFixed(1) : "0.0";
+                                        const variance = (d.Actual - d.Plan).toFixed(2);
+                                        return (
+                                            <TableRow key={d.name}>
+                                                <TableCell className="font-medium">{d.name}</TableCell>
+                                                <TableCell className="text-right">{d.Plan.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right text-primary font-bold">{d.Actual.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">{pct}%</TableCell>
+                                                <TableCell className={`text-right ${Number(variance) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                    {Number(variance) > 0 ? '+' : ''}{variance}
+                                                </TableCell>
+                                                <TableCell className="text-right">{d.Down}</TableCell>
+                                            </TableRow>
+                                        )
+                                    })
+                                ) : (
+                                    dailyRecords.map((d) => (
+                                        <TableRow key={d.work_date}>
+                                            <TableCell className="font-medium">{format(new Date(d.work_date), 'dd/MM/yyyy')}</TableCell>
+                                            <TableCell className="text-right">{Number(d.plan_ton).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right text-primary font-bold">{Number(d.actual_ton).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">{Number(d.input_ton).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">{Number(d.good_output_ton).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">{d.downtime_min}</TableCell>
                                         </TableRow>
-                                    )
-                                })}
+                                    ))
+                                )}
                             </TableBody>
                         </Table>
                     </CardContent>
