@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { createClient } from "@/lib/supabase/client"
+import { ddsClient } from "@/lib/supabase/dds-client"
 import { useLanguage } from "@/contexts/LanguageContext"
 
 export default function DashboardPage() {
@@ -107,6 +108,45 @@ export default function DashboardPage() {
             const startFilter = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
             const endFilter = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
 
+            // 0. Fetch DDS-meeting Downtime Data
+            const { data: ddsIssues } = await ddsClient
+                .from('issues')
+                .select('department, duration_mins, start_time')
+                .eq('is_downtime', true)
+                .eq('status', 'Closed')
+                .gte('start_time', `${startFilter}T00:00:00Z`)
+                .lte('start_time', `${endFilter}T23:59:59Z`);
+
+            const ddsDownTimeSum: Record<string, number> = {};
+            const ddsTotalDownTimeSum: Record<string, number> = {};
+
+            if (ddsIssues) {
+                ddsIssues.forEach((issue: any) => {
+                    const issueDate = format(new Date(issue.start_time), 'yyyy-MM-dd');
+                    const deptName = issue.department;
+
+                    const key = `${deptName}_${issueDate}`;
+                    if (!ddsDownTimeSum[key]) ddsDownTimeSum[key] = 0;
+                    ddsDownTimeSum[key] += Number(issue.duration_mins || 0);
+
+                    if (!ddsTotalDownTimeSum[issueDate]) ddsTotalDownTimeSum[issueDate] = 0;
+                    ddsTotalDownTimeSum[issueDate] += Number(issue.duration_mins || 0);
+                });
+            }
+
+            const getExternalDeptName = (deptCode: string) => {
+                switch (deptCode) {
+                    case 'STEAM': return 'Steaming';
+                    case 'SHELL': return 'Shelling';
+                    case 'BORMA': return 'Borma';
+                    case 'PEEL_MC': return 'Peeling MC';
+                    case 'CS': return 'ColorSorter';
+                    case 'HAND': return 'HandPeeling';
+                    case 'PACK': return 'Packing';
+                    default: return null;
+                }
+            };
+
             // 1. Fetch Total Factory Data
             const { data: totalData } = await supabase
                 .from("v_dashboard_total_daily")
@@ -116,6 +156,10 @@ export default function DashboardPage() {
                 .order("work_date")
 
             if (totalData) {
+                // Pre-process and inject external downtime mappings 
+                totalData.forEach((d: any) => {
+                    d.total_downtime_min = ddsTotalDownTimeSum[d.work_date] || 0;
+                });
                 const history = totalData.map(d => ({
                     name: format(new Date(d.work_date), 'dd/MM'),
                     Actual: Number(d.total_actual_ton),
@@ -146,6 +190,16 @@ export default function DashboardPage() {
                 .order("work_date")
 
             if (dData) {
+                // Map the downloaded external Downtime values
+                dData.forEach((curr: any) => {
+                    const extDept = getExternalDeptName(curr.dept_code);
+                    if (extDept) {
+                        curr.downtime_min = ddsDownTimeSum[`${extDept}_${curr.work_date}`] || 0;
+                    } else {
+                        curr.downtime_min = 0;
+                    }
+                });
+
                 // Determine regions mapping
                 // Map RCN: RCN
                 // Map LCA: STEAM, SHELL, BORMA
