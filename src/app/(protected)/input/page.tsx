@@ -179,7 +179,7 @@ export default function InputPage() {
         )
 
         let cError = null
-        if (selectedDeptCode === "PACK" || role === "admin") {
+        if (selectedDeptCode === "PACK") {
             const { error: containerError } = await supabase.from("daily_containers").upsert(
                 {
                     work_date: formattedDate,
@@ -311,7 +311,7 @@ export default function InputPage() {
                                                     </FormItem>
                                                 )}
                                             />
-                                            {(departments.find(d => d.id === selectedDept)?.code === "PACK" || role === "admin") && (
+                                            {(departments.find(d => d.id === selectedDept)?.code === "PACK") && (
                                                 <FormField
                                                     control={formActual.control}
                                                     name="actual_container"
