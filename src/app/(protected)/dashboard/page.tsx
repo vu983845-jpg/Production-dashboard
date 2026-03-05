@@ -311,10 +311,10 @@ export default function DashboardPage() {
                         )}
                     </div>
                     {/* Sparkline chart */}
-                    <div className="h-20 w-full mt-auto border-t pt-2">
+                    <div className="h-24 w-full mt-auto border-t pt-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
-                                <XAxis dataKey="name" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} height={16} minTickGap={10} tickMargin={5} />
+                            <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 15 }}>
+                                <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={20} minTickGap={10} tickMargin={5} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                 <Bar dataKey="Actual" radius={[2, 2, 0, 0]}>
                                     {history.map((entry: any, index: number) => {
