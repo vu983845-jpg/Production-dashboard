@@ -26,7 +26,7 @@ export default function AdminPlanPage() {
             const { data } = await supabase.from("departments").select("id, name_vi, code").order("sort_order")
             if (data) {
                 setDepartments(data)
-                if (data.length > 0) setSelectedDept(data[0].id)
+                // Admin selects department manually to avoid accidental saves
             }
         }
         loadDepts()
@@ -161,60 +161,66 @@ export default function AdminPlanPage() {
                 </div>
             </div>
 
-            <div className="bg-card border rounded-xl shadow overflow-hidden mb-6">
-                <div className="flex items-center justify-between p-4 border-b">
-                    <h3 className="font-semibold">Bảng Plan Nhập liệu - {departments.find(d => d.id === selectedDept)?.name_vi}</h3>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={handleCopyPrevWeek}>
-                            Copy tuần trước
-                        </Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            <Save className="h-4 w-4 mr-2" />
-                            {isSaving ? "Đang lưu..." : "Lưu Plan"}
-                        </Button>
-                    </div>
+            {!selectedDept ? (
+                <div className="flex flex-col items-center justify-center p-12 mt-8 border rounded-xl border-dashed bg-card/50 text-muted-foreground">
+                    <p>Vui lòng chọn bộ phận phía trên để bắt đầu lập kế hoạch.</p>
                 </div>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[200px]">Ngày</TableHead>
-                            <TableHead>Kế hoạch (Tấn)</TableHead>
-                            {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
-                                <TableHead>Kế hoạch (Container)</TableHead>
-                            )}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {planData.map((row, idx) => (
-                            <TableRow key={row.work_date}>
-                                <TableCell className="font-medium capitalize">{row.display_date}</TableCell>
-                                <TableCell>
-                                    <Input
-                                        type="number"
-                                        step="0.1"
-                                        min="0"
-                                        className="max-w-[150px]"
-                                        value={row.plan_ton}
-                                        onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
-                                    />
-                                </TableCell>
+            ) : (
+                <div className="bg-card border rounded-xl shadow overflow-hidden mb-6">
+                    <div className="flex items-center justify-between p-4 border-b">
+                        <h3 className="font-semibold">Bảng Plan Nhập liệu - {departments.find(d => d.id === selectedDept)?.name_vi}</h3>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={handleCopyPrevWeek}>
+                                Copy tuần trước
+                            </Button>
+                            <Button onClick={handleSave} disabled={isSaving}>
+                                <Save className="h-4 w-4 mr-2" />
+                                {isSaving ? "Đang lưu..." : "Lưu Plan"}
+                            </Button>
+                        </div>
+                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[200px]">Ngày</TableHead>
+                                <TableHead>Kế hoạch (Tấn)</TableHead>
                                 {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                    <TableHead>Kế hoạch (Container)</TableHead>
+                                )}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {planData.map((row, idx) => (
+                                <TableRow key={row.work_date}>
+                                    <TableCell className="font-medium capitalize">{row.display_date}</TableCell>
                                     <TableCell>
                                         <Input
                                             type="number"
-                                            step="1"
+                                            step="0.1"
                                             min="0"
                                             className="max-w-[150px]"
-                                            value={row.plan_container}
-                                            onChange={(e) => handlePlanChange(idx, "plan_container", e.target.value)}
+                                            value={row.plan_ton}
+                                            onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
                                         />
                                     </TableCell>
-                                )}
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+                                    {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                        <TableCell>
+                                            <Input
+                                                type="number"
+                                                step="1"
+                                                min="0"
+                                                className="max-w-[150px]"
+                                                value={row.plan_container}
+                                                onChange={(e) => handlePlanChange(idx, "plan_container", e.target.value)}
+                                            />
+                                        </TableCell>
+                                    )}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
 
         </div>
     )

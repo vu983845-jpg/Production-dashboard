@@ -281,155 +281,161 @@ export default function InputPage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="actual" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
-                    <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
-                </TabsList>
+            {!selectedDept ? (
+                <div className="flex flex-col items-center justify-center p-12 mt-8 border rounded-xl border-dashed bg-card/50 text-muted-foreground">
+                    <p>Vui lòng chọn bộ phận ở thanh Tùy chọn để bắt đầu nhập liệu.</p>
+                </div>
+            ) : (
+                <Tabs defaultValue="actual" className="space-y-4">
+                    <TabsList>
+                        <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
+                        <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="actual" className="space-y-4">
-                    <div className="rounded-xl border bg-card text-card-foreground shadow">
-                        <div className="p-6">
-                            <Form {...formActual}>
-                                <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-lg">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormField
-                                            control={formActual.control}
-                                            name="actual_ton"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Sản lượng thực tế (Tấn)</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" step="0.001" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        {(departments.find(d => d.id === selectedDept)?.code === "PACK" || role === "admin") && (
+                    <TabsContent value="actual" className="space-y-4">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow">
+                            <div className="p-6">
+                                <Form {...formActual}>
+                                    <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-lg">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <FormField
                                                 control={formActual.control}
-                                                name="actual_container"
+                                                name="actual_ton"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Sản lượng xuất (Container)</FormLabel>
+                                                        <FormLabel>Sản lượng thực tế (Tấn)</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" step="1" {...field} />
+                                                            <Input type="number" step="0.001" {...field} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
                                             />
-                                        )}
-                                    </div>
-                                    <FormField
-                                        control={formActual.control}
-                                        name="note"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Ghi chú (Tùy chọn)</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} placeholder="Vd: Ca sáng nghỉ 30p do mất điện" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <Button type="submit" disabled={isSaving}>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        {isSaving ? "Đang lưu..." : "Lưu Actual"}
-                                    </Button>
-                                </form>
-                            </Form>
+                                            {(departments.find(d => d.id === selectedDept)?.code === "PACK" || role === "admin") && (
+                                                <FormField
+                                                    control={formActual.control}
+                                                    name="actual_container"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Sản lượng xuất (Container)</FormLabel>
+                                                            <FormControl>
+                                                                <Input type="number" step="1" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            )}
+                                        </div>
+                                        <FormField
+                                            control={formActual.control}
+                                            name="note"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Ghi chú (Tùy chọn)</FormLabel>
+                                                    <FormControl>
+                                                        <Input {...field} placeholder="Vd: Ca sáng nghỉ 30p do mất điện" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <Button type="submit" disabled={isSaving}>
+                                            <Save className="mr-2 h-4 w-4" />
+                                            {isSaving ? "Đang lưu..." : "Lưu Actual"}
+                                        </Button>
+                                    </form>
+                                </Form>
+                            </div>
                         </div>
-                    </div>
-                </TabsContent>
+                    </TabsContent>
 
-                <TabsContent value="kpi" className="space-y-4">
-                    <div className="rounded-xl border bg-card text-card-foreground shadow">
-                        <div className="p-6">
-                            <Form {...formKpi}>
-                                <form onSubmit={formKpi.handleSubmit(onSubmitKpi)} className="space-y-6">
+                    <TabsContent value="kpi" className="space-y-4">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow">
+                            <div className="p-6">
+                                <Form {...formKpi}>
+                                    <form onSubmit={formKpi.handleSubmit(onSubmitKpi)} className="space-y-6">
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <FormField
+                                                control={formKpi.control}
+                                                name="wip_open_ton"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>WIP Tồn đầu ngày (Tấn)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" step="0.001" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={formKpi.control}
+                                                name="wip_close_ton"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>WIP Tồn cuối ngày (Tấn)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" step="0.001" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={formKpi.control}
+                                                name="input_ton"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Input đầu vào (Tấn)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" step="0.001" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={formKpi.control}
+                                                name="good_output_ton"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Good Output đạt (Tấn - Tính Yield)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" step="0.001" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+
                                         <FormField
                                             control={formKpi.control}
-                                            name="wip_open_ton"
+                                            name="note"
                                             render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>WIP Tồn đầu ngày (Tấn)</FormLabel>
+                                                <FormItem className="max-w-lg">
+                                                    <FormLabel>Ghi chú (Tùy chọn)</FormLabel>
                                                     <FormControl>
-                                                        <Input type="number" step="0.001" {...field} />
+                                                        <Input {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
-                                        <FormField
-                                            control={formKpi.control}
-                                            name="wip_close_ton"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>WIP Tồn cuối ngày (Tấn)</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" step="0.001" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={formKpi.control}
-                                            name="input_ton"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Input đầu vào (Tấn)</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" step="0.001" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={formKpi.control}
-                                            name="good_output_ton"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Good Output đạt (Tấn - Tính Yield)</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" step="0.001" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
 
-                                    <FormField
-                                        control={formKpi.control}
-                                        name="note"
-                                        render={({ field }) => (
-                                            <FormItem className="max-w-lg">
-                                                <FormLabel>Ghi chú (Tùy chọn)</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-
-                                    <Button type="submit" disabled={isSaving}>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        {isSaving ? "Đang lưu..." : "Lưu KPI"}
-                                    </Button>
-                                </form>
-                            </Form>
+                                        <Button type="submit" disabled={isSaving}>
+                                            <Save className="mr-2 h-4 w-4" />
+                                            {isSaving ? "Đang lưu..." : "Lưu KPI"}
+                                        </Button>
+                                    </form>
+                                </Form>
+                            </div>
                         </div>
-                    </div>
-                </TabsContent>
-            </Tabs>
+                    </TabsContent>
+                </Tabs>
+            )}
         </div>
     )
 }
