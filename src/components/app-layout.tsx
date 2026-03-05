@@ -102,7 +102,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                         })}
                 </nav>
                 {/* Mobile menu */}
-                <div className="md:hidden flex items-center">
+                <div className="md:hidden flex items-center gap-3">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="icon" className="shrink-0 md:hidden">
@@ -125,9 +125,13 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                                 ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
+                    <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0">
+                        <IntersnackLogo className="h-7 w-7" />
+                        <span className="text-red-600 font-bold tracking-tight" style={{ fontSize: '0.95rem' }}>Intersnack</span>
+                    </Link>
                 </div>
 
-                <div className="flex flex-1 items-center justify-end gap-3 md:ml-auto md:gap-4 lg:gap-6 shrink-0">
+                <div className="flex flex-1 items-center justify-end gap-2 md:gap-4 lg:gap-6 shrink-0">
                     <LanguageToggle />
 
                     <DropdownMenu>

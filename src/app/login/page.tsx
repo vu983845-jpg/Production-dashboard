@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { IntersnackLogo } from "@/components/intersnack-logo";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -52,7 +53,10 @@ export default function LoginPage() {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-gray-50">
             <Card className="w-full max-w-sm">
-                <CardHeader>
+                <CardHeader className="text-center pb-6">
+                    <div className="flex justify-center mb-4">
+                        <IntersnackLogo className="h-16 w-16" />
+                    </div>
                     <CardTitle className="text-2xl font-bold">Đăng nhập</CardTitle>
                     <CardDescription>Hệ thống quản lý sản lượng nhà máy</CardDescription>
                 </CardHeader>
