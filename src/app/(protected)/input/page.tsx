@@ -46,6 +46,12 @@ const kpiSchema = z.object({
     note: z.string().optional(),
 })
 
+const planSchema = z.object({
+    plan_ton: z.coerce.number().min(0, "Giá trị phải >= 0"),
+    plan_container: z.coerce.number().min(0, "Container >= 0").int(),
+    note: z.string().optional(),
+})
+
 export default function InputPage() {
     const supabase = createClient()
     const [date, setDate] = useState<Date>(new Date())
@@ -73,6 +79,15 @@ export default function InputPage() {
             input_ton: 0,
             good_output_ton: 0,
             downtime_min: 0,
+            note: "",
+        },
+    })
+
+    const formPlan = useForm<z.infer<typeof planSchema>>({
+        resolver: zodResolver(planSchema),
+        defaultValues: {
+            plan_ton: 0,
+            plan_container: 0,
             note: "",
         },
     })
@@ -151,10 +166,28 @@ export default function InputPage() {
             } else {
                 formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, downtime_min: 0, note: "" })
             }
+
+            // Fetch Plan
+            const { data: planData } = await supabase
+                .from("daily_plan")
+                .select("*")
+                .eq("department_id", selectedDept)
+                .eq("work_date", formattedDate)
+                .single()
+
+            if (planData || cData) {
+                formPlan.reset({
+                    plan_ton: Number(planData?.plan_ton || 0),
+                    plan_container: Number(cData?.plan_container || 0),
+                    note: planData?.note || "",
+                })
+            } else {
+                formPlan.reset({ plan_ton: 0, plan_container: 0, note: "" })
+            }
         }
 
         fetchRecords()
-    }, [selectedDept, date, formActual, formKpi])
+    }, [selectedDept, date, formActual, formKpi, formPlan])
 
     // Save Actual
     async function onSubmitActual(values: z.infer<typeof actualSchema>) {
@@ -227,6 +260,47 @@ export default function InputPage() {
         setIsSaving(false)
     }
 
+    // Save Plan
+    async function onSubmitPlan(values: z.infer<typeof planSchema>) {
+        if (!selectedDept) {
+            toast.error("Vui lòng chọn bộ phận")
+            return
+        }
+        setIsSaving(true)
+        const formattedDate = format(date, "yyyy-MM-dd")
+        const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code
+
+        const { error: planError } = await supabase.from("daily_plan").upsert(
+            {
+                department_id: selectedDept,
+                work_date: formattedDate,
+                plan_ton: values.plan_ton,
+                updated_at: new Date().toISOString()
+            },
+            { onConflict: 'department_id,work_date' }
+        )
+
+        let cError = null
+        if (selectedDeptCode === "PACK") {
+            const { error: containerError } = await supabase.from("daily_containers").upsert(
+                {
+                    work_date: formattedDate,
+                    plan_container: values.plan_container,
+                    updated_at: new Date().toISOString()
+                },
+                { onConflict: 'work_date' }
+            )
+            cError = containerError
+        }
+
+        if (planError || cError) {
+            toast.error("Lỗi khi lưu Plan: " + (planError?.message || cError?.message))
+        } else {
+            toast.success("Đã lưu Kế Hoạch thành công")
+        }
+        setIsSaving(false)
+    }
+
     return (
         <div className="flex-col md:flex">
             <div className="flex items-center justify-between space-y-2 border-b pb-4 mb-4">
@@ -290,6 +364,7 @@ export default function InputPage() {
                     <TabsList>
                         <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
                         <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
+                        <TabsTrigger value="plan">Plan (Kế Hoạch)</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="actual" className="space-y-4">
@@ -428,6 +503,53 @@ export default function InputPage() {
                                         <Button type="submit" disabled={isSaving}>
                                             <Save className="mr-2 h-4 w-4" />
                                             {isSaving ? "Đang lưu..." : "Lưu KPI"}
+                                        </Button>
+                                    </form>
+                                </Form>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="plan" className="space-y-4">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow">
+                            <div className="p-6">
+                                <Form {...formPlan}>
+                                    <form onSubmit={formPlan.handleSubmit(onSubmitPlan)} className="space-y-6">
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <FormField
+                                                control={formPlan.control}
+                                                name="plan_ton"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Kế hoạch (Tấn)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" step="0.1" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                                <FormField
+                                                    control={formPlan.control}
+                                                    name="plan_container"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Kế hoạch (Container)</FormLabel>
+                                                            <FormControl>
+                                                                <Input type="number" step="1" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            )}
+                                        </div>
+
+                                        <Button type="submit" disabled={isSaving}>
+                                            <Save className="mr-2 h-4 w-4" />
+                                            {isSaving ? "Đang lưu..." : "Lưu Plan"}
                                         </Button>
                                     </form>
                                 </Form>

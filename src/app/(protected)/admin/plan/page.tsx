@@ -19,17 +19,32 @@ export default function AdminPlanPage() {
     const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
     const [planData, setPlanData] = useState<any[]>([])
     const [isSaving, setIsSaving] = useState(false)
+    const [role, setRole] = useState("")
+    const [userId, setUserId] = useState("")
 
-    // Load Departments
+    // Load Departments and User Profile
     useEffect(() => {
-        async function loadDepts() {
+        async function loadData() {
+            // Load User Profile first
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                setUserId(user.id)
+                const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+                if (profile) {
+                    setRole(profile.role)
+                    if (profile.department_id) {
+                        setSelectedDept(profile.department_id)
+                    }
+                }
+            }
+
+            // Load Departments
             const { data } = await supabase.from("departments").select("id, name_vi, code").order("sort_order")
             if (data) {
                 setDepartments(data)
-                // Admin selects department manually to avoid accidental saves
             }
         }
-        loadDepts()
+        loadData()
     }, [])
 
     // Load weekly plan data for the selected department
@@ -137,7 +152,11 @@ export default function AdminPlanPage() {
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <div className="w-full sm:w-1/3 space-y-2">
                     <label className="text-sm font-medium">Bộ phận</label>
-                    <Select value={selectedDept} onValueChange={setSelectedDept}>
+                    <Select
+                        value={selectedDept}
+                        onValueChange={setSelectedDept}
+                        disabled={role === "dept_user"}
+                    >
                         <SelectTrigger>
                             <SelectValue placeholder="Chọn bộ phận" />
                         </SelectTrigger>
