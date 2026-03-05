@@ -121,9 +121,19 @@ export default function DashboardPage() {
                     Actual: Number(d.total_actual_ton),
                     Plan: Number(d.total_plan_ton)
                 }));
+                const containerHistory = totalData.map(d => ({
+                    name: format(new Date(d.work_date), 'dd/MM'),
+                    Actual: Number(d.total_actual_container),
+                    Plan: Number(d.total_plan_container)
+                }));
+
                 dashboards["all"] = {
                     summary: buildSummary(totalData, true),
                     history
+                };
+                dashboards["container"] = {
+                    summary: buildSummary(totalData, true),
+                    history: containerHistory
                 };
             }
 
@@ -244,11 +254,20 @@ export default function DashboardPage() {
         if (!data) return null; // Loading or no data
         const { summary, history } = data;
 
+        const isContainer = id === 'container';
         const remainingDays = getRemainingWorkingDays(selectedMonth);
         const remainingTarget = Math.max(0, summary.totalPlan - summary.totalActual);
         const dailyNeeded = remainingDays > 0 ? (remainingTarget / remainingDays).toFixed(2) : "0";
-        const isReached = summary.totalActual >= summary.totalPlan && summary.totalPlan > 0;
-        const hasContainerData = summary.totalPlanCont > 0 || summary.totalActualCont > 0;
+
+        const isReachTonnage = summary.totalActual >= summary.totalPlan && summary.totalPlan > 0;
+        const isReachContainer = summary.totalActualCont >= summary.totalPlanCont && summary.totalPlanCont > 0;
+
+        const isReached = isContainer ? isReachContainer : isReachTonnage;
+
+        const actualNum = isContainer ? summary.totalActualCont : summary.totalActual;
+        const planNum = isContainer ? summary.totalPlanCont : summary.totalPlan;
+        const unit = isContainer ? "Cont" : "T";
+        const variance = actualNum - planNum;
 
         return (
             <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col ${isTotal ? 'border-primary/50 border-2' : ''}`}>
@@ -262,59 +281,49 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <p className="text-xs text-muted-foreground mb-1">{t('actual_vs_plan')}</p>
-                            <div className="text-lg font-bold">{summary.totalActual.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlan.toFixed(1)} T</span></div>
+                            <div className="text-lg font-bold">{isContainer ? actualNum : actualNum.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ {isContainer ? planNum : planNum.toFixed(1)} {unit}</span></div>
                             <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
-                                {summary.variance >= 0 ? `+${summary.variance.toFixed(1)} T` : `${summary.variance.toFixed(1)} T`}
+                                {variance >= 0 ? `+${isContainer ? variance : variance.toFixed(1)} ${unit}` : `${isContainer ? variance : variance.toFixed(1)} ${unit}`}
                             </p>
                         </div>
-                        <div>
-                            <p className="text-xs text-muted-foreground mb-1">{t('achv_pct')}</p>
-                            <div className="text-lg font-bold flex items-center gap-1">
-                                {summary.achivementPct.toFixed(1)}%
-                                {summary.achivementPct >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
-                            </div>
-                        </div>
-                        <div>
-                            <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
-                            <div className={`text-md font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
-                                {isReached ? 'Đạt' : `${dailyNeeded} T`}
-                            </div>
-                        </div>
-                        {hasContainerData ? (
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-1">{t('container') || 'Container'}</p>
-                                <div className="text-md font-bold text-blue-600 flex items-center gap-1">
-                                    {summary.totalActualCont} <span className="text-sm text-muted-foreground font-normal">/ {summary.totalPlanCont} Cont</span>
+                        {!isContainer && (
+                            <>
+                                <div>
+                                    <p className="text-xs text-muted-foreground mb-1">{t('achv_pct')}</p>
+                                    <div className="text-lg font-bold flex items-center gap-1">
+                                        {summary.achivementPct.toFixed(1)}%
+                                        {summary.achivementPct >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div>
-                                <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
-                                <div className="text-md font-bold text-amber-600 flex items-center gap-1">
-                                    <Clock className="h-3 w-3" /> {summary.downtime}p
+                                <div>
+                                    <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
+                                    <div className={`text-md font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
+                                        {isReached ? 'Đạt' : `${dailyNeeded} T`}
+                                    </div>
                                 </div>
-                            </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
+                                    <div className="text-md font-bold text-amber-600 flex items-center gap-1">
+                                        <Clock className="h-3 w-3" /> {summary.downtime}p
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
-                    {hasContainerData && (
-                        <div className="mb-4">
-                            <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
-                            <div className="text-md font-bold text-amber-600 flex items-center gap-1">
-                                <Clock className="h-3 w-3" /> {summary.downtime}p
-                            </div>
-                        </div>
-                    )}
                     {/* Sparkline chart */}
                     <div className="h-16 w-full mt-auto border-t pt-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="name" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} height={12} minTickGap={10} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                 <Bar dataKey="Actual" radius={[2, 2, 0, 0]}>
-                                    {history.map((entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={entry.Actual >= entry.Plan ? "#22c55e" : "#ef4444"} />
-                                    ))}
+                                    {history.map((entry: any, index: number) => {
+                                        // If there is a plan AND actual is less than plan -> Red. Otherwise -> Green.
+                                        const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
+                                        return <Cell key={`cell-${index}`} fill={color} />;
+                                    })}
                                 </Bar>
-                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
+                                {!isContainer && <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />}
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -365,9 +374,12 @@ export default function DashboardPage() {
                 </div>
 
                 <TabsContent value="stations" className="mt-0">
-                    <div className="mb-4">
-                        {/* Total Factory Card - Full Width on Top */}
+                    <div className="mb-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+                        {/* Total Factory Card - Full Width / 2 columns */}
                         {renderMiniDashboard("all", t('all_factory_card'), true)}
+
+                        {/* Dedicated Container Export Card */}
+                        {renderMiniDashboard("container", t('container') || "Xuất Container", true)}
                     </div>
 
                     {/* 9 MINI DASHBOARDS GRID - 3x3 format on standard desktops */}

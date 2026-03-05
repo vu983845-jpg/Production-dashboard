@@ -12,9 +12,9 @@ interface LanguageContextProps {
 
 const translations: Record<string, Record<Language, string>> = {
     // Layout
-    "nav.dashboard": { vi: "Tổng quan Sản xuất", en: "Production Dashboard" },
-    "nav.input": { vi: "Ghi nhận Trạm", en: "Station Input" },
-    "nav.plan": { vi: "Kế hoạch Sản xuất", en: "Production Plan" },
+    "nav.dashboard": { vi: "Tổng quan Sản xuất", en: "Dashboard" },
+    "nav.input": { vi: "Ghi nhận kết quả sản xuất", en: "Data Input" },
+    "nav.plan": { vi: "Kế hoạch Sản xuất", en: "Plan Setup" },
     "nav.users": { vi: "Nhân Sự", en: "Personnel" },
     "role": { vi: "Quyền", en: "Role" },
     "logout": { vi: "Đăng xuất", en: "Logout" },
