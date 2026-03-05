@@ -30,13 +30,17 @@ BEGIN
       IF FOUND AND NOT EXISTS (SELECT 1 FROM auth.users WHERE email = account.email) THEN
           v_user_id := gen_random_uuid();
           
-          INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+          INSERT INTO auth.users (
+              id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+              confirmation_token, recovery_token, email_change_token_new, email_change
+          )
           VALUES (
               v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 
               account.email, crypt(account.password, gen_salt('bf')), now(), 
               '{"provider":"email","providers":["email"]}', 
               json_build_object('full_name', account.full_name, 'role', 'dept_user', 'department_id', v_dept_id), 
-              now(), now()
+              now(), now(),
+              '', '', '', ''
           );
 
           INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, created_at, updated_at)
@@ -51,8 +55,14 @@ BEGIN
   -- 2. Create HSE Admin and QA/QC Admin if not already present
   v_user_id := gen_random_uuid();
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'hse_admin@dds.com') THEN
-      INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-      VALUES (v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'hse_admin@dds.com', crypt('Hse2026@', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', json_build_object('full_name', 'HSE Admin', 'role', 'admin', 'department_id', NULL), now(), now());
+      INSERT INTO auth.users (
+          id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+          confirmation_token, recovery_token, email_change_token_new, email_change
+      )
+      VALUES (
+          v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'hse_admin@dds.com', crypt('Hse2026@', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', json_build_object('full_name', 'HSE Admin', 'role', 'admin', 'department_id', NULL), now(), now(),
+          '', '', '', ''
+      );
       
       INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, created_at, updated_at)
       VALUES (gen_random_uuid(), v_user_id, v_user_id::text, format('{"sub":"%s","email":"%s"}', v_user_id::text, 'hse_admin@dds.com')::jsonb, 'email', now(), now());
@@ -60,8 +70,14 @@ BEGIN
 
   v_user_id := gen_random_uuid();
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'qa_qc@dds.com') THEN
-      INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-      VALUES (v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'qa_qc@dds.com', crypt('Qaqc2026@', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', json_build_object('full_name', 'QA/QC Admin', 'role', 'admin', 'department_id', NULL), now(), now());
+      INSERT INTO auth.users (
+          id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+          confirmation_token, recovery_token, email_change_token_new, email_change
+      )
+      VALUES (
+          v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'qa_qc@dds.com', crypt('Qaqc2026@', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', json_build_object('full_name', 'QA/QC Admin', 'role', 'admin', 'department_id', NULL), now(), now(),
+          '', '', '', ''
+      );
       
       INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, created_at, updated_at)
       VALUES (gen_random_uuid(), v_user_id, v_user_id::text, format('{"sub":"%s","email":"%s"}', v_user_id::text, 'qa_qc@dds.com')::jsonb, 'email', now(), now());
