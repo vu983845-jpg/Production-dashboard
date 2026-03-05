@@ -12,7 +12,7 @@ import {
     BatteryWarning,
     Download
 } from "lucide-react"
-import { AreaChart, Area, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts"
+import { AreaChart, Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -307,17 +307,15 @@ export default function DashboardPage() {
                     {/* Sparkline chart */}
                     <div className="h-16 w-full mt-auto border-t pt-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id={`colorActual-${id}`} x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} />
-                                <Area type="monotone" dataKey="Actual" stroke="var(--color-primary)" fillOpacity={1} fill={`url(#colorActual-${id})`} />
-                                <Line type="monotone" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
-                            </AreaChart>
+                            <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                                <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                                <Bar dataKey="Actual" radius={[2, 2, 0, 0]}>
+                                    {history.map((entry: any, index: number) => (
+                                        <Cell key={`cell-${index}`} fill={entry.Actual >= entry.Plan ? "#22c55e" : "#ef4444"} />
+                                    ))}
+                                </Bar>
+                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
+                            </ComposedChart>
                         </ResponsiveContainer>
                     </div>
                 </CardContent>
@@ -367,11 +365,13 @@ export default function DashboardPage() {
                 </div>
 
                 <TabsContent value="stations" className="mt-0">
-                    {/* 9 MINI DASHBOARDS GRID */}
-                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {/* Total Factory Card */}
+                    <div className="mb-4">
+                        {/* Total Factory Card - Full Width on Top */}
                         {renderMiniDashboard("all", t('all_factory_card'), true)}
+                    </div>
 
+                    {/* 9 MINI DASHBOARDS GRID - 3x3 format on standard desktops */}
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                         {/* Department Cards */}
                         {departments.map(d => renderMiniDashboard(d.id, language === 'en' && d.name_en ? d.name_en : d.name_vi))}
                     </div>
