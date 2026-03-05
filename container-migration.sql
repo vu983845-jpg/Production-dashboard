@@ -106,3 +106,9 @@ CREATE POLICY "containers_update" ON public.daily_containers FOR UPDATE TO authe
     (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin' OR 
     (SELECT code FROM public.departments WHERE id = (SELECT department_id FROM public.profiles WHERE id = auth.uid())) = 'PACK'
 );
+
+-- 8. Grant table access to authenticated users
+GRANT ALL ON public.daily_containers TO authenticated;
+
+-- 9. Reload PostgREST schema cache to prevent "Database error querying schema"
+NOTIFY pgrst, 'reload schema';
