@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client"
 
 export default function AdminPlanPage() {
     const supabase = createClient()
-    const [departments, setDepartments] = useState<{ id: string, name_vi: string }[]>([])
+    const [departments, setDepartments] = useState<{ id: string, name_vi: string, code: string }[]>([])
     const [selectedDept, setSelectedDept] = useState<string>("")
     const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
     const [planData, setPlanData] = useState<any[]>([])
@@ -23,7 +23,7 @@ export default function AdminPlanPage() {
     // Load Departments
     useEffect(() => {
         async function loadDepts() {
-            const { data } = await supabase.from("departments").select("id, name_vi").order("sort_order")
+            const { data } = await supabase.from("departments").select("id, name_vi, code").order("sort_order")
             if (data) {
                 setDepartments(data)
                 if (data.length > 0) setSelectedDept(data[0].id)
@@ -179,7 +179,9 @@ export default function AdminPlanPage() {
                         <TableRow>
                             <TableHead className="w-[200px]">Ngày</TableHead>
                             <TableHead>Kế hoạch (Tấn)</TableHead>
-                            <TableHead>Kế hoạch (Container)</TableHead>
+                            {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                <TableHead>Kế hoạch (Container)</TableHead>
+                            )}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -196,16 +198,18 @@ export default function AdminPlanPage() {
                                         onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
                                     />
                                 </TableCell>
-                                <TableCell>
-                                    <Input
-                                        type="number"
-                                        step="1"
-                                        min="0"
-                                        className="max-w-[150px]"
-                                        value={row.plan_container}
-                                        onChange={(e) => handlePlanChange(idx, "plan_container", e.target.value)}
-                                    />
-                                </TableCell>
+                                {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                    <TableCell>
+                                        <Input
+                                            type="number"
+                                            step="1"
+                                            min="0"
+                                            className="max-w-[150px]"
+                                            value={row.plan_container}
+                                            onChange={(e) => handlePlanChange(idx, "plan_container", e.target.value)}
+                                        />
+                                    </TableCell>
+                                )}
                             </TableRow>
                         ))}
                     </TableBody>
