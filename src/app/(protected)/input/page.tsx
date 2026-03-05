@@ -382,19 +382,6 @@ export default function InputPage() {
                                                 </FormItem>
                                             )}
                                         />
-                                        <FormField
-                                            control={formKpi.control}
-                                            name="downtime_min"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Downtime (Phút)</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" step="1" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
                                     </div>
 
                                     <FormField
