@@ -51,7 +51,7 @@ export default function InputPage() {
     const [date, setDate] = useState<Date>(new Date())
     const [role, setRole] = useState("")
     const [userId, setUserId] = useState("")
-    const [departments, setDepartments] = useState<{ id: string, name_vi: string }[]>([])
+    const [departments, setDepartments] = useState<{ id: string, name_vi: string, code: string }[]>([])
     const [selectedDept, setSelectedDept] = useState<string>("")
     const [isSaving, setIsSaving] = useState(false)
 
@@ -93,7 +93,7 @@ export default function InputPage() {
             }
 
             // Load all departments
-            const { data: depts } = await supabase.from("departments").select("id, name_vi").order("sort_order")
+            const { data: depts } = await supabase.from("departments").select("id, name_vi, code").order("sort_order")
             if (depts) setDepartments(depts)
         }
         loadUser()
@@ -114,11 +114,18 @@ export default function InputPage() {
                 .eq("work_date", formattedDate)
                 .single()
 
-            if (actualData) {
+            // Fetch Container Actual
+            const { data: cData } = await supabase
+                .from("daily_containers")
+                .select("*")
+                .eq("work_date", formattedDate)
+                .single()
+
+            if (actualData || cData) {
                 formActual.reset({
-                    actual_ton: Number(actualData.actual_ton),
-                    actual_container: Number(actualData.actual_container || 0),
-                    note: actualData.note || "",
+                    actual_ton: Number(actualData?.actual_ton || 0),
+                    actual_container: Number(cData?.actual_container || 0),
+                    note: actualData?.note || "",
                 })
             } else {
                 formActual.reset({ actual_ton: 0, actual_container: 0, note: "" })
@@ -157,13 +164,13 @@ export default function InputPage() {
         }
         setIsSaving(true)
         const formattedDate = format(date, "yyyy-MM-dd")
+        const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code
 
-        const { error } = await supabase.from("daily_actual").upsert(
+        const { error: actualError } = await supabase.from("daily_actual").upsert(
             {
                 department_id: selectedDept,
                 work_date: formattedDate,
                 actual_ton: values.actual_ton,
-                actual_container: values.actual_container,
                 note: values.note,
                 updated_by: userId,
                 updated_at: new Date().toISOString()
@@ -171,10 +178,23 @@ export default function InputPage() {
             { onConflict: 'department_id,work_date' }
         )
 
-        if (error) {
-            toast.error("Lỗi khi lưu Actual: " + error.message)
+        let cError = null
+        if (selectedDeptCode === "PACK" || role === "admin") {
+            const { error: containerError } = await supabase.from("daily_containers").upsert(
+                {
+                    work_date: formattedDate,
+                    actual_container: values.actual_container,
+                    updated_at: new Date().toISOString()
+                },
+                { onConflict: 'work_date' }
+            )
+            cError = containerError
+        }
+
+        if (actualError || cError) {
+            toast.error("Lỗi khi lưu Actual: " + (actualError?.message || cError?.message))
         } else {
-            toast.success("Đã rưu Actual thành công")
+            toast.success("Đã lưu Actual thành công")
         }
         setIsSaving(false)
     }
@@ -286,19 +306,21 @@ export default function InputPage() {
                                                 </FormItem>
                                             )}
                                         />
-                                        <FormField
-                                            control={formActual.control}
-                                            name="actual_container"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Sản lượng xuất (Container)</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" step="1" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        {(departments.find(d => d.id === selectedDept)?.code === "PACK" || role === "admin") && (
+                                            <FormField
+                                                control={formActual.control}
+                                                name="actual_container"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Sản lượng xuất (Container)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" step="1" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        )}
                                     </div>
                                     <FormField
                                         control={formActual.control}

@@ -47,17 +47,24 @@ export default function AdminPlanPage() {
                 .gte("work_date", start)
                 .lte("work_date", end)
 
+            const { data: cData } = await supabase
+                .from("daily_containers")
+                .select("*")
+                .gte("work_date", start)
+                .lte("work_date", end)
+
             // Generate skeleton for 7 days
             const weeklySkeleton = Array.from({ length: 7 }).map((_, idx) => {
                 const d = addDays(weekStart, idx)
                 const dStr = format(d, "yyyy-MM-dd")
                 const existing = data?.find(row => row.work_date === dStr)
+                const existingC = cData?.find(row => row.work_date === dStr)
 
                 return {
                     work_date: dStr,
                     display_date: format(d, "EEEE, dd/MM", { locale: vi }),
                     plan_ton: existing ? Number(existing.plan_ton) : 0,
-                    plan_container: existing ? Number(existing.plan_container || 0) : 0,
+                    plan_container: existingC ? Number(existingC.plan_container || 0) : 0,
                     id: existing ? existing.id : undefined
                 }
             })
@@ -82,12 +89,11 @@ export default function AdminPlanPage() {
         }
         setIsSaving(true)
 
-        // Prepare upsert payload
+        // Prepare upsert payload for plan
         const payload = planData.map(d => ({
             department_id: selectedDept,
             work_date: d.work_date,
             plan_ton: d.plan_ton,
-            plan_container: d.plan_container,
             updated_at: new Date().toISOString()
         }))
 
@@ -95,8 +101,18 @@ export default function AdminPlanPage() {
             .from("daily_plan")
             .upsert(payload, { onConflict: 'department_id,work_date' })
 
-        if (error) {
-            toast.error("Lỗi khi lưu kế hoạch: " + error.message)
+        // Prepare upsert payload for containers
+        const containerPayload = planData.map(d => ({
+            work_date: d.work_date,
+            plan_container: d.plan_container,
+            updated_at: new Date().toISOString()
+        }))
+        const { error: cError } = await supabase
+            .from("daily_containers")
+            .upsert(containerPayload, { onConflict: 'work_date' })
+
+        if (error || cError) {
+            toast.error("Lỗi khi lưu kế hoạch: " + (error?.message || cError?.message))
         } else {
             toast.success("Lưu kế hoạch tuần thành công")
         }
