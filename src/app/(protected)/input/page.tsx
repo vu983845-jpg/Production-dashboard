@@ -67,6 +67,7 @@ export default function InputPage() {
     const [departments, setDepartments] = useState<{ id: string, name_en: string, code: string }[]>([])
     const [selectedDept, setSelectedDept] = useState<string>("")
     const [isSaving, setIsSaving] = useState(false)
+    const [allowedDeptIds, setAllowedDeptIds] = useState<Set<string>>(new Set())
     const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, title: string, description: string, onConfirm: () => void }>({
         isOpen: false,
         title: "",
@@ -110,9 +111,15 @@ export default function InputPage() {
             const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
             if (profile) {
                 setRole(profile.role)
+                const ids = new Set<string>()
                 if (profile.department_id) {
+                    ids.add(profile.department_id)
                     setSelectedDept(profile.department_id)
                 }
+                if (profile.secondary_department_id) {
+                    ids.add(profile.secondary_department_id)
+                }
+                setAllowedDeptIds(ids)
             }
 
             // Load all departments
@@ -353,13 +360,13 @@ export default function InputPage() {
                     <Select
                         value={selectedDept}
                         onValueChange={setSelectedDept}
-                        disabled={role === "dept_user"} // Lock if normal user
+                        disabled={role === "dept_user" && allowedDeptIds.size <= 1}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="Chọn bộ phận" />
                         </SelectTrigger>
                         <SelectContent>
-                            {departments.map((d) => (
+                            {(role === "dept_user" ? departments.filter(d => allowedDeptIds.has(d.id)) : departments).map((d) => (
                                 <SelectItem key={d.id} value={d.id}>
                                     {d.name_en}
                                 </SelectItem>
