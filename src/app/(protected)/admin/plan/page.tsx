@@ -179,30 +179,46 @@ export default function AdminPlanPage() {
             return;
         }
 
+        const isFgwhDept = departments.find(d => d.id === selectedDept)?.code === 'FGWH';
         const dailyPlanTon = Number((monthlyPlanTon / workingDays.length).toFixed(3));
 
-        const payload = workingDays.map(dateStr => ({
-            department_id: selectedDept,
-            work_date: dateStr,
-            plan_ton: dailyPlanTon,
-            target_broken_pct: targetBroken,
-            target_unpeel_pct: targetUnpeel,
-            target_sw_pct: targetSw,
-            target_isp_pct: targetIsp,
-            target_yield_pct: targetYield,
-            updated_at: new Date().toISOString()
-        }));
-
-        const { error } = await supabase
-            .from("daily_plan")
-            .upsert(payload, { onConflict: 'department_id,work_date' });
-
-        if (error) {
-            toast.error("Lỗi khi lưu kế hoạch tháng: " + error.message);
+        if (isFgwhDept) {
+            // For FGWH: distribute into plan_isp_ton in daily_fgwh
+            const fgwhPayload = workingDays.map(dateStr => ({
+                work_date: dateStr,
+                plan_isp_ton: dailyPlanTon,
+                updated_at: new Date().toISOString()
+            }));
+            const { error: fgwhError } = await supabase
+                .from('daily_fgwh')
+                .upsert(fgwhPayload, { onConflict: 'work_date' });
+            if (fgwhError) {
+                toast.error('Lỗi khi lưu kế hoạch FGWH: ' + fgwhError.message);
+            } else {
+                toast.success(`Đã chia đều ${monthlyPlanTon} tấn vào KH ISP qua ${workingDays.length} ngày!`);
+                setWeekStart(new Date(weekStart.getTime()));
+            }
         } else {
-            toast.success(`Đã chia đều ${monthlyPlanTon} tấn qua ${workingDays.length} ngày thành công!`);
-            // Trigger a re-render/refetch of the weekly plan by simply re-evaluating the current weekStart
-            setWeekStart(new Date(weekStart.getTime()));
+            const payload = workingDays.map(dateStr => ({
+                department_id: selectedDept,
+                work_date: dateStr,
+                plan_ton: dailyPlanTon,
+                target_broken_pct: targetBroken,
+                target_unpeel_pct: targetUnpeel,
+                target_sw_pct: targetSw,
+                target_isp_pct: targetIsp,
+                target_yield_pct: targetYield,
+                updated_at: new Date().toISOString()
+            }));
+            const { error } = await supabase
+                .from('daily_plan')
+                .upsert(payload, { onConflict: 'department_id,work_date' });
+            if (error) {
+                toast.error('Lỗi khi lưu kế hoạch tháng: ' + error.message);
+            } else {
+                toast.success(`Đã chia đều ${monthlyPlanTon} tấn qua ${workingDays.length} ngày thành công!`);
+                setWeekStart(new Date(weekStart.getTime()));
+            }
         }
 
         setIsSavingMonthly(false);
@@ -317,7 +333,9 @@ export default function AdminPlanPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[200px]">Ngày</TableHead>
-                                <TableHead>Kế hoạch (Tấn)</TableHead>
+                                {departments.find(d => d.id === selectedDept)?.code !== "FGWH" && (
+                                    <TableHead>Kế hoạch (Tấn)</TableHead>
+                                )}
                                 {departments.find(d => d.id === selectedDept)?.code === "FGWH" && (
                                     <>
                                         <TableHead>KH ISP (Tấn)</TableHead>
@@ -330,16 +348,18 @@ export default function AdminPlanPage() {
                             {planData.map((row, idx) => (
                                 <TableRow key={row.work_date}>
                                     <TableCell className="font-medium capitalize">{row.display_date}</TableCell>
-                                    <TableCell>
-                                        <Input
-                                            type="number"
-                                            step="0.1"
-                                            min="0"
-                                            className="max-w-[150px]"
-                                            value={row.plan_ton}
-                                            onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
-                                        />
-                                    </TableCell>
+                                    {departments.find(d => d.id === selectedDept)?.code !== "FGWH" && (
+                                        <TableCell>
+                                            <Input
+                                                type="number"
+                                                step="0.1"
+                                                min="0"
+                                                className="max-w-[150px]"
+                                                value={row.plan_ton}
+                                                onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
+                                            />
+                                        </TableCell>
+                                    )}
                                     {departments.find(d => d.id === selectedDept)?.code === "FGWH" && (
                                         <>
                                             <TableCell>
