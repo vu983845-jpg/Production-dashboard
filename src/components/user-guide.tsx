@@ -66,7 +66,7 @@ export function UserGuide() {
 
                     <div className="pt-4 border-t text-xs text-muted-foreground text-center">
                         <p>App này sử dụng nội bộ VICC Long An.</p>
-                        <p>Hệ thống điều hành bởi V.H - Thiết kế riêng cho nhà máy Intersnack Cashew.</p>
+                        <p>Hệ thống điều hành bởi V.H.</p>
                     </div>
                 </div>
             </DialogContent>
