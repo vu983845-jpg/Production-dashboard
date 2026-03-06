@@ -483,7 +483,6 @@ export default function InputPage() {
                                             );
                                         }
 
-                                        // 2. Hand Peeling (WIP Đầu/Cuối, ISP)
                                         if (selectedDeptCode === "HAND") {
                                             return (
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -500,7 +499,6 @@ export default function InputPage() {
                                             );
                                         }
 
-                                        // 3. Shelling (Broken)
                                         if (selectedDeptCode === "SHELL") {
                                             return (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -511,7 +509,6 @@ export default function InputPage() {
                                             );
                                         }
 
-                                        // 4. Borma (SW)
                                         if (selectedDeptCode === "BORMA") {
                                             return (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -522,7 +519,6 @@ export default function InputPage() {
                                             );
                                         }
 
-                                        // 5. Steaming (WIP Tồn kho)
                                         if (selectedDeptCode === "STEAM") {
                                             return (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -536,7 +532,7 @@ export default function InputPage() {
                                             );
                                         }
 
-                                        // 6. Default (RCN, CS, PACK) (WIP Đầu/Cuối, Input, Output)
+                                        // Default forms for RCN, Color Sorter, and PACK (Packing)
                                         return (
                                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                                                 <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
@@ -549,7 +545,7 @@ export default function InputPage() {
                                                     <FormItem><FormLabel>Input đầu vào (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                                 <FormField control={formKpi.control} name="good_output_ton" render={({ field }) => (
-                                                    <FormItem><FormLabel>Good Output (Tính Yield)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    <FormItem><FormLabel>Good Output đạt (Tính Yield)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
                                                 )} />
                                             </div>
                                         );
