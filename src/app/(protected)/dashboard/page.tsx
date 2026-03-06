@@ -573,8 +573,8 @@ export default function DashboardPage() {
 
                     {/* 9 MINI DASHBOARDS GRID - 3x3 format on standard desktops */}
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                        {/* Department Cards */}
-                        {departments.map(d => renderMiniDashboard(d.id, d.name_en))}
+                        {/* Department Cards - exclude FGWH since it has its own card above */}
+                        {departments.filter(d => d.code !== 'FGWH').map(d => renderMiniDashboard(d.id, d.name_en))}
                     </div>
                 </TabsContent>
 
