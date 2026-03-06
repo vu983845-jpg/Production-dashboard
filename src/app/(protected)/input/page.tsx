@@ -385,59 +385,50 @@ export default function InputPage() {
                     <p className="font-semibold text-lg">🔒 Chế độ Xem</p>
                     <p className="text-sm text-center">Tài khoản này chỉ có quyền xem Dashboard. Liên hệ Admin để được cấp quyền nhập liệu.</p>
                 </div>
+            ) : departments.find(d => d.id === selectedDept)?.code === 'FGWH' ? (
+                /* FGWH: Direct ISP / Non-ISP form, no tabs needed */
+                <div className="rounded-xl border bg-card text-card-foreground shadow">
+                    <div className="p-6 space-y-6 max-w-lg">
+                        <h3 className="font-semibold text-base">FGWH — Nhập Sản lượng thực tế</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">ISP Thực tế (Tấn)</label>
+                                <input
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    value={fgwhData.actual_isp_ton}
+                                    onChange={e => setFgwhData(prev => ({ ...prev, actual_isp_ton: Number(e.target.value) }))}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Non-ISP Thực tế (Tấn)</label>
+                                <input
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    value={fgwhData.actual_non_isp_ton}
+                                    onChange={e => setFgwhData(prev => ({ ...prev, actual_non_isp_ton: Number(e.target.value) }))}
+                                />
+                            </div>
+                        </div>
+                        <button
+                            onClick={saveFgwh}
+                            disabled={isSaving}
+                            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
+                        >
+                            {isSaving ? 'Đang lưu...' : 'Lưu FGWH'}
+                        </button>
+                    </div>
+                </div>
             ) : (
                 <Tabs defaultValue="actual" className="space-y-4">
                     <TabsList>
-                        {departments.find(d => d.id === selectedDept)?.code === 'FGWH' ? (
-                            <TabsTrigger value="fgwh">FGWH - Nhập ISP / Non-ISP</TabsTrigger>
-                        ) : (
-                            <>
-                                <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
-                                <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
-                            </>
-                        )}
+                        <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
+                        <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
                     </TabsList>
-
-                    {/* FGWH ISP/Non-ISP Tab */}
-                    {departments.find(d => d.id === selectedDept)?.code === 'FGWH' && (
-                        <TabsContent value="fgwh" className="space-y-4">
-                            <div className="rounded-xl border bg-card text-card-foreground shadow">
-                                <div className="p-6 space-y-6 max-w-lg">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">ISP Thực tế (Tấn)</label>
-                                            <input
-                                                type="number"
-                                                step="0.001"
-                                                min="0"
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                                                value={fgwhData.actual_isp_ton}
-                                                onChange={e => setFgwhData(prev => ({ ...prev, actual_isp_ton: Number(e.target.value) }))}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">Non-ISP Thực tế (Tấn)</label>
-                                            <input
-                                                type="number"
-                                                step="0.001"
-                                                min="0"
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                                                value={fgwhData.actual_non_isp_ton}
-                                                onChange={e => setFgwhData(prev => ({ ...prev, actual_non_isp_ton: Number(e.target.value) }))}
-                                            />
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={saveFgwh}
-                                        disabled={isSaving}
-                                        className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
-                                    >
-                                        {isSaving ? 'Đang lưu...' : 'Lưu FGWH'}
-                                    </button>
-                                </div>
-                            </div>
-                        </TabsContent>
-                    )}
 
                     <TabsContent value="actual" className="space-y-4">
                         <div className="rounded-xl border bg-card text-card-foreground shadow">
