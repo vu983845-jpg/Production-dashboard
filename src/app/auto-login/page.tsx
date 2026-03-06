@@ -54,6 +54,12 @@ function AutoLoginContent() {
                     throw new Error(data.error || "Lỗi xác thực tự động");
                 }
 
+                if (data.redirectUrl) {
+                    if (isMounted) setStatus("Đang tải phiên đăng nhập...");
+                    window.location.href = data.redirectUrl;
+                    return;
+                }
+
                 if (isMounted) {
                     toast.success("Đăng nhập tự động thành công!");
                     router.refresh(); // Refresh Next.js server components with new auth state
