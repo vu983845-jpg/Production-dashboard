@@ -608,8 +608,8 @@ export default function DashboardPage() {
                                         <TableHead>Ngày / Date</TableHead>
                                         <TableHead className="text-right">{t('col_plan')}</TableHead>
                                         <TableHead className="text-right">{t('col_actual')}</TableHead>
-                                        <TableHead className="text-right">Input (T)</TableHead>
-                                        <TableHead className="text-right">Output (T)</TableHead>
+                                        <TableHead className="text-right">Input (Tấn)</TableHead>
+                                        <TableHead className="text-right">Output (Tấn)</TableHead>
                                         <TableHead className="text-right">{t('col_downtime')}</TableHead>
                                     </TableRow>
                                 )}

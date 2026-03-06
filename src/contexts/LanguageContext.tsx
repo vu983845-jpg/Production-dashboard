@@ -13,7 +13,7 @@ interface LanguageContextProps {
 const translations: Record<string, Record<Language, string>> = {
     // Layout
     "nav.dashboard": { vi: "Tổng quan Sản xuất", en: "Dashboard" },
-    "nav.input": { vi: "Ghi nhận kết quả sản xuất", en: "Data Input" },
+    "nav.input": { vi: "Nhập Dữ liệu", en: "Data Input" },
     "nav.plan": { vi: "Kế hoạch Sản xuất", en: "Plan Setup" },
     "nav.users": { vi: "Nhân Sự", en: "Personnel" },
     "role": { vi: "Quyền", en: "Role" },
@@ -26,12 +26,12 @@ const translations: Record<string, Record<Language, string>> = {
     "tab_regions": { vi: "3 Charts", en: "3 Charts" },
     "dropdown_placeholder": { vi: "Chọn để Lọc Dữ liệu", en: "Select to Filter Data" },
     "all_factory": { vi: "Tổng Hợp Toàn Nhà Máy", en: "Total Factory Aggregate" },
-    "all_factory_card": { vi: "CẢ NHÀ MÁY (TỔNG HỢP)", en: "FACTORY (AGGREGATE)" },
+    "all_factory_card": { vi: "TỔNG NHÀ MÁY", en: "FACTORY (AGGREGATE)" },
     "export_btn": { vi: "Xuất file", en: "Export" },
     "actual_vs_plan": { vi: "Thực tế / Kế hoạch (T)", en: "Actual / Plan (T)" },
     "achv_pct": { vi: "Mức đạt (%)", en: "Target Achieved (%)" },
     "downtime": { vi: "Downtime", en: "Downtime" },
-    "daily_needed": { vi: "Cân đối Target (Cần đạt/Ngày)", en: "Daily Target Needed" },
+    "daily_needed": { vi: "Cần đạt / Ngày (T)", en: "Daily Target Needed" },
     "container": { vi: "Số Lượng Xuất (Container)", en: "Exported Containers" },
 
     // Regions
