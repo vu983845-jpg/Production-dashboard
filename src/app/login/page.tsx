@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,17 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const supabase = createClient();
+
+    useEffect(() => {
+        // Automatically check for a valid session (e.g. from magic link auth hash)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || session) {
+                router.push('/dashboard');
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [router, supabase]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
