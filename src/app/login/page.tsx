@@ -18,7 +18,14 @@ export default function LoginPage() {
     const supabase = createClient();
 
     useEffect(() => {
-        // Automatically check for a valid session (e.g. from magic link auth hash)
+        // Automatically check for a valid session on mount (catches #access_token on URL)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                router.push('/dashboard');
+            }
+        });
+
+        // Listen for standard auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' || session) {
                 router.push('/dashboard');
