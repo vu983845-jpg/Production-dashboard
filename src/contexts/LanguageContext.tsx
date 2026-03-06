@@ -22,15 +22,15 @@ const translations: Record<string, Record<Language, string>> = {
     // Dashboard general
     "command_center": { vi: "Production Dashboard", en: "Production Dashboard" },
     "command_desc": { vi: "Theo dõi toàn cảnh tiến độ của nhà máy", en: "Overall view of factory operations" },
-    "tab_stations": { vi: "9 Table", en: "9 Table" },
-    "tab_regions": { vi: "3 Table", en: "3 Table" },
+    "tab_stations": { vi: "9 Tables", en: "9 Tables" },
+    "tab_regions": { vi: "3 Tables", en: "3 Tables" },
     "dropdown_placeholder": { vi: "Chọn để Lọc Dữ liệu", en: "Select to Filter Data" },
     "all_factory": { vi: "Tổng Hợp Toàn Nhà Máy", en: "Total Factory Aggregate" },
     "all_factory_card": { vi: "CẢ NHÀ MÁY (TỔNG HỢP)", en: "FACTORY (AGGREGATE)" },
     "export_btn": { vi: "Xuất file", en: "Export" },
     "actual_vs_plan": { vi: "Thực tế / Kế hoạch (T)", en: "Actual / Plan (T)" },
     "achv_pct": { vi: "Mức đạt (%)", en: "Target Achieved (%)" },
-    "downtime": { vi: "Thời gian Chết máy", en: "Machine Downtime" },
+    "downtime": { vi: "Downtime", en: "Downtime" },
     "daily_needed": { vi: "Cân đối Target (Cần đạt/Ngày)", en: "Daily Target Needed" },
     "container": { vi: "Số Lượng Xuất (Container)", en: "Exported Containers" },
 
@@ -46,7 +46,7 @@ const translations: Record<string, Record<Language, string>> = {
     "col_actual": { vi: "Thực tế (T)", en: "Actual (T)" },
     "col_achv": { vi: "Mức đạt (%)", en: "Achv. (%)" },
     "col_variance": { vi: "Chênh lệch (T)", en: "Variance (T)" },
-    "col_downtime": { vi: "Chết máy (Phút)", en: "Downtime (Min)" },
+    "col_downtime": { vi: "Downtime (Phút)", en: "Downtime (Min)" },
 }
 
 const LanguageContext = createContext<LanguageContextProps | undefined>(undefined)

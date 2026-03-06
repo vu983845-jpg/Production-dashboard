@@ -25,6 +25,7 @@ import { createClient } from "@/lib/supabase/client"
 import { IntersnackLogo } from "@/components/intersnack-logo"
 import { LanguageToggle } from "@/components/language-toggle"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { UserGuide } from "@/components/user-guide"
 
 interface AppLayoutProps {
     children: ReactNode
@@ -162,6 +163,12 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
                 {children}
             </main>
+            <footer className="mt-auto border-t bg-background px-4 py-3 sm:px-6">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+                    <UserGuide />
+                    <span className="text-xs text-muted-foreground/60 italic font-medium">V.H</span>
+                </div>
+            </footer>
         </div>
     )
 }
