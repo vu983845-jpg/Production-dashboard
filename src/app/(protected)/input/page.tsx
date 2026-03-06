@@ -373,6 +373,11 @@ export default function InputPage() {
                 <div className="flex flex-col items-center justify-center p-12 mt-8 border rounded-xl border-dashed bg-card/50 text-muted-foreground">
                     <p>Vui lòng chọn bộ phận ở thanh Tùy chọn để bắt đầu nhập liệu.</p>
                 </div>
+            ) : role === 'viewer' ? (
+                <div className="flex flex-col items-center justify-center p-12 mt-8 border rounded-xl border-dashed bg-amber-50 text-amber-700 gap-2">
+                    <p className="font-semibold text-lg">🔒 Chế độ Xem</p>
+                    <p className="text-sm text-center">Tài khoản này chỉ có quyền xem Dashboard. Liên hệ Admin để được cấp quyền nhập liệu.</p>
+                </div>
             ) : (
                 <Tabs defaultValue="actual" className="space-y-4">
                     <TabsList>
