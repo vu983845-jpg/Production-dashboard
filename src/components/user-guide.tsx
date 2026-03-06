@@ -42,8 +42,8 @@ export function UserGuide() {
                         <h3 className="font-semibold text-base mb-2 text-primary">2. Ghi nhận Sản xuất (Data Input)</h3>
                         <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
                             <li>Chọn <strong>Bộ phận</strong> và <strong>Ngày tháng</strong> để nhập dữ liệu.</li>
-                            <li>Nhập các thông số như Thực tế sản xuất (T), Số lần Chết máy (Logs), và các Vấn đề ảnh hưởng tới bộ phận.</li>
-                            <li>Nhấn <strong>Lưu Dữ liệu Trạm</strong> để gửi báo cáo lên hệ thống. Đảm bảo trạng thái hiện lên thông báo "Lưu thành công".</li>
+                            <li>Nhập các thông số như Thực tế sản xuất (T), và các Vấn đề ảnh hưởng tới bộ phận.</li>
+                            <li>Nhấn <strong>Lưu Dữ liệu Bộ phận</strong> để gửi báo cáo lên hệ thống. Đảm bảo trạng thái hiện lên thông báo "Lưu thành công".</li>
                         </ul>
                     </section>
 
@@ -59,8 +59,8 @@ export function UserGuide() {
                     <section>
                         <h3 className="font-semibold text-base mb-2 text-primary">4. Vấn đề thường gặp</h3>
                         <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                            <li><strong>Không thể chỉnh sửa dữ liệu của ngày quá hạn?</strong> Vui lòng liên hệ Admin trưởng xưởng để mở khóa (Báo cáo muộn).</li>
-                            <li><strong>Thiếu tài khoản nhân sự?</strong> Admin có thể vào trang Nhân sự để thêm mới và phân bổ chức vụ (Role).</li>
+                            <li><strong>Báo cáo Thời gian chết máy (Downtime)?</strong> Việc ghi nhận Downtime hiện tại được thực hiện trực tiếp trên <strong>DDS App</strong>. Hệ thống Dashboard sẽ tự động đồng bộ dữ liệu Downtime từ DDS.</li>
+                            <li><strong>Không thể chỉnh sửa dữ liệu, báo cáo muộn hoặc các lỗi hệ thống khác?</strong> Vui lòng liên hệ trực tiếp <strong>VuHuynh</strong> để được hỗ trợ kiểm tra và xử lý.</li>
                         </ul>
                     </section>
 
