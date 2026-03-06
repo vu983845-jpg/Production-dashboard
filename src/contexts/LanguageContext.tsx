@@ -22,8 +22,8 @@ const translations: Record<string, Record<Language, string>> = {
     // Dashboard general
     "command_center": { vi: "Production Dashboard", en: "Production Dashboard" },
     "command_desc": { vi: "Theo dõi toàn cảnh tiến độ của nhà máy", en: "Overall view of factory operations" },
-    "tab_stations": { vi: "9 Tables", en: "9 Tables" },
-    "tab_regions": { vi: "3 Tables", en: "3 Tables" },
+    "tab_stations": { vi: "9 Charts", en: "9 Charts" },
+    "tab_regions": { vi: "3 Charts", en: "3 Charts" },
     "dropdown_placeholder": { vi: "Chọn để Lọc Dữ liệu", en: "Select to Filter Data" },
     "all_factory": { vi: "Tổng Hợp Toàn Nhà Máy", en: "Total Factory Aggregate" },
     "all_factory_card": { vi: "CẢ NHÀ MÁY (TỔNG HỢP)", en: "FACTORY (AGGREGATE)" },
