@@ -43,6 +43,8 @@ const kpiSchema = z.object({
     input_ton: z.coerce.number().min(0, "Input >= 0"),
     good_output_ton: z.coerce.number().min(0, "Output >= 0"),
     downtime_min: z.coerce.number().min(0, "Downtime >= 0").max(1440, "Downtime <= 1440").int(),
+    broken_pct: z.coerce.number().min(0, "Broken >= 0").max(100, "Broken <= 100").optional().default(0),
+    unpeel_pct: z.coerce.number().min(0, "Unpeel >= 0").max(100, "Unpeel <= 100").optional().default(0),
     note: z.string().optional(),
 })
 
@@ -73,6 +75,8 @@ export default function InputPage() {
             input_ton: 0,
             good_output_ton: 0,
             downtime_min: 0,
+            broken_pct: 0,
+            unpeel_pct: 0,
             note: "",
         },
     })
@@ -146,10 +150,12 @@ export default function InputPage() {
                     input_ton: Number(kpiData.input_ton),
                     good_output_ton: Number(kpiData.good_output_ton),
                     downtime_min: Number(kpiData.downtime_min),
+                    broken_pct: Number(kpiData.broken_pct || 0),
+                    unpeel_pct: Number(kpiData.unpeel_pct || 0),
                     note: kpiData.note || "",
                 })
             } else {
-                formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, downtime_min: 0, note: "" })
+                formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, downtime_min: 0, broken_pct: 0, unpeel_pct: 0, note: "" })
             }
         }
 
@@ -356,60 +362,100 @@ export default function InputPage() {
                                 <Form {...formKpi}>
                                     <form onSubmit={formKpi.handleSubmit(onSubmitKpi)} className="space-y-6">
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <FormField
-                                                control={formKpi.control}
-                                                name="wip_open_ton"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>WIP Tồn đầu ngày (Tấn)</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="number" step="0.001" {...field} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={formKpi.control}
-                                                name="wip_close_ton"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>WIP Tồn cuối ngày (Tấn)</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="number" step="0.001" {...field} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={formKpi.control}
-                                                name="input_ton"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Input đầu vào (Tấn)</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="number" step="0.001" {...field} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={formKpi.control}
-                                                name="good_output_ton"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Good Output đạt (Tấn - Tính Yield)</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="number" step="0.001" {...field} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
+                                        {(() => {
+                                            const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code;
+                                            const isPeeling = selectedDeptCode === "PEEL_MC" || selectedDeptCode === "HAND";
+
+                                            if (isPeeling) {
+                                                return (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <FormField
+                                                            control={formKpi.control}
+                                                            name="broken_pct"
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Tỷ lệ Bể (Broken %)</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input type="number" step="0.1" {...field} />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                        <FormField
+                                                            control={formKpi.control}
+                                                            name="unpeel_pct"
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Tỷ lệ Sót lụa (Unpeel %)</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input type="number" step="0.1" {...field} />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <FormField
+                                                        control={formKpi.control}
+                                                        name="wip_open_ton"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>WIP Tồn đầu ngày (Tấn)</FormLabel>
+                                                                <FormControl>
+                                                                    <Input type="number" step="0.001" {...field} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={formKpi.control}
+                                                        name="wip_close_ton"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>WIP Tồn cuối ngày (Tấn)</FormLabel>
+                                                                <FormControl>
+                                                                    <Input type="number" step="0.001" {...field} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={formKpi.control}
+                                                        name="input_ton"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Input đầu vào (Tấn)</FormLabel>
+                                                                <FormControl>
+                                                                    <Input type="number" step="0.001" {...field} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={formKpi.control}
+                                                        name="good_output_ton"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Good Output đạt (Tấn - Tính Yield)</FormLabel>
+                                                                <FormControl>
+                                                                    <Input type="number" step="0.001" {...field} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            );
+                                        })()}
 
                                         <FormField
                                             control={formKpi.control}
