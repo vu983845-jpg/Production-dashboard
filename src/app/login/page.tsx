@@ -86,6 +86,17 @@ export default function LoginPage() {
                         <Button type="submit" className="w-full" disabled={loading}>
                             {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                         </Button>
+                        <div className="text-center mt-4 text-sm text-muted-foreground w-full">
+                            Bạn chưa có tài khoản?{" "}
+                            <span
+                                className="text-primary hover:underline cursor-pointer font-medium"
+                                onClick={() => {
+                                    alert("Để yêu cầu cấp tài khoản, vui lòng liên hệ Zalo: 0945646999");
+                                }}
+                            >
+                                Liên hệ hỗ trợ
+                            </span>
+                        </div>
                     </form>
                 </CardContent>
             </Card>
