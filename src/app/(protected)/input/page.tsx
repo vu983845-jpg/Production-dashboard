@@ -43,7 +43,6 @@ import { createClient } from "@/lib/supabase/client"
 // Schemas
 const actualSchema = z.object({
     actual_ton: z.coerce.number().min(0, "Giá trị phải >= 0"),
-    actual_container: z.coerce.number().min(0, "Container >= 0").int(),
     note: z.string().optional(),
 })
 
@@ -65,7 +64,7 @@ export default function InputPage() {
     const [date, setDate] = useState<Date>(new Date())
     const [role, setRole] = useState("")
     const [userId, setUserId] = useState("")
-    const [departments, setDepartments] = useState<{ id: string, name_vi: string, code: string }[]>([])
+    const [departments, setDepartments] = useState<{ id: string, name_en: string, code: string }[]>([])
     const [selectedDept, setSelectedDept] = useState<string>("")
     const [isSaving, setIsSaving] = useState(false)
     const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, title: string, description: string, onConfirm: () => void }>({
@@ -80,7 +79,6 @@ export default function InputPage() {
         resolver: zodResolver(actualSchema),
         defaultValues: {
             actual_ton: 0,
-            actual_container: 0,
             note: "",
         },
     })
@@ -117,7 +115,7 @@ export default function InputPage() {
             }
 
             // Load all departments
-            const { data: depts } = await supabase.from("departments").select("id, name_vi, code").order("sort_order")
+            const { data: depts } = await supabase.from("departments").select("id, name_en, code").order("sort_order")
             if (depts) setDepartments(depts)
         }
         loadUser()
@@ -138,21 +136,13 @@ export default function InputPage() {
                 .eq("work_date", formattedDate)
                 .single()
 
-            // Fetch Container Actual
-            const { data: cData } = await supabase
-                .from("daily_containers")
-                .select("*")
-                .eq("work_date", formattedDate)
-                .single()
-
-            if (actualData || cData) {
+            if (actualData) {
                 formActual.reset({
                     actual_ton: Number(actualData?.actual_ton || 0),
-                    actual_container: Number(cData?.actual_container || 0),
                     note: actualData?.note || "",
                 })
             } else {
-                formActual.reset({ actual_ton: 0, actual_container: 0, note: "" })
+                formActual.reset({ actual_ton: 0, note: "" })
             }
 
             // Fetch KPI
@@ -221,21 +211,8 @@ export default function InputPage() {
             { onConflict: 'department_id,work_date' }
         )
 
-        let cError = null
-        if (selectedDeptCode === "PACK") {
-            const { error: containerError } = await supabase.from("daily_containers").upsert(
-                {
-                    work_date: formattedDate,
-                    actual_container: values.actual_container,
-                    updated_at: new Date().toISOString()
-                },
-                { onConflict: 'work_date' }
-            )
-            cError = containerError
-        }
-
-        if (actualError || cError) {
-            toast.error("Lỗi khi lưu Actual: " + (actualError?.message || cError?.message))
+        if (actualError) {
+            toast.error("Lỗi khi lưu Actual: " + actualError.message)
         } else {
             toast.success("Đã lưu Actual thành công")
         }
@@ -349,7 +326,7 @@ export default function InputPage() {
                         <SelectContent>
                             {departments.map((d) => (
                                 <SelectItem key={d.id} value={d.id}>
-                                    {d.name_vi}
+                                    {d.name_en}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -387,21 +364,7 @@ export default function InputPage() {
                                                     </FormItem>
                                                 )}
                                             />
-                                            {(departments.find(d => d.id === selectedDept)?.code === "PACK") && (
-                                                <FormField
-                                                    control={formActual.control}
-                                                    name="actual_container"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Sản lượng xuất (Container)</FormLabel>
-                                                            <FormControl>
-                                                                <Input type="number" step="1" {...field} />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            )}
+
                                         </div>
                                         <FormField
                                             control={formActual.control}

@@ -41,7 +41,7 @@ const translations: Record<string, Record<Language, string>> = {
 
     // Table 
     "master_data_table": { vi: "Bảng Dữ liệu Sản lượng Tổng hợp", en: "Master Production Data Table" },
-    "col_dept": { vi: "Trạm / Ngày", en: "Station / Date" },
+    "col_dept": { vi: "Bộ phận / Ngày", en: "Dept / Date" },
     "col_plan": { vi: "Kế hoạch (T)", en: "Plan (T)" },
     "col_actual": { vi: "Thực tế (T)", en: "Actual (T)" },
     "col_achv": { vi: "Mức đạt (%)", en: "Achv. (%)" },

@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client"
 
 export default function AdminPlanPage() {
     const supabase = createClient()
-    const [departments, setDepartments] = useState<{ id: string, name_vi: string, code: string }[]>([])
+    const [departments, setDepartments] = useState<{ id: string, name_en: string, code: string }[]>([])
     const [selectedDept, setSelectedDept] = useState<string>("")
     const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
     const [planData, setPlanData] = useState<any[]>([])
@@ -49,7 +49,7 @@ export default function AdminPlanPage() {
             }
 
             // Load Departments
-            const { data } = await supabase.from("departments").select("id, name_vi, code").order("sort_order")
+            const { data } = await supabase.from("departments").select("id, name_en, code").order("sort_order")
             if (data) {
                 setDepartments(data)
             }
@@ -72,8 +72,8 @@ export default function AdminPlanPage() {
                 .gte("work_date", start)
                 .lte("work_date", end)
 
-            const { data: cData } = await supabase
-                .from("daily_containers")
+            const { data: fgwhData } = await supabase
+                .from("daily_fgwh")
                 .select("*")
                 .gte("work_date", start)
                 .lte("work_date", end)
@@ -83,13 +83,14 @@ export default function AdminPlanPage() {
                 const d = addDays(weekStart, idx)
                 const dStr = format(d, "yyyy-MM-dd")
                 const existing = data?.find(row => row.work_date === dStr)
-                const existingC = cData?.find(row => row.work_date === dStr)
+                const existingF = fgwhData?.find(row => row.work_date === dStr)
 
                 return {
                     work_date: dStr,
                     display_date: format(d, "EEEE, dd/MM", { locale: vi }),
                     plan_ton: existing ? Number(existing.plan_ton) : 0,
-                    plan_container: existingC ? Number(existingC.plan_container || 0) : 0,
+                    plan_isp_ton: existingF ? Number(existingF.plan_isp_ton || 0) : 0,
+                    plan_non_isp_ton: existingF ? Number(existingF.plan_non_isp_ton || 0) : 0,
                     id: existing ? existing.id : undefined
                 }
             })
@@ -100,7 +101,7 @@ export default function AdminPlanPage() {
     }, [selectedDept, weekStart])
 
     // Handle Input change
-    const handlePlanChange = (index: number, field: "plan_ton" | "plan_container", value: string) => {
+    const handlePlanChange = (index: number, field: "plan_ton" | "plan_isp_ton" | "plan_non_isp_ton", value: string) => {
         const newData = [...planData]
         newData[index][field] = value === "" ? 0 : Number(value)
         setPlanData(newData)
@@ -126,18 +127,19 @@ export default function AdminPlanPage() {
             .from("daily_plan")
             .upsert(payload, { onConflict: 'department_id,work_date' })
 
-        // Prepare upsert payload for containers
-        const containerPayload = planData.map(d => ({
+        // Prepare upsert payload for FGWH ISP/Non-ISP plan
+        const fgwhPayload = planData.map(d => ({
             work_date: d.work_date,
-            plan_container: d.plan_container,
+            plan_isp_ton: d.plan_isp_ton,
+            plan_non_isp_ton: d.plan_non_isp_ton,
             updated_at: new Date().toISOString()
         }))
-        const { error: cError } = await supabase
-            .from("daily_containers")
-            .upsert(containerPayload, { onConflict: 'work_date' })
+        const { error: fgwhError } = await supabase
+            .from("daily_fgwh")
+            .upsert(fgwhPayload, { onConflict: 'work_date' })
 
-        if (error || cError) {
-            toast.error("Lỗi khi lưu kế hoạch: " + (error?.message || cError?.message))
+        if (error || fgwhError) {
+            toast.error("Lỗi khi lưu kế hoạch: " + (error?.message || fgwhError?.message))
         } else {
             toast.success("Lưu kế hoạch tuần thành công")
         }
@@ -228,7 +230,7 @@ export default function AdminPlanPage() {
                         </SelectTrigger>
                         <SelectContent>
                             {departments.map(d => (
-                                <SelectItem key={d.id} value={d.id}>{d.name_vi}</SelectItem>
+                                <SelectItem key={d.id} value={d.id}>{d.name_en}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -300,7 +302,7 @@ export default function AdminPlanPage() {
             ) : (
                 <div className="bg-card border rounded-xl shadow overflow-hidden mb-6">
                     <div className="flex items-center justify-between p-4 border-b">
-                        <h3 className="font-semibold">Bảng Plan Nhập liệu - {departments.find(d => d.id === selectedDept)?.name_vi}</h3>
+                        <h3 className="font-semibold">Bảng Plan Nhập liệu - {departments.find(d => d.id === selectedDept)?.name_en}</h3>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" onClick={handleCopyPrevWeek}>
                                 Copy tuần trước
@@ -316,8 +318,11 @@ export default function AdminPlanPage() {
                             <TableRow>
                                 <TableHead className="w-[200px]">Ngày</TableHead>
                                 <TableHead>Kế hoạch (Tấn)</TableHead>
-                                {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
-                                    <TableHead>Kế hoạch (Container)</TableHead>
+                                {departments.find(d => d.id === selectedDept)?.code === "FGWH" && (
+                                    <>
+                                        <TableHead>KH ISP (Tấn)</TableHead>
+                                        <TableHead>KH Non-ISP (Tấn)</TableHead>
+                                    </>
                                 )}
                             </TableRow>
                         </TableHeader>
@@ -335,17 +340,29 @@ export default function AdminPlanPage() {
                                             onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
                                         />
                                     </TableCell>
-                                    {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
-                                        <TableCell>
-                                            <Input
-                                                type="number"
-                                                step="1"
-                                                min="0"
-                                                className="max-w-[150px]"
-                                                value={row.plan_container}
-                                                onChange={(e) => handlePlanChange(idx, "plan_container", e.target.value)}
-                                            />
-                                        </TableCell>
+                                    {departments.find(d => d.id === selectedDept)?.code === "FGWH" && (
+                                        <>
+                                            <TableCell>
+                                                <Input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0"
+                                                    className="max-w-[150px]"
+                                                    value={row.plan_isp_ton}
+                                                    onChange={(e) => handlePlanChange(idx, "plan_isp_ton", e.target.value)}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0"
+                                                    className="max-w-[150px]"
+                                                    value={row.plan_non_isp_ton}
+                                                    onChange={(e) => handlePlanChange(idx, "plan_non_isp_ton", e.target.value)}
+                                                />
+                                            </TableCell>
+                                        </>
                                     )}
                                 </TableRow>
                             ))}

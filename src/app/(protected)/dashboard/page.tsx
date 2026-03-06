@@ -78,6 +78,13 @@ export default function DashboardPage() {
     const buildSummary = (records: any[], isTotal: boolean) => {
         let tPlan = 0, tActual = 0, tDown = 0, tInput = 0, tOutput = 0, tWip = 0;
         let tPlanCont = 0, tActualCont = 0;
+        let tPlanIsp = 0, tActualIsp = 0, tPlanNonIsp = 0, tActualNonIsp = 0;
+
+        let sumBroken = 0, countBroken = 0;
+        let sumUnpeel = 0, countUnpeel = 0;
+        let sumIsp = 0, countIsp = 0;
+        let sumSw = 0, countSw = 0;
+
         records.forEach(r => {
             tPlan += Number(isTotal ? r.total_plan_ton : r.plan_ton || 0);
             tPlanCont += Number(isTotal ? r.total_plan_container : r.plan_container || 0);
@@ -87,7 +94,28 @@ export default function DashboardPage() {
             tInput += Number(isTotal ? r.total_input_ton : r.input_ton || 0);
             tOutput += Number(isTotal ? r.total_good_output_ton : r.good_output_ton || 0);
             tWip = Number(isTotal ? r.total_wip_close_ton : r.wip_close_ton || 0);
+
+            // FGWH ISP / Non-ISP (only available on total records from v_dashboard_total_daily)
+            if (isTotal) {
+                tPlanIsp += Number(r.total_plan_isp_ton || 0);
+                tActualIsp += Number(r.total_actual_isp_ton || 0);
+                tPlanNonIsp += Number(r.total_plan_non_isp_ton || 0);
+                tActualNonIsp += Number(r.total_actual_non_isp_ton || 0);
+            }
+
+            if (!isTotal) {
+                if (Number(r.broken_pct) > 0) { sumBroken += Number(r.broken_pct); countBroken++; }
+                if (Number(r.unpeel_pct) > 0) { sumUnpeel += Number(r.unpeel_pct); countUnpeel++; }
+                if (Number(r.isp_pct) > 0) { sumIsp += Number(r.isp_pct); countIsp++; }
+                if (Number(r.sw_pct) > 0) { sumSw += Number(r.sw_pct); countSw++; }
+            } else {
+                if (Number(r.avg_broken_pct) > 0) { sumBroken += Number(r.avg_broken_pct); countBroken++; }
+                if (Number(r.avg_unpeel_pct) > 0) { sumUnpeel += Number(r.avg_unpeel_pct); countUnpeel++; }
+                if (Number(r.avg_isp_pct) > 0) { sumIsp += Number(r.avg_isp_pct); countIsp++; }
+                if (Number(r.avg_sw_pct) > 0) { sumSw += Number(r.avg_sw_pct); countSw++; }
+            }
         });
+
         return {
             totalPlan: tPlan,
             totalPlanCont: tPlanCont,
@@ -97,7 +125,15 @@ export default function DashboardPage() {
             variance: tActual - tPlan,
             downtime: tDown,
             wipClose: tWip,
-            yieldPct: tInput > 0 ? (tOutput / tInput) * 100 : 0
+            yieldPct: tInput > 0 ? (tOutput / tInput) * 100 : 0,
+            brokenPct: countBroken > 0 ? sumBroken / countBroken : 0,
+            unpeelPct: countUnpeel > 0 ? sumUnpeel / countUnpeel : 0,
+            ispPct: countIsp > 0 ? sumIsp / countIsp : 0,
+            swPct: countSw > 0 ? sumSw / countSw : 0,
+            totalPlanIsp: tPlanIsp,
+            totalActualIsp: tActualIsp,
+            totalPlanNonIsp: tPlanNonIsp,
+            totalActualNonIsp: tActualNonIsp
         };
     };
 
@@ -165,19 +201,19 @@ export default function DashboardPage() {
                     Actual: Number(d.total_actual_ton),
                     Plan: Number(d.total_plan_ton)
                 }));
-                const containerHistory = totalData.map(d => ({
+                const fgwhIspHistory = totalData.map(d => ({
                     name: format(new Date(d.work_date), 'dd/MM'),
-                    Actual: Number(d.total_actual_container),
-                    Plan: Number(d.total_plan_container)
+                    Actual: Number(d.total_actual_isp_ton || 0),
+                    Plan: Number(d.total_plan_isp_ton || 0)
                 }));
 
                 dashboards["all"] = {
                     summary: buildSummary(totalData, true),
                     history
                 };
-                dashboards["container"] = {
+                dashboards["fgwh"] = {
                     summary: buildSummary(totalData, true),
-                    history: containerHistory
+                    history: fgwhIspHistory
                 };
             }
 
@@ -257,8 +293,8 @@ export default function DashboardPage() {
             if (dData) {
                 const map = new Map()
                 dData.forEach(r => {
-                    if (!map.has(r.dept_name_vi)) map.set(r.dept_name_vi, { name: r.dept_name_vi, Actual: 0, Plan: 0, Down: 0 })
-                    const current = map.get(r.dept_name_vi)
+                    if (!map.has(r.dept_name_en)) map.set(r.dept_name_en, { name: r.dept_name_en, Actual: 0, Plan: 0, Down: 0 })
+                    const current = map.get(r.dept_name_en)
                     current.Actual += Number(r.actual_ton)
                     current.Plan += Number(r.plan_ton)
                     current.Down += Number(r.downtime_min)
@@ -308,20 +344,70 @@ export default function DashboardPage() {
         if (!data) return null; // Loading or no data
         const { summary, history } = data;
 
-        const isContainer = id === 'container';
+        const isFgwh = id === 'fgwh';
         const remainingDays = getRemainingWorkingDays(selectedMonth);
         const remainingTarget = Math.max(0, summary.totalPlan - summary.totalActual);
         const dailyNeeded = remainingDays > 0 ? (remainingTarget / remainingDays).toFixed(2) : "0";
 
         const isReachTonnage = summary.totalActual >= summary.totalPlan && summary.totalPlan > 0;
-        const isReachContainer = summary.totalActualCont >= summary.totalPlanCont && summary.totalPlanCont > 0;
+        const isReached = isReachTonnage;
 
-        const isReached = isContainer ? isReachContainer : isReachTonnage;
-
-        const actualNum = isContainer ? summary.totalActualCont : summary.totalActual;
-        const planNum = isContainer ? summary.totalPlanCont : summary.totalPlan;
-        const unit = isContainer ? "Cont" : "T";
+        const actualNum = summary.totalActual;
+        const planNum = summary.totalPlan;
+        const unit = "T";
         const variance = actualNum - planNum;
+
+        const deptCode = id === 'all' ? 'ALL' : (id.startsWith('region-') ? id.replace('region-', '') : (departments.find(d => d.id === id)?.code || "ALL"));
+
+        if (isFgwh) {
+            return (
+                <Card key={id} className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col border-primary/50 border-2">
+                    <CardHeader className="pb-2 bg-gray-50/50 border-b">
+                        <CardTitle className="text-md font-bold flex justify-between items-center text-primary">
+                            FGWH - Kho Thành Phẩm
+                            <FileSymlink className="h-4 w-4 text-primary" />
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4 flex-1">
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-1">ISP Actual / Plan</p>
+                                <div className="text-lg font-bold">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></div>
+                                <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
+                                    {((summary.totalActualIsp ?? 0) - (summary.totalPlanIsp ?? 0)) >= 0
+                                        ? `+${((summary.totalActualIsp ?? 0) - (summary.totalPlanIsp ?? 0)).toFixed(1)} T`
+                                        : `${((summary.totalActualIsp ?? 0) - (summary.totalPlanIsp ?? 0)).toFixed(1)} T`}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-1">Non-ISP Actual / Plan</p>
+                                <div className="text-lg font-bold">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></div>
+                                <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
+                                    {((summary.totalActualNonIsp ?? 0) - (summary.totalPlanNonIsp ?? 0)) >= 0
+                                        ? `+${((summary.totalActualNonIsp ?? 0) - (summary.totalPlanNonIsp ?? 0)).toFixed(1)} T`
+                                        : `${((summary.totalActualNonIsp ?? 0) - (summary.totalPlanNonIsp ?? 0)).toFixed(1)} T`}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="h-24 w-full mt-auto border-t pt-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 15 }}>
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={20} minTickGap={10} tickMargin={5} />
+                                    <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                                    <Bar dataKey="Actual" radius={[2, 2, 0, 0]}>
+                                        {history.map((entry: any, index: number) => {
+                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
+                                            return <Cell key={`cell-${index}`} fill={color} />;
+                                        })}
+                                    </Bar>
+                                    <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+        }
 
         return (
             <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col ${isTotal ? 'border-primary/50 border-2' : ''}`}>
@@ -332,15 +418,15 @@ export default function DashboardPage() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 flex-1">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div>
                             <p className="text-xs text-muted-foreground mb-1">{t('actual_vs_plan')}</p>
-                            <div className="text-lg font-bold">{isContainer ? actualNum : actualNum.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ {isContainer ? planNum : planNum.toFixed(1)} {unit}</span></div>
+                            <div className="text-lg font-bold">{actualNum.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span></div>
                             <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
-                                {variance >= 0 ? `+${isContainer ? variance : variance.toFixed(1)} ${unit}` : `${isContainer ? variance : variance.toFixed(1)} ${unit}`}
+                                {variance >= 0 ? `+${variance.toFixed(1)} ${unit}` : `${variance.toFixed(1)} ${unit}`}
                             </p>
                         </div>
-                        {!isContainer && (
+                        {(
                             <>
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">{t('achv_pct')}</p>
@@ -361,6 +447,55 @@ export default function DashboardPage() {
                                         <Clock className="h-3 w-3" /> {summary.downtime}p
                                     </div>
                                 </div>
+
+                                {["PEEL_MC", "SHELL"].includes(deptCode) && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Tỷ lệ Bể (%)</p>
+                                        <div className="text-md font-bold text-red-600 flex items-center gap-1">
+                                            {summary.brokenPct.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                )}
+                                {["PEEL_MC"].includes(deptCode) && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Sót lụa (%)</p>
+                                        <div className="text-md font-bold text-orange-600 flex items-center gap-1">
+                                            {summary.unpeelPct.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                )}
+                                {["HAND"].includes(deptCode) && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Tỷ lệ ISP (%)</p>
+                                        <div className="text-md font-bold text-blue-600 flex items-center gap-1">
+                                            {summary.ispPct.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                )}
+                                {["BORMA"].includes(deptCode) && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Tỷ lệ SW (%)</p>
+                                        <div className="text-md font-bold text-amber-700 flex items-center gap-1">
+                                            {summary.swPct.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                )}
+                                {["ALL", "LCA", "HCA", "RCN", "CS", "PACK"].includes(deptCode) && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Yield (%)</p>
+                                        <div className="text-md font-bold text-blue-600 flex items-center gap-1">
+                                            {summary.yieldPct.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                )}
+                                {["ALL", "LCA", "HCA", "RCN", "STEAM", "HAND", "CS", "PACK"].includes(deptCode) && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">WIP Close</p>
+                                        <div className="text-md font-bold text-purple-600 flex items-center gap-1">
+                                            {summary.wipClose.toFixed(1)} T
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
@@ -377,7 +512,7 @@ export default function DashboardPage() {
                                         return <Cell key={`cell-${index}`} fill={color} />;
                                     })}
                                 </Bar>
-                                {!isContainer && <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />}
+                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -415,7 +550,7 @@ export default function DashboardPage() {
                                 <SelectContent>
                                     <SelectItem value="all">{t('all_factory')}</SelectItem>
                                     {departments.map(d => (
-                                        <SelectItem key={d.id} value={d.id}>{language === 'en' && d.name_en ? d.name_en : d.name_vi}</SelectItem>
+                                        <SelectItem key={d.id} value={d.id}>{d.name_en}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -432,14 +567,14 @@ export default function DashboardPage() {
                         {/* Total Factory Card - Full Width / 2 columns */}
                         {renderMiniDashboard("all", t('all_factory_card'), true)}
 
-                        {/* Dedicated Container Export Card */}
-                        {renderMiniDashboard("container", t('container') || "Xuất Container", true)}
+                        {/* FGWH Finished Goods Warehouse Card */}
+                        {renderMiniDashboard("fgwh", "FGWH - Kho Thành Phẩm", true)}
                     </div>
 
                     {/* 9 MINI DASHBOARDS GRID - 3x3 format on standard desktops */}
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                         {/* Department Cards */}
-                        {departments.map(d => renderMiniDashboard(d.id, language === 'en' && d.name_en ? d.name_en : d.name_vi))}
+                        {departments.map(d => renderMiniDashboard(d.id, d.name_en))}
                     </div>
                 </TabsContent>
 
