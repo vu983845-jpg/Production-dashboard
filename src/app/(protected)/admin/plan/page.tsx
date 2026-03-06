@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, startOfWeek, endOfWeek, addDays, startOfMonth } from "date-fns"
+import { format, startOfWeek, endOfWeek, addDays, startOfMonth, endOfMonth, getDaysInMonth } from "date-fns"
 import { vi } from "date-fns/locale"
-import { Save, Plus, Settings } from "lucide-react"
+import { Save, Plus, Settings, CalendarDays } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,16 @@ export default function AdminPlanPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [role, setRole] = useState("")
     const [userId, setUserId] = useState("")
+
+    // Monthly Setup State
+    const [selectedMonth, setSelectedMonth] = useState<Date>(startOfMonth(new Date()))
+    const [isSavingMonthly, setIsSavingMonthly] = useState(false)
+    const [monthlyPlanTon, setMonthlyPlanTon] = useState<number>(0)
+    const [targetBroken, setTargetBroken] = useState<number>(0)
+    const [targetUnpeel, setTargetUnpeel] = useState<number>(0)
+    const [targetSw, setTargetSw] = useState<number>(0)
+    const [targetIsp, setTargetIsp] = useState<number>(0)
+    const [targetYield, setTargetYield] = useState<number>(0)
 
     // Load Departments and User Profile
     useEffect(() => {
@@ -140,6 +150,62 @@ export default function AdminPlanPage() {
         toast.info("Tính năng Copy từ tuần trước đang phát triển")
     }
 
+    // Monthly Save Logic
+    const handleMonthlySave = async () => {
+        if (!selectedDept || !selectedMonth) {
+            toast.error("Vui lòng chọn bộ phận và tháng");
+            return;
+        }
+
+        setIsSavingMonthly(true);
+
+        const start = startOfMonth(selectedMonth);
+        const end = endOfMonth(selectedMonth);
+        let current = start;
+        const workingDays = [];
+
+        while (current <= end) {
+            if (current.getDay() !== 0) { // 0 is Sunday
+                workingDays.push(format(current, "yyyy-MM-dd"));
+            }
+            current = addDays(current, 1);
+        }
+
+        if (workingDays.length === 0) {
+            toast.error("Không có ngày làm việc nào trong tháng này");
+            setIsSavingMonthly(false);
+            return;
+        }
+
+        const dailyPlanTon = Number((monthlyPlanTon / workingDays.length).toFixed(3));
+
+        const payload = workingDays.map(dateStr => ({
+            department_id: selectedDept,
+            work_date: dateStr,
+            plan_ton: dailyPlanTon,
+            target_broken_pct: targetBroken,
+            target_unpeel_pct: targetUnpeel,
+            target_sw_pct: targetSw,
+            target_isp_pct: targetIsp,
+            target_yield_pct: targetYield,
+            updated_at: new Date().toISOString()
+        }));
+
+        const { error } = await supabase
+            .from("daily_plan")
+            .upsert(payload, { onConflict: 'department_id,work_date' });
+
+        if (error) {
+            toast.error("Lỗi khi lưu kế hoạch tháng: " + error.message);
+        } else {
+            toast.success(`Đã chia đều ${monthlyPlanTon} tấn qua ${workingDays.length} ngày thành công!`);
+            // Trigger a re-render/refetch of the weekly plan by simply re-evaluating the current weekStart
+            setWeekStart(new Date(weekStart.getTime()));
+        }
+
+        setIsSavingMonthly(false);
+    }
+
     return (
         <div className="flex-col md:flex">
             <div className="flex items-center justify-between space-y-2 border-b pb-4 mb-4">
@@ -179,6 +245,53 @@ export default function AdminPlanPage() {
                     </div>
                 </div>
             </div>
+
+            {selectedDept && (
+                <div className="bg-card border rounded-xl shadow overflow-hidden mb-6 p-6 space-y-4">
+                    <div className="flex items-center gap-2 border-b pb-3">
+                        <CalendarDays className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-lg">Chia Đều Kế Hoạch Tháng ({format(selectedMonth, "MM/yyyy")})</h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium">Chọn Tháng</label>
+                            <Input type="month" value={format(selectedMonth, "yyyy-MM")} onChange={(e) => setSelectedMonth(new Date(e.target.value))} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium">Tổng Sản Lượng (Tấn)</label>
+                            <Input type="number" step="1" min="0" value={monthlyPlanTon || ""} onChange={(e) => setMonthlyPlanTon(Number(e.target.value))} placeholder="VD: 1500" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Yield (%)</label>
+                            <Input type="number" step="0.1" min="0" max="100" value={targetYield || ""} onChange={(e) => setTargetYield(Number(e.target.value))} placeholder="%" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Broken (%)</label>
+                            <Input type="number" step="0.1" min="0" max="100" value={targetBroken || ""} onChange={(e) => setTargetBroken(Number(e.target.value))} placeholder="%" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Unpeel (%)</label>
+                            <Input type="number" step="0.1" min="0" max="100" value={targetUnpeel || ""} onChange={(e) => setTargetUnpeel(Number(e.target.value))} placeholder="%" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target SW (%)</label>
+                            <Input type="number" step="0.1" min="0" max="100" value={targetSw || ""} onChange={(e) => setTargetSw(Number(e.target.value))} placeholder="%" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target ISP (%)</label>
+                            <Input type="number" step="0.1" min="0" max="100" value={targetIsp || ""} onChange={(e) => setTargetIsp(Number(e.target.value))} placeholder="%" />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                        <Button onClick={handleMonthlySave} disabled={isSavingMonthly} className="bg-primary/90 hover:bg-primary">
+                            <Settings className="h-4 w-4 mr-2" />
+                            {isSavingMonthly ? "Đang xử lý..." : "Lưu & Chia Đều Theo Tháng"}
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {!selectedDept ? (
                 <div className="flex flex-col items-center justify-center p-12 mt-8 border rounded-xl border-dashed bg-card/50 text-muted-foreground">

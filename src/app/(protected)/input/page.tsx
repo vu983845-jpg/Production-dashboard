@@ -38,13 +38,15 @@ const actualSchema = z.object({
 })
 
 const kpiSchema = z.object({
-    wip_open_ton: z.coerce.number().min(0, "WIP Đầu >= 0"),
-    wip_close_ton: z.coerce.number().min(0, "WIP Cuối >= 0"),
-    input_ton: z.coerce.number().min(0, "Input >= 0"),
-    good_output_ton: z.coerce.number().min(0, "Output >= 0"),
-    downtime_min: z.coerce.number().min(0, "Downtime >= 0").max(1440, "Downtime <= 1440").int(),
+    wip_open_ton: z.coerce.number().min(0, "WIP Đầu >= 0").optional().default(0),
+    wip_close_ton: z.coerce.number().min(0, "WIP Cuối >= 0").optional().default(0),
+    input_ton: z.coerce.number().min(0, "Input >= 0").optional().default(0),
+    good_output_ton: z.coerce.number().min(0, "Output >= 0").optional().default(0),
+    downtime_min: z.coerce.number().min(0, "Downtime >= 0").optional().default(0),
     broken_pct: z.coerce.number().min(0, "Broken >= 0").max(100, "Broken <= 100").optional().default(0),
     unpeel_pct: z.coerce.number().min(0, "Unpeel >= 0").max(100, "Unpeel <= 100").optional().default(0),
+    isp_pct: z.coerce.number().min(0, "ISP >= 0").max(100, "ISP <= 100").optional().default(0),
+    sw_pct: z.coerce.number().min(0, "SW >= 0").max(100, "SW <= 100").optional().default(0),
     note: z.string().optional(),
 })
 
@@ -77,6 +79,8 @@ export default function InputPage() {
             downtime_min: 0,
             broken_pct: 0,
             unpeel_pct: 0,
+            isp_pct: 0,
+            sw_pct: 0,
             note: "",
         },
     })
@@ -152,10 +156,12 @@ export default function InputPage() {
                     downtime_min: Number(kpiData.downtime_min),
                     broken_pct: Number(kpiData.broken_pct || 0),
                     unpeel_pct: Number(kpiData.unpeel_pct || 0),
+                    isp_pct: Number(kpiData.isp_pct || 0),
+                    sw_pct: Number(kpiData.sw_pct || 0),
                     note: kpiData.note || "",
                 })
             } else {
-                formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, downtime_min: 0, broken_pct: 0, unpeel_pct: 0, note: "" })
+                formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, downtime_min: 0, broken_pct: 0, unpeel_pct: 0, isp_pct: 0, sw_pct: 0, note: "" })
             }
         }
 
@@ -364,95 +370,89 @@ export default function InputPage() {
 
                                         {(() => {
                                             const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code;
-                                            const isPeeling = selectedDeptCode === "PEEL_MC" || selectedDeptCode === "HAND";
 
-                                            if (isPeeling) {
+                                            // 1. Peeling MC (Broken, Unpeel)
+                                            if (selectedDeptCode === "PEEL_MC") {
                                                 return (
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                        <FormField
-                                                            control={formKpi.control}
-                                                            name="broken_pct"
-                                                            render={({ field }) => (
-                                                                <FormItem>
-                                                                    <FormLabel>Tỷ lệ Bể (Broken %)</FormLabel>
-                                                                    <FormControl>
-                                                                        <Input type="number" step="0.1" {...field} />
-                                                                    </FormControl>
-                                                                    <FormMessage />
-                                                                </FormItem>
-                                                            )}
-                                                        />
-                                                        <FormField
-                                                            control={formKpi.control}
-                                                            name="unpeel_pct"
-                                                            render={({ field }) => (
-                                                                <FormItem>
-                                                                    <FormLabel>Tỷ lệ Sót lụa (Unpeel %)</FormLabel>
-                                                                    <FormControl>
-                                                                        <Input type="number" step="0.1" {...field} />
-                                                                    </FormControl>
-                                                                    <FormMessage />
-                                                                </FormItem>
-                                                            )}
-                                                        />
+                                                        <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
+                                                            <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={formKpi.control} name="unpeel_pct" render={({ field }) => (
+                                                            <FormItem><FormLabel>Tỷ lệ Sót lụa (Unpeel %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
                                                     </div>
                                                 );
                                             }
 
+                                            // 2. Hand Peeling (WIP Đầu/Cuối, ISP)
+                                            if (selectedDeptCode === "HAND") {
+                                                return (
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                        <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
+                                                            <FormItem><FormLabel>WIP Tồn đầu ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
+                                                            <FormItem><FormLabel>WIP Tồn cuối ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={formKpi.control} name="isp_pct" render={({ field }) => (
+                                                            <FormItem><FormLabel>Tỷ lệ thu hồi (ISP %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                    </div>
+                                                );
+                                            }
+
+                                            // 3. Shelling (Broken)
+                                            if (selectedDeptCode === "SHELL") {
+                                                return (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
+                                                            <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                    </div>
+                                                );
+                                            }
+
+                                            // 4. Borma (SW)
+                                            if (selectedDeptCode === "BORMA") {
+                                                return (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <FormField control={formKpi.control} name="sw_pct" render={({ field }) => (
+                                                            <FormItem><FormLabel>Tỷ lệ SW (%)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                    </div>
+                                                );
+                                            }
+
+                                            // 5. Steaming (WIP Tồn kho)
+                                            if (selectedDeptCode === "STEAM") {
+                                                return (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
+                                                            <FormItem><FormLabel>Tồn kho đầu ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
+                                                            <FormItem><FormLabel>Tồn kho cuối ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                    </div>
+                                                );
+                                            }
+
+                                            // 6. Default (RCN, CS, PACK) (WIP Đầu/Cuối, Input, Output)
                                             return (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <FormField
-                                                        control={formKpi.control}
-                                                        name="wip_open_ton"
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>WIP Tồn đầu ngày (Tấn)</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type="number" step="0.001" {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                    <FormField
-                                                        control={formKpi.control}
-                                                        name="wip_close_ton"
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>WIP Tồn cuối ngày (Tấn)</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type="number" step="0.001" {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                    <FormField
-                                                        control={formKpi.control}
-                                                        name="input_ton"
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>Input đầu vào (Tấn)</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type="number" step="0.001" {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                    <FormField
-                                                        control={formKpi.control}
-                                                        name="good_output_ton"
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>Good Output đạt (Tấn - Tính Yield)</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type="number" step="0.001" {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
+                                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                                                    <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
+                                                        <FormItem><FormLabel>WIP Tồn đầu ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
+                                                        <FormItem><FormLabel>WIP Tồn cuối ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <FormField control={formKpi.control} name="input_ton" render={({ field }) => (
+                                                        <FormItem><FormLabel>Input đầu vào (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <FormField control={formKpi.control} name="good_output_ton" render={({ field }) => (
+                                                        <FormItem><FormLabel>Good Output (Tính Yield)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
                                                 </div>
                                             );
                                         })()}
