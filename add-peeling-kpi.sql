@@ -2,7 +2,11 @@
 ALTER TABLE public.daily_kpi ADD COLUMN IF NOT EXISTS broken_pct numeric NOT NULL DEFAULT 0;
 ALTER TABLE public.daily_kpi ADD COLUMN IF NOT EXISTS unpeel_pct numeric NOT NULL DEFAULT 0;
 
--- 2. Cập nhật View v_dashboard_daily
+-- 2. Xóa View cũ nếu có rồi tạo mới
+DROP VIEW IF EXISTS public.v_dashboard_total_daily CASCADE;
+DROP VIEW IF EXISTS public.v_dashboard_daily CASCADE;
+
+-- 3. Cập nhật View v_dashboard_daily
 CREATE OR REPLACE VIEW public.v_dashboard_daily AS
 SELECT
     b.work_date,
