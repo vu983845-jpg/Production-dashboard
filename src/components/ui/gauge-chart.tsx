@@ -68,7 +68,6 @@ export function GaugeChart({
                 </div>
                 <div className={`flex items-center gap-1 mt-2 text-base font-bold ${trendColor}`}>
                     <span>{rawPercent.toFixed(1)}%</span>
-                    {rawPercent > 0 && <TrendIcon className="w-5 h-5" />}
                 </div>
                 <div className="text-[11px] text-muted-foreground font-medium mt-1">
                     Target: {formattedTarget}
