@@ -75,7 +75,7 @@ export default function InputPage() {
         onConfirm: () => { }
     })
     const [fgwhData, setFgwhData] = useState({ actual_isp_ton: 0, actual_non_isp_ton: 0 })
-    const [energyData, setEnergyData] = useState({ electricity_kwh: 0, electricity_target_kwh: 0, water_m3: 0, water_target_m3: 0 })
+    const [energyData, setEnergyData] = useState({ electricity_kwh: 0, electricity_target_kwh: 0, water_m3: 0, water_target_m3: 0, wood_kg: 0, wood_target_kg: 0 })
 
     // Forms
     const formActual = useForm<z.infer<typeof actualSchema>>({
@@ -213,10 +213,12 @@ export default function InputPage() {
                     electricity_kwh: Number(eData.electricity_kwh || 0),
                     electricity_target_kwh: Number(eData.electricity_target_kwh || 0),
                     water_m3: Number(eData.water_m3 || 0),
-                    water_target_m3: Number(eData.water_target_m3 || 0)
+                    water_target_m3: Number(eData.water_target_m3 || 0),
+                    wood_kg: Number(eData.wood_kg || 0),
+                    wood_target_kg: Number(eData.wood_target_kg || 0)
                 });
             } else {
-                setEnergyData({ electricity_kwh: 0, electricity_target_kwh: 0, water_m3: 0, water_target_m3: 0 });
+                setEnergyData({ electricity_kwh: 0, electricity_target_kwh: 0, water_m3: 0, water_target_m3: 0, wood_kg: 0, wood_target_kg: 0 });
             }
         }
         fetchEnergy();
@@ -297,6 +299,8 @@ export default function InputPage() {
                 electricity_target_kwh: energyData.electricity_target_kwh,
                 water_m3: energyData.water_m3,
                 water_target_m3: energyData.water_target_m3,
+                wood_kg: energyData.wood_kg,
+                wood_target_kg: energyData.wood_target_kg,
                 updated_at: new Date().toISOString()
             },
             { onConflict: 'work_date' }
@@ -690,7 +694,7 @@ export default function InputPage() {
                             <div className="p-6 space-y-6 max-w-2xl">
                                 <h3 className="font-semibold text-base">Nhập liệu Năng lượng (Toàn nhà máy)</h3>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
                                     <div className="space-y-4 border-r pr-4">
                                         <h4 className="font-medium text-amber-600">⚡ Điện năng (kWh)</h4>
                                         <div className="space-y-2">
@@ -713,7 +717,7 @@ export default function InputPage() {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4 pl-4">
+                                    <div className="space-y-4 pl-4 border-r pr-4">
                                         <h4 className="font-medium text-blue-600">💧 Nước (m³)</h4>
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium text-muted-foreground">Mục tiêu / Target</label>
@@ -731,6 +735,28 @@ export default function InputPage() {
                                                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                                 value={energyData.water_m3 || ''}
                                                 onChange={e => setEnergyData(prev => ({ ...prev, water_m3: Number(e.target.value) }))}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 pl-4">
+                                        <h4 className="font-medium text-orange-600">🔥 Củi (kg)</h4>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-muted-foreground">Mục tiêu / Target</label>
+                                            <input
+                                                type="number" step="1" min="0" placeholder="0"
+                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                value={energyData.wood_target_kg || ''}
+                                                onChange={e => setEnergyData(prev => ({ ...prev, wood_target_kg: Number(e.target.value) }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-muted-foreground">Thực tế / Actual</label>
+                                            <input
+                                                type="number" step="1" min="0" placeholder="0"
+                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                                                value={energyData.wood_kg || ''}
+                                                onChange={e => setEnergyData(prev => ({ ...prev, wood_kg: Number(e.target.value) }))}
                                             />
                                         </div>
                                     </div>

@@ -32,6 +32,11 @@ export default function AdminPlanPage() {
     const [targetIsp, setTargetIsp] = useState<number>(0)
     const [targetYield, setTargetYield] = useState<number>(0)
 
+    // Energy Monthly Targets
+    const [monthlyElectricity, setMonthlyElectricity] = useState<number>(0)
+    const [monthlyWater, setMonthlyWater] = useState<number>(0)
+    const [monthlyWood, setMonthlyWood] = useState<number>(0)
+
     // Load Departments and User Profile
     useEffect(() => {
         async function loadData() {
@@ -105,6 +110,7 @@ export default function AdminPlanPage() {
                     plan_non_isp_ton: existingF ? Number(existingF.plan_non_isp_ton || 0) : 0,
                     electricity_target_kwh: existingE ? Number(existingE.electricity_target_kwh || 0) : 0,
                     water_target_m3: existingE ? Number(existingE.water_target_m3 || 0) : 0,
+                    wood_target_kg: existingE ? Number(existingE.wood_target_kg || 0) : 0,
                     id: existing ? existing.id : undefined
                 }
             })
@@ -115,7 +121,7 @@ export default function AdminPlanPage() {
     }, [selectedDept, weekStart])
 
     // Handle Input change
-    const handlePlanChange = (index: number, field: "plan_ton" | "plan_isp_ton" | "plan_non_isp_ton" | "electricity_target_kwh" | "water_target_m3", value: string) => {
+    const handlePlanChange = (index: number, field: "plan_ton" | "plan_isp_ton" | "plan_non_isp_ton" | "electricity_target_kwh" | "water_target_m3" | "wood_target_kg", value: string) => {
         const newData = [...planData]
         newData[index][field] = value === "" ? 0 : Number(value)
         setPlanData(newData)
@@ -136,6 +142,7 @@ export default function AdminPlanPage() {
                 work_date: d.work_date,
                 electricity_target_kwh: d.electricity_target_kwh,
                 water_target_m3: d.water_target_m3,
+                wood_target_kg: d.wood_target_kg,
                 updated_at: new Date().toISOString()
             }))
             const res = await supabase.from("daily_energy").upsert(energyPayload, { onConflict: 'work_date' })
@@ -188,8 +195,9 @@ export default function AdminPlanPage() {
         let current = start;
         const workingDays = [];
 
+        const isEnergyDept = selectedDept === 'energy';
         while (current <= end) {
-            if (current.getDay() !== 0) { // 0 is Sunday
+            if (isEnergyDept || current.getDay() !== 0) { // Energy includes Sundays, others skip Sunday
                 workingDays.push(format(current, "yyyy-MM-dd"));
             }
             current = addDays(current, 1);
@@ -218,6 +226,27 @@ export default function AdminPlanPage() {
                 toast.error('Lỗi khi lưu kế hoạch FGWH: ' + fgwhError.message);
             } else {
                 toast.success(`Đã chia đều ${monthlyPlanTon} tấn vào KH ISP qua ${workingDays.length} ngày!`);
+                setWeekStart(new Date(weekStart.getTime()));
+            }
+        } else if (isEnergyDept) {
+            const dailyElec = Math.round(monthlyElectricity / workingDays.length);
+            const dailyWater = Number((monthlyWater / workingDays.length).toFixed(2));
+            const dailyWood = Math.round(monthlyWood / workingDays.length);
+
+            const energyPayload = workingDays.map(dateStr => ({
+                work_date: dateStr,
+                electricity_target_kwh: dailyElec,
+                water_target_m3: dailyWater,
+                wood_target_kg: dailyWood,
+                updated_at: new Date().toISOString()
+            }));
+            const { error: eError } = await supabase
+                .from('daily_energy')
+                .upsert(energyPayload, { onConflict: 'work_date' });
+            if (eError) {
+                toast.error('Lỗi khi lưu kế hoạch Năng Lượng: ' + eError.message);
+            } else {
+                toast.success(`Đã chia đều kế hoạch điện, nước, củi qua ${workingDays.length} ngày thành công!`);
                 setWeekStart(new Date(weekStart.getTime()));
             }
         } else {
@@ -286,7 +315,7 @@ export default function AdminPlanPage() {
                 </div>
             </div>
 
-            {selectedDept && selectedDept !== 'energy' && (
+            {selectedDept && (
                 <div className="bg-card border rounded-xl shadow overflow-hidden mb-6 p-6 space-y-4">
                     <div className="flex items-center gap-2 border-b pb-3">
                         <CalendarDays className="h-5 w-5 text-primary" />
@@ -298,30 +327,50 @@ export default function AdminPlanPage() {
                             <label className="text-sm font-medium">Chọn Tháng</label>
                             <Input type="month" value={format(selectedMonth, "yyyy-MM")} onChange={(e) => setSelectedMonth(new Date(e.target.value))} />
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-sm font-medium">Tổng Sản Lượng (Tấn)</label>
-                            <Input type="number" step="1" min="0" value={monthlyPlanTon || ""} onChange={(e) => setMonthlyPlanTon(Number(e.target.value))} placeholder="VD: 1500" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Yield (%)</label>
-                            <Input type="number" step="0.1" min="0" max="100" value={targetYield || ""} onChange={(e) => setTargetYield(Number(e.target.value))} placeholder="%" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Broken (%)</label>
-                            <Input type="number" step="0.1" min="0" max="100" value={targetBroken || ""} onChange={(e) => setTargetBroken(Number(e.target.value))} placeholder="%" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Unpeel (%)</label>
-                            <Input type="number" step="0.1" min="0" max="100" value={targetUnpeel || ""} onChange={(e) => setTargetUnpeel(Number(e.target.value))} placeholder="%" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target SW (%)</label>
-                            <Input type="number" step="0.1" min="0" max="100" value={targetSw || ""} onChange={(e) => setTargetSw(Number(e.target.value))} placeholder="%" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target ISP (%)</label>
-                            <Input type="number" step="0.1" min="0" max="100" value={targetIsp || ""} onChange={(e) => setTargetIsp(Number(e.target.value))} placeholder="%" />
-                        </div>
+
+                        {selectedDept === 'energy' ? (
+                            <>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-amber-600">Tổng Điện (kWh)</label>
+                                    <Input type="number" step="1" min="0" value={monthlyElectricity || ""} onChange={(e) => setMonthlyElectricity(Number(e.target.value))} placeholder="VD: 50000" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-blue-600">Tổng Nước (m³)</label>
+                                    <Input type="number" step="0.1" min="0" value={monthlyWater || ""} onChange={(e) => setMonthlyWater(Number(e.target.value))} placeholder="VD: 2000" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-orange-600">Tổng Củi (kg)</label>
+                                    <Input type="number" step="1" min="0" value={monthlyWood || ""} onChange={(e) => setMonthlyWood(Number(e.target.value))} placeholder="VD: 30000" />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium">Tổng Sản Lượng (Tấn)</label>
+                                    <Input type="number" step="1" min="0" value={monthlyPlanTon || ""} onChange={(e) => setMonthlyPlanTon(Number(e.target.value))} placeholder="VD: 1500" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Yield (%)</label>
+                                    <Input type="number" step="0.1" min="0" max="100" value={targetYield || ""} onChange={(e) => setTargetYield(Number(e.target.value))} placeholder="%" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Broken (%)</label>
+                                    <Input type="number" step="0.1" min="0" max="100" value={targetBroken || ""} onChange={(e) => setTargetBroken(Number(e.target.value))} placeholder="%" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Unpeel (%)</label>
+                                    <Input type="number" step="0.1" min="0" max="100" value={targetUnpeel || ""} onChange={(e) => setTargetUnpeel(Number(e.target.value))} placeholder="%" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target SW (%)</label>
+                                    <Input type="number" step="0.1" min="0" max="100" value={targetSw || ""} onChange={(e) => setTargetSw(Number(e.target.value))} placeholder="%" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target ISP (%)</label>
+                                    <Input type="number" step="0.1" min="0" max="100" value={targetIsp || ""} onChange={(e) => setTargetIsp(Number(e.target.value))} placeholder="%" />
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="flex justify-end pt-2">
@@ -368,6 +417,7 @@ export default function AdminPlanPage() {
                                     <>
                                         <TableHead>Mục tiêu Điện (kWh)</TableHead>
                                         <TableHead>Mục tiêu Nước (m³)</TableHead>
+                                        <TableHead>Mục tiêu Củi (kg)</TableHead>
                                     </>
                                 )}
                             </TableRow>
@@ -432,6 +482,16 @@ export default function AdminPlanPage() {
                                                     className="max-w-[150px]"
                                                     value={row.water_target_m3}
                                                     onChange={(e) => handlePlanChange(idx, "water_target_m3", e.target.value)}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input
+                                                    type="number"
+                                                    step="1"
+                                                    min="0"
+                                                    className="max-w-[150px]"
+                                                    value={row.wood_target_kg}
+                                                    onChange={(e) => handlePlanChange(idx, "wood_target_kg", e.target.value)}
                                                 />
                                             </TableCell>
                                         </>

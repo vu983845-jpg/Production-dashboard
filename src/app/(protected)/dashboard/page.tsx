@@ -49,7 +49,8 @@ export default function DashboardPage() {
         steamActual: 0, steamTarget: 0,
         fgwhActual: 0, fgwhTarget: 0,
         elecActual: 0, elecTarget: 0,
-        waterActual: 0, waterTarget: 0
+        waterActual: 0, waterTarget: 0,
+        woodActual: 0, woodTarget: 0
     })
 
     // Load Departments
@@ -306,13 +307,15 @@ export default function DashboardPage() {
                 .lte('work_date', endFilter)
                 .order('work_date');
 
-            let elecActual = 0, elecTarget = 0, waterActual = 0, waterTarget = 0;
+            let elecActual = 0, elecTarget = 0, waterActual = 0, waterTarget = 0, woodActual = 0, woodTarget = 0;
             if (eData) {
                 eData.forEach(r => {
                     elecActual += Number(r.electricity_kwh || 0);
                     elecTarget += Number(r.electricity_target_kwh || 0);
                     waterActual += Number(r.water_m3 || 0);
                     waterTarget += Number(r.water_target_m3 || 0);
+                    woodActual += Number(r.wood_kg || 0);
+                    woodTarget += Number(r.wood_target_kg || 0);
                 });
 
                 setEnergyHistory(eData.map(r => ({
@@ -320,7 +323,9 @@ export default function DashboardPage() {
                     ElectricityActual: Number(r.electricity_kwh || 0),
                     ElectricityTarget: Number(r.electricity_target_kwh || 0),
                     WaterActual: Number(r.water_m3 || 0),
-                    WaterTarget: Number(r.water_target_m3 || 0)
+                    WaterTarget: Number(r.water_target_m3 || 0),
+                    WoodActual: Number(r.wood_kg || 0),
+                    WoodTarget: Number(r.wood_target_kg || 0)
                 })));
             }
 
@@ -344,7 +349,7 @@ export default function DashboardPage() {
             }
 
             setKpiSummary({
-                steamActual, steamTarget, fgwhActual, fgwhTarget, elecActual, elecTarget, waterActual, waterTarget
+                steamActual, steamTarget, fgwhActual, fgwhTarget, elecActual, elecTarget, waterActual, waterTarget, woodActual, woodTarget
             });
 
             // Still populate legacy states for the Master Table if needed
@@ -620,7 +625,7 @@ export default function DashboardPage() {
                 </div>
 
                 {selectedDept === 'all' && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 mt-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6 mt-4">
                         <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
                             <GaugeChart value={kpiSummary.steamActual} target={kpiSummary.steamTarget} label="TIẾN ĐỘ HẤP / STEAMING" unit="T" color="#f59e0b" />
                         </Card>
@@ -632,6 +637,9 @@ export default function DashboardPage() {
                         </Card>
                         <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
                             <GaugeChart value={kpiSummary.waterActual} target={kpiSummary.waterTarget} label="NƯỚC TIÊU THỤ" unit="m³" color="#3b82f6" formatValue={(v) => Number(v).toLocaleString()} inverse />
+                        </Card>
+                        <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
+                            <GaugeChart value={kpiSummary.woodActual} target={kpiSummary.woodTarget} label="CỦI TIÊU THỤ" unit="kg" color="#f97316" formatValue={(v) => Number(v).toLocaleString()} inverse />
                         </Card>
                     </div>
                 )}
@@ -674,12 +682,15 @@ export default function DashboardPage() {
                                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                                     <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#eab308" />
                                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" />
+                                    <YAxis yAxisId="right2" orientation="right" tick={{ fontSize: 12 }} stroke="#f97316" width={80} />
                                     <Tooltip contentStyle={{ fontSize: '13px' }} />
                                     <Legend wrapperStyle={{ bottom: -5 }} />
                                     <Bar yAxisId="left" dataKey="ElectricityActual" name="Thực tế Điện (kWh)" fill="#eab308" radius={[4, 4, 0, 0]} barSize={20} />
                                     <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Mục tiêu Điện (kWh)" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
                                     <Bar yAxisId="right" dataKey="WaterActual" name="Thực tế Nước (m³)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
                                     <Line yAxisId="right" type="monotone" dataKey="WaterTarget" name="Mục tiêu Nước (m³)" stroke="#2563eb" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                    <Bar yAxisId="right2" dataKey="WoodActual" name="Thực tế Củi (kg)" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
+                                    <Line yAxisId="right2" type="monotone" dataKey="WoodTarget" name="Mục tiêu Củi (kg)" stroke="#c2410c" strokeDasharray="5 5" dot={false} strokeWidth={2} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </CardContent>
