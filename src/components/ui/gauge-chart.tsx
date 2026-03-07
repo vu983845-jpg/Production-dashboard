@@ -1,4 +1,5 @@
 import React from 'react';
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 /**
  * A reusable half-circle HTML/CSS Gauge Chart
@@ -11,6 +12,7 @@ interface GaugeChartProps {
     color?: string;      // Color for the progress arc, e.g. #3b82f6 (blue)
     height?: number;     // Height in pixels
     formatValue?: (val: number) => string;
+    inverse?: boolean;   // If true, exceeding target is bad (red arrow). If false, exceeding target is good (green arrow).
 }
 
 export function GaugeChart({
@@ -20,7 +22,8 @@ export function GaugeChart({
     unit = '',
     color = '#10b981', // default emerald-500
     height = 120,
-    formatValue
+    formatValue,
+    inverse = false
 }: GaugeChartProps) {
     // Prevent divide by zero and clamp percentage between 0-100%
     const validTarget = target > 0 ? target : 1;
@@ -43,6 +46,18 @@ export function GaugeChart({
     const formattedTarget = formatValue
         ? formatValue(target)
         : Number.isInteger(target) ? target.toString() : target.toFixed(1);
+
+    // Trend Icon matching logic
+    let TrendIcon = Minus;
+    let trendColor = "text-muted-foreground";
+
+    if (rawPercent >= 100) {
+        TrendIcon = TrendingUp;
+        trendColor = inverse ? "text-red-500" : "text-green-500";
+    } else if (rawPercent > 0) {
+        TrendIcon = TrendingDown;
+        trendColor = inverse ? "text-green-500" : "text-amber-500";
+    }
 
     return (
         <div className="flex flex-col items-center justify-center relative w-full" style={{ height }}>
@@ -79,12 +94,12 @@ export function GaugeChart({
             <div className="absolute inset-x-0 bottom-1 flex flex-col items-center justify-end leading-none">
                 <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold text-foreground tracking-tight">{formattedValue}</span>
+                    <span className="text-xs font-normal text-muted-foreground">{unit}</span>
                 </div>
-                {target > 0 && (
-                    <div className="text-[10px] text-muted-foreground mt-0.5">
-                        Target: {formattedTarget} {unit}
-                    </div>
-                )}
+                <div className={`flex items-center justify-center gap-1 mt-1 text-sm font-bold ${trendColor}`}>
+                    <span>{rawPercent.toFixed(1)}%</span>
+                    {rawPercent > 0 && <TrendIcon className="w-4 h-4" />}
+                </div>
             </div>
 
             <div className="absolute top-1 font-semibold text-xs text-muted-foreground text-center line-clamp-1 w-full px-2">
@@ -93,7 +108,7 @@ export function GaugeChart({
 
             <div className="absolute bottom-[-15px] inset-x-0 flex justify-between px-6 text-[9px] text-muted-foreground font-medium">
                 <span>0</span>
-                <span>{rawPercent.toFixed(1)}%</span>
+                <span>Target: {formattedTarget}</span>
             </div>
         </div>
     );
