@@ -60,23 +60,23 @@ export function GaugeChart({
     }
 
     return (
-        <div className="flex flex-row items-center justify-between w-full h-full gap-2">
-            {/* Left Side: Labels & Targets */}
-            <div className="flex flex-col justify-center flex-1 text-left min-w-0">
-                <div className="font-bold text-xs text-muted-foreground line-clamp-2 leading-tight">
+        <div className="flex flex-col sm:flex-row items-center justify-between w-full h-full gap-2 sm:gap-4">
+            {/* Labels & Targets */}
+            <div className="flex flex-col justify-center items-center sm:items-start flex-1 text-center sm:text-left min-w-0 w-full">
+                <div className="font-bold text-[10px] sm:text-xs text-muted-foreground line-clamp-2 leading-tight uppercase tracking-wider">
                     {label}
                 </div>
-                <div className="flex items-baseline gap-1 mt-2 text-base font-bold text-foreground">
+                <div className="flex items-baseline gap-1 mt-1 sm:mt-2 text-sm sm:text-base font-bold text-foreground">
                     <span>{formattedValue}</span>
-                    <span className="text-xs text-muted-foreground font-normal">{unit}</span>
+                    <span className="text-[10px] sm:text-xs text-muted-foreground font-normal">{unit}</span>
                 </div>
-                <div className="text-[11px] text-muted-foreground font-medium mt-0.5">
-                    Target: {formattedTarget} {unit}
+                <div className="text-[9px] sm:text-[11px] text-muted-foreground font-medium mt-0.5 opacity-80">
+                    Mục tiêu: {formattedTarget} {unit}
                 </div>
             </div>
 
-            {/* Right Side: SVG Gauge */}
-            <div className="relative w-28 h-18 shrink-0 flex flex-col items-center justify-end pb-1">
+            {/* SVG Gauge */}
+            <div className="relative w-24 h-16 sm:w-28 sm:h-18 shrink-0 flex flex-col items-center justify-end pb-1 mt-2 sm:mt-0">
                 <svg
                     viewBox="0 0 100 55"
                     className="absolute inset-x-0 bottom-0 w-full h-full overflow-visible"
@@ -106,10 +106,10 @@ export function GaugeChart({
                 </svg>
 
                 {/* Numbers overlay inside arc */}
-                <div className="relative z-10 flex flex-col items-center justify-end leading-none translate-y-2">
+                <div className="relative z-10 flex flex-col items-center justify-end leading-none translate-y-1 sm:translate-y-2">
                     <div className={`flex items-baseline gap-0.5 ${trendColor}`}>
-                        <span className="text-xl font-bold tracking-tight">{rawPercent.toFixed(1)}</span>
-                        <span className="text-[10px] font-bold">%</span>
+                        <span className="text-lg sm:text-xl font-bold tracking-tight">{rawPercent.toFixed(0)}</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold">%</span>
                     </div>
                 </div>
             </div>
