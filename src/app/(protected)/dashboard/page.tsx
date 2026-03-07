@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { createClient } from "@/lib/supabase/client"
 import { ddsClient } from "@/lib/supabase/dds-client"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { GaugeChart } from "@/components/ui/gauge-chart"
 
 export default function DashboardPage() {
     const supabase = createClient()
@@ -42,6 +43,14 @@ export default function DashboardPage() {
             history: any[]
         }
     }>({})
+
+    const [energyHistory, setEnergyHistory] = useState<any[]>([])
+    const [kpiSummary, setKpiSummary] = useState({
+        steamActual: 0, steamTarget: 0,
+        fgwhActual: 0, fgwhTarget: 0,
+        elecActual: 0, elecTarget: 0,
+        waterActual: 0, waterTarget: 0
+    })
 
     // Load Departments
     useEffect(() => {
@@ -288,6 +297,55 @@ export default function DashboardPage() {
             }
 
             setDashboardsData(dashboards);
+
+            // 3. Fetch Energy & Build KPIs
+            const { data: eData } = await supabase
+                .from('daily_energy')
+                .select('*')
+                .gte('work_date', startFilter)
+                .lte('work_date', endFilter)
+                .order('work_date');
+
+            let elecActual = 0, elecTarget = 0, waterActual = 0, waterTarget = 0;
+            if (eData) {
+                eData.forEach(r => {
+                    elecActual += Number(r.electricity_kwh || 0);
+                    elecTarget += Number(r.electricity_target_kwh || 0);
+                    waterActual += Number(r.water_m3 || 0);
+                    waterTarget += Number(r.water_target_m3 || 0);
+                });
+
+                setEnergyHistory(eData.map(r => ({
+                    name: format(new Date(r.work_date), 'dd/MM'),
+                    ElectricityActual: Number(r.electricity_kwh || 0),
+                    ElectricityTarget: Number(r.electricity_target_kwh || 0),
+                    WaterActual: Number(r.water_m3 || 0),
+                    WaterTarget: Number(r.water_target_m3 || 0)
+                })));
+            }
+
+            // Calculate FGWH KPIs
+            let fgwhActual = 0, fgwhTarget = 0;
+            if (totalData) {
+                totalData.forEach(r => {
+                    fgwhActual += Number(r.total_actual_isp_ton || 0);
+                    fgwhTarget += Number(r.total_plan_isp_ton || 0);
+                });
+            }
+
+            // Calculate Steaming vs RCN KPIs (Steam actual vs steam target)
+            let steamActual = 0, steamTarget = 0;
+            if (dData) {
+                const steamRecords = dData.filter(r => r.dept_code === 'STEAM');
+                steamRecords.forEach(r => {
+                    steamActual += Number(r.actual_ton || 0);
+                    steamTarget += Number(r.plan_ton || 0);
+                });
+            }
+
+            setKpiSummary({
+                steamActual, steamTarget, fgwhActual, fgwhTarget, elecActual, elecTarget, waterActual, waterTarget
+            });
 
             // Still populate legacy states for the Master Table if needed
             if (dData) {
@@ -585,6 +643,47 @@ export default function DashboardPage() {
                     </div>
                 </TabsContent>
             </Tabs>
+
+            {selectedDept === 'all' && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                    <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
+                        <GaugeChart value={kpiSummary.steamActual} target={kpiSummary.steamTarget} label="TIẾN ĐỘ HẤP / STEAMING" unit="T" color="#f59e0b" />
+                    </Card>
+                    <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
+                        <GaugeChart value={kpiSummary.fgwhActual} target={kpiSummary.fgwhTarget} label="THÀNH PHẨM / FGWH" unit="T" color="#10b981" />
+                    </Card>
+                    <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
+                        <GaugeChart value={kpiSummary.elecActual} target={kpiSummary.elecTarget} label="ĐIỆN TIÊU THỤ" unit="kWh" color="#eab308" formatValue={(v) => Number(v).toLocaleString()} />
+                    </Card>
+                    <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
+                        <GaugeChart value={kpiSummary.waterActual} target={kpiSummary.waterTarget} label="NƯỚC TIÊU THỤ" unit="m³" color="#3b82f6" formatValue={(v) => Number(v).toLocaleString()} />
+                    </Card>
+                </div>
+            )}
+
+            {selectedDept === 'all' && energyHistory.length > 0 && (
+                <Card className="mt-4 bg-white">
+                    <CardHeader>
+                        <CardTitle className="text-xl">Theo dõi Điện & Nước ({format(selectedMonth, 'MM/yyyy')})</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-80 pb-6">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={energyHistory} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                                <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#eab308" />
+                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" />
+                                <Tooltip contentStyle={{ fontSize: '13px' }} />
+                                <Legend wrapperStyle={{ bottom: -5 }} />
+                                <Bar yAxisId="left" dataKey="ElectricityActual" name="Thực tế Điện (kWh)" fill="#eab308" radius={[4, 4, 0, 0]} barSize={20} />
+                                <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Mục tiêu Điện (kWh)" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                <Bar yAxisId="right" dataKey="WaterActual" name="Thực tế Nước (m³)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
+                                <Line yAxisId="right" type="monotone" dataKey="WaterTarget" name="Mục tiêu Nước (m³)" stroke="#2563eb" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            )}
 
             <div className="grid gap-4 mt-4">
                 <Card className="bg-white">
