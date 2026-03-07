@@ -66,11 +66,12 @@ export function GaugeChart({
                 <div className="font-bold text-xs text-muted-foreground line-clamp-2 leading-tight">
                     {label}
                 </div>
-                <div className={`flex items-center gap-1 mt-2 text-base font-bold ${trendColor}`}>
-                    <span>{rawPercent.toFixed(1)}%</span>
+                <div className="flex items-baseline gap-1 mt-2 text-base font-bold text-foreground">
+                    <span>{formattedValue}</span>
+                    <span className="text-xs text-muted-foreground font-normal">{unit}</span>
                 </div>
-                <div className="text-[11px] text-muted-foreground font-medium mt-1">
-                    Target: {formattedTarget}
+                <div className="text-[11px] text-muted-foreground font-medium mt-0.5">
+                    Target: {formattedTarget} {unit}
                 </div>
             </div>
 
@@ -106,9 +107,9 @@ export function GaugeChart({
 
                 {/* Numbers overlay inside arc */}
                 <div className="relative z-10 flex flex-col items-center justify-end leading-none translate-y-2">
-                    <div className="flex items-baseline gap-0.5">
-                        <span className="text-xl font-bold text-foreground tracking-tight">{formattedValue}</span>
-                        <span className="text-[10px] font-normal text-muted-foreground">{unit}</span>
+                    <div className={`flex items-baseline gap-0.5 ${trendColor}`}>
+                        <span className="text-xl font-bold tracking-tight">{rawPercent.toFixed(1)}</span>
+                        <span className="text-[10px] font-bold">%</span>
                     </div>
                 </div>
             </div>
