@@ -94,6 +94,7 @@ export default function DashboardPage() {
         let sumUnpeel = 0, countUnpeel = 0;
         let sumIsp = 0, countIsp = 0;
         let sumSw = 0, countSw = 0;
+        let tElecCons = 0, tElecTarget = 0;
 
         records.forEach(r => {
             tPlan += Number(isTotal ? r.total_plan_ton : r.plan_ton || 0);
@@ -104,6 +105,8 @@ export default function DashboardPage() {
             tInput += Number(isTotal ? r.total_input_ton : r.input_ton || 0);
             tOutput += Number(isTotal ? r.total_good_output_ton : r.good_output_ton || 0);
             tWip = Number(isTotal ? r.total_wip_close_ton : r.wip_close_ton || 0);
+            tElecCons += Number(r.electricity_consumption_kwh || 0);
+            tElecTarget += Number(r.target_electricity_kwh || 0);
 
             // FGWH ISP / Non-ISP (only available on total records from v_dashboard_total_daily)
             if (isTotal) {
@@ -143,7 +146,9 @@ export default function DashboardPage() {
             totalPlanIsp: tPlanIsp,
             totalActualIsp: tActualIsp,
             totalPlanNonIsp: tPlanNonIsp,
-            totalActualNonIsp: tActualNonIsp
+            totalActualNonIsp: tActualNonIsp,
+            totalElectricityConsumption: tElecCons,
+            totalTargetElectricityKwh: tElecTarget
         };
     };
 
@@ -277,17 +282,19 @@ export default function DashboardPage() {
                     // To build an accurate history (Actual vs Plan per day), we must group regions by Work_Date!
                     const recordsByDay = records.reduce((dayAcc: any, r: any) => {
                         if (!dayAcc[r.work_date]) {
-                            dayAcc[r.work_date] = { plan: 0, actual: 0 };
+                            dayAcc[r.work_date] = { plan: 0, actual: 0, elec: 0 };
                         }
                         dayAcc[r.work_date].plan += Number(r.plan_ton);
                         dayAcc[r.work_date].actual += Number(r.actual_ton);
+                        dayAcc[r.work_date].elec += Number(r.electricity_consumption_kwh || 0);
                         return dayAcc;
                     }, {});
 
                     const history = Object.keys(recordsByDay).sort().map(d => ({
                         name: format(new Date(d), 'dd/MM'),
                         Actual: recordsByDay[d].actual,
-                        Plan: recordsByDay[d].plan
+                        Plan: recordsByDay[d].plan,
+                        Intensity: recordsByDay[d].actual > 0 ? Number((recordsByDay[d].elec / recordsByDay[d].actual).toFixed(2)) : 0
                     }));
 
                     dashboards[key] = {
@@ -519,6 +526,22 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 )}
+                                {deptCode === "SHELL" && (
+                                    <>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground mb-1">Điện (kWh)</p>
+                                            <div className="text-md font-bold text-amber-600 flex items-center gap-1">
+                                                {summary.totalElectricityConsumption?.toLocaleString()} / {summary.totalTargetElectricityKwh?.toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground mb-1">kWh / Tấn</p>
+                                            <div className="text-md font-bold text-amber-700 flex items-center gap-1">
+                                                {summary.totalActual > 0 ? (summary.totalElectricityConsumption / summary.totalActual).toFixed(2) : "0.00"}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                                 {["PEEL_MC"].includes(deptCode) && (
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Sót lụa (%)</p>
@@ -568,6 +591,12 @@ export default function DashboardPage() {
                             <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 15 }}>
                                 <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={20} minTickGap={10} tickMargin={5} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                                {deptCode === "SHELL" && (
+                                    <>
+                                        <YAxis yAxisId="intensity" orientation="right" hide />
+                                        <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name="kWh/T" />
+                                    </>
+                                )}
                                 <Bar dataKey="Actual" radius={[2, 2, 0, 0]}>
                                     {history.map((entry: any, index: number) => {
                                         // If there is a plan AND actual is less than plan -> Red. Otherwise -> Green.

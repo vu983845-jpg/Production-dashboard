@@ -31,6 +31,7 @@ export default function AdminPlanPage() {
     const [targetSw, setTargetSw] = useState<number>(0)
     const [targetIsp, setTargetIsp] = useState<number>(0)
     const [targetYield, setTargetYield] = useState<number>(0)
+    const [targetElec, setTargetElec] = useState<number>(0)
 
     // Energy Monthly Targets
     const [monthlyElectricity, setMonthlyElectricity] = useState<number>(0)
@@ -108,7 +109,7 @@ export default function AdminPlanPage() {
                     plan_ton: existing ? Number(existing.plan_ton) : 0,
                     plan_isp_ton: existingF ? Number(existingF.plan_isp_ton || 0) : 0,
                     plan_non_isp_ton: existingF ? Number(existingF.plan_non_isp_ton || 0) : 0,
-                    electricity_target_kwh: existingE ? Number(existingE.electricity_target_kwh || 0) : 0,
+                    electricity_target_kwh: existingE ? Number(existingE.electricity_target_kwh || 0) : (existing ? Number(existing.target_electricity_kwh || 0) : 0),
                     water_target_m3: existingE ? Number(existingE.water_target_m3 || 0) : 0,
                     wood_target_kg: existingE ? Number(existingE.wood_target_kg || 0) : 0,
                     id: existing ? existing.id : undefined
@@ -161,6 +162,7 @@ export default function AdminPlanPage() {
                 department_id: selectedDept,
                 work_date: d.work_date,
                 plan_ton: d.plan_ton,
+                target_electricity_kwh: d.electricity_target_kwh,
                 updated_at: new Date().toISOString()
             }))
             const res = await supabase.from("daily_plan").upsert(payload, { onConflict: 'department_id,work_date' })
@@ -210,6 +212,7 @@ export default function AdminPlanPage() {
         }
 
         const isFgwhDept = departments.find(d => d.id === selectedDept)?.code === 'FGWH';
+        const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code;
         const dailyPlanTon = Number((monthlyPlanTon / workingDays.length).toFixed(3));
 
         if (isFgwhDept) {
@@ -259,6 +262,7 @@ export default function AdminPlanPage() {
                 target_sw_pct: targetSw,
                 target_isp_pct: targetIsp,
                 target_yield_pct: targetYield,
+                target_electricity_kwh: selectedDeptCode === "SHELL" ? Number((targetElec / workingDays.length).toFixed(0)) : 0,
                 updated_at: new Date().toISOString()
             }));
             const { error } = await supabase
@@ -369,6 +373,12 @@ export default function AdminPlanPage() {
                                     <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target ISP (%)</label>
                                     <Input type="number" step="0.1" min="0" max="100" value={targetIsp || ""} onChange={(e) => setTargetIsp(Number(e.target.value))} placeholder="%" />
                                 </div>
+                                {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
+                                    <div className="space-y-1">
+                                        <label className="text-sm border-b border-primary/20 block pb-1 text-amber-600 font-semibold">Tổng Điện tháng (kWh)</label>
+                                        <Input type="number" step="1" min="0" value={targetElec || ""} onChange={(e) => setTargetElec(Number(e.target.value))} placeholder="VD: 5000" />
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
@@ -405,7 +415,12 @@ export default function AdminPlanPage() {
                             <TableRow>
                                 <TableHead className="w-[200px]">Ngày</TableHead>
                                 {!["FGWH", "ENERGY"].includes(departments.find(d => d.id === selectedDept)?.code || "") && (
-                                    <TableHead>Kế hoạch (Tấn)</TableHead>
+                                    <>
+                                        <TableHead>Kế hoạch (Tấn)</TableHead>
+                                        {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
+                                            <TableHead>Target Điện (kWh)</TableHead>
+                                        )}
+                                    </>
                                 )}
                                 {departments.find(d => d.id === selectedDept)?.code === "FGWH" && (
                                     <>
@@ -427,16 +442,30 @@ export default function AdminPlanPage() {
                                 <TableRow key={row.work_date}>
                                     <TableCell className="font-medium capitalize">{row.display_date}</TableCell>
                                     {!["FGWH", "ENERGY"].includes(departments.find(d => d.id === selectedDept)?.code || "") && (
-                                        <TableCell>
-                                            <Input
-                                                type="number"
-                                                step="0.1"
-                                                min="0"
-                                                className="max-w-[150px]"
-                                                value={row.plan_ton}
-                                                onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
-                                            />
-                                        </TableCell>
+                                        <>
+                                            <TableCell>
+                                                <Input
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0"
+                                                    className="max-w-[150px]"
+                                                    value={row.plan_ton}
+                                                    onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
+                                                />
+                                            </TableCell>
+                                            {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
+                                                <TableCell>
+                                                    <Input
+                                                        type="number"
+                                                        step="1"
+                                                        min="0"
+                                                        className="max-w-[150px]"
+                                                        value={row.electricity_target_kwh}
+                                                        onChange={(e) => handlePlanChange(idx, "electricity_target_kwh", e.target.value)}
+                                                    />
+                                                </TableCell>
+                                            )}
+                                        </>
                                     )}
                                     {departments.find(d => d.id === selectedDept)?.code === "FGWH" && (
                                         <>

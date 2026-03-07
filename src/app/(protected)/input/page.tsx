@@ -56,6 +56,7 @@ const kpiSchema = z.object({
     unpeel_pct: z.coerce.number().min(0, "Unpeel >= 0").max(100, "Unpeel <= 100").optional().default(0),
     isp_pct: z.coerce.number().min(0, "ISP >= 0").max(100, "ISP <= 100").optional().default(0),
     sw_pct: z.coerce.number().min(0, "SW >= 0").max(100, "SW <= 100").optional().default(0),
+    electricity_meter_reading: z.coerce.number().min(0, "Chỉ số điện >= 0").optional(),
     note: z.string().optional(),
 })
 
@@ -76,6 +77,7 @@ export default function InputPage() {
     })
     const [fgwhData, setFgwhData] = useState({ actual_isp_ton: 0, actual_non_isp_ton: 0 })
     const [energyData, setEnergyData] = useState({ electricity_kwh: 0, electricity_target_kwh: 0, water_m3: 0, water_target_m3: 0, wood_kg: 0, wood_target_kg: 0 })
+    const [prevMeterReading, setPrevMeterReading] = useState<number | null>(null)
 
     // Forms
     const formActual = useForm<z.infer<typeof actualSchema>>({
@@ -98,6 +100,7 @@ export default function InputPage() {
             unpeel_pct: 0,
             isp_pct: 0,
             sw_pct: 0,
+            electricity_meter_reading: 0,
             note: "",
         },
     })
@@ -187,10 +190,28 @@ export default function InputPage() {
                     unpeel_pct: Number(kpiData.unpeel_pct || 0),
                     isp_pct: Number(kpiData.isp_pct || 0),
                     sw_pct: Number(kpiData.sw_pct || 0),
+                    electricity_meter_reading: Number(kpiData.electricity_meter_reading || 0),
                     note: kpiData.note || "",
                 })
             } else {
-                formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, downtime_min: 0, broken_pct: 0, unpeel_pct: 0, isp_pct: 0, sw_pct: 0, note: "" })
+                formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, downtime_min: 0, broken_pct: 0, unpeel_pct: 0, isp_pct: 0, sw_pct: 0, electricity_meter_reading: 0, note: "" })
+            }
+
+            // Fetch Previous Day's Meter Reading for Shelling
+            const currentDeptCode = departments.find(d => d.id === selectedDept)?.code
+            if (currentDeptCode === 'SHELL') {
+                const prevDate = new Date(date)
+                prevDate.setDate(prevDate.getDate() - 1)
+                const formattedPrevDate = format(prevDate, "yyyy-MM-dd")
+
+                const { data: prevKpi } = await supabase
+                    .from("daily_kpi")
+                    .select("electricity_meter_reading")
+                    .eq("department_id", selectedDept)
+                    .eq("work_date", formattedPrevDate)
+                    .single()
+
+                setPrevMeterReading(prevKpi ? Number(prevKpi.electricity_meter_reading) : null)
             }
         }
 
@@ -611,10 +632,42 @@ export default function InputPage() {
 
                                                     if (selectedDeptCode === "SHELL") {
                                                         return (
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                                <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
-                                                                    <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                )} />
+                                                            <div className="space-y-6">
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                    <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
+                                                                        <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                    )} />
+                                                                    <FormField control={formKpi.control} name="electricity_meter_reading" render={({ field }) => (
+                                                                        <FormItem>
+                                                                            <FormLabel className="text-amber-600 font-semibold">Chỉ số đồng hồ điện (kWh)</FormLabel>
+                                                                            <FormControl><Input type="number" step="1" {...field} /></FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )} />
+                                                                </div>
+                                                                {(() => {
+                                                                    const currentMeter = formKpi.watch("electricity_meter_reading") || 0;
+                                                                    const consumption = prevMeterReading !== null ? currentMeter - prevMeterReading : 0;
+                                                                    const actualTon = formActual.watch("actual_ton") || 0;
+                                                                    const intensity = actualTon > 0 ? (consumption / actualTon).toFixed(2) : "0.00";
+
+                                                                    if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">Chưa có chỉ số ngày hôm trước để tính tiêu thụ.</p>;
+
+                                                                    return (
+                                                                        <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 grid grid-cols-2 gap-4">
+                                                                            <div>
+                                                                                <p className="text-xs text-amber-700 font-medium">Tiêu thụ hôm nay</p>
+                                                                                <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
+                                                                                <p className="text-[10px] text-amber-600">(Số mới {currentMeter} - Số cũ {prevMeterReading})</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn</p>
+                                                                                <p className="text-xl font-bold text-amber-900">{intensity} <span className="text-sm font-normal">kWh/T</span></p>
+                                                                                <p className="text-[10px] text-amber-600">(Tiêu thụ / {actualTon} Tấn phẩm)</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })()}
                                                             </div>
                                                         );
                                                     }
