@@ -60,55 +60,61 @@ export function GaugeChart({
     }
 
     return (
-        <div className="flex flex-col items-center justify-center relative w-full" style={{ height }}>
-            {/* SVG implementation of half-circle Gauge */}
-            <svg
-                viewBox="0 0 100 55"
-                className="w-full h-full overflow-visible"
-                preserveAspectRatio="xMidYMax meet"
-            >
-                {/* Background Arc */}
-                <path
-                    d={`M 10 50 A 40 40 0 0 1 90 50`}
-                    fill="none"
-                    stroke="#e2e8f0" // slate-200
-                    strokeWidth="10"
-                    strokeLinecap="round"
-                />
-
-                {/* Progress Arc */}
-                <path
-                    d={`M 10 50 A 40 40 0 0 1 90 50`}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="10"
-                    strokeLinecap="round"
-                    strokeDasharray={strokeDasharray}
-                    style={{
-                        transition: "stroke-dasharray 1s ease-out"
-                    }}
-                />
-            </svg>
-
-            {/* Labels overlay */}
-            <div className="absolute inset-x-0 bottom-1 flex flex-col items-center justify-end leading-none">
-                <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-foreground tracking-tight">{formattedValue}</span>
-                    <span className="text-xs font-normal text-muted-foreground">{unit}</span>
-                </div>
-                <div className={`flex items-center justify-center gap-1 mt-1 text-sm font-bold ${trendColor}`}>
-                    <span>{rawPercent.toFixed(1)}%</span>
-                    {rawPercent > 0 && <TrendIcon className="w-4 h-4" />}
-                </div>
-            </div>
-
-            <div className="absolute top-1 font-semibold text-xs text-muted-foreground text-center line-clamp-1 w-full px-2">
+        <div className="flex flex-col items-center justify-between w-full" style={{ height }}>
+            {/* Top Label */}
+            <div className="font-semibold text-xs text-muted-foreground text-center line-clamp-1 w-full px-2 mt-1">
                 {label}
             </div>
 
-            <div className="absolute bottom-[-15px] inset-x-0 flex justify-between px-6 text-[9px] text-muted-foreground font-medium">
-                <span>0</span>
-                <span>Target: {formattedTarget}</span>
+            {/* SVG implementation of half-circle Gauge */}
+            <div className="relative w-full flex-1 flex flex-col items-center justify-end">
+                <svg
+                    viewBox="0 0 100 55"
+                    className="absolute inset-0 w-full h-full overflow-visible"
+                    preserveAspectRatio="xMidYMax meet"
+                >
+                    {/* Background Arc */}
+                    <path
+                        d={`M 10 50 A 40 40 0 0 1 90 50`}
+                        fill="none"
+                        stroke="#e2e8f0" // slate-200
+                        strokeWidth="10"
+                        strokeLinecap="round"
+                    />
+
+                    {/* Progress Arc */}
+                    <path
+                        d={`M 10 50 A 40 40 0 0 1 90 50`}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="10"
+                        strokeLinecap="round"
+                        strokeDasharray={strokeDasharray}
+                        style={{
+                            transition: "stroke-dasharray 1s ease-out"
+                        }}
+                    />
+                </svg>
+
+                {/* Numbers overlay */}
+                <div className="relative z-10 flex flex-col items-center justify-end leading-none mb-1">
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold text-foreground tracking-tight">{formattedValue}</span>
+                        <span className="text-xs font-normal text-muted-foreground">{unit}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Target & Trend */}
+            <div className="flex flex-col items-center w-full mt-1 mb-1">
+                <div className={`flex items-center justify-center gap-1 text-sm font-bold ${trendColor}`}>
+                    <span>{rawPercent.toFixed(1)}%</span>
+                    {rawPercent > 0 && <TrendIcon className="w-4 h-4" />}
+                </div>
+                <div className="flex justify-between w-full px-4 text-[10px] text-muted-foreground font-medium mt-1">
+                    <span>0</span>
+                    <span>Target: {formattedTarget}</span>
+                </div>
             </div>
         </div>
     );
