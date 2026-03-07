@@ -339,7 +339,7 @@ export default function AdminPlanPage() {
                                     <Input type="number" step="0.1" min="0" value={monthlyWater || ""} onChange={(e) => setMonthlyWater(Number(e.target.value))} placeholder="VD: 2000" />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-sm font-medium text-orange-600">Tổng Củi (kg)</label>
+                                    <label className="text-sm font-medium text-orange-600">Tổng Củi (Tấn)</label>
                                     <Input type="number" step="1" min="0" value={monthlyWood || ""} onChange={(e) => setMonthlyWood(Number(e.target.value))} placeholder="VD: 30000" />
                                 </div>
                             </>
@@ -417,7 +417,7 @@ export default function AdminPlanPage() {
                                     <>
                                         <TableHead>Mục tiêu Điện (kWh)</TableHead>
                                         <TableHead>Mục tiêu Nước (m³)</TableHead>
-                                        <TableHead>Mục tiêu Củi (kg)</TableHead>
+                                        <TableHead>Mục tiêu Củi (Tấn)</TableHead>
                                     </>
                                 )}
                             </TableRow>

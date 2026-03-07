@@ -740,7 +740,7 @@ export default function InputPage() {
                                     </div>
 
                                     <div className="space-y-4 pl-4">
-                                        <h4 className="font-medium text-orange-600">🔥 Củi (kg)</h4>
+                                        <h4 className="font-medium text-orange-600">🔥 Củi (Tấn)</h4>
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium text-muted-foreground">Mục tiêu / Target</label>
                                             <input

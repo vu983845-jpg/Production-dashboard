@@ -639,7 +639,7 @@ export default function DashboardPage() {
                             <GaugeChart value={kpiSummary.waterActual} target={kpiSummary.waterTarget} label="NƯỚC TIÊU THỤ" unit="m³" color="#3b82f6" formatValue={(v) => Number(v).toLocaleString()} inverse />
                         </Card>
                         <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
-                            <GaugeChart value={kpiSummary.woodActual} target={kpiSummary.woodTarget} label="CỦI TIÊU THỤ" unit="kg" color="#f97316" formatValue={(v) => Number(v).toLocaleString()} inverse />
+                            <GaugeChart value={kpiSummary.woodActual} target={kpiSummary.woodTarget} label="CỦI TIÊU THỤ" unit="T" color="#f97316" formatValue={(v) => Number(v).toLocaleString()} inverse />
                         </Card>
                     </div>
                 )}
@@ -689,8 +689,8 @@ export default function DashboardPage() {
                                     <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Mục tiêu Điện (kWh)" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
                                     <Bar yAxisId="right" dataKey="WaterActual" name="Thực tế Nước (m³)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
                                     <Line yAxisId="right" type="monotone" dataKey="WaterTarget" name="Mục tiêu Nước (m³)" stroke="#2563eb" strokeDasharray="5 5" dot={false} strokeWidth={2} />
-                                    <Bar yAxisId="right2" dataKey="WoodActual" name="Thực tế Củi (kg)" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
-                                    <Line yAxisId="right2" type="monotone" dataKey="WoodTarget" name="Mục tiêu Củi (kg)" stroke="#c2410c" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                    <Bar yAxisId="right2" dataKey="WoodActual" name="Thực tế Củi (Tấn)" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
+                                    <Line yAxisId="right2" type="monotone" dataKey="WoodTarget" name="Mục tiêu Củi (Tấn)" stroke="#c2410c" strokeDasharray="5 5" dot={false} strokeWidth={2} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </CardContent>
