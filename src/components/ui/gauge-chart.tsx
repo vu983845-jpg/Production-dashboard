@@ -60,17 +60,26 @@ export function GaugeChart({
     }
 
     return (
-        <div className="flex flex-col items-center justify-between w-full" style={{ height }}>
-            {/* Top Label */}
-            <div className="font-semibold text-xs text-muted-foreground text-center line-clamp-1 w-full px-2 mt-1">
-                {label}
+        <div className="flex flex-row items-center justify-between w-full h-full gap-2">
+            {/* Left Side: Labels & Targets */}
+            <div className="flex flex-col justify-center flex-1 text-left min-w-0">
+                <div className="font-bold text-xs text-muted-foreground line-clamp-2 leading-tight">
+                    {label}
+                </div>
+                <div className={`flex items-center gap-1 mt-2 text-base font-bold ${trendColor}`}>
+                    <span>{rawPercent.toFixed(1)}%</span>
+                    {rawPercent > 0 && <TrendIcon className="w-5 h-5" />}
+                </div>
+                <div className="text-[11px] text-muted-foreground font-medium mt-1">
+                    Target: {formattedTarget}
+                </div>
             </div>
 
-            {/* SVG implementation of half-circle Gauge */}
-            <div className="relative w-full flex-1 flex flex-col items-center justify-end">
+            {/* Right Side: SVG Gauge */}
+            <div className="relative w-28 h-18 shrink-0 flex flex-col items-center justify-end pb-1">
                 <svg
                     viewBox="0 0 100 55"
-                    className="absolute inset-0 w-full h-full overflow-visible"
+                    className="absolute inset-x-0 bottom-0 w-full h-full overflow-visible"
                     preserveAspectRatio="xMidYMax meet"
                 >
                     {/* Background Arc */}
@@ -96,24 +105,12 @@ export function GaugeChart({
                     />
                 </svg>
 
-                {/* Numbers overlay */}
-                <div className="relative z-10 flex flex-col items-center justify-end leading-none mb-1">
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-bold text-foreground tracking-tight">{formattedValue}</span>
-                        <span className="text-xs font-normal text-muted-foreground">{unit}</span>
+                {/* Numbers overlay inside arc */}
+                <div className="relative z-10 flex flex-col items-center justify-end leading-none translate-y-2">
+                    <div className="flex items-baseline gap-0.5">
+                        <span className="text-xl font-bold text-foreground tracking-tight">{formattedValue}</span>
+                        <span className="text-[10px] font-normal text-muted-foreground">{unit}</span>
                     </div>
-                </div>
-            </div>
-
-            {/* Bottom Target & Trend */}
-            <div className="flex flex-col items-center w-full mt-1 mb-1">
-                <div className={`flex items-center justify-center gap-1 text-sm font-bold ${trendColor}`}>
-                    <span>{rawPercent.toFixed(1)}%</span>
-                    {rawPercent > 0 && <TrendIcon className="w-4 h-4" />}
-                </div>
-                <div className="flex justify-between w-full px-4 text-[10px] text-muted-foreground font-medium mt-1">
-                    <span>0</span>
-                    <span>Target: {formattedTarget}</span>
                 </div>
             </div>
         </div>
