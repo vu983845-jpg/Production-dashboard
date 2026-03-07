@@ -375,7 +375,7 @@ export default function AdminPlanPage() {
                                 </div>
                                 {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
                                     <div className="space-y-1">
-                                        <label className="text-sm border-b border-primary/20 block pb-1 text-amber-600 font-semibold">Tổng Điện tháng (kWh)</label>
+                                        <label className="text-sm border-b border-primary/20 block pb-1 text-amber-600 font-semibold">Tổng Điện Shelling (kWh)</label>
                                         <Input type="number" step="1" min="0" value={targetElec || ""} onChange={(e) => setTargetElec(Number(e.target.value))} placeholder="VD: 5000" />
                                     </div>
                                 )}
@@ -418,7 +418,7 @@ export default function AdminPlanPage() {
                                     <>
                                         <TableHead>Kế hoạch (Tấn)</TableHead>
                                         {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
-                                            <TableHead>Target Điện (kWh)</TableHead>
+                                            <TableHead>Target Điện Shelling (kWh)</TableHead>
                                         )}
                                     </>
                                 )}
