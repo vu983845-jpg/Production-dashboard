@@ -701,27 +701,78 @@ export default function DashboardPage() {
             {
                 selectedDept === 'all' && energyHistory.length > 0 && (
                     <Card className="mt-4 bg-white">
-                        <CardHeader>
-                            <CardTitle className="text-xl">Theo dõi Điện & Nước ({format(selectedMonth, 'MM/yyyy')})</CardTitle>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xl">Theo dõi Điện - Nước - Củi ({format(selectedMonth, 'MM/yyyy')})</CardTitle>
                         </CardHeader>
-                        <CardContent className="h-80 pb-6">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={energyHistory} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                                    <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#eab308" />
-                                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" />
-                                    <YAxis yAxisId="right2" orientation="right" tick={{ fontSize: 12 }} stroke="#f97316" width={80} />
-                                    <Tooltip contentStyle={{ fontSize: '13px' }} />
-                                    <Legend wrapperStyle={{ bottom: -5 }} />
-                                    <Bar yAxisId="left" dataKey="ElectricityActual" name="Thực tế Điện (kWh)" fill="#eab308" radius={[4, 4, 0, 0]} barSize={20} />
-                                    <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Mục tiêu Điện (kWh)" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
-                                    <Bar yAxisId="right" dataKey="WaterActual" name="Thực tế Nước (m³)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
-                                    <Line yAxisId="right" type="monotone" dataKey="WaterTarget" name="Mục tiêu Nước (m³)" stroke="#2563eb" strokeDasharray="5 5" dot={false} strokeWidth={2} />
-                                    <Bar yAxisId="right2" dataKey="WoodActual" name="Thực tế Củi (Tấn)" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
-                                    <Line yAxisId="right2" type="monotone" dataKey="WoodTarget" name="Mục tiêu Củi (Tấn)" stroke="#c2410c" strokeDasharray="5 5" dot={false} strokeWidth={2} />
-                                </ComposedChart>
-                            </ResponsiveContainer>
+                        <CardContent>
+                            {/* DESKTOP VIEW: Combined Chart with 3 Y-Axes */}
+                            <div className="hidden md:block h-80 w-full pb-4">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={energyHistory} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                                        <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#eab308" />
+                                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" />
+                                        <YAxis yAxisId="right2" orientation="right" tick={{ fontSize: 12 }} stroke="#f97316" width={80} />
+                                        <Tooltip contentStyle={{ fontSize: '12px' }} />
+                                        <Legend wrapperStyle={{ bottom: -5, fontSize: '11px' }} />
+                                        <Bar yAxisId="left" dataKey="ElectricityActual" name="Điện (kWh)" fill="#eab308" radius={[4, 4, 0, 0]} barSize={20} />
+                                        <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Target Điện" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                        <Bar yAxisId="right" dataKey="WaterActual" name="Nước (m³)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
+                                        <Line yAxisId="right" type="monotone" dataKey="WaterTarget" name="Target Nước" stroke="#2563eb" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                        <Bar yAxisId="right2" dataKey="WoodActual" name="Củi (Tấn)" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
+                                        <Line yAxisId="right2" type="monotone" dataKey="WoodTarget" name="Target Củi" stroke="#c2410c" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* MOBILE VIEW: 3 Separate Charts for better readability */}
+                            <div className="md:hidden flex flex-col gap-10 py-4">
+                                {/* Electricity Chart */}
+                                <div className="h-48 w-full">
+                                    <p className="text-xs font-bold text-amber-600 mb-2 uppercase tracking-tight">Biểu đồ Điện (kWh)</p>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                            <YAxis tick={{ fontSize: 9 }} stroke="#eab308" />
+                                            <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                            <Bar dataKey="ElectricityActual" name="Thực tế" fill="#eab308" radius={[2, 2, 0, 0]} barSize={12} />
+                                            <Line type="monotone" dataKey="ElectricityTarget" name="Mục tiêu" stroke="#ca8a04" strokeDasharray="4 4" dot={false} strokeWidth={2} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                {/* Water Chart */}
+                                <div className="h-48 w-full">
+                                    <p className="text-xs font-bold text-blue-600 mb-2 uppercase tracking-tight">Biểu đồ Nước (m³)</p>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                            <YAxis tick={{ fontSize: 9 }} stroke="#3b82f6" />
+                                            <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                            <Bar dataKey="WaterActual" name="Thực tế" fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={12} />
+                                            <Line type="monotone" dataKey="WaterTarget" name="Mục tiêu" stroke="#2563eb" strokeDasharray="4 4" dot={false} strokeWidth={2} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                {/* Wood Chart */}
+                                <div className="h-48 w-full">
+                                    <p className="text-xs font-bold text-orange-600 mb-2 uppercase tracking-tight">Biểu đồ Củi (Tấn)</p>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                            <YAxis tick={{ fontSize: 9 }} stroke="#f97316" />
+                                            <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                            <Bar dataKey="WoodActual" name="Thực tế" fill="#f97316" radius={[2, 2, 0, 0]} barSize={12} />
+                                            <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={2} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 )
