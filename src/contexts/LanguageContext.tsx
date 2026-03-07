@@ -26,7 +26,7 @@ const translations: Record<string, Record<Language, string>> = {
     "tab_regions": { vi: "3 Charts", en: "3 Charts" },
     "dropdown_placeholder": { vi: "Chọn để Lọc Dữ liệu", en: "Select to Filter Data" },
     "all_factory": { vi: "Tổng Hợp Toàn Nhà Máy", en: "Total Factory Aggregate" },
-    "all_factory_card": { vi: "TỔNG NHÀ MÁY", en: "FACTORY (AGGREGATE)" },
+    "all_factory_card": { vi: "TỔNG SẢN LƯỢNG / TOTAL PRODUCTION", en: "FACTORY (AGGREGATE)" },
     "export_btn": { vi: "Xuất file", en: "Export" },
     "actual_vs_plan": { vi: "Thực tế / Kế hoạch (T)", en: "Actual / Plan (T)" },
     "achv_pct": { vi: "Mức đạt (%)", en: "Target Achieved (%)" },
