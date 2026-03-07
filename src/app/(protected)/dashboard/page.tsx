@@ -653,15 +653,15 @@ export default function DashboardPage() {
                         {renderMiniDashboard("fgwh", "FGWH - Kho Thành Phẩm", true)}
                     </div>
 
-                    {/* 9 MINI DASHBOARDS GRID - 3x3 format on standard desktops */}
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    {/* MINI DASHBOARDS GRID */}
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                         {/* Department Cards - exclude FGWH since it has its own card above */}
                         {departments.filter(d => d.code !== 'FGWH').map(d => renderMiniDashboard(d.id, d.name_en))}
                     </div>
                 </TabsContent>
 
                 <TabsContent value="regions" className="mt-0">
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                         {renderMiniDashboard("region-RCN", t('region_rcn'), true)}
                         {renderMiniDashboard("region-LCA", t('region_lca'), true)}
                         {renderMiniDashboard("region-HCA", t('region_hca'), true)}

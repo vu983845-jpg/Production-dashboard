@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { IntersnackLogo } from "@/components/intersnack-logo";
+import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -69,7 +70,14 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex h-screen w-full items-center justify-center bg-gray-50">
+        <div className="flex h-screen w-full items-center justify-center bg-gray-50 relative">
+            <Button variant="ghost" className="absolute top-4 left-4 sm:top-6 sm:left-6 gap-2 text-muted-foreground hover:text-foreground" asChild>
+                <a href="https://dds-meeting.vercel.app/">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Quay lại DDS Meeting</span>
+                    <span className="sm:hidden">DDS Meeting</span>
+                </a>
+            </Button>
             <Card className="w-full max-w-sm">
                 <CardHeader className="text-center pb-6">
                     <div className="flex justify-center mb-4">

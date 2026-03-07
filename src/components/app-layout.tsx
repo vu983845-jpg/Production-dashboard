@@ -10,6 +10,7 @@ import {
     Users,
     LogOut,
     Menu,
+    ArrowLeft,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -133,6 +134,13 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                 </div>
 
                 <div className="flex flex-1 items-center justify-end gap-2 md:gap-4 lg:gap-6 shrink-0">
+                    <Button variant="outline" size="sm" asChild className="gap-1.5 px-2 sm:px-3 text-muted-foreground hover:text-foreground">
+                        <a href="https://dds-meeting.vercel.app/">
+                            <ArrowLeft className="h-4 w-4" />
+                            <span className="hidden sm:inline">DDS Meeting</span>
+                            <span className="sm:hidden text-xs font-semibold">DDS</span>
+                        </a>
+                    </Button>
                     <LanguageToggle />
 
                     <DropdownMenu>
