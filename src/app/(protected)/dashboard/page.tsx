@@ -566,22 +566,6 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 )}
-                                {["ALL", "LCA", "HCA", "RCN", "CS", "PACK"].includes(deptCode) && (
-                                    <div>
-                                        <p className="text-xs text-muted-foreground mb-1">Yield (%)</p>
-                                        <div className="text-md font-bold text-blue-600 flex items-center gap-1">
-                                            {summary.yieldPct.toFixed(1)}%
-                                        </div>
-                                    </div>
-                                )}
-                                {["ALL", "LCA", "HCA", "RCN", "STEAM", "HAND", "CS", "PACK"].includes(deptCode) && (
-                                    <div>
-                                        <p className="text-xs text-muted-foreground mb-1">WIP Close</p>
-                                        <div className="text-md font-bold text-purple-600 flex items-center gap-1">
-                                            {summary.wipClose.toFixed(1)} T
-                                        </div>
-                                    </div>
-                                )}
                             </>
                         )}
                     </div>
