@@ -82,8 +82,8 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                         className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0 md:mr-2"
                     >
                         <IntersnackLogo className="h-8 w-8" />
-                        <span className="hidden lg:inline text-red-600 font-bold tracking-tight whitespace-nowrap">Intersnack Cashew Company</span>
-                        <span className="lg:hidden text-red-600 font-bold whitespace-nowrap">Intersnack</span>
+                        <span className="hidden lg:inline text-red-600 font-bold tracking-tight whitespace-nowrap">VICC LA</span>
+                        <span className="lg:hidden text-red-600 font-bold whitespace-nowrap">VICC LA</span>
                     </Link>
                     {navItems
                         .filter((item) => item.roles.includes(role))
@@ -129,7 +129,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                     </DropdownMenu>
                     <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0">
                         <IntersnackLogo className="h-7 w-7" />
-                        <span className="text-red-600 font-bold tracking-tight" style={{ fontSize: '0.95rem' }}>Intersnack</span>
+                        <span className="text-red-600 font-bold tracking-tight" style={{ fontSize: '0.95rem' }}>VICC LA</span>
                     </Link>
                 </div>
 
