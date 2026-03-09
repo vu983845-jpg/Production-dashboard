@@ -490,15 +490,11 @@ export default function DashboardPage() {
                     <CardContent className="pt-4 flex-1">
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-blue-600 mb-1">Hôm nay / Daily (ISP)</p>
-                                <div className="text-md font-bold text-blue-700">{summary.latestActualIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.latestPlanIsp?.toFixed(1) ?? 0} T</span></div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mt-2 mb-1">Tháng / Monthly (ISP)</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mb-1">Tháng / Monthly (ISP)</p>
                                 <div className="text-md font-bold">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></div>
                             </div>
                             <div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-blue-600 mb-1">Hôm nay / Daily (Non)</p>
-                                <div className="text-md font-bold text-blue-700">{summary.latestActualNonIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.latestPlanNonIsp?.toFixed(1) ?? 0} T</span></div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mt-2 mb-1">Tháng / Monthly (Non)</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mb-1">Tháng / Monthly (Non)</p>
                                 <div className="text-md font-bold">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></div>
                             </div>
                         </div>
@@ -534,9 +530,7 @@ export default function DashboardPage() {
                 <CardContent className="pt-4 flex-1">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold text-blue-600 mb-1">Hôm nay / Daily</p>
-                            <div className="text-md font-bold text-blue-700">{summary.latestActual.toFixed(1)} <span className="text-xs font-normal text-muted-foreground">/ {summary.latestPlan.toFixed(1)} {unit}</span></div>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mt-2 mb-1">Tháng / Monthly</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mb-1">Tháng / Monthly</p>
                             <div className="text-md font-bold">{actualNum.toFixed(1)} <span className="text-xs font-normal text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span></div>
                             <p className="text-[10px] text-primary mt-1 font-medium">
                                 {variance >= 0 ? `+${variance.toFixed(1)} ${unit}` : `${variance.toFixed(1)} ${unit}`}
@@ -563,9 +557,6 @@ export default function DashboardPage() {
                                         <div className="text-lg font-bold flex items-center gap-1 text-indigo-700">
                                             {summary.achivementContPct?.toFixed(1) || 0}%
                                             {(summary.achivementContPct || 0) >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
-                                        </div>
-                                        <div className={`text-[10px] font-bold mt-1 ${summary.latestActualCont < summary.latestPlanCont ? 'text-red-600 animate-pulse' : 'text-indigo-600'}`}>
-                                            Today: {summary.latestActualCont.toFixed(2)} / {summary.latestPlanCont.toFixed(2)}
                                         </div>
                                     </div>
                                 )}
