@@ -36,8 +36,8 @@ const translations: Record<string, Record<Language, string>> = {
 
     // Regions
     "region_rcn": { vi: "KHO ĐIỀU THÔ (RCN)", en: "RCN WAREHOUSE" },
-    "region_lca": { vi: "LCA (Hấp -> Borma)", en: "LCA (Steaming -> Borma)" },
-    "region_hca": { vi: "HCA (Tách -> Đóng gói)", en: "HCA (Peeling -> Packing)" },
+    "region_lca": { vi: "LCA", en: "LCA" },
+    "region_hca": { vi: "HCA", en: "HCA" },
 
     // Table 
     "master_data_table": { vi: "Bảng Dữ liệu Sản lượng Tổng hợp", en: "Master Production Data Table" },
