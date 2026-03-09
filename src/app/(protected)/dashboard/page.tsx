@@ -282,10 +282,12 @@ export default function DashboardPage() {
                     // To build an accurate history (Actual vs Plan per day), we must group regions by Work_Date!
                     const recordsByDay = records.reduce((dayAcc: any, r: any) => {
                         if (!dayAcc[r.work_date]) {
-                            dayAcc[r.work_date] = { plan: 0, actual: 0, elec: 0 };
+                            dayAcc[r.work_date] = { plan: 0, actual: 0, plan_cont: 0, actual_cont: 0, elec: 0 };
                         }
                         dayAcc[r.work_date].plan += Number(r.plan_ton);
                         dayAcc[r.work_date].actual += Number(r.actual_ton);
+                        dayAcc[r.work_date].plan_cont += Number(r.plan_container || 0);
+                        dayAcc[r.work_date].actual_cont += Number(r.actual_container || 0);
                         dayAcc[r.work_date].elec += Number(r.electricity_consumption_kwh || 0);
                         return dayAcc;
                     }, {});
@@ -294,6 +296,8 @@ export default function DashboardPage() {
                         name: format(new Date(d), 'dd/MM'),
                         Actual: recordsByDay[d].actual,
                         Plan: recordsByDay[d].plan,
+                        ContActual: recordsByDay[d].actual_cont,
+                        ContPlan: recordsByDay[d].plan_cont,
                         Intensity: recordsByDay[d].actual > 0 ? Number((recordsByDay[d].elec / recordsByDay[d].actual).toFixed(2)) : 0
                     }));
 
@@ -391,10 +395,18 @@ export default function DashboardPage() {
                 return `"${d.name}",${d.Plan},${d.Actual},${pct},${variance},${d.Down}`;
             });
         } else {
-            headers = ["Ngày", "Mã BP", "Plan (Tấn)", "Actual (Tấn)", "Input (Tấn)", "Output (Tấn)", "Downtime (Phút)"];
-            rows = dailyRecords.map(d => {
-                return `"${format(new Date(d.work_date), 'dd/MM/yyyy')}",${d.dept_code},${d.plan_ton},${d.actual_ton},${d.input_ton},${d.good_output_ton},${d.downtime_min}`;
-            });
+            const isPack = departments.find(d => d.id === selectedDept)?.code === 'PACK';
+            if (isPack) {
+                headers = ["Ngày", "Mã BP", "Plan (Tấn)", "Actual (Tấn)", "Plan Cont", "Actual Cont", "Input (Tấn)", "Output (Tấn)", "Downtime (Phút)"];
+                rows = dailyRecords.map(d => {
+                    return `"${format(new Date(d.work_date), 'dd/MM/yyyy')}",${d.dept_code},${d.plan_ton},${d.actual_ton},${d.plan_container || 0},${d.actual_container || 0},${d.input_ton},${d.good_output_ton},${d.downtime_min}`;
+                });
+            } else {
+                headers = ["Ngày", "Mã BP", "Plan (Tấn)", "Actual (Tấn)", "Input (Tấn)", "Output (Tấn)", "Downtime (Phút)"];
+                rows = dailyRecords.map(d => {
+                    return `"${format(new Date(d.work_date), 'dd/MM/yyyy')}",${d.dept_code},${d.plan_ton},${d.actual_ton},${d.input_ton},${d.good_output_ton},${d.downtime_min}`;
+                });
+            }
         }
 
         const csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
@@ -511,6 +523,14 @@ export default function DashboardPage() {
                                         {isReached ? 'Đạt' : `${dailyNeeded} T`}
                                     </div>
                                 </div>
+                                {deptCode === "PACK" && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Actual / Plan Container</p>
+                                        <div className="text-md font-bold text-indigo-600">
+                                            {summary.totalActualCont.toFixed(2)} / {summary.totalPlanCont.toFixed(2)}
+                                        </div>
+                                    </div>
+                                )}
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
                                     <div className="text-md font-bold text-amber-600 flex items-center gap-1">
@@ -581,14 +601,22 @@ export default function DashboardPage() {
                                         <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name="kWh/T" />
                                     </>
                                 )}
-                                <Bar dataKey="Actual" radius={[2, 2, 0, 0]}>
+                                <Bar dataKey="Actual" name="Actual (T)" radius={[2, 2, 0, 0]}>
                                     {history.map((entry: any, index: number) => {
                                         // If there is a plan AND actual is less than plan -> Red. Otherwise -> Green.
                                         const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
                                         return <Cell key={`cell-${index}`} fill={color} />;
                                     })}
                                 </Bar>
-                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
+                                {deptCode === "PACK" && (
+                                    <>
+                                        <YAxis yAxisId="cont" hide />
+                                        <Line yAxisId="cont" type="monotone" dataKey="ContActual" stroke="#6366f1" dot={false} strokeWidth={2} name="Actual Cont" />
+                                        <Line yAxisId="cont" type="step" dataKey="ContPlan" stroke="#cbd5e1" strokeDasharray="2 2" dot={false} strokeWidth={1} name="Plan Cont" />
+                                    </>
+                                )}
+                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Plan (T)" />
+                                <Legend wrapperStyle={{ fontSize: '9px', marginTop: '5px' }} />
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -786,6 +814,12 @@ export default function DashboardPage() {
                                         <TableHead className="text-right">{t('col_actual')}</TableHead>
                                         <TableHead className="text-right">Input (Tấn)</TableHead>
                                         <TableHead className="text-right">Output (Tấn)</TableHead>
+                                        {departments.find(d => d.id === selectedDept)?.code === 'PACK' && (
+                                            <>
+                                                <TableHead className="text-right">Plan Cont</TableHead>
+                                                <TableHead className="text-right">Actual Cont</TableHead>
+                                            </>
+                                        )}
                                         <TableHead className="text-right">{t('col_downtime')}</TableHead>
                                     </TableRow>
                                 )}
@@ -816,6 +850,12 @@ export default function DashboardPage() {
                                             <TableCell className="text-right text-primary font-bold">{Number(d.actual_ton).toFixed(2)}</TableCell>
                                             <TableCell className="text-right">{Number(d.input_ton).toFixed(2)}</TableCell>
                                             <TableCell className="text-right">{Number(d.good_output_ton).toFixed(2)}</TableCell>
+                                            {d.dept_code === 'PACK' && (
+                                                <>
+                                                    <TableCell className="text-right">{Number(d.plan_container || 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-bold text-indigo-600">{Number(d.actual_container || 0).toFixed(2)}</TableCell>
+                                                </>
+                                            )}
                                             <TableCell className="text-right">{d.downtime_min}</TableCell>
                                         </TableRow>
                                     ))

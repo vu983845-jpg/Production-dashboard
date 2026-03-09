@@ -33,6 +33,7 @@ export default function AdminPlanPage() {
     const [targetYield, setTargetYield] = useState<number>(0)
     const [targetElec, setTargetElec] = useState<number>(0)
     const [cutoffDay, setCutoffDay] = useState<number>(getDaysInMonth(new Date()))
+    const [monthlyPlanCont, setMonthlyPlanCont] = useState<number>(0)
 
     // Energy Monthly Targets
     const [monthlyElectricity, setMonthlyElectricity] = useState<number>(0)
@@ -108,6 +109,7 @@ export default function AdminPlanPage() {
                     work_date: dStr,
                     display_date: format(d, "EEEE, dd/MM", { locale: vi }),
                     plan_ton: existing ? Number(existing.plan_ton) : 0,
+                    plan_container: existing ? Number(existing.plan_container) : 0,
                     plan_isp_ton: existingF ? Number(existingF.plan_isp_ton || 0) : 0,
                     plan_non_isp_ton: existingF ? Number(existingF.plan_non_isp_ton || 0) : 0,
                     electricity_target_kwh: existingE ? Number(existingE.electricity_target_kwh || 0) : (existing ? Number(existing.target_electricity_kwh || 0) : 0),
@@ -123,7 +125,7 @@ export default function AdminPlanPage() {
     }, [selectedDept, weekStart])
 
     // Handle Input change
-    const handlePlanChange = (index: number, field: "plan_ton" | "plan_isp_ton" | "plan_non_isp_ton" | "electricity_target_kwh" | "water_target_m3" | "wood_target_kg", value: string) => {
+    const handlePlanChange = (index: number, field: "plan_ton" | "plan_container" | "plan_isp_ton" | "plan_non_isp_ton" | "electricity_target_kwh" | "water_target_m3" | "wood_target_kg", value: string) => {
         const newData = [...planData]
         newData[index][field] = value === "" ? 0 : Number(value)
         setPlanData(newData)
@@ -163,6 +165,7 @@ export default function AdminPlanPage() {
                 department_id: selectedDept,
                 work_date: d.work_date,
                 plan_ton: d.plan_ton,
+                plan_container: d.plan_container,
                 target_electricity_kwh: d.electricity_target_kwh,
                 updated_at: new Date().toISOString()
             }))
@@ -264,6 +267,7 @@ export default function AdminPlanPage() {
                 department_id: selectedDept,
                 work_date: dateStr,
                 plan_ton: dailyPlanTon,
+                plan_container: selectedDeptCode === "PACK" ? Number((monthlyPlanCont / workingDays.length).toFixed(3)) : 0,
                 target_broken_pct: targetBroken,
                 target_unpeel_pct: targetUnpeel,
                 target_sw_pct: targetSw,
@@ -366,8 +370,14 @@ export default function AdminPlanPage() {
                             <>
                                 <div className="space-y-1">
                                     <label className="text-sm font-medium">Tổng Sản Lượng (Tấn)</label>
-                                    <Input type="number" step="1" min="0" value={monthlyPlanTon || ""} onChange={(e) => setMonthlyPlanTon(Number(e.target.value))} placeholder="VD: 1500" />
+                                    <Input type="number" step="0.1" min="0" value={monthlyPlanTon || ""} onChange={(e) => setMonthlyPlanTon(Number(e.target.value))} placeholder="VD: 1500" />
                                 </div>
+                                {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-blue-600">Tổng Container</label>
+                                        <Input type="number" step="0.1" min="0" value={monthlyPlanCont || ""} onChange={(e) => setMonthlyPlanCont(Number(e.target.value))} placeholder="VD: 17" />
+                                    </div>
+                                )}
                                 <div className="space-y-1">
                                     <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target Yield (%)</label>
                                     <Input type="number" step="0.1" min="0" max="100" value={targetYield || ""} onChange={(e) => setTargetYield(Number(e.target.value))} placeholder="%" />
@@ -432,6 +442,9 @@ export default function AdminPlanPage() {
                                 {!["FGWH", "ENERGY"].includes(departments.find(d => d.id === selectedDept)?.code || "") && (
                                     <>
                                         <TableHead>Kế hoạch (Tấn)</TableHead>
+                                        {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                            <TableHead>Kế hoạch Cont</TableHead>
+                                        )}
                                         {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
                                             <TableHead>Target Điện Shelling (kWh)</TableHead>
                                         )}
@@ -453,22 +466,78 @@ export default function AdminPlanPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {planData.map((row, idx) => (
-                                <TableRow key={row.work_date}>
-                                    <TableCell className="font-medium capitalize">{row.display_date}</TableCell>
-                                    {!["FGWH", "ENERGY"].includes(departments.find(d => d.id === selectedDept)?.code || "") && (
-                                        <>
-                                            <TableCell>
-                                                <Input
-                                                    type="number"
-                                                    step="0.1"
-                                                    min="0"
-                                                    className="max-w-[150px]"
-                                                    value={row.plan_ton}
-                                                    onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
-                                                />
-                                            </TableCell>
-                                            {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
+                            {planData.map((row, idx) => {
+                                const deptCode = departments.find(d => d.id === selectedDept)?.code;
+                                return (
+                                    <TableRow key={row.work_date}>
+                                        <TableCell className="font-medium capitalize">{row.display_date}</TableCell>
+
+                                        {!["FGWH", "ENERGY"].includes(deptCode || "") && (
+                                            <>
+                                                <TableCell>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.1"
+                                                        min="0"
+                                                        className="max-w-[150px]"
+                                                        value={row.plan_ton}
+                                                        onChange={(e) => handlePlanChange(idx, "plan_ton", e.target.value)}
+                                                    />
+                                                </TableCell>
+                                                {deptCode === "PACK" && (
+                                                    <TableCell>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            className="max-w-[100px]"
+                                                            value={row.plan_container}
+                                                            onChange={(e) => handlePlanChange(idx, "plan_container", e.target.value)}
+                                                        />
+                                                    </TableCell>
+                                                )}
+                                                {deptCode === "SHELL" && (
+                                                    <TableCell>
+                                                        <Input
+                                                            type="number"
+                                                            step="1"
+                                                            min="0"
+                                                            className="max-w-[150px]"
+                                                            value={row.electricity_target_kwh}
+                                                            onChange={(e) => handlePlanChange(idx, "electricity_target_kwh", e.target.value)}
+                                                        />
+                                                    </TableCell>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {deptCode === "FGWH" && (
+                                            <>
+                                                <TableCell>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.1"
+                                                        min="0"
+                                                        className="max-w-[150px]"
+                                                        value={row.plan_isp_ton}
+                                                        onChange={(e) => handlePlanChange(idx, "plan_isp_ton", e.target.value)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.1"
+                                                        min="0"
+                                                        className="max-w-[150px]"
+                                                        value={row.plan_non_isp_ton}
+                                                        onChange={(e) => handlePlanChange(idx, "plan_non_isp_ton", e.target.value)}
+                                                    />
+                                                </TableCell>
+                                            </>
+                                        )}
+
+                                        {deptCode === "ENERGY" && (
+                                            <>
                                                 <TableCell>
                                                     <Input
                                                         type="number"
@@ -479,74 +548,37 @@ export default function AdminPlanPage() {
                                                         onChange={(e) => handlePlanChange(idx, "electricity_target_kwh", e.target.value)}
                                                     />
                                                 </TableCell>
-                                            )}
-                                        </>
-                                    )}
-                                    {departments.find(d => d.id === selectedDept)?.code === "FGWH" && (
-                                        <>
-                                            <TableCell>
-                                                <Input
-                                                    type="number"
-                                                    step="0.1"
-                                                    min="0"
-                                                    className="max-w-[150px]"
-                                                    value={row.plan_isp_ton}
-                                                    onChange={(e) => handlePlanChange(idx, "plan_isp_ton", e.target.value)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Input
-                                                    type="number"
-                                                    step="0.1"
-                                                    min="0"
-                                                    className="max-w-[150px]"
-                                                    value={row.plan_non_isp_ton}
-                                                    onChange={(e) => handlePlanChange(idx, "plan_non_isp_ton", e.target.value)}
-                                                />
-                                            </TableCell>
-                                        </>
-                                    )}
-                                    {departments.find(d => d.id === selectedDept)?.code === "ENERGY" && (
-                                        <>
-                                            <TableCell>
-                                                <Input
-                                                    type="number"
-                                                    step="1"
-                                                    min="0"
-                                                    className="max-w-[150px]"
-                                                    value={row.electricity_target_kwh}
-                                                    onChange={(e) => handlePlanChange(idx, "electricity_target_kwh", e.target.value)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Input
-                                                    type="number"
-                                                    step="0.1"
-                                                    min="0"
-                                                    className="max-w-[150px]"
-                                                    value={row.water_target_m3}
-                                                    onChange={(e) => handlePlanChange(idx, "water_target_m3", e.target.value)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Input
-                                                    type="number"
-                                                    step="1"
-                                                    min="0"
-                                                    className="max-w-[150px]"
-                                                    value={row.wood_target_kg}
-                                                    onChange={(e) => handlePlanChange(idx, "wood_target_kg", e.target.value)}
-                                                />
-                                            </TableCell>
-                                        </>
-                                    )}
-                                </TableRow>
-                            ))}
+                                                <TableCell>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.1"
+                                                        min="0"
+                                                        className="max-w-[150px]"
+                                                        value={row.water_target_m3}
+                                                        onChange={(e) => handlePlanChange(idx, "water_target_m3", e.target.value)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input
+                                                        type="number"
+                                                        step="1"
+                                                        min="0"
+                                                        className="max-w-[150px]"
+                                                        value={row.wood_target_kg}
+                                                        onChange={(e) => handlePlanChange(idx, "wood_target_kg", e.target.value)}
+                                                    />
+                                                </TableCell>
+                                            </>
+                                        )}
+                                    </TableRow>
+                                )
+                            })}
                         </TableBody>
                     </Table>
                 </div>
-            )}
+            )
+            }
 
-        </div>
+        </div >
     )
 }

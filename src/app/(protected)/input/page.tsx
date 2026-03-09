@@ -51,6 +51,7 @@ import { createClient } from "@/lib/supabase/client"
 // Schemas
 const actualSchema = z.object({
     actual_ton: z.coerce.number().min(0, "Giá trị phải >= 0"),
+    actual_container: z.coerce.number().min(0, "Số container >= 0").optional().default(0),
     note: z.string().optional(),
     electricity_meter_reading: z.coerce.number().min(0, "Chỉ số điện >= 0").optional(),
 })
@@ -65,6 +66,7 @@ const kpiSchema = z.object({
     unpeel_pct: z.coerce.number().min(0, "Unpeel >= 0").max(100, "Unpeel <= 100").optional().default(0),
     isp_pct: z.coerce.number().min(0, "ISP >= 0").max(100, "ISP <= 100").optional().default(0),
     sw_pct: z.coerce.number().min(0, "SW >= 0").max(100, "SW <= 100").optional().default(0),
+    actual_container: z.coerce.number().min(0, "Số container >= 0").optional().default(0),
     electricity_meter_reading: z.coerce.number().min(0, "Chỉ số điện >= 0").optional(),
     note: z.string().optional(),
 })
@@ -94,6 +96,7 @@ export default function InputPage() {
         resolver: zodResolver(actualSchema),
         defaultValues: {
             actual_ton: 0,
+            actual_container: 0,
             note: "",
             electricity_meter_reading: 0,
         },
@@ -111,6 +114,7 @@ export default function InputPage() {
             unpeel_pct: 0,
             isp_pct: 0,
             sw_pct: 0,
+            actual_container: 0,
             electricity_meter_reading: 0,
             note: "",
         },
@@ -163,11 +167,12 @@ export default function InputPage() {
                 // Initial reset without electricity, will be updated after KPI fetch
                 formActual.reset({
                     actual_ton: Number(actualData?.actual_ton || 0),
+                    actual_container: Number(actualData?.actual_container || 0),
                     note: actualData?.note || "",
                     electricity_meter_reading: 0,
                 })
             } else {
-                formActual.reset({ actual_ton: 0, note: "", electricity_meter_reading: 0 })
+                formActual.reset({ actual_ton: 0, actual_container: 0, note: "", electricity_meter_reading: 0 })
             }
 
             // Fetch FGWH data if dept is FGWH
@@ -199,6 +204,7 @@ export default function InputPage() {
                     wip_close_ton: Number(kpiData.wip_close_ton),
                     input_ton: Number(kpiData.input_ton),
                     good_output_ton: Number(kpiData.good_output_ton),
+                    actual_container: Number(actualData?.actual_container || 0),
                     downtime_min: Number(kpiData.downtime_min),
                     broken_pct: Number(kpiData.broken_pct || 0),
                     unpeel_pct: Number(kpiData.unpeel_pct || 0),
@@ -208,7 +214,7 @@ export default function InputPage() {
                     note: kpiData.note || "",
                 })
             } else {
-                formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, downtime_min: 0, broken_pct: 0, unpeel_pct: 0, isp_pct: 0, sw_pct: 0, electricity_meter_reading: 0, note: "" })
+                formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, actual_container: Number(actualData?.actual_container || 0), downtime_min: 0, broken_pct: 0, unpeel_pct: 0, isp_pct: 0, sw_pct: 0, electricity_meter_reading: 0, note: "" })
             }
 
             // Fetch Previous Day's Meter Reading for Shelling
@@ -321,6 +327,7 @@ export default function InputPage() {
                 department_id: selectedDept,
                 work_date: formattedDate,
                 actual_ton: values.actual_ton,
+                actual_container: values.actual_container,
                 note: values.note,
                 updated_by: userId,
                 updated_at: new Date().toISOString()
@@ -420,17 +427,28 @@ export default function InputPage() {
     async function executeSaveKpi(values: z.infer<typeof kpiSchema>) {
         setIsSaving(true)
         const formattedDate = format(date, "yyyy-MM-dd")
+        const { actual_container, ...restValues } = values
 
         const { error } = await supabase.from("daily_kpi").upsert(
             {
                 department_id: selectedDept,
                 work_date: formattedDate,
-                ...values,
+                ...restValues,
                 updated_by: userId,
                 updated_at: new Date().toISOString()
             },
             { onConflict: 'department_id,work_date' }
         )
+
+        // Also update actual_container in daily_actual if present
+        if (values.actual_container !== undefined) {
+            await supabase.from("daily_actual").upsert({
+                department_id: selectedDept,
+                work_date: formattedDate,
+                actual_container: values.actual_container,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'department_id,work_date' })
+        }
 
         if (error) {
             toast.error("Lỗi khi lưu KPI: " + error.message)
@@ -582,7 +600,7 @@ export default function InputPage() {
                                         <div className="p-6">
                                             <Form {...formActual}>
                                                 <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-lg">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                         <FormField
                                                             control={formActual.control}
                                                             name="actual_ton"
@@ -596,6 +614,21 @@ export default function InputPage() {
                                                                 </FormItem>
                                                             )}
                                                         />
+                                                        {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                                            <FormField
+                                                                control={formActual.control}
+                                                                name="actual_container"
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel>Số Container thực tế</FormLabel>
+                                                                        <FormControl>
+                                                                            <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                                                        </FormControl>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        )}
                                                         {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
                                                             <FormField
                                                                 control={formActual.control}
@@ -882,8 +915,11 @@ export default function InputPage() {
                                                         <TableCell className="font-medium whitespace-nowrap">
                                                             {format(parseISO(r.work_date), "dd/MM/yyyy")}
                                                         </TableCell>
-                                                        <TableCell className="text-right font-bold text-primary">
-                                                            {Number(r.actual_ton).toFixed(2)}
+                                                        <TableCell className="text-right">
+                                                            <div className="font-bold text-primary">{Number(r.actual_ton).toFixed(2)} T</div>
+                                                            {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
+                                                                <div className="text-[10px] text-muted-foreground">{Number(r.actual_container || 0).toFixed(2)} Cont</div>
+                                                            )}
                                                         </TableCell>
                                                         <TableCell className="text-right text-muted-foreground">
                                                             {r.kpi ? `${Number(r.kpi.input_ton).toFixed(1)} / ${Number(r.kpi.good_output_ton).toFixed(1)}` : "-"}
