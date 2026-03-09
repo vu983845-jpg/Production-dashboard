@@ -482,24 +482,26 @@ export default function DashboardPage() {
             return (
                 <Card key={id} className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col border-primary/50 border-2">
                     <CardHeader className="pb-2 bg-gray-50/50 border-b">
-                        <CardTitle className="text-md font-bold flex justify-between items-center text-primary">
-                            FGWH - Kho Thành Phẩm
-                            <FileSymlink className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-md font-bold flex flex-wrap justify-between items-center gap-4 text-primary">
+                            <span className="flex items-center gap-2">
+                                FGWH - Kho Thành Phẩm
+                                <FileSymlink className="h-4 w-4 text-primary" />
+                            </span>
+                            <div className="flex items-center gap-6">
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[10px] text-muted-foreground uppercase mb-0.5">ISP (Thực tế / KH)</span>
+                                    <span className="text-xl font-black text-blue-700">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></span>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[10px] text-muted-foreground uppercase mb-0.5">Non-ISP (Thực tế / KH)</span>
+                                    <span className="text-xl font-black text-slate-700">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></span>
+                                </div>
+                            </div>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-4 flex-1">
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mb-1">Tháng / Monthly (ISP)</p>
-                                <div className="text-md font-bold">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></div>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mb-1">Tháng / Monthly (Non)</p>
-                                <div className="text-md font-bold">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></div>
-                            </div>
-                        </div>
-                        <div className="h-36 w-full mt-auto border-t pt-2">
-                            <ResponsiveContainer width="100%" height="100%">
+                    <CardContent className="pt-4 flex-1 flex flex-col">
+                        <div className="flex-1">
+                            <ResponsiveContainer width="100%" height={160}>
                                 <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
                                     <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
                                     <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
@@ -522,29 +524,40 @@ export default function DashboardPage() {
         return (
             <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col ${isTotal ? 'border-primary/50 border-2' : ''}`}>
                 <CardHeader className="pb-2 bg-gray-50/50 border-b">
-                    <CardTitle className={`text-md font-bold flex justify-between items-center ${isTotal ? 'text-primary' : ''}`}>
-                        {name}
-                        {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
+                    <CardTitle className={`text-md font-bold flex flex-wrap justify-between items-center gap-4 ${isTotal ? 'text-primary' : ''}`}>
+                        <span className="flex items-center gap-2 uppercase tracking-wider">
+                            {name}
+                            {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
+                        </span>
+
+                        <div className="flex items-center gap-8">
+                            <div className="flex flex-col items-end border-r pr-4 border-gray-200">
+                                <span className="text-[10px] text-muted-foreground mb-0.5">THÁNG / MONTHLY</span>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-2xl font-black text-slate-800">{actualNum.toFixed(1)}</span>
+                                    <span className="text-sm text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span>
+                                </div>
+                                <span className={`text-[10px] font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {variance >= 0 ? `+${variance.toFixed(1)}` : variance.toFixed(1)} {unit}
+                                </span>
+                            </div>
+
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] text-muted-foreground mb-0.5">MTD ACHIEVEMENT</span>
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-2xl font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {summary.achivementPct.toFixed(1)}%
+                                    </span>
+                                    {summary.achivementPct >= 100 ? <TrendingUp className="h-6 w-6 text-green-500" /> : <TrendingDown className="h-6 w-6 text-red-500" />}
+                                </div>
+                            </div>
+                        </div>
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 flex-1">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mb-1">Tháng / Monthly</p>
-                            <div className="text-md font-bold">{actualNum.toFixed(1)} <span className="text-xs font-normal text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span></div>
-                            <p className="text-[10px] text-primary mt-1 font-medium">
-                                {variance >= 0 ? `+${variance.toFixed(1)} ${unit}` : `${variance.toFixed(1)} ${unit}`}
-                            </p>
-                        </div>
                         {(
                             <>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">MTD {t('achv_pct')}</p>
-                                    <div className="text-lg font-bold flex items-center gap-1">
-                                        {summary.achivementPct.toFixed(1)}%
-                                        {summary.achivementPct >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
-                                    </div>
-                                </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
                                     <div className={`text-md font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
