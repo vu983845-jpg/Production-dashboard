@@ -96,9 +96,24 @@ export default function DashboardPage() {
         let sumSw = 0, countSw = 0;
         let tElecCons = 0, tElecTarget = 0;
 
+        // MTD (Month To Date) Calculation Logic
+        const todayStr = format(new Date(), "yyyy-MM-dd");
+        let tPlanMTD = 0;
+        let tPlanContMTD = 0;
+
         records.forEach(r => {
-            tPlan += Number(isTotal ? r.total_plan_ton : r.plan_ton || 0);
-            tPlanCont += Number(isTotal ? r.total_plan_container : r.plan_container || 0);
+            const planVal = Number(isTotal ? r.total_plan_ton : r.plan_ton || 0);
+            const planContVal = Number(isTotal ? r.total_plan_container : r.plan_container || 0);
+
+            tPlan += planVal;
+            tPlanCont += planContVal;
+
+            // Only add to MTD if the date is today or in the past
+            if (r.work_date <= todayStr) {
+                tPlanMTD += planVal;
+                tPlanContMTD += planContVal;
+            }
+
             tActual += Number(isTotal ? r.total_actual_ton : r.actual_ton || 0);
             tActualCont += Number(isTotal ? r.total_actual_container : r.actual_container || 0);
             tDown += Number(isTotal ? r.total_downtime_min : r.downtime_min || 0);
@@ -128,13 +143,13 @@ export default function DashboardPage() {
                 if (Number(r.avg_sw_pct) > 0) { sumSw += Number(r.avg_sw_pct); countSw++; }
             }
         });
+
         const latestRecord = records[records.length - 1] || {};
         const latestPlan = Number(isTotal ? latestRecord.total_plan_ton : latestRecord.plan_ton || 0);
         const latestActual = Number(isTotal ? latestRecord.total_actual_ton : latestRecord.actual_ton || 0);
         const latestPlanCont = Number(isTotal ? latestRecord.total_plan_container : latestRecord.plan_container || 0);
         const latestActualCont = Number(isTotal ? latestRecord.total_actual_container : latestRecord.actual_container || 0);
 
-        const latestActualIsp = Number(latestRecord.total_plan_isp_ton || 0); // Wait, this is plan. Fixing...
         const latestActualIsp_val = Number(latestRecord.total_actual_isp_ton || 0);
         const latestPlanIsp_val = Number(latestRecord.total_plan_isp_ton || 0);
         const latestActualNonIsp_val = Number(latestRecord.total_actual_non_isp_ton || 0);
@@ -145,6 +160,8 @@ export default function DashboardPage() {
             totalPlanCont: tPlanCont,
             totalActual: tActual,
             totalActualCont: tActualCont,
+            totalPlanMTD: tPlanMTD,
+            totalPlanContMTD: tPlanContMTD,
             latestPlan,
             latestActual,
             latestPlanCont,
@@ -153,8 +170,9 @@ export default function DashboardPage() {
             latestPlanIsp: latestPlanIsp_val,
             latestActualNonIsp: latestActualNonIsp_val,
             latestPlanNonIsp: latestPlanNonIsp_val,
-            achivementPct: tPlan > 0 ? (tActual / tPlan) * 100 : 0,
-            variance: tActual - tPlan,
+            achivementPct: tPlanMTD > 0 ? (tActual / tPlanMTD) * 100 : 0,
+            achivementContPct: tPlanContMTD > 0 ? (tActualCont / tPlanContMTD) * 100 : 0,
+            variance: tActual - tPlanMTD, // Variance compared to MTD plan
             downtime: tDown,
             wipClose: tWip,
             yieldPct: tInput > 0 ? (tOutput / tInput) * 100 : 0,
@@ -527,7 +545,7 @@ export default function DashboardPage() {
                         {(
                             <>
                                 <div>
-                                    <p className="text-xs text-muted-foreground mb-1">{t('achv_pct')}</p>
+                                    <p className="text-xs text-muted-foreground mb-1">MTD {t('achv_pct')}</p>
                                     <div className="text-lg font-bold flex items-center gap-1">
                                         {summary.achivementPct.toFixed(1)}%
                                         {summary.achivementPct >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
@@ -541,12 +559,13 @@ export default function DashboardPage() {
                                 </div>
                                 {deptCode === "PACK" && (
                                     <div>
-                                        <p className="text-xs text-muted-foreground mb-1 uppercase font-bold text-indigo-600">Daily Actual / Plan Cont</p>
-                                        <div className={`text-md font-bold ${summary.latestActualCont < summary.latestPlanCont ? 'text-red-600 animate-pulse' : 'text-indigo-600'}`}>
-                                            {summary.latestActualCont.toFixed(2)} / {summary.latestPlanCont.toFixed(2)}
+                                        <p className="text-xs text-muted-foreground mb-1 uppercase font-bold text-indigo-600">Container MTD Achv (%)</p>
+                                        <div className="text-lg font-bold flex items-center gap-1 text-indigo-700">
+                                            {summary.achivementContPct?.toFixed(1) || 0}%
+                                            {(summary.achivementContPct || 0) >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
                                         </div>
-                                        <div className="text-[10px] text-muted-foreground mt-1">
-                                            Tổng tháng: {summary.totalActualCont.toFixed(1)}
+                                        <div className={`text-[10px] font-bold mt-1 ${summary.latestActualCont < summary.latestPlanCont ? 'text-red-600 animate-pulse' : 'text-indigo-600'}`}>
+                                            Today: {summary.latestActualCont.toFixed(2)} / {summary.latestPlanCont.toFixed(2)}
                                         </div>
                                     </div>
                                 )}

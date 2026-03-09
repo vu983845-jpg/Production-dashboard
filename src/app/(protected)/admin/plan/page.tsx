@@ -223,13 +223,19 @@ export default function AdminPlanPage() {
 
         const isFgwhDept = departments.find(d => d.id === selectedDept)?.code === 'FGWH';
         const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code;
-        const dailyPlanTon = Number((monthlyPlanTon / workingDays.length).toFixed(3));
+
+        // Helper for exact distribution to avoid rounding drift
+        const distributeExact = (total: number, count: number, index: number, decimals: number = 3) => {
+            const factor = Math.pow(10, decimals);
+            const currentCum = Math.round((total * (index + 1) / count) * factor) / factor;
+            const prevCum = Math.round((total * index / count) * factor) / factor;
+            return Number((currentCum - prevCum).toFixed(decimals));
+        };
 
         if (isFgwhDept) {
-            // For FGWH: distribute into plan_isp_ton in daily_fgwh
-            const fgwhPayload = workingDays.map(dateStr => ({
+            const fgwhPayload = workingDays.map((dateStr, idx) => ({
                 work_date: dateStr,
-                plan_isp_ton: dailyPlanTon,
+                plan_isp_ton: distributeExact(monthlyPlanTon, workingDays.length, idx, 3),
                 updated_at: new Date().toISOString()
             }));
             const { error: fgwhError } = await supabase
@@ -242,15 +248,11 @@ export default function AdminPlanPage() {
                 setWeekStart(new Date(weekStart.getTime()));
             }
         } else if (isEnergyDept) {
-            const dailyElec = Math.round(monthlyElectricity / workingDays.length);
-            const dailyWater = Number((monthlyWater / workingDays.length).toFixed(2));
-            const dailyWood = Math.round(monthlyWood / workingDays.length);
-
-            const energyPayload = workingDays.map(dateStr => ({
+            const energyPayload = workingDays.map((dateStr, idx) => ({
                 work_date: dateStr,
-                electricity_target_kwh: dailyElec,
-                water_target_m3: dailyWater,
-                wood_target_kg: dailyWood,
+                electricity_target_kwh: distributeExact(monthlyElectricity, workingDays.length, idx, 0),
+                water_target_m3: distributeExact(monthlyWater, workingDays.length, idx, 2),
+                wood_target_kg: distributeExact(monthlyWood, workingDays.length, idx, 0),
                 updated_at: new Date().toISOString()
             }));
             const { error: eError } = await supabase
@@ -263,17 +265,17 @@ export default function AdminPlanPage() {
                 setWeekStart(new Date(weekStart.getTime()));
             }
         } else {
-            const payload = workingDays.map(dateStr => ({
+            const payload = workingDays.map((dateStr, idx) => ({
                 department_id: selectedDept,
                 work_date: dateStr,
-                plan_ton: dailyPlanTon,
-                plan_container: selectedDeptCode === "PACK" ? Number((monthlyPlanCont / workingDays.length).toFixed(3)) : 0,
+                plan_ton: distributeExact(monthlyPlanTon, workingDays.length, idx, 3),
+                plan_container: selectedDeptCode === "PACK" ? distributeExact(monthlyPlanCont, workingDays.length, idx, 3) : 0,
                 target_broken_pct: targetBroken,
                 target_unpeel_pct: targetUnpeel,
                 target_sw_pct: targetSw,
                 target_isp_pct: targetIsp,
                 target_yield_pct: targetYield,
-                target_electricity_kwh: selectedDeptCode === "SHELL" ? Number((targetElec / workingDays.length).toFixed(0)) : 0,
+                target_electricity_kwh: selectedDeptCode === "SHELL" ? distributeExact(targetElec, workingDays.length, idx, 0) : 0,
                 updated_at: new Date().toISOString()
             }));
             const { error } = await supabase
