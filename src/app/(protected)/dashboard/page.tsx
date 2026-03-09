@@ -128,12 +128,31 @@ export default function DashboardPage() {
                 if (Number(r.avg_sw_pct) > 0) { sumSw += Number(r.avg_sw_pct); countSw++; }
             }
         });
+        const latestRecord = records[records.length - 1] || {};
+        const latestPlan = Number(isTotal ? latestRecord.total_plan_ton : latestRecord.plan_ton || 0);
+        const latestActual = Number(isTotal ? latestRecord.total_actual_ton : latestRecord.actual_ton || 0);
+        const latestPlanCont = Number(isTotal ? latestRecord.total_plan_container : latestRecord.plan_container || 0);
+        const latestActualCont = Number(isTotal ? latestRecord.total_actual_container : latestRecord.actual_container || 0);
+
+        const latestActualIsp = Number(latestRecord.total_plan_isp_ton || 0); // Wait, this is plan. Fixing...
+        const latestActualIsp_val = Number(latestRecord.total_actual_isp_ton || 0);
+        const latestPlanIsp_val = Number(latestRecord.total_plan_isp_ton || 0);
+        const latestActualNonIsp_val = Number(latestRecord.total_actual_non_isp_ton || 0);
+        const latestPlanNonIsp_val = Number(latestRecord.total_plan_non_isp_ton || 0);
 
         return {
             totalPlan: tPlan,
             totalPlanCont: tPlanCont,
             totalActual: tActual,
             totalActualCont: tActualCont,
+            latestPlan,
+            latestActual,
+            latestPlanCont,
+            latestActualCont,
+            latestActualIsp: latestActualIsp_val,
+            latestPlanIsp: latestPlanIsp_val,
+            latestActualNonIsp: latestActualNonIsp_val,
+            latestPlanNonIsp: latestPlanNonIsp_val,
             achivementPct: tPlan > 0 ? (tActual / tPlan) * 100 : 0,
             variance: tActual - tPlan,
             downtime: tDown,
@@ -453,36 +472,31 @@ export default function DashboardPage() {
                     <CardContent className="pt-4 flex-1">
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <p className="text-xs text-muted-foreground mb-1">ISP Actual / Plan</p>
-                                <div className="text-lg font-bold">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></div>
-                                <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
-                                    {((summary.totalActualIsp ?? 0) - (summary.totalPlanIsp ?? 0)) >= 0
-                                        ? `+${((summary.totalActualIsp ?? 0) - (summary.totalPlanIsp ?? 0)).toFixed(1)} T`
-                                        : `${((summary.totalActualIsp ?? 0) - (summary.totalPlanIsp ?? 0)).toFixed(1)} T`}
-                                </p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-blue-600 mb-1">Hôm nay / Daily (ISP)</p>
+                                <div className="text-md font-bold text-blue-700">{summary.latestActualIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.latestPlanIsp?.toFixed(1) ?? 0} T</span></div>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mt-2 mb-1">Tháng / Monthly (ISP)</p>
+                                <div className="text-md font-bold">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></div>
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground mb-1">Non-ISP Actual / Plan</p>
-                                <div className="text-lg font-bold">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></div>
-                                <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
-                                    {((summary.totalActualNonIsp ?? 0) - (summary.totalPlanNonIsp ?? 0)) >= 0
-                                        ? `+${((summary.totalActualNonIsp ?? 0) - (summary.totalPlanNonIsp ?? 0)).toFixed(1)} T`
-                                        : `${((summary.totalActualNonIsp ?? 0) - (summary.totalPlanNonIsp ?? 0)).toFixed(1)} T`}
-                                </p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-blue-600 mb-1">Hôm nay / Daily (Non)</p>
+                                <div className="text-md font-bold text-blue-700">{summary.latestActualNonIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.latestPlanNonIsp?.toFixed(1) ?? 0} T</span></div>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mt-2 mb-1">Tháng / Monthly (Non)</p>
+                                <div className="text-md font-bold">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-xs font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></div>
                             </div>
                         </div>
-                        <div className="h-24 w-full mt-auto border-t pt-2">
+                        <div className="h-36 w-full mt-auto border-t pt-2">
                             <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 15 }}>
-                                    <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={20} minTickGap={10} tickMargin={5} />
+                                <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
                                     <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                                    <Bar dataKey="Actual" radius={[2, 2, 0, 0]}>
+                                    <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
+                                    <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
                                         {history.map((entry: any, index: number) => {
                                             const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
-                                    <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
+                                    <Line type="step" dataKey="Plan" name="Kế hoạch" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>
@@ -502,9 +516,11 @@ export default function DashboardPage() {
                 <CardContent className="pt-4 flex-1">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div>
-                            <p className="text-xs text-muted-foreground mb-1">{t('actual_vs_plan')}</p>
-                            <div className="text-lg font-bold">{actualNum.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span></div>
-                            <p className="text-[10px] sm:text-xs text-primary mt-1 font-medium">
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold text-blue-600 mb-1">Hôm nay / Daily</p>
+                            <div className="text-md font-bold text-blue-700">{summary.latestActual.toFixed(1)} <span className="text-xs font-normal text-muted-foreground">/ {summary.latestPlan.toFixed(1)} {unit}</span></div>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold text-slate-500 mt-2 mb-1">Tháng / Monthly</p>
+                            <div className="text-md font-bold">{actualNum.toFixed(1)} <span className="text-xs font-normal text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span></div>
+                            <p className="text-[10px] text-primary mt-1 font-medium">
                                 {variance >= 0 ? `+${variance.toFixed(1)} ${unit}` : `${variance.toFixed(1)} ${unit}`}
                             </p>
                         </div>
@@ -525,9 +541,12 @@ export default function DashboardPage() {
                                 </div>
                                 {deptCode === "PACK" && (
                                     <div>
-                                        <p className="text-xs text-muted-foreground mb-1">Actual / Plan Container</p>
-                                        <div className="text-md font-bold text-indigo-600">
-                                            {summary.totalActualCont.toFixed(2)} / {summary.totalPlanCont.toFixed(2)}
+                                        <p className="text-xs text-muted-foreground mb-1 uppercase font-bold text-indigo-600">Daily Actual / Plan Cont</p>
+                                        <div className={`text-md font-bold ${summary.latestActualCont < summary.latestPlanCont ? 'text-red-600 animate-pulse' : 'text-indigo-600'}`}>
+                                            {summary.latestActualCont.toFixed(2)} / {summary.latestPlanCont.toFixed(2)}
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground mt-1">
+                                            Tổng tháng: {summary.totalActualCont.toFixed(1)}
                                         </div>
                                     </div>
                                 )}
@@ -590,10 +609,10 @@ export default function DashboardPage() {
                         )}
                     </div>
                     {/* Sparkline chart */}
-                    <div className="h-24 w-full mt-auto border-t pt-2">
+                    <div className="h-36 w-full mt-auto border-t pt-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 15 }}>
-                                <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={20} minTickGap={10} tickMargin={5} />
+                            <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
+                                <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                 {deptCode === "SHELL" && (
                                     <>
@@ -601,7 +620,7 @@ export default function DashboardPage() {
                                         <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name="kWh/T" />
                                     </>
                                 )}
-                                <Bar dataKey="Actual" name="Actual (T)" radius={[2, 2, 0, 0]}>
+                                <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
                                     {history.map((entry: any, index: number) => {
                                         // If there is a plan AND actual is less than plan -> Red. Otherwise -> Green.
                                         const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
@@ -611,12 +630,12 @@ export default function DashboardPage() {
                                 {deptCode === "PACK" && (
                                     <>
                                         <YAxis yAxisId="cont" hide />
-                                        <Line yAxisId="cont" type="monotone" dataKey="ContActual" stroke="#6366f1" dot={false} strokeWidth={2} name="Actual Cont" />
-                                        <Line yAxisId="cont" type="step" dataKey="ContPlan" stroke="#cbd5e1" strokeDasharray="2 2" dot={false} strokeWidth={1} name="Plan Cont" />
+                                        <Line yAxisId="cont" type="monotone" dataKey="ContActual" stroke="#6366f1" dot={false} strokeWidth={2} name="Cont thực tế" />
+                                        <Line yAxisId="cont" type="step" dataKey="ContPlan" stroke="#cbd5e1" strokeDasharray="2 2" dot={false} strokeWidth={1} name="Cont kế hoạch" />
                                     </>
                                 )}
-                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Plan (T)" />
-                                <Legend wrapperStyle={{ fontSize: '9px', marginTop: '5px' }} />
+                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
+                                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
