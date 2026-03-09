@@ -530,7 +530,7 @@ export default function DashboardPage() {
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
 
-                        <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-6">
                             <div className="flex flex-col items-end border-r pr-4 border-gray-200">
                                 <span className="text-[10px] text-muted-foreground mb-0.5">THÁNG / MONTHLY</span>
                                 <div className="flex items-baseline gap-1">
@@ -542,7 +542,7 @@ export default function DashboardPage() {
                                 </span>
                             </div>
 
-                            <div className="flex flex-col items-end">
+                            <div className={`flex flex-col items-end ${deptCode === 'PACK' ? 'border-r pr-4 border-gray-200' : ''}`}>
                                 <span className="text-[10px] text-muted-foreground mb-0.5">MTD ACHIEVEMENT</span>
                                 <div className="flex items-center gap-2">
                                     <span className={`text-2xl font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'}`}>
@@ -551,6 +551,27 @@ export default function DashboardPage() {
                                     {summary.achivementPct >= 100 ? <TrendingUp className="h-6 w-6 text-green-500" /> : <TrendingDown className="h-6 w-6 text-red-500" />}
                                 </div>
                             </div>
+
+                            {deptCode === 'PACK' && (
+                                <>
+                                    <div className="flex flex-col items-end border-r pr-4 border-gray-200">
+                                        <span className="text-[10px] text-muted-foreground mb-0.5 uppercase">Container Month</span>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-2xl font-black text-indigo-700">{summary.totalActualCont?.toFixed(1) || 0}</span>
+                                            <span className="text-sm text-muted-foreground">/ {summary.totalPlanCont?.toFixed(1) || 0}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[10px] text-muted-foreground mb-0.5 uppercase">Container MTD %</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-2xl font-black ${(summary.achivementContPct || 0) >= 100 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {summary.achivementContPct?.toFixed(1) || 0}%
+                                            </span>
+                                            {(summary.achivementContPct || 0) >= 100 ? <TrendingUp className="h-6 w-6 text-green-500" /> : <TrendingDown className="h-6 w-6 text-red-500" />}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </CardTitle>
                 </CardHeader>
@@ -564,15 +585,6 @@ export default function DashboardPage() {
                                         {isReached ? 'Đạt' : `${dailyNeeded} T`}
                                     </div>
                                 </div>
-                                {deptCode === "PACK" && (
-                                    <div>
-                                        <p className="text-xs text-muted-foreground mb-1 uppercase font-bold text-indigo-600">Container MTD Achv (%)</p>
-                                        <div className="text-lg font-bold flex items-center gap-1 text-indigo-700">
-                                            {summary.achivementContPct?.toFixed(1) || 0}%
-                                            {(summary.achivementContPct || 0) >= 100 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
-                                        </div>
-                                    </div>
-                                )}
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
                                     <div className="text-md font-bold text-amber-600 flex items-center gap-1">
