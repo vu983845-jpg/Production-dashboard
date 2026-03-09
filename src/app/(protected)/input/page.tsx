@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { format, parseISO } from "date-fns"
 import { vi } from "date-fns/locale"
-import { CalendarIcon, Save } from "lucide-react"
+import { CalendarIcon, Save, Edit2 } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
@@ -38,6 +38,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
 import { createClient } from "@/lib/supabase/client"
 
 // Schemas
@@ -79,6 +87,7 @@ export default function InputPage() {
     const [fgwhData, setFgwhData] = useState({ actual_isp_ton: 0, actual_non_isp_ton: 0 })
     const [energyData, setEnergyData] = useState({ electricity_kwh: 0, electricity_target_kwh: 0, water_m3: 0, water_target_m3: 0, wood_kg: 0, wood_target_kg: 0 })
     const [prevMeterReading, setPrevMeterReading] = useState<number | null>(null)
+    const [recentRecords, setRecentRecords] = useState<any[]>([])
 
     // Forms
     const formActual = useForm<z.infer<typeof actualSchema>>({
@@ -221,7 +230,40 @@ export default function InputPage() {
         }
 
         fetchRecords()
+        if (selectedDept) fetchHistory(selectedDept)
     }, [selectedDept, date, formActual, formKpi])
+
+    // Fetch History
+    async function fetchHistory(deptId: string) {
+        if (!deptId) return
+
+        // Get last 10 days of actuals
+        const { data: actuals } = await supabase
+            .from("daily_actual")
+            .select("*")
+            .eq("department_id", deptId)
+            .order("work_date", { ascending: false })
+            .limit(10)
+
+        // Get last 15 days of KPIs
+        const { data: kpis } = await supabase
+            .from("daily_kpi")
+            .select("*")
+            .eq("department_id", deptId)
+            .order("work_date", { ascending: false })
+            .limit(15)
+
+        // Merge by date
+        const history = (actuals || []).map(a => {
+            const k = kpis?.find(x => x.work_date === a.work_date)
+            return {
+                ...a,
+                kpi: k || null
+            }
+        })
+
+        setRecentRecords(history)
+    }
 
     // Load Energy when date changes
     useEffect(() => {
@@ -273,7 +315,6 @@ export default function InputPage() {
     async function executeSaveActual(values: z.infer<typeof actualSchema>) {
         setIsSaving(true)
         const formattedDate = format(date, "yyyy-MM-dd")
-        const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code
 
         const { error: actualError } = await supabase.from("daily_actual").upsert(
             {
@@ -306,6 +347,7 @@ export default function InputPage() {
             }
 
             toast.success("Đã lưu Actual thành công")
+            fetchHistory(selectedDept)
         }
         setIsSaving(false)
     }
@@ -326,6 +368,7 @@ export default function InputPage() {
             toast.error('Lỗi khi lưu FGWH: ' + error.message)
         } else {
             toast.success('Đã lưu số liệu FGWH thành công')
+            fetchHistory(selectedDept)
         }
         setIsSaving(false)
     }
@@ -392,7 +435,8 @@ export default function InputPage() {
         if (error) {
             toast.error("Lỗi khi lưu KPI: " + error.message)
         } else {
-            toast.success("Đã rrư KPI thành công")
+            toast.success("Đã lưu KPI thành công")
+            fetchHistory(selectedDept)
         }
         setIsSaving(false)
     }
@@ -526,285 +570,352 @@ export default function InputPage() {
                             </div>
                         </div>
                     ) : (
-                        <Tabs defaultValue="actual" className="space-y-4">
-                            <TabsList>
-                                <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
-                                <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
-                            </TabsList>
+                        <div className="space-y-8">
+                            <Tabs defaultValue="actual" className="space-y-4">
+                                <TabsList>
+                                    <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
+                                    <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
+                                </TabsList>
 
-                            <TabsContent value="actual" className="space-y-4">
-                                <div className="rounded-xl border bg-card text-card-foreground shadow">
-                                    <div className="p-6">
-                                        <Form {...formActual}>
-                                            <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-lg">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <FormField
-                                                        control={formActual.control}
-                                                        name="actual_ton"
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>Sản lượng thực tế (Tấn)</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type="number" step="0.001" {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                    {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
+                                <TabsContent value="actual" className="space-y-4">
+                                    <div className="rounded-xl border bg-card text-card-foreground shadow">
+                                        <div className="p-6">
+                                            <Form {...formActual}>
+                                                <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-lg">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                         <FormField
                                                             control={formActual.control}
-                                                            name="electricity_meter_reading"
+                                                            name="actual_ton"
                                                             render={({ field }) => (
                                                                 <FormItem>
-                                                                    <FormLabel className="text-amber-600 font-semibold">Chỉ số điện Shelling (kWh)</FormLabel>
+                                                                    <FormLabel>Sản lượng thực tế (Tấn)</FormLabel>
                                                                     <FormControl>
-                                                                        <Input type="number" step="1" {...field} />
+                                                                        <Input type="number" step="0.001" {...field} />
                                                                     </FormControl>
                                                                     <FormMessage />
                                                                 </FormItem>
                                                             )}
                                                         />
-                                                    )}
-                                                </div>
-                                                <FormField
-                                                    control={formActual.control}
-                                                    name="note"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Ghi chú (Tùy chọn)</FormLabel>
-                                                            <FormControl>
-                                                                <Input {...field} placeholder="Vd: Ca sáng nghỉ 30p do mất điện" />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <Button type="submit" disabled={isSaving}>
-                                                    <Save className="mr-2 h-4 w-4" />
-                                                    {isSaving ? "Đang lưu..." : "Lưu Actual"}
-                                                </Button>
-                                            </form>
-                                        </Form>
+                                                        {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
+                                                            <FormField
+                                                                control={formActual.control}
+                                                                name="electricity_meter_reading"
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel className="text-amber-600 font-semibold">Chỉ số điện Shelling (kWh)</FormLabel>
+                                                                        <FormControl>
+                                                                            <Input type="number" step="1" {...field} />
+                                                                        </FormControl>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <FormField
+                                                        control={formActual.control}
+                                                        name="note"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Ghi chú (Tùy chọn)</FormLabel>
+                                                                <FormControl>
+                                                                    <Input {...field} placeholder="Vd: Ca sáng nghỉ 30p do mất điện" />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <Button type="submit" disabled={isSaving}>
+                                                        <Save className="mr-2 h-4 w-4" />
+                                                        {isSaving ? "Đang lưu..." : "Lưu Actual"}
+                                                    </Button>
+                                                </form>
+                                            </Form>
+                                        </div>
                                     </div>
-                                </div>
-                            </TabsContent>
+                                </TabsContent>
 
-                            <TabsContent value="kpi" className="space-y-4">
-                                <div className="rounded-xl border bg-card text-card-foreground shadow">
-                                    <div className="p-6">
-                                        <Form {...formKpi}>
-                                            <form onSubmit={formKpi.handleSubmit(onSubmitKpi)} className="space-y-6">
+                                <TabsContent value="kpi" className="space-y-4">
+                                    <div className="rounded-xl border bg-card text-card-foreground shadow">
+                                        <div className="p-6">
+                                            <Form {...formKpi}>
+                                                <form onSubmit={formKpi.handleSubmit(onSubmitKpi)} className="space-y-6">
 
-                                                {(() => {
-                                                    const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code;
+                                                    {(() => {
+                                                        const selectedDeptCode = departments.find(d => d.id === selectedDept)?.code;
 
-                                                    // Admin sees FULL form exactly requested
-                                                    if (role === 'admin') {
-                                                        return (
-                                                            <div className="space-y-6">
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                                                                    <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
-                                                                        <FormItem><FormLabel>WIP Tồn đầu ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                    )} />
-                                                                    <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
-                                                                        <FormItem><FormLabel>WIP Tồn cuối ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                    )} />
-                                                                    <FormField control={formKpi.control} name="input_ton" render={({ field }) => (
-                                                                        <FormItem><FormLabel>Input đầu vào (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                    )} />
-                                                                    <FormField control={formKpi.control} name="good_output_ton" render={({ field }) => (
-                                                                        <FormItem><FormLabel>Good Output đạt (Tính Yield)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                    )} />
-                                                                    <FormField control={formKpi.control} name="downtime_min" render={({ field }) => (
-                                                                        <FormItem><FormLabel>Downtime (Phút)</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                    )} />
+                                                        // Admin sees FULL form exactly requested
+                                                        if (role === 'admin') {
+                                                            return (
+                                                                <div className="space-y-6">
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                                                                        <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
+                                                                            <FormItem><FormLabel>WIP Tồn đầu ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
+                                                                            <FormItem><FormLabel>WIP Tồn cuối ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="input_ton" render={({ field }) => (
+                                                                            <FormItem><FormLabel>Input đầu vào (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="good_output_ton" render={({ field }) => (
+                                                                            <FormItem><FormLabel>Good Output đạt (Tính Yield)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="downtime_min" render={({ field }) => (
+                                                                            <FormItem><FormLabel>Downtime (Phút)</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
+                                                                            <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="unpeel_pct" render={({ field }) => (
+                                                                            <FormItem><FormLabel>Tỷ lệ Sót lụa (Unpeel %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="isp_pct" render={({ field }) => (
+                                                                            <FormItem><FormLabel>Tỷ lệ thu hồi (ISP %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="sw_pct" render={({ field }) => (
+                                                                            <FormItem><FormLabel>Tỷ lệ SW (%)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="electricity_meter_reading" render={({ field }) => (
+                                                                            <FormItem><FormLabel className="text-amber-600 font-semibold">Chỉ số điện (kWh)</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                    </div>
+
+                                                                    {selectedDeptCode === "SHELL" && (
+                                                                        <div className="mt-6 border-t pt-6">
+                                                                            {(() => {
+                                                                                const currentMeter = formKpi.watch("electricity_meter_reading") || 0;
+                                                                                const consumption = prevMeterReading !== null ? currentMeter - prevMeterReading : 0;
+                                                                                const actualTon = formActual.watch("actual_ton") || 0;
+                                                                                const intensity = actualTon > 0 ? (consumption / actualTon).toFixed(2) : "0.00";
+
+                                                                                if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">Chưa có chỉ số ngày hôm trước để tính tiêu thụ.</p>;
+
+                                                                                return (
+                                                                                    <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 grid grid-cols-2 gap-4 max-w-2xl">
+                                                                                        <div>
+                                                                                            <p className="text-xs text-amber-700 font-medium">Tiêu thụ Shelling hôm nay</p>
+                                                                                            <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
+                                                                                            <p className="text-[10px] text-amber-600">(Số mới {currentMeter} - Số cũ {prevMeterReading})</p>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn (Shelling)</p>
+                                                                                            <p className="text-xl font-bold text-amber-900">{intensity} <span className="text-sm font-normal">kWh/T</span></p>
+                                                                                            <p className="text-[10px] text-amber-600">(Tiêu thụ / {actualTon} Tấn phẩm)</p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        // Normal User Form Flows (Restricted by Department)
+                                                        if (selectedDeptCode === "PEEL_MC") {
+                                                            return (
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                                     <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
                                                                         <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
                                                                     )} />
                                                                     <FormField control={formKpi.control} name="unpeel_pct" render={({ field }) => (
                                                                         <FormItem><FormLabel>Tỷ lệ Sót lụa (Unpeel %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
                                                                     )} />
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        if (selectedDeptCode === "HAND") {
+                                                            return (
+                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                                    <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
+                                                                        <FormItem><FormLabel>WIP Tồn đầu ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                    )} />
+                                                                    <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
+                                                                        <FormItem><FormLabel>WIP Tồn cuối ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                    )} />
                                                                     <FormField control={formKpi.control} name="isp_pct" render={({ field }) => (
                                                                         <FormItem><FormLabel>Tỷ lệ thu hồi (ISP %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
                                                                     )} />
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        if (selectedDeptCode === "SHELL") {
+                                                            return (
+                                                                <div className="space-y-6">
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                        <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
+                                                                            <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                        )} />
+                                                                        <FormField control={formKpi.control} name="electricity_meter_reading" render={({ field }) => (
+                                                                            <FormItem>
+                                                                                <FormLabel className="text-amber-600 font-semibold">Chỉ số đồng hồ điện (kWh)</FormLabel>
+                                                                                <FormControl><Input type="number" step="1" {...field} /></FormControl>
+                                                                                <FormMessage />
+                                                                            </FormItem>
+                                                                        )} />
+                                                                    </div>
+                                                                    {(() => {
+                                                                        const currentMeter = formKpi.watch("electricity_meter_reading") || 0;
+                                                                        const consumption = prevMeterReading !== null ? currentMeter - prevMeterReading : 0;
+                                                                        const actualTon = formActual.watch("actual_ton") || 0;
+                                                                        const intensity = actualTon > 0 ? (consumption / actualTon).toFixed(2) : "0.00";
+
+                                                                        if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">Chưa có chỉ số ngày hôm trước để tính tiêu thụ.</p>;
+
+                                                                        return (
+                                                                            <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 grid grid-cols-2 gap-4">
+                                                                                <div>
+                                                                                    <p className="text-xs text-amber-700 font-medium">Tiêu thụ hôm nay</p>
+                                                                                    <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
+                                                                                    <p className="text-[10px] text-amber-600">(Số mới {currentMeter} - Số cũ {prevMeterReading})</p>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn</p>
+                                                                                    <p className="text-xl font-bold text-amber-900">{intensity} <span className="text-sm font-normal">kWh/T</span></p>
+                                                                                    <p className="text-[10px] text-amber-600">(Tiêu thụ / {actualTon} Tấn phẩm)</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        if (selectedDeptCode === "BORMA") {
+                                                            return (
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                                     <FormField control={formKpi.control} name="sw_pct" render={({ field }) => (
                                                                         <FormItem><FormLabel>Tỷ lệ SW (%)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
                                                                     )} />
-                                                                    <FormField control={formKpi.control} name="electricity_meter_reading" render={({ field }) => (
-                                                                        <FormItem><FormLabel className="text-amber-600 font-semibold">Chỉ số điện (kWh)</FormLabel><FormControl><Input type="number" step="1" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                    )} />
                                                                 </div>
+                                                            );
+                                                        }
 
-                                                                {selectedDeptCode === "SHELL" && (
-                                                                    <div className="mt-6 border-t pt-6">
-                                                                        {(() => {
-                                                                            const currentMeter = formKpi.watch("electricity_meter_reading") || 0;
-                                                                            const consumption = prevMeterReading !== null ? currentMeter - prevMeterReading : 0;
-                                                                            const actualTon = formActual.watch("actual_ton") || 0;
-                                                                            const intensity = actualTon > 0 ? (consumption / actualTon).toFixed(2) : "0.00";
-
-                                                                            if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">Chưa có chỉ số ngày hôm trước để tính tiêu thụ.</p>;
-
-                                                                            return (
-                                                                                <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 grid grid-cols-2 gap-4 max-w-2xl">
-                                                                                    <div>
-                                                                                        <p className="text-xs text-amber-700 font-medium">Tiêu thụ Shelling hôm nay</p>
-                                                                                        <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
-                                                                                        <p className="text-[10px] text-amber-600">(Số mới {currentMeter} - Số cũ {prevMeterReading})</p>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn (Shelling)</p>
-                                                                                        <p className="text-xl font-bold text-amber-900">{intensity} <span className="text-sm font-normal">kWh/T</span></p>
-                                                                                        <p className="text-[10px] text-amber-600">(Tiêu thụ / {actualTon} Tấn phẩm)</p>
-                                                                                    </div>
-                                                                                </div>
-                                                                            );
-                                                                        })()}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // Normal User Form Flows (Restricted by Department)
-                                                    if (selectedDeptCode === "PEEL_MC") {
-                                                        return (
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                                <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
-                                                                    <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                )} />
-                                                                <FormField control={formKpi.control} name="unpeel_pct" render={({ field }) => (
-                                                                    <FormItem><FormLabel>Tỷ lệ Sót lụa (Unpeel %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                )} />
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    if (selectedDeptCode === "HAND") {
-                                                        return (
-                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                                <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
-                                                                    <FormItem><FormLabel>WIP Tồn đầu ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                )} />
-                                                                <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
-                                                                    <FormItem><FormLabel>WIP Tồn cuối ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                )} />
-                                                                <FormField control={formKpi.control} name="isp_pct" render={({ field }) => (
-                                                                    <FormItem><FormLabel>Tỷ lệ thu hồi (ISP %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                )} />
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    if (selectedDeptCode === "SHELL") {
-                                                        return (
-                                                            <div className="space-y-6">
+                                                        if (selectedDeptCode === "STEAM") {
+                                                            return (
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                                    <FormField control={formKpi.control} name="broken_pct" render={({ field }) => (
-                                                                        <FormItem><FormLabel>Tỷ lệ Bể (Broken %)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                    <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
+                                                                        <FormItem><FormLabel>Tồn kho đầu ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
                                                                     )} />
-                                                                    <FormField control={formKpi.control} name="electricity_meter_reading" render={({ field }) => (
-                                                                        <FormItem>
-                                                                            <FormLabel className="text-amber-600 font-semibold">Chỉ số đồng hồ điện (kWh)</FormLabel>
-                                                                            <FormControl><Input type="number" step="1" {...field} /></FormControl>
-                                                                            <FormMessage />
-                                                                        </FormItem>
+                                                                    <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
+                                                                        <FormItem><FormLabel>Tồn kho cuối ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
                                                                     )} />
                                                                 </div>
-                                                                {(() => {
-                                                                    const currentMeter = formKpi.watch("electricity_meter_reading") || 0;
-                                                                    const consumption = prevMeterReading !== null ? currentMeter - prevMeterReading : 0;
-                                                                    const actualTon = formActual.watch("actual_ton") || 0;
-                                                                    const intensity = actualTon > 0 ? (consumption / actualTon).toFixed(2) : "0.00";
+                                                            );
+                                                        }
 
-                                                                    if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">Chưa có chỉ số ngày hôm trước để tính tiêu thụ.</p>;
-
-                                                                    return (
-                                                                        <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 grid grid-cols-2 gap-4">
-                                                                            <div>
-                                                                                <p className="text-xs text-amber-700 font-medium">Tiêu thụ hôm nay</p>
-                                                                                <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
-                                                                                <p className="text-[10px] text-amber-600">(Số mới {currentMeter} - Số cũ {prevMeterReading})</p>
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn</p>
-                                                                                <p className="text-xl font-bold text-amber-900">{intensity} <span className="text-sm font-normal">kWh/T</span></p>
-                                                                                <p className="text-[10px] text-amber-600">(Tiêu thụ / {actualTon} Tấn phẩm)</p>
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                })()}
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    if (selectedDeptCode === "BORMA") {
+                                                        // Default forms for RCN, Color Sorter, and PACK (Packing)
                                                         return (
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                                <FormField control={formKpi.control} name="sw_pct" render={({ field }) => (
-                                                                    <FormItem><FormLabel>Tỷ lệ SW (%)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>
-                                                                )} />
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    if (selectedDeptCode === "STEAM") {
-                                                        return (
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                                                                 <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
-                                                                    <FormItem><FormLabel>Tồn kho đầu ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                    <FormItem><FormLabel>WIP Tồn đầu ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
                                                                 )} />
                                                                 <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
-                                                                    <FormItem><FormLabel>Tồn kho cuối ngày (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                    <FormItem><FormLabel>WIP Tồn cuối ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                )} />
+                                                                <FormField control={formKpi.control} name="input_ton" render={({ field }) => (
+                                                                    <FormItem><FormLabel>Input đầu vào (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                )} />
+                                                                <FormField control={formKpi.control} name="good_output_ton" render={({ field }) => (
+                                                                    <FormItem><FormLabel>Good Output đạt (Tính Yield)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
                                                                 )} />
                                                             </div>
                                                         );
-                                                    }
+                                                    })()}
 
-                                                    // Default forms for RCN, Color Sorter, and PACK (Packing)
-                                                    return (
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                                                            <FormField control={formKpi.control} name="wip_open_ton" render={({ field }) => (
-                                                                <FormItem><FormLabel>WIP Tồn đầu ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                            )} />
-                                                            <FormField control={formKpi.control} name="wip_close_ton" render={({ field }) => (
-                                                                <FormItem><FormLabel>WIP Tồn cuối ngày (T)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                            )} />
-                                                            <FormField control={formKpi.control} name="input_ton" render={({ field }) => (
-                                                                <FormItem><FormLabel>Input đầu vào (Tấn)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                            )} />
-                                                            <FormField control={formKpi.control} name="good_output_ton" render={({ field }) => (
-                                                                <FormItem><FormLabel>Good Output đạt (Tính Yield)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                                            )} />
-                                                        </div>
-                                                    );
-                                                })()}
+                                                    <FormField
+                                                        control={formKpi.control}
+                                                        name="note"
+                                                        render={({ field }) => (
+                                                            <FormItem className="max-w-lg">
+                                                                <FormLabel>Ghi chú (Tùy chọn)</FormLabel>
+                                                                <FormControl>
+                                                                    <Input {...field} />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
 
-                                                <FormField
-                                                    control={formKpi.control}
-                                                    name="note"
-                                                    render={({ field }) => (
-                                                        <FormItem className="max-w-lg">
-                                                            <FormLabel>Ghi chú (Tùy chọn)</FormLabel>
-                                                            <FormControl>
-                                                                <Input {...field} />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-
-                                                <Button type="submit" disabled={isSaving}>
-                                                    <Save className="mr-2 h-4 w-4" />
-                                                    {isSaving ? "Đang lưu..." : "Lưu KPI"}
-                                                </Button>
-                                            </form>
-                                        </Form>
+                                                    <Button type="submit" disabled={isSaving}>
+                                                        <Save className="mr-2 h-4 w-4" />
+                                                        {isSaving ? "Đang lưu..." : "Lưu KPI"}
+                                                    </Button>
+                                                </form>
+                                            </Form>
+                                        </div>
                                     </div>
+                                </TabsContent>
+                            </Tabs>
+
+                            {/* Recent History Table */}
+                            <div className="mt-12 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-bold">Lịch sử nhập liệu gần đây</h3>
+                                    <p className="text-sm text-muted-foreground italic">Hiển thị 10 ngày gần nhất của bộ phận</p>
                                 </div>
-                            </TabsContent>
-                        </Tabs>
+                                <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-muted/50">
+                                                <TableHead className="w-[120px]">Ngày</TableHead>
+                                                <TableHead className="text-right">Sản lượng (T)</TableHead>
+                                                <TableHead className="text-right">Input/Output (T)</TableHead>
+                                                <TableHead className="text-right">Downtime</TableHead>
+                                                <TableHead>Ghi chú</TableHead>
+                                                <TableHead className="w-[80px] text-center">Thao tác</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {recentRecords.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground whitespace-nowrap">
+                                                        Chưa có dữ liệu lịch sử cho bộ phận này.
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                recentRecords.map((r) => (
+                                                    <TableRow key={r.work_date} className={format(date, "yyyy-MM-dd") === r.work_date ? "bg-primary/5 font-medium" : ""}>
+                                                        <TableCell className="font-medium whitespace-nowrap">
+                                                            {format(parseISO(r.work_date), "dd/MM/yyyy")}
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-bold text-primary">
+                                                            {Number(r.actual_ton).toFixed(2)}
+                                                        </TableCell>
+                                                        <TableCell className="text-right text-muted-foreground">
+                                                            {r.kpi ? `${Number(r.kpi.input_ton).toFixed(1)} / ${Number(r.kpi.good_output_ton).toFixed(1)}` : "-"}
+                                                        </TableCell>
+                                                        <TableCell className="text-right whitespace-nowrap">
+                                                            {r.kpi ? `${r.kpi.downtime_min}p` : "-"}
+                                                        </TableCell>
+                                                        <TableCell className="max-w-[200px] truncate" title={r.note || (r.kpi?.note)}>
+                                                            {r.note || r.kpi?.note || "-"}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                                                onClick={() => {
+                                                                    const recordDate = parseISO(r.work_date)
+                                                                    setDate(recordDate)
+                                                                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                                                                }}
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </TabsContent>
 
