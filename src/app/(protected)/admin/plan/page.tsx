@@ -32,6 +32,7 @@ export default function AdminPlanPage() {
     const [targetIsp, setTargetIsp] = useState<number>(0)
     const [targetYield, setTargetYield] = useState<number>(0)
     const [targetElec, setTargetElec] = useState<number>(0)
+    const [cutoffDay, setCutoffDay] = useState<number>(getDaysInMonth(new Date()))
 
     // Energy Monthly Targets
     const [monthlyElectricity, setMonthlyElectricity] = useState<number>(0)
@@ -198,9 +199,15 @@ export default function AdminPlanPage() {
         const workingDays = [];
 
         const isEnergyDept = selectedDept === 'energy';
+        const daysInMonth = getDaysInMonth(selectedMonth);
+        const effectiveCutoff = cutoffDay || daysInMonth;
+
         while (current <= end) {
-            if (isEnergyDept || current.getDay() !== 0) { // Energy includes Sundays, others skip Sunday
-                workingDays.push(format(current, "yyyy-MM-dd"));
+            const dayOfMonth = current.getDate();
+            if (dayOfMonth <= effectiveCutoff) {
+                if (isEnergyDept || current.getDay() !== 0) { // Energy includes Sundays, others skip Sunday
+                    workingDays.push(format(current, "yyyy-MM-dd"));
+                }
             }
             current = addDays(current, 1);
         }
@@ -329,7 +336,15 @@ export default function AdminPlanPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         <div className="space-y-1">
                             <label className="text-sm font-medium">Chọn Tháng</label>
-                            <Input type="month" value={format(selectedMonth, "yyyy-MM")} onChange={(e) => setSelectedMonth(new Date(e.target.value))} />
+                            <Input type="month" value={format(selectedMonth, "yyyy-MM")} onChange={(e) => {
+                                const newMonth = new Date(e.target.value);
+                                setSelectedMonth(newMonth);
+                                setCutoffDay(getDaysInMonth(newMonth));
+                            }} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-blue-600">Ngày Cut-off</label>
+                            <Input type="number" min="1" max={getDaysInMonth(selectedMonth)} value={cutoffDay || ""} onChange={(e) => setCutoffDay(Number(e.target.value))} />
                         </div>
 
                         {selectedDept === 'energy' ? (
