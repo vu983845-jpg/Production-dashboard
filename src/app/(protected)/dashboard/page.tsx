@@ -98,6 +98,24 @@ export default function DashboardPage() {
 
         // MTD (Month To Date) Calculation Logic
         const todayStr = format(new Date(), "yyyy-MM-dd");
+
+        // 1. Find Cutoff Date (The latest date that has any actual production)
+        let cutoffDate = "";
+        records.forEach(r => {
+            const actT = Number(isTotal ? r.total_actual_ton : r.actual_ton || 0);
+            const actC = Number(isTotal ? r.total_actual_container : r.actual_container || 0);
+            if (actT > 0 || actC > 0) {
+                if (!cutoffDate || r.work_date > cutoffDate) {
+                    cutoffDate = r.work_date;
+                }
+            }
+        });
+
+        // Default cutoff to today if no actuals found (e.g. start of month) or if cutoff is in the future
+        if (!cutoffDate || cutoffDate > todayStr) {
+            cutoffDate = todayStr;
+        }
+
         let tPlanMTD = 0;
         let tPlanContMTD = 0;
 
@@ -108,8 +126,8 @@ export default function DashboardPage() {
             tPlan += planVal;
             tPlanCont += planContVal;
 
-            // Only add to MTD if the date is today or in the past
-            if (r.work_date <= todayStr) {
+            // Only add to MTD if the date is within the cutoff period
+            if (r.work_date <= cutoffDate) {
                 tPlanMTD += planVal;
                 tPlanContMTD += planContVal;
             }
