@@ -103,6 +103,7 @@ export default function InputPage() {
     const [monthlyEnergyData, setMonthlyEnergyData] = useState<MonthlyEnergyRecord[]>([])
     const [prevMonthLastMeter, setPrevMonthLastMeter] = useState<{ elec: number | null, water: number | null }>({ elec: null, water: null })
     const [prevMeterReading, setPrevMeterReading] = useState<number | null>(null)
+    const [prevDayActual, setPrevDayActual] = useState<number | null>(null)
     const [recentRecords, setRecentRecords] = useState<any[]>([])
 
     // Forms
@@ -231,7 +232,7 @@ export default function InputPage() {
                 formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, actual_container: Number(actualData?.actual_container || 0), downtime_min: 0, broken_pct: 0, unpeel_pct: 0, isp_pct: 0, sw_pct: 0, electricity_meter_reading: 0, note: "" })
             }
 
-            // Fetch Previous Day's Meter Reading for Shelling
+            // Fetch Previous Day's Meter Reading & Actual Ton for Shelling
             const currentDeptCode = departments.find(d => d.id === selectedDept)?.code
             if (currentDeptCode === 'SHELL') {
                 const prevDate = new Date(date)
@@ -245,7 +246,15 @@ export default function InputPage() {
                     .eq("work_date", formattedPrevDate)
                     .single()
 
+                const { data: prevActual } = await supabase
+                    .from("daily_actual")
+                    .select("actual_ton")
+                    .eq("department_id", selectedDept)
+                    .eq("work_date", formattedPrevDate)
+                    .single()
+
                 setPrevMeterReading(prevKpi ? Number(prevKpi.electricity_meter_reading) : null)
+                setPrevDayActual(prevActual ? Number(prevActual.actual_ton) : null)
             }
         }
 
@@ -828,22 +837,25 @@ export default function InputPage() {
                                                                     {(() => {
                                                                         const currentMeter = formKpi.watch("electricity_meter_reading") || 0;
                                                                         const consumption = prevMeterReading !== null ? currentMeter - prevMeterReading : 0;
-                                                                        const actualTon = formActual.watch("actual_ton") || 0;
-                                                                        const intensity = actualTon > 0 ? (consumption / actualTon).toFixed(2) : "0.00";
+                                                                        const targetActualTon = prevDayActual || 0;
+                                                                        const intensity = targetActualTon > 0 ? (consumption / targetActualTon).toFixed(2) : "0.00";
 
                                                                         if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">Chưa có chỉ số ngày hôm trước để tính tiêu thụ.</p>;
 
                                                                         return (
                                                                             <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 grid grid-cols-2 gap-4">
                                                                                 <div>
-                                                                                    <p className="text-xs text-amber-700 font-medium">Tiêu thụ (Tự động tính)</p>
+                                                                                    <p className="text-xs text-amber-700 font-medium">Tiêu thụ Ca trước (Tự động tính)</p>
                                                                                     <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
                                                                                     <p className="text-[10px] text-amber-600">(Mới {currentMeter} - Cũ {prevMeterReading})</p>
                                                                                 </div>
                                                                                 <div>
-                                                                                    <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn</p>
+                                                                                    <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn (Ca trước)</p>
                                                                                     <p className="text-xl font-bold text-amber-900">{intensity} <span className="text-sm font-normal">kWh/T</span></p>
-                                                                                    <p className="text-[10px] text-amber-600">(Tiêu thụ / {actualTon} Tấn phẩm)</p>
+                                                                                    {targetActualTon > 0
+                                                                                        ? <p className="text-[10px] text-amber-600">(Tiêu thụ / {targetActualTon} Tấn phẩm ngày trước)</p>
+                                                                                        : <p className="text-[10px] text-red-500 italic">Chưa có sản lượng ngày hôm trước</p>
+                                                                                    }
                                                                                 </div>
                                                                             </div>
                                                                         );
