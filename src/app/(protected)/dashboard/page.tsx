@@ -48,6 +48,7 @@ export default function DashboardPage() {
     const [kpiSummary, setKpiSummary] = useState({
         steamActual: 0, steamTarget: 0,
         fgwhActual: 0, fgwhTarget: 0,
+        contActual: 0, contTarget: 0,
         elecActual: 0, elecTarget: 0,
         waterActual: 0, waterTarget: 0,
         woodActual: 0, woodTarget: 0
@@ -445,8 +446,18 @@ export default function DashboardPage() {
                 });
             }
 
+            // Calculate Container KPIs
+            let contActual = 0, contTarget = 0;
+            if (dData) {
+                const packRecords = dData.filter(r => r.dept_code === 'PACK');
+                packRecords.forEach(r => {
+                    contActual += Number(r.actual_container || 0);
+                    contTarget += Number(r.plan_container || 0);
+                });
+            }
+
             setKpiSummary({
-                steamActual, steamTarget, fgwhActual, fgwhTarget, elecActual, elecTarget, waterActual, waterTarget, woodActual, woodTarget
+                steamActual, steamTarget, fgwhActual, fgwhTarget, elecActual, elecTarget, waterActual, waterTarget, woodActual, woodTarget, contActual, contTarget
             });
 
             // Still populate legacy states for the Master Table if needed
@@ -751,7 +762,7 @@ export default function DashboardPage() {
                             <GaugeChart value={kpiSummary.steamActual} target={kpiSummary.steamTarget} label="TIẾN ĐỘ HẤP / STEAMING" unit="T" color="#f59e0b" />
                         </Card>
                         <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
-                            <GaugeChart value={kpiSummary.fgwhActual} target={kpiSummary.fgwhTarget} label="THÀNH PHẨM / FGWH" unit="T" color="#10b981" />
+                            <GaugeChart value={kpiSummary.contActual} target={kpiSummary.contTarget} label="CONTAINER / ĐÓNG CÔNG" unit="Cont" color="#10b981" />
                         </Card>
                         <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
                             <GaugeChart value={kpiSummary.elecActual} target={kpiSummary.elecTarget} label="ĐIỆN TIÊU THỤ" unit="kWh" color="#eab308" formatValue={(v) => Number(v).toLocaleString()} inverse />
