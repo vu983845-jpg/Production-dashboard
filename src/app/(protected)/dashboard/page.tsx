@@ -361,6 +361,37 @@ export default function DashboardPage() {
                         history
                     };
                 });
+
+                // Extract Container data from PACK department to create a Virtual Container Dashboard
+                const packRecords = dData.filter((r: any) => r.dept_code === 'PACK');
+                if (packRecords.length > 0) {
+                    const contRecordsByDay = packRecords.reduce((dayAcc: any, r: any) => {
+                        if (!dayAcc[r.work_date]) {
+                            dayAcc[r.work_date] = { plan: 0, actual: 0 };
+                        }
+                        dayAcc[r.work_date].plan += Number(r.plan_container || 0);
+                        dayAcc[r.work_date].actual += Number(r.actual_container || 0);
+                        return dayAcc;
+                    }, {});
+
+                    const contHistory = Object.keys(contRecordsByDay).sort().map(d => ({
+                        name: format(new Date(d), 'dd/MM'),
+                        Actual: contRecordsByDay[d].actual,
+                        Plan: contRecordsByDay[d].plan,
+                    }));
+
+                    const packSummary = buildSummary(packRecords, false);
+                    dashboards["virtual-container"] = {
+                        summary: {
+                            ...packSummary,
+                            totalPlan: packSummary.totalPlanCont,
+                            totalActual: packSummary.totalActualCont,
+                            totalPlanMTD: packSummary.totalPlanContMTD,
+                            achivementPct: packSummary.achivementContPct,
+                        },
+                        history: contHistory
+                    };
+                }
             }
 
             setDashboardsData(dashboards);
@@ -491,10 +522,10 @@ export default function DashboardPage() {
 
         const actualNum = summary.totalActual;
         const planNum = summary.totalPlan;
-        const unit = "T";
+        const unit = id === 'virtual-container' ? "Cont" : "T";
         const variance = actualNum - planNum;
 
-        const deptCode = id === 'all' ? 'ALL' : (id.startsWith('region-') ? id.replace('region-', '') : (departments.find(d => d.id === id)?.code || "ALL"));
+        const deptCode = id === 'all' ? 'ALL' : (id.startsWith('region-') ? id.replace('region-', '') : (id === 'virtual-container' ? 'CONT' : (departments.find(d => d.id === id)?.code || "ALL")));
 
         if (isFgwh) {
             return (
@@ -570,26 +601,6 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            {deptCode === 'PACK' && (
-                                <>
-                                    <div className="flex flex-col items-end border-r pr-4 border-gray-200">
-                                        <span className="text-[10px] text-muted-foreground mb-0.5 uppercase">Container Month</span>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-2xl font-black text-indigo-700">{summary.totalActualCont?.toFixed(1) || 0}</span>
-                                            <span className="text-sm text-muted-foreground">/ {summary.totalPlanCont?.toFixed(1) || 0}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-[10px] text-muted-foreground mb-0.5 uppercase">Container MTD %</span>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`text-2xl font-black ${(summary.achivementContPct || 0) >= 100 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {summary.achivementContPct?.toFixed(1) || 0}%
-                                            </span>
-                                            {(summary.achivementContPct || 0) >= 100 ? <TrendingUp className="h-6 w-6 text-green-500" /> : <TrendingDown className="h-6 w-6 text-red-500" />}
-                                        </div>
-                                    </div>
-                                </>
-                            )}
                         </div>
                     </CardTitle>
                 </CardHeader>
@@ -680,13 +691,6 @@ export default function DashboardPage() {
                                         return <Cell key={`cell-${index}`} fill={color} />;
                                     })}
                                 </Bar>
-                                {deptCode === "PACK" && (
-                                    <>
-                                        <YAxis yAxisId="cont" hide />
-                                        <Line yAxisId="cont" type="monotone" dataKey="ContActual" stroke="#6366f1" dot={false} strokeWidth={2} name="Cont thực tế" />
-                                        <Line yAxisId="cont" type="step" dataKey="ContPlan" stroke="#cbd5e1" strokeDasharray="2 2" dot={false} strokeWidth={1} name="Cont kế hoạch" />
-                                    </>
-                                )}
                                 <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
                                 <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
                             </ComposedChart>
@@ -770,6 +774,8 @@ export default function DashboardPage() {
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                         {/* Department Cards - exclude FGWH since it has its own card above */}
                         {departments.filter(d => d.code !== 'FGWH').map(d => renderMiniDashboard(d.id, d.name_en))}
+                        {/* Virtual Container Card */}
+                        {renderMiniDashboard("virtual-container", "Container")}
                     </div>
                 </TabsContent>
 
