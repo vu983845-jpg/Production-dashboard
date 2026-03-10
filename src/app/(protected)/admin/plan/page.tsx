@@ -199,17 +199,20 @@ export default function AdminPlanPage() {
         const start = startOfMonth(selectedMonth);
         const end = endOfMonth(selectedMonth);
         let current = start;
-        const workingDays = [];
+        const workingDays: string[] = [];
 
         const isEnergyDept = selectedDept === 'energy';
         const daysInMonth = getDaysInMonth(selectedMonth);
         const effectiveCutoff = cutoffDay || daysInMonth;
 
+        const allDaysInMonth: string[] = [];
         while (current <= end) {
+            const dateStr = format(current, "yyyy-MM-dd");
+            allDaysInMonth.push(dateStr);
             const dayOfMonth = current.getDate();
             if (dayOfMonth <= effectiveCutoff) {
                 if (isEnergyDept || current.getDay() !== 0) { // Energy includes Sundays, others skip Sunday
-                    workingDays.push(format(current, "yyyy-MM-dd"));
+                    workingDays.push(dateStr);
                 }
             }
             current = addDays(current, 1);
@@ -270,30 +273,43 @@ export default function AdminPlanPage() {
                 .from('daily_plan')
                 .select('*')
                 .eq('department_id', selectedDept)
-                .in('work_date', workingDays);
+                .in('work_date', allDaysInMonth);
 
             const existingMap = new Map();
             if (existingData) {
                 existingData.forEach(r => existingMap.set(r.work_date, r));
             }
 
-            const payload = workingDays.map((dateStr, idx) => {
+            const payload = allDaysInMonth.map((dateStr) => {
                 const existing = existingMap.get(dateStr) || {};
+                const isWorkingDay = workingDays.includes(dateStr);
+                const workingDayIdx = workingDays.indexOf(dateStr);
 
-                const newPlanTon = (targetType === 'all' || targetType === 'prod') ? distributeExact(monthlyPlanTon, workingDays.length, idx, 3) : (existing.plan_ton || 0);
-                const newPlanCont = (selectedDeptCode === "PACK" && (targetType === 'all' || targetType === 'cont')) ? distributeExact(monthlyPlanCont, workingDays.length, idx, 3) : (existing.plan_container || 0);
+                // For targeted items, if it's a working day, distribute exact. If not, reset to 0 (to clear old manually-entered values).
+                const getDistributedValue = (total: number, decimals: number) =>
+                    isWorkingDay ? distributeExact(total, workingDays.length, workingDayIdx, decimals) : 0;
+
+                const newPlanTon = (targetType === 'all' || targetType === 'prod')
+                    ? getDistributedValue(monthlyPlanTon, 1)
+                    : (existing.plan_ton || 0);
+
+                const newPlanCont = (selectedDeptCode === "PACK" && (targetType === 'all' || targetType === 'cont'))
+                    ? getDistributedValue(monthlyPlanCont, 2)
+                    : (existing.plan_container || 0);
 
                 return {
                     department_id: selectedDept,
                     work_date: dateStr,
                     plan_ton: newPlanTon,
                     plan_container: newPlanCont,
-                    target_broken_pct: (targetType === 'all' || targetType === 'prod') ? targetBroken : (existing.target_broken_pct || 0),
-                    target_unpeel_pct: (targetType === 'all' || targetType === 'prod') ? targetUnpeel : (existing.target_unpeel_pct || 0),
-                    target_sw_pct: (targetType === 'all' || targetType === 'prod') ? targetSw : (existing.target_sw_pct || 0),
-                    target_isp_pct: (targetType === 'all' || targetType === 'prod') ? targetIsp : (existing.target_isp_pct || 0),
-                    target_yield_pct: (targetType === 'all' || targetType === 'prod') ? targetYield : (existing.target_yield_pct || 0),
-                    target_electricity_kwh: (selectedDeptCode === "SHELL" && (targetType === 'all' || targetType === 'prod')) ? distributeExact(targetElec, workingDays.length, idx, 0) : (existing.target_electricity_kwh || 0),
+                    target_broken_pct: (targetType === 'all' || targetType === 'prod') ? (isWorkingDay ? targetBroken : 0) : (existing.target_broken_pct || 0),
+                    target_unpeel_pct: (targetType === 'all' || targetType === 'prod') ? (isWorkingDay ? targetUnpeel : 0) : (existing.target_unpeel_pct || 0),
+                    target_sw_pct: (targetType === 'all' || targetType === 'prod') ? (isWorkingDay ? targetSw : 0) : (existing.target_sw_pct || 0),
+                    target_isp_pct: (targetType === 'all' || targetType === 'prod') ? (isWorkingDay ? targetIsp : 0) : (existing.target_isp_pct || 0),
+                    target_yield_pct: (targetType === 'all' || targetType === 'prod') ? (isWorkingDay ? targetYield : 0) : (existing.target_yield_pct || 0),
+                    target_electricity_kwh: (selectedDeptCode === "SHELL" && (targetType === 'all' || targetType === 'prod'))
+                        ? (isWorkingDay ? distributeExact(targetElec, workingDays.length, workingDayIdx, 0) : 0)
+                        : (existing.target_electricity_kwh || 0),
                     updated_at: new Date().toISOString()
                 };
             });
