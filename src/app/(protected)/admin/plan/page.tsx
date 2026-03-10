@@ -188,7 +188,7 @@ export default function AdminPlanPage() {
     }
 
     // Monthly Save Logic
-    const handleMonthlySave = async () => {
+    const handleMonthlySave = async (targetType: 'all' | 'prod' | 'cont' = 'all') => {
         if (!selectedDept || !selectedMonth) {
             toast.error("Vui lòng chọn bộ phận và tháng");
             return;
@@ -265,26 +265,51 @@ export default function AdminPlanPage() {
                 setWeekStart(new Date(weekStart.getTime()));
             }
         } else {
-            const payload = workingDays.map((dateStr, idx) => ({
-                department_id: selectedDept,
-                work_date: dateStr,
-                plan_ton: distributeExact(monthlyPlanTon, workingDays.length, idx, 3),
-                plan_container: selectedDeptCode === "PACK" ? distributeExact(monthlyPlanCont, workingDays.length, idx, 3) : 0,
-                target_broken_pct: targetBroken,
-                target_unpeel_pct: targetUnpeel,
-                target_sw_pct: targetSw,
-                target_isp_pct: targetIsp,
-                target_yield_pct: targetYield,
-                target_electricity_kwh: selectedDeptCode === "SHELL" ? distributeExact(targetElec, workingDays.length, idx, 0) : 0,
-                updated_at: new Date().toISOString()
-            }));
+            // Fetch existing data first to allow partial updates
+            const { data: existingData } = await supabase
+                .from('daily_plan')
+                .select('*')
+                .eq('department_id', selectedDept)
+                .in('work_date', workingDays);
+
+            const existingMap = new Map();
+            if (existingData) {
+                existingData.forEach(r => existingMap.set(r.work_date, r));
+            }
+
+            const payload = workingDays.map((dateStr, idx) => {
+                const existing = existingMap.get(dateStr) || {};
+
+                const newPlanTon = (targetType === 'all' || targetType === 'prod') ? distributeExact(monthlyPlanTon, workingDays.length, idx, 3) : (existing.plan_ton || 0);
+                const newPlanCont = (selectedDeptCode === "PACK" && (targetType === 'all' || targetType === 'cont')) ? distributeExact(monthlyPlanCont, workingDays.length, idx, 3) : (existing.plan_container || 0);
+
+                return {
+                    department_id: selectedDept,
+                    work_date: dateStr,
+                    plan_ton: newPlanTon,
+                    plan_container: newPlanCont,
+                    target_broken_pct: (targetType === 'all' || targetType === 'prod') ? targetBroken : (existing.target_broken_pct || 0),
+                    target_unpeel_pct: (targetType === 'all' || targetType === 'prod') ? targetUnpeel : (existing.target_unpeel_pct || 0),
+                    target_sw_pct: (targetType === 'all' || targetType === 'prod') ? targetSw : (existing.target_sw_pct || 0),
+                    target_isp_pct: (targetType === 'all' || targetType === 'prod') ? targetIsp : (existing.target_isp_pct || 0),
+                    target_yield_pct: (targetType === 'all' || targetType === 'prod') ? targetYield : (existing.target_yield_pct || 0),
+                    target_electricity_kwh: (selectedDeptCode === "SHELL" && (targetType === 'all' || targetType === 'prod')) ? distributeExact(targetElec, workingDays.length, idx, 0) : (existing.target_electricity_kwh || 0),
+                    updated_at: new Date().toISOString()
+                };
+            });
             const { error } = await supabase
                 .from('daily_plan')
                 .upsert(payload, { onConflict: 'department_id,work_date' });
             if (error) {
                 toast.error('Lỗi khi lưu kế hoạch tháng: ' + error.message);
             } else {
-                toast.success(`Đã chia đều ${monthlyPlanTon} tấn qua ${workingDays.length} ngày thành công!`);
+                if (targetType === 'cont') {
+                    toast.success(`Đã chia đều kế hoạch Container qua ${workingDays.length} ngày thành công!`);
+                } else if (targetType === 'prod') {
+                    toast.success(`Đã chia đều ${monthlyPlanTon} tấn qua ${workingDays.length} ngày thành công!`);
+                } else {
+                    toast.success(`Đã chia đều chỉ tiêu qua ${workingDays.length} ngày thành công!`);
+                }
                 setWeekStart(new Date(weekStart.getTime()));
             }
         }
@@ -410,11 +435,23 @@ export default function AdminPlanPage() {
                         )}
                     </div>
 
-                    <div className="flex justify-end pt-2">
-                        <Button onClick={handleMonthlySave} disabled={isSavingMonthly} className="bg-primary/90 hover:bg-primary">
-                            <Settings className="h-4 w-4 mr-2" />
-                            {isSavingMonthly ? "Đang xử lý..." : "Lưu & Chia Đều Theo Tháng"}
-                        </Button>
+                    <div className="flex justify-end pt-2 gap-2">
+                        {departments.find(d => d.id === selectedDept)?.code === "PACK" ? (
+                            <>
+                                <Button onClick={() => handleMonthlySave('cont')} disabled={isSavingMonthly} variant="outline" className="border-indigo-600 text-indigo-700 hover:bg-indigo-50">
+                                    {isSavingMonthly ? "Đang xử lý..." : "Chia Đều Container"}
+                                </Button>
+                                <Button onClick={() => handleMonthlySave('prod')} disabled={isSavingMonthly} className="bg-primary/90 hover:bg-primary">
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    {isSavingMonthly ? "Đang xử lý..." : "Chia Đều Sản Xuất (Tấn)"}
+                                </Button>
+                            </>
+                        ) : (
+                            <Button onClick={() => handleMonthlySave('all')} disabled={isSavingMonthly} className="bg-primary/90 hover:bg-primary">
+                                <Settings className="h-4 w-4 mr-2" />
+                                {isSavingMonthly ? "Đang xử lý..." : "Lưu & Chia Đều Theo Tháng"}
+                            </Button>
+                        )}
                     </div>
                 </div>
             )}
