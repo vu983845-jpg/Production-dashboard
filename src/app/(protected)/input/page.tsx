@@ -23,6 +23,14 @@ export type MonthlyEnergyRecord = {
     water_meter_reading?: number;
 }
 
+export type ShellingMonthlyEnergyRecord = {
+    work_date: string;
+    actual_ton: number;
+    electricity_meter_reading?: number;
+    electricity_kwh: number;
+    electricity_target_kwh: number;
+}
+
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -105,6 +113,9 @@ export default function InputPage() {
     const [prevMeterReading, setPrevMeterReading] = useState<number | null>(null)
     const [prevDayActual, setPrevDayActual] = useState<number | null>(null)
     const [recentRecords, setRecentRecords] = useState<any[]>([])
+
+    // Shelling Monthly Energy State
+    const [shellingMonthlyEnergyData, setShellingMonthlyEnergyData] = useState<ShellingMonthlyEnergyRecord[]>([])
 
     // Forms
     const formActual = useForm<z.infer<typeof actualSchema>>({
@@ -347,6 +358,71 @@ export default function InputPage() {
         fetchEnergy();
     }, [date, role])
 
+    // Load Shelling Energy
+    useEffect(() => {
+        async function fetchShellingEnergy() {
+            if (!date) return;
+            const hasShellAccess = role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL');
+            if (!hasShellAccess) return;
+
+            const shellDept = departments.find(d => d.code === 'SHELL');
+            if (!shellDept) return;
+
+            const startStr = format(startOfMonth(date), "yyyy-MM-dd");
+            const endStr = format(endOfMonth(date), "yyyy-MM-dd");
+
+            // Fetch KPIs (for electricity_meter_reading)
+            const { data: kpiData } = await supabase
+                .from('daily_kpi')
+                .select('work_date, electricity_meter_reading')
+                .eq('department_id', shellDept.id)
+                .gte('work_date', startStr)
+                .lte('work_date', endStr)
+                .order('work_date');
+
+            // Fetch Actuals (for actual_ton of previous day)
+            // Need from prevMonthLastDay to endOfMonth
+            const prevMonthLastDay = format(subDays(startOfMonth(date), 1), "yyyy-MM-dd");
+            const { data: actualData } = await supabase
+                .from('daily_actual')
+                .select('work_date, actual_ton')
+                .eq('department_id', shellDept.id)
+                .gte('work_date', prevMonthLastDay)
+                .lte('work_date', endStr)
+                .order('work_date');
+
+            // Compute compiled data
+            const daysInMonth = eachDayOfInterval({ start: startOfMonth(date), end: endOfMonth(date) });
+            const compiledData: ShellingMonthlyEnergyRecord[] = daysInMonth.map(d => {
+                const dayStr = format(d, "yyyy-MM-dd");
+                const prevDayStr = format(subDays(d, 1), "yyyy-MM-dd");
+
+                const existingKpi = kpiData?.find(r => r.work_date === dayStr);
+                const prevActual = actualData?.find(r => r.work_date === prevDayStr);
+
+                return {
+                    work_date: dayStr,
+                    actual_ton: prevActual?.actual_ton ? Number(prevActual.actual_ton) : 0,
+                    electricity_meter_reading: existingKpi?.electricity_meter_reading !== null && existingKpi?.electricity_meter_reading !== undefined ? Number(existingKpi.electricity_meter_reading) : undefined,
+                    electricity_kwh: 0,
+                    electricity_target_kwh: 0,
+                };
+            });
+
+            // Calculate kWh
+            for (let i = 0; i < compiledData.length - 1; i++) {
+                const meterToday = compiledData[i].electricity_meter_reading;
+                const meterTomorrow = compiledData[i + 1].electricity_meter_reading;
+                if (meterToday != null && meterTomorrow != null) {
+                    compiledData[i].electricity_kwh = Math.max(0, meterTomorrow - meterToday);
+                }
+            }
+
+            setShellingMonthlyEnergyData(compiledData);
+        }
+        fetchShellingEnergy();
+    }, [date, role, allowedDeptIds, departments])
+
     // Save Actual
     async function onSubmitActual(values: z.infer<typeof actualSchema>) {
         if (!selectedDept) {
@@ -444,6 +520,37 @@ export default function InputPage() {
             toast.error('Lỗi khi lưu Điện/Nước/Củi: ' + error.message)
         } else {
             toast.success('Đã lưu toàn bộ dữ liệu Điện/Nước/Củi của tháng thành công')
+        }
+        setIsSaving(false)
+    }
+
+    async function saveShellingEnergy() {
+        setIsSaving(true)
+        const shellDept = departments.find(d => d.code === 'SHELL');
+        if (!shellDept) {
+            setIsSaving(false);
+            return;
+        }
+
+        const payloadToSave = shellingMonthlyEnergyData
+            .filter(record => record.electricity_meter_reading !== undefined)
+            .map(record => ({
+                work_date: record.work_date,
+                department_id: shellDept.id,
+                electricity_meter_reading: record.electricity_meter_reading,
+                updated_at: new Date().toISOString()
+            }))
+
+        if (payloadToSave.length > 0) {
+            const { error } = await supabase.from('daily_kpi').upsert(
+                payloadToSave,
+                { onConflict: 'work_date,department_id' }
+            )
+            if (error) {
+                toast.error('Lỗi khi lưu Điện Shelling: ' + error.message)
+            } else {
+                toast.success('Đã lưu dữ liệu Điện Shelling thành công')
+            }
         }
         setIsSaving(false)
     }
@@ -559,6 +666,7 @@ export default function InputPage() {
                 <TabsList>
                     <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>
                     {role === 'admin' && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
+                    {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="production" className="space-y-4">
@@ -1160,6 +1268,83 @@ export default function InputPage() {
                                     <Button onClick={saveEnergy} disabled={isSaving}>
                                         <Save className="mr-2 h-4 w-4" />
                                         {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Tháng'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+                )}
+
+                {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
+                    <TabsContent value="shelling-energy" className="space-y-4">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow">
+                            <div className="p-6">
+                                <h3 className="text-lg font-semibold mb-6 flex justify-between items-center text-amber-800">
+                                    <span>⚡ Nhập liệu Chỉ số Điện Shelling (Toàn tháng)</span>
+                                    <span className="text-sm font-normal text-muted-foreground">{date ? format(date, "MM/yyyy") : ''}</span>
+                                </h3>
+
+                                <div className="rounded-md border overflow-x-auto min-w-full">
+                                    <Table className="min-w-[500px]">
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="border-r w-[80px] text-center bg-gray-50 uppercase text-gray-500 font-semibold text-xs">Ngày</TableHead>
+                                                <TableHead className="border-r text-center w-[120px] bg-amber-50/50 text-amber-700">Công tơ điện</TableHead>
+                                                <TableHead className="border-r text-center w-[100px] bg-amber-50/50 text-amber-700 border-r-amber-100">Tiêu thụ (Lùi)</TableHead>
+                                                <TableHead className="border-r text-center w-[120px] bg-gray-50 text-gray-700">Sản lượng <br /><span className="text-[10px] font-normal leading-none">(Ngày trước)</span></TableHead>
+                                                <TableHead className="text-center w-[100px] bg-gray-50 text-gray-700">kWh / Tấn</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {shellingMonthlyEnergyData.map((row, index) => {
+                                                const nextRowElec = index < shellingMonthlyEnergyData.length - 1 ? shellingMonthlyEnergyData[index + 1].electricity_meter_reading : undefined;
+                                                const intensity = row.actual_ton > 0 ? (row.electricity_kwh / row.actual_ton).toFixed(2) : "0.00";
+
+                                                const handleMeterChange = (val: number | undefined) => {
+                                                    const newData = [...shellingMonthlyEnergyData];
+                                                    newData[index].electricity_meter_reading = val;
+                                                    for (let i = 0; i < newData.length - 1; i++) {
+                                                        const meterToday = newData[i].electricity_meter_reading;
+                                                        const meterTomorrow = newData[i + 1].electricity_meter_reading;
+                                                        if (meterToday != null && meterTomorrow != null) {
+                                                            newData[i].electricity_kwh = Math.max(0, meterTomorrow - meterToday);
+                                                        }
+                                                    }
+                                                    setShellingMonthlyEnergyData(newData);
+                                                };
+
+                                                return (
+                                                    <TableRow key={row.work_date}>
+                                                        <TableCell className="border-r font-medium text-center">{format(parseISO(row.work_date), "dd/MM")}</TableCell>
+                                                        <TableCell className="border-r p-1 relative bg-transparent">
+                                                            <input type="number" step="1" className="w-full text-right p-2 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent font-semibold shadow-inner"
+                                                                value={row.electricity_meter_reading !== undefined ? row.electricity_meter_reading : ''}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                    handleMeterChange(val);
+                                                                }} />
+                                                            {nextRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Từ mùng {format(parseISO(shellingMonthlyEnergyData[index + 1].work_date), "d")}: {nextRowElec}</div>}
+                                                        </TableCell>
+                                                        <TableCell className="border-r border-r-amber-100 p-1 text-right bg-amber-50 font-bold text-amber-800 align-middle">
+                                                            {row.electricity_kwh.toLocaleString()}
+                                                        </TableCell>
+                                                        <TableCell className="border-r p-1 text-center bg-gray-50 text-gray-700 font-semibold align-middle">
+                                                            {row.actual_ton > 0 ? row.actual_ton : "-"}
+                                                        </TableCell>
+                                                        <TableCell className={cn("p-1 text-right font-bold align-middle bg-gray-50", Number(intensity) > 0 ? "text-indigo-700" : "text-gray-400")}>
+                                                            {intensity}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                <div className="mt-6 flex justify-end">
+                                    <Button onClick={saveShellingEnergy} disabled={isSaving} className="bg-amber-600 hover:bg-amber-700 text-white">
+                                        <Save className="mr-2 h-4 w-4" />
+                                        {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Điện Shelling'}
                                     </Button>
                                 </div>
                             </div>
