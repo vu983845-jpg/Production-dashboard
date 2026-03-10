@@ -608,18 +608,22 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         {(
                             <>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
-                                    <div className={`text-md font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
-                                        {isReached ? 'Đạt' : `${dailyNeeded} T`}
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
-                                    <div className="text-md font-bold text-amber-600 flex items-center gap-1">
-                                        <Clock className="h-3 w-3" /> {summary.downtime}p
-                                    </div>
-                                </div>
+                                {id !== 'virtual-container' && (
+                                    <>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
+                                            <div className={`text-md font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
+                                                {isReached ? 'Đạt' : `${dailyNeeded} T`}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
+                                            <div className="text-md font-bold text-amber-600 flex items-center gap-1">
+                                                <Clock className="h-3 w-3" /> {summary.downtime}p
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
 
                                 {["PEEL_MC", "SHELL"].includes(deptCode) && (
                                     <div>
