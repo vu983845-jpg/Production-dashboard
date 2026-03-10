@@ -1,3 +1,6 @@
+DROP VIEW IF EXISTS public.v_dashboard_total_daily CASCADE;
+DROP VIEW IF EXISTS public.v_dashboard_daily CASCADE;
+
 CREATE OR REPLACE VIEW public.v_dashboard_daily AS
 WITH kpi_with_prev AS (
     SELECT 

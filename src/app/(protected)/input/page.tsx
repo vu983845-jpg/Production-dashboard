@@ -1039,8 +1039,32 @@ export default function InputPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {monthlyEnergyData.map((row, index) => {
-                                                const prevRowElec = index === 0 ? prevMonthLastMeter.elec : monthlyEnergyData[index - 1].electricity_meter_reading;
-                                                const prevRowWater = index === 0 ? prevMonthLastMeter.water : monthlyEnergyData[index - 1].water_meter_reading;
+                                                const nextRowElec = index < monthlyEnergyData.length - 1 ? monthlyEnergyData[index + 1].electricity_meter_reading : undefined;
+                                                const nextRowWater = index < monthlyEnergyData.length - 1 ? monthlyEnergyData[index + 1].water_meter_reading : undefined;
+
+                                                const handleMeterChange = (type: 'electric' | 'water', val: number | undefined) => {
+                                                    const newData = [...monthlyEnergyData];
+                                                    if (type === 'electric') {
+                                                        newData[index].electricity_meter_reading = val;
+                                                        for (let i = 0; i < newData.length - 1; i++) {
+                                                            const meterToday = newData[i].electricity_meter_reading;
+                                                            const meterTomorrow = newData[i + 1].electricity_meter_reading;
+                                                            if (meterToday != null && meterTomorrow != null) {
+                                                                newData[i].electricity_kwh = Math.max(0, meterTomorrow - meterToday);
+                                                            }
+                                                        }
+                                                    } else {
+                                                        newData[index].water_meter_reading = val;
+                                                        for (let i = 0; i < newData.length - 1; i++) {
+                                                            const meterToday = newData[i].water_meter_reading;
+                                                            const meterTomorrow = newData[i + 1].water_meter_reading;
+                                                            if (meterToday != null && meterTomorrow != null) {
+                                                                newData[i].water_m3 = Math.max(0, meterTomorrow - meterToday);
+                                                            }
+                                                        }
+                                                    }
+                                                    setMonthlyEnergyData(newData);
+                                                };
 
                                                 return (
                                                     <TableRow key={row.work_date}>
@@ -1052,18 +1076,13 @@ export default function InputPage() {
                                                                 value={row.electricity_meter_reading !== undefined ? row.electricity_meter_reading : ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
-                                                                    const newData = [...monthlyEnergyData];
-                                                                    if (val !== undefined && prevRowElec != null && prevRowElec !== undefined) {
-                                                                        newData[index].electricity_kwh = Math.max(0, val - prevRowElec);
-                                                                    }
-                                                                    newData[index].electricity_meter_reading = val;
-                                                                    setMonthlyEnergyData(newData);
+                                                                    handleMeterChange('electric', val);
                                                                 }} />
-                                                            {index === 0 && prevRowElec != null && <div className="text-[9px] text-amber-600 text-center absolute bottom-0 left-0 right-0">Trừ từ: {prevRowElec}</div>}
+                                                            {nextRowElec != null && <div className="text-[9px] text-amber-600 text-center absolute bottom-0 left-0 right-0">Trừ từ sau: {nextRowElec}</div>}
                                                         </TableCell>
                                                         <TableCell className="border-r p-1">
-                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", prevRowElec != null ? "bg-amber-50" : "bg-transparent focus:ring-1 focus:ring-amber-400")}
-                                                                readOnly={prevRowElec != null}
+                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", nextRowElec != null ? "bg-amber-50" : "bg-transparent focus:ring-1 focus:ring-amber-400")}
+                                                                readOnly={nextRowElec != null}
                                                                 value={row.electricity_kwh || ''}
                                                                 onChange={(e) => {
                                                                     const newData = [...monthlyEnergyData];
@@ -1087,18 +1106,13 @@ export default function InputPage() {
                                                                 value={row.water_meter_reading !== undefined ? row.water_meter_reading : ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
-                                                                    const newData = [...monthlyEnergyData];
-                                                                    if (val !== undefined && prevRowWater != null && prevRowWater !== undefined) {
-                                                                        newData[index].water_m3 = Math.max(0, val - prevRowWater);
-                                                                    }
-                                                                    newData[index].water_meter_reading = val;
-                                                                    setMonthlyEnergyData(newData);
+                                                                    handleMeterChange('water', val);
                                                                 }} />
-                                                            {index === 0 && prevRowWater != null && <div className="text-[9px] text-blue-600 text-center absolute bottom-0 left-0 right-0">Trừ từ: {prevRowWater}</div>}
+                                                            {nextRowWater != null && <div className="text-[9px] text-blue-600 text-center absolute bottom-0 left-0 right-0">Trừ từ sau: {nextRowWater}</div>}
                                                         </TableCell>
                                                         <TableCell className="border-r p-1">
-                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", prevRowWater != null ? "bg-blue-50" : "bg-transparent focus:ring-1 focus:ring-blue-400")}
-                                                                readOnly={prevRowWater != null}
+                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", nextRowWater != null ? "bg-blue-50" : "bg-transparent focus:ring-1 focus:ring-blue-400")}
+                                                                readOnly={nextRowWater != null}
                                                                 value={row.water_m3 || ''}
                                                                 onChange={(e) => {
                                                                     const newData = [...monthlyEnergyData];
