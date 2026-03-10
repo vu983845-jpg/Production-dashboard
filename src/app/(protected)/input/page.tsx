@@ -87,7 +87,15 @@ export default function InputPage() {
         onConfirm: () => { }
     })
     const [fgwhData, setFgwhData] = useState({ actual_isp_ton: 0, actual_non_isp_ton: 0 })
-    const [energyData, setEnergyData] = useState({ electricity_kwh: 0, electricity_target_kwh: 0, water_m3: 0, water_target_m3: 0, wood_kg: 0, wood_target_kg: 0 })
+    const [energyData, setEnergyData] = useState({
+        electricity_kwh: 0, electricity_target_kwh: 0,
+        water_m3: 0, water_target_m3: 0,
+        wood_kg: 0, wood_target_kg: 0,
+        electricity_meter_reading: undefined as number | undefined,
+        water_meter_reading: undefined as number | undefined,
+        prev_electricity_meter_reading: null as number | null,
+        prev_water_meter_reading: null as number | null
+    })
     const [prevMeterReading, setPrevMeterReading] = useState<number | null>(null)
     const [recentRecords, setRecentRecords] = useState<any[]>([])
 
@@ -276,11 +284,24 @@ export default function InputPage() {
         async function fetchEnergy() {
             if (!date || role !== 'admin') return;
             const formattedDate = format(date, "yyyy-MM-dd");
+            const prevDate = new Date(date);
+            prevDate.setDate(prevDate.getDate() - 1);
+            const formattedPrevDate = format(prevDate, "yyyy-MM-dd");
+
             const { data: eData } = await supabase
                 .from('daily_energy')
                 .select('*')
                 .eq('work_date', formattedDate)
                 .single();
+
+            const { data: pData } = await supabase
+                .from('daily_energy')
+                .select('electricity_meter_reading, water_meter_reading')
+                .eq('work_date', formattedPrevDate)
+                .single();
+
+            const prevElec = pData?.electricity_meter_reading !== null && pData?.electricity_meter_reading !== undefined ? Number(pData.electricity_meter_reading) : null;
+            const prevWater = pData?.water_meter_reading !== null && pData?.water_meter_reading !== undefined ? Number(pData.water_meter_reading) : null;
 
             if (eData) {
                 setEnergyData({
@@ -289,10 +310,22 @@ export default function InputPage() {
                     water_m3: Number(eData.water_m3 || 0),
                     water_target_m3: Number(eData.water_target_m3 || 0),
                     wood_kg: Number(eData.wood_kg || 0),
-                    wood_target_kg: Number(eData.wood_target_kg || 0)
+                    wood_target_kg: Number(eData.wood_target_kg || 0),
+                    electricity_meter_reading: eData.electricity_meter_reading !== null ? Number(eData.electricity_meter_reading) : undefined,
+                    water_meter_reading: eData.water_meter_reading !== null ? Number(eData.water_meter_reading) : undefined,
+                    prev_electricity_meter_reading: prevElec,
+                    prev_water_meter_reading: prevWater
                 });
             } else {
-                setEnergyData({ electricity_kwh: 0, electricity_target_kwh: 0, water_m3: 0, water_target_m3: 0, wood_kg: 0, wood_target_kg: 0 });
+                setEnergyData({
+                    electricity_kwh: 0, electricity_target_kwh: 0,
+                    water_m3: 0, water_target_m3: 0,
+                    wood_kg: 0, wood_target_kg: 0,
+                    electricity_meter_reading: undefined,
+                    water_meter_reading: undefined,
+                    prev_electricity_meter_reading: prevElec,
+                    prev_water_meter_reading: prevWater
+                });
             }
         }
         fetchEnergy();
@@ -392,6 +425,8 @@ export default function InputPage() {
                 water_target_m3: energyData.water_target_m3,
                 wood_kg: energyData.wood_kg,
                 wood_target_kg: energyData.wood_target_kg,
+                electricity_meter_reading: energyData.electricity_meter_reading,
+                water_meter_reading: energyData.water_meter_reading,
                 updated_at: new Date().toISOString()
             },
             { onConflict: 'work_date' }
@@ -801,9 +836,9 @@ export default function InputPage() {
                                                                         return (
                                                                             <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 grid grid-cols-2 gap-4">
                                                                                 <div>
-                                                                                    <p className="text-xs text-amber-700 font-medium">Tiêu thụ hôm nay</p>
+                                                                                    <p className="text-xs text-amber-700 font-medium">Tiêu thụ (Tự động tính)</p>
                                                                                     <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
-                                                                                    <p className="text-[10px] text-amber-600">(Số mới {currentMeter} - Số cũ {prevMeterReading})</p>
+                                                                                    <p className="text-[10px] text-amber-600">(Mới {currentMeter} - Cũ {prevMeterReading})</p>
                                                                                 </div>
                                                                                 <div>
                                                                                     <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn</p>
@@ -974,12 +1009,35 @@ export default function InputPage() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-muted-foreground">Thực tế / Actual</label>
+                                            <label className="text-sm font-medium text-muted-foreground">Chỉ số Công tơ (Meter)</label>
+                                            <input
+                                                type="number" step="1" min="0" placeholder="0"
+                                                className="flex h-9 w-full rounded-md border border-input bg-amber-50 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                                                value={energyData.electricity_meter_reading !== undefined ? energyData.electricity_meter_reading : ''}
+                                                onChange={e => {
+                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                    setEnergyData(prev => {
+                                                        const consumption = (val !== undefined && prev.prev_electricity_meter_reading !== null)
+                                                            ? Math.max(0, val - prev.prev_electricity_meter_reading)
+                                                            : prev.electricity_kwh;
+                                                        return { ...prev, electricity_meter_reading: val, electricity_kwh: consumption };
+                                                    });
+                                                }}
+                                            />
+                                            {energyData.prev_electricity_meter_reading !== null ? (
+                                                <p className="text-[10px] text-amber-600">Tự trừ đầu kì: {energyData.prev_electricity_meter_reading}</p>
+                                            ) : (
+                                                <p className="text-[10px] text-muted-foreground italic">Chưa có chỉ số ngày hôm trước</p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-muted-foreground">Tiêu thụ Thực tế</label>
                                             <input
                                                 type="number" step="0.01" min="0" placeholder="0"
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                                                className={cn("flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm", energyData.prev_electricity_meter_reading !== null ? "bg-muted opacity-80" : "bg-transparent focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none")}
                                                 value={energyData.electricity_kwh || ''}
                                                 onChange={e => setEnergyData(prev => ({ ...prev, electricity_kwh: Number(e.target.value) }))}
+                                                readOnly={energyData.prev_electricity_meter_reading !== null}
                                             />
                                         </div>
                                     </div>
@@ -996,12 +1054,35 @@ export default function InputPage() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-muted-foreground">Thực tế / Actual</label>
+                                            <label className="text-sm font-medium text-muted-foreground">Chỉ số Đồng hồ (Meter)</label>
+                                            <input
+                                                type="number" step="1" min="0" placeholder="0"
+                                                className="flex h-9 w-full rounded-md border border-input bg-blue-50 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                                value={energyData.water_meter_reading !== undefined ? energyData.water_meter_reading : ''}
+                                                onChange={e => {
+                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                    setEnergyData(prev => {
+                                                        const consumption = (val !== undefined && prev.prev_water_meter_reading !== null)
+                                                            ? Math.max(0, val - prev.prev_water_meter_reading)
+                                                            : prev.water_m3;
+                                                        return { ...prev, water_meter_reading: val, water_m3: consumption };
+                                                    });
+                                                }}
+                                            />
+                                            {energyData.prev_water_meter_reading !== null ? (
+                                                <p className="text-[10px] text-blue-600">Tự trừ đầu kì: {energyData.prev_water_meter_reading}</p>
+                                            ) : (
+                                                <p className="text-[10px] text-muted-foreground italic">Chưa có chỉ số ngày hôm trước</p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-muted-foreground">Tiêu thụ Thực tế</label>
                                             <input
                                                 type="number" step="0.01" min="0" placeholder="0"
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                                className={cn("flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm", energyData.prev_water_meter_reading !== null ? "bg-muted opacity-80" : "bg-transparent focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none")}
                                                 value={energyData.water_m3 || ''}
                                                 onChange={e => setEnergyData(prev => ({ ...prev, water_m3: Number(e.target.value) }))}
+                                                readOnly={energyData.prev_water_meter_reading !== null}
                                             />
                                         </div>
                                     </div>
