@@ -760,23 +760,18 @@ export default function DashboardPage() {
                                 )}
                                 {deptCode === "CS" ? (
                                     <>
-                                        <Bar dataKey="IspActual" name="ISP (Thực tế)" stackId="a">
+                                        <Bar dataKey="IspActual" name="ISP (Thực tế)" radius={[2, 2, 0, 0]}>
                                             {displayHistory.map((entry: any, index: number) => {
                                                 const ispColor = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#ef4444" : "#22c55e";
                                                 return <Cell key={`isp-cell-${index}`} fill={ispColor} />;
                                             })}
                                         </Bar>
-                                        <Bar dataKey="NonIspActual" name="Non-ISP (Thực tế)" stackId="a">
-                                            {displayHistory.map((entry: any, index: number) => {
-                                                const nonIspColor = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#fca5a5" : "#86efac";
-                                                return <Cell key={`non-isp-cell-${index}`} fill={nonIspColor} />;
-                                            })}
-                                        </Bar>
+                                        <Line type="step" dataKey="NonIspActual" stroke="transparent" dot={false} strokeWidth={0} name="Non-ISP (Thực tế)" />
                                         <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch ISP" />
                                     </>
                                 ) : (
                                     <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
-                                        {history.map((entry: any, index: number) => {
+                                        {displayHistory.map((entry: any, index: number) => {
                                             const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
