@@ -189,7 +189,7 @@ export default function AdminPlanPage() {
     }
 
     // Monthly Save Logic
-    const handleMonthlySave = async (targetType: 'all' | 'prod' | 'cont' = 'all') => {
+    const handleMonthlySave = async (targetType: 'all' | 'prod' | 'cont' | 'isp' = 'all') => {
         if (!selectedDept || !selectedMonth) {
             toast.error("Vui lòng chọn bộ phận và tháng");
             return;
@@ -298,7 +298,7 @@ export default function AdminPlanPage() {
                     ? getDistributedValue(monthlyPlanCont, 2)
                     : (existing.plan_container || 0);
 
-                const newPlanIsp = (selectedDeptCode === "CS" && (targetType === 'all' || targetType === 'prod'))
+                const newPlanIsp = (selectedDeptCode === "CS" && (targetType === 'all' || targetType === 'isp' || targetType === 'prod'))
                     ? getDistributedValue(targetIsp, 1) // Using targetIsp state variable as the total target ISP volume for the month
                     : (existing.plan_isp_ton || 0);
 
@@ -327,6 +327,8 @@ export default function AdminPlanPage() {
             } else {
                 if (targetType === 'cont') {
                     toast.success(`Đã chia đều kế hoạch Container qua ${workingDays.length} ngày thành công!`);
+                } else if (targetType === 'isp') {
+                    toast.success(`Đã chia đều chỉ tiêu ISP qua ${workingDays.length} ngày thành công!`);
                 } else if (targetType === 'prod') {
                     toast.success(`Đã chia đều ${monthlyPlanTon} tấn qua ${workingDays.length} ngày thành công!`);
                 } else {
@@ -469,6 +471,16 @@ export default function AdminPlanPage() {
                             <>
                                 <Button onClick={() => handleMonthlySave('cont')} disabled={isSavingMonthly} variant="outline" className="border-indigo-600 text-indigo-700 hover:bg-indigo-50">
                                     {isSavingMonthly ? "Đang xử lý..." : "Chia Đều Container"}
+                                </Button>
+                                <Button onClick={() => handleMonthlySave('prod')} disabled={isSavingMonthly} className="bg-primary/90 hover:bg-primary">
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    {isSavingMonthly ? "Đang xử lý..." : "Chia Đều Sản Xuất (Tấn)"}
+                                </Button>
+                            </>
+                        ) : departments.find(d => d.id === selectedDept)?.code === "CS" ? (
+                            <>
+                                <Button onClick={() => handleMonthlySave('isp')} disabled={isSavingMonthly} variant="outline" className="border-blue-600 text-blue-700 hover:bg-blue-50">
+                                    {isSavingMonthly ? "Đang xử lý..." : "Chia Đều C.Tiêu ISP"}
                                 </Button>
                                 <Button onClick={() => handleMonthlySave('prod')} disabled={isSavingMonthly} className="bg-primary/90 hover:bg-primary">
                                     <Settings className="h-4 w-4 mr-2" />
