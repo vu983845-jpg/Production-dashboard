@@ -157,6 +157,7 @@ export default function DashboardPage() {
                 if (Number(r.isp_pct) > 0) { sumIsp += Number(r.isp_pct); countIsp++; }
                 if (Number(r.sw_pct) > 0) { sumSw += Number(r.sw_pct); countSw++; }
                 tActualIspCS += Number(r.isp_ton || 0);
+                tPlanIsp += Number(r.plan_isp_ton || 0);
             } else {
                 if (Number(r.avg_broken_pct) > 0) { sumBroken += Number(r.avg_broken_pct); countBroken++; }
                 if (Number(r.avg_unpeel_pct) > 0) { sumUnpeel += Number(r.avg_unpeel_pct); countUnpeel++; }
@@ -342,14 +343,15 @@ export default function DashboardPage() {
                     // To build an accurate history (Actual vs Plan per day), we must group regions by Work_Date!
                     const recordsByDay = records.reduce((dayAcc: any, r: any) => {
                         if (!dayAcc[r.work_date]) {
-                            dayAcc[r.work_date] = { plan: 0, actual: 0, plan_cont: 0, actual_cont: 0, elec: 0, isp: 0 };
+                            dayAcc[r.work_date] = { plan: 0, actual: 0, plan_cont: 0, actual_cont: 0, elec: 0, isp_actual: 0, isp_plan: 0 };
                         }
                         dayAcc[r.work_date].plan += Number(r.plan_ton);
                         dayAcc[r.work_date].actual += Number(r.actual_ton);
                         dayAcc[r.work_date].plan_cont += Number(r.plan_container || 0);
                         dayAcc[r.work_date].actual_cont += Number(r.actual_container || 0);
                         dayAcc[r.work_date].elec += Number(r.electricity_consumption_kwh || 0);
-                        dayAcc[r.work_date].isp += Number(r.isp_ton || 0);
+                        dayAcc[r.work_date].isp_actual += Number(r.isp_ton || 0);
+                        dayAcc[r.work_date].isp_plan += Number(r.plan_isp_ton || 0);
                         return dayAcc;
                     }, {});
 
@@ -360,8 +362,9 @@ export default function DashboardPage() {
                         ContActual: recordsByDay[d].actual_cont,
                         ContPlan: recordsByDay[d].plan_cont,
                         Intensity: recordsByDay[d].actual > 0 ? Number((recordsByDay[d].elec / recordsByDay[d].actual).toFixed(2)) : 0,
-                        IspActual: recordsByDay[d].isp,
-                        NonIspActual: Math.max(0, recordsByDay[d].actual - recordsByDay[d].isp)
+                        IspActual: recordsByDay[d].isp_actual,
+                        IspPlan: recordsByDay[d].isp_plan,
+                        NonIspActual: Math.max(0, recordsByDay[d].actual - recordsByDay[d].isp_actual)
                     }));
 
                     dashboards[key] = {
@@ -618,6 +621,15 @@ export default function DashboardPage() {
                                     {summary.achivementPct >= 100 ? <TrendingUp className="h-6 w-6 text-green-500" /> : <TrendingDown className="h-6 w-6 text-red-500" />}
                                 </div>
                             </div>
+                            {deptCode === 'CS' && (
+                                <div className="flex flex-col items-end border-l pl-4 border-gray-200 ml-2">
+                                    <span className="text-[10px] text-muted-foreground uppercase mb-0.5 text-blue-600">ISP (Thực tế / KH)</span>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-xl font-black text-blue-700">{summary.totalActualIspCS?.toFixed(1) ?? 0}</span>
+                                        <span className="text-sm text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span>
+                                    </div>
+                                </div>
+                            )}
 
                         </div>
                     </CardTitle>
@@ -710,6 +722,7 @@ export default function DashboardPage() {
                                     <>
                                         <Bar dataKey="IspActual" name="ISP (Thực tế)" stackId="a" fill="#3b82f6" />
                                         <Bar dataKey="NonIspActual" name="Non-ISP (Thực tế)" stackId="a" fill="#94a3b8" radius={[2, 2, 0, 0]} />
+                                        <Line type="step" dataKey="IspPlan" stroke="#2563eb" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Kế hoạch ISP" />
                                     </>
                                 ) : (
                                     <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>

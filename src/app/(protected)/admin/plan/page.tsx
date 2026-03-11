@@ -110,7 +110,7 @@ export default function AdminPlanPage() {
                     display_date: format(d, "EEEE, dd/MM", { locale: vi }),
                     plan_ton: existing ? Number(existing.plan_ton) : 0,
                     plan_container: existing ? Number(existing.plan_container) : 0,
-                    plan_isp_ton: existingF ? Number(existingF.plan_isp_ton || 0) : 0,
+                    plan_isp_ton: (existingF ? Number(existingF.plan_isp_ton || 0) : 0) || (existing ? Number(existing.plan_isp_ton || 0) : 0),
                     plan_non_isp_ton: existingF ? Number(existingF.plan_non_isp_ton || 0) : 0,
                     electricity_target_kwh: existingE ? Number(existingE.electricity_target_kwh || 0) : (existing ? Number(existing.target_electricity_kwh || 0) : 0),
                     water_target_m3: existingE ? Number(existingE.water_target_m3 || 0) : 0,
@@ -166,6 +166,7 @@ export default function AdminPlanPage() {
                 work_date: d.work_date,
                 plan_ton: d.plan_ton,
                 plan_container: d.plan_container,
+                plan_isp_ton: d.plan_isp_ton,
                 target_electricity_kwh: d.electricity_target_kwh,
                 updated_at: new Date().toISOString()
             }))
@@ -297,11 +298,16 @@ export default function AdminPlanPage() {
                     ? getDistributedValue(monthlyPlanCont, 2)
                     : (existing.plan_container || 0);
 
+                const newPlanIsp = (selectedDeptCode === "CS" && (targetType === 'all' || targetType === 'prod'))
+                    ? getDistributedValue(targetIsp, 1) // Using targetIsp state variable as the total target ISP volume for the month
+                    : (existing.plan_isp_ton || 0);
+
                 return {
                     department_id: selectedDept,
                     work_date: dateStr,
                     plan_ton: newPlanTon,
                     plan_container: newPlanCont,
+                    plan_isp_ton: newPlanIsp,
                     target_broken_pct: (targetType === 'all' || targetType === 'prod') ? (isWorkingDay ? targetBroken : 0) : (existing.target_broken_pct || 0),
                     target_unpeel_pct: (targetType === 'all' || targetType === 'prod') ? (isWorkingDay ? targetUnpeel : 0) : (existing.target_unpeel_pct || 0),
                     target_sw_pct: (targetType === 'all' || targetType === 'prod') ? (isWorkingDay ? targetSw : 0) : (existing.target_sw_pct || 0),
@@ -437,10 +443,17 @@ export default function AdminPlanPage() {
                                     <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target SW (%)</label>
                                     <Input type="number" step="0.1" min="0" max="100" value={targetSw || ""} onChange={(e) => setTargetSw(Number(e.target.value))} placeholder="%" />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target ISP (%)</label>
-                                    <Input type="number" step="0.1" min="0" max="100" value={targetIsp || ""} onChange={(e) => setTargetIsp(Number(e.target.value))} placeholder="%" />
-                                </div>
+                                {departments.find(d => d.id === selectedDept)?.code === "CS" ? (
+                                    <div className="space-y-1">
+                                        <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Tổng Target ISP (Tấn)</label>
+                                        <Input type="number" step="0.1" min="0" value={targetIsp || ""} onChange={(e) => setTargetIsp(Number(e.target.value))} placeholder="VD: 50" />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target ISP (%)</label>
+                                        <Input type="number" step="0.1" min="0" max="100" value={targetIsp || ""} onChange={(e) => setTargetIsp(Number(e.target.value))} placeholder="%" />
+                                    </div>
+                                )}
                                 {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
                                     <div className="space-y-1">
                                         <label className="text-sm border-b border-primary/20 block pb-1 text-amber-600 font-semibold">Tổng Điện Shelling (kWh)</label>
@@ -500,6 +513,9 @@ export default function AdminPlanPage() {
                                         {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
                                             <TableHead>Kế hoạch Cont</TableHead>
                                         )}
+                                        {departments.find(d => d.id === selectedDept)?.code === "CS" && (
+                                            <TableHead>Kế hoạch ISP (Tấn)</TableHead>
+                                        )}
                                         {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
                                             <TableHead>Target Điện Shelling (kWh)</TableHead>
                                         )}
@@ -548,6 +564,18 @@ export default function AdminPlanPage() {
                                                             className="max-w-[100px]"
                                                             value={row.plan_container}
                                                             onChange={(e) => handlePlanChange(idx, "plan_container", e.target.value)}
+                                                        />
+                                                    </TableCell>
+                                                )}
+                                                {deptCode === "CS" && (
+                                                    <TableCell>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.1"
+                                                            min="0"
+                                                            className="max-w-[150px]"
+                                                            value={row.plan_isp_ton}
+                                                            onChange={(e) => handlePlanChange(idx, "plan_isp_ton", e.target.value)}
                                                         />
                                                     </TableCell>
                                                 )}
