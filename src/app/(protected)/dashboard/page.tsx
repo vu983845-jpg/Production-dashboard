@@ -12,7 +12,7 @@ import {
     BatteryWarning,
     Download
 } from "lucide-react"
-import { AreaChart, Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts"
+import { AreaChart, Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine } from "recharts"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -659,22 +659,20 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         {(
                             <>
-                                {id !== 'virtual-container' && (
-                                    <>
                                         <div>
                                             <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
                                             <div className={`text-md font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
-                                                {isReached ? 'Đạt' : `${dailyNeeded} T`}
+                                                {isReached ? 'Đạt' : `${dailyNeeded} ${unit}`}
                                             </div>
                                         </div>
-                                        <div>
-                                            <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
-                                            <div className="text-md font-bold text-amber-600 flex items-center gap-1">
-                                                <Clock className="h-3 w-3" /> {summary.downtime}p
+                                        {id !== 'virtual-container' && (
+                                            <div>
+                                                <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
+                                                <div className="text-md font-bold text-amber-600 flex items-center gap-1">
+                                                    <Clock className="h-3 w-3" /> {summary.downtime}p
+                                                </div>
                                             </div>
-                                        </div>
-                                    </>
-                                )}
+                                        )}
 
                                 {["PEEL_MC", "SHELL"].includes(deptCode) && (
                                     <div>
@@ -733,6 +731,9 @@ export default function DashboardPage() {
                             <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
                                 <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                                {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && (
+                                    <ReferenceLine y={Number(dailyNeeded)} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'top', value: `Cần: ${dailyNeeded} Cont`, fill: '#10b981', fontSize: 10 }} />
+                                )}
                                 {deptCode === "SHELL" && (
                                     <>
                                         <YAxis yAxisId="intensity" orientation="right" hide />
