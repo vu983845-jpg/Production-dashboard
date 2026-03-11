@@ -760,9 +760,19 @@ export default function DashboardPage() {
                                 )}
                                 {deptCode === "CS" ? (
                                     <>
-                                        <Bar dataKey="IspActual" name="ISP (Thực tế)" stackId="a" fill="#3b82f6" />
-                                        <Bar dataKey="NonIspActual" name="Non-ISP (Thực tế)" stackId="a" fill="#94a3b8" radius={[2, 2, 0, 0]} />
-                                        <Line type="step" dataKey="IspPlan" stroke="#2563eb" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Kế hoạch ISP" />
+                                        <Bar dataKey="IspActual" name="ISP (Thực tế)" stackId="a">
+                                            {displayHistory.map((entry: any, index: number) => {
+                                                const ispColor = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#ef4444" : "#22c55e";
+                                                return <Cell key={`isp-cell-${index}`} fill={ispColor} />;
+                                            })}
+                                        </Bar>
+                                        <Bar dataKey="NonIspActual" name="Non-ISP (Thực tế)" stackId="a">
+                                            {displayHistory.map((entry: any, index: number) => {
+                                                const nonIspColor = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#fca5a5" : "#86efac";
+                                                return <Cell key={`non-isp-cell-${index}`} fill={nonIspColor} />;
+                                            })}
+                                        </Bar>
+                                        <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch ISP" />
                                     </>
                                 ) : (
                                     <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
