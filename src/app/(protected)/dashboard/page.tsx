@@ -51,7 +51,8 @@ export default function DashboardPage() {
         contActual: 0, contTarget: 0,
         elecActual: 0, elecTarget: 0,
         waterActual: 0, waterTarget: 0,
-        woodActual: 0, woodTarget: 0
+        woodActual: 0, woodTarget: 0,
+        totalEmission: 0, totalEmissionTarget: 265
     })
 
     // Load Departments
@@ -259,6 +260,52 @@ export default function DashboardPage() {
                 }
             };
 
+            // 0.5 Fetch Energy Data (needed for Total Emission injected into Total Factory history)
+            const { data: eData } = await supabase
+                .from('daily_energy')
+                .select('*')
+                .gte('work_date', startFilter)
+                .lte('work_date', endFilter)
+                .order('work_date');
+
+            let elecActual = 0, elecTarget = 0, waterActual = 0, waterTarget = 0, woodActual = 0, woodTarget = 0;
+            let totalEmissionTons = 0;
+            const dailyEmissionsByDate: Record<string, number> = {};
+
+            if (eData) {
+                eData.forEach(r => {
+                    const elec = Number(r.electricity_kwh || 0);
+                    const water = Number(r.water_m3 || 0);
+                    const wood = Number(r.wood_kg || 0);
+                    
+                    elecActual += elec;
+                    elecTarget += Number(r.electricity_target_kwh || 0);
+                    waterActual += water;
+                    waterTarget += Number(r.water_target_m3 || 0);
+                    woodActual += wood;
+                    woodTarget += Number(r.wood_target_kg || 0);
+
+                    // Scope 1: Wood (tons -> * 43.893270) + Wastewater (Water * 0.6 -> * 0.201)
+                    const scope1 = (wood * 43.893270) + (water * 0.6 * 0.201);
+                    // Scope 2: Electricity (kWh -> * 0.845)
+                    const scope2 = elec * 0.845;
+                    const dailyEmission = (scope1 + scope2) / 1000; // Convert to Tons CO₂e
+                    
+                    dailyEmissionsByDate[r.work_date] = dailyEmission;
+                    totalEmissionTons += dailyEmission;
+                });
+
+                setEnergyHistory(eData.map(r => ({
+                    name: format(new Date(r.work_date), 'dd/MM'),
+                    ElectricityActual: Number(r.electricity_kwh || 0),
+                    ElectricityTarget: Number(r.electricity_target_kwh || 0),
+                    WaterActual: Number(r.water_m3 || 0),
+                    WaterTarget: Number(r.water_target_m3 || 0),
+                    WoodActual: Number(r.wood_kg || 0),
+                    WoodTarget: Number(r.wood_target_kg || 0)
+                })));
+            }
+
             // 1. Fetch Total Factory Data
             const { data: totalData } = await supabase
                 .from("v_dashboard_total_daily")
@@ -275,7 +322,8 @@ export default function DashboardPage() {
                 const history = totalData.map(d => ({
                     name: format(new Date(d.work_date), 'dd/MM'),
                     Actual: Number(d.total_actual_ton),
-                    Plan: Number(d.total_plan_ton)
+                    Plan: Number(d.total_plan_ton),
+                    Emission: dailyEmissionsByDate[d.work_date] || 0
                 }));
                 const fgwhIspHistory = totalData.map(d => ({
                     name: format(new Date(d.work_date), 'dd/MM'),
@@ -407,35 +455,7 @@ export default function DashboardPage() {
 
             setDashboardsData(dashboards);
 
-            // 3. Fetch Energy & Build KPIs
-            const { data: eData } = await supabase
-                .from('daily_energy')
-                .select('*')
-                .gte('work_date', startFilter)
-                .lte('work_date', endFilter)
-                .order('work_date');
-
-            let elecActual = 0, elecTarget = 0, waterActual = 0, waterTarget = 0, woodActual = 0, woodTarget = 0;
-            if (eData) {
-                eData.forEach(r => {
-                    elecActual += Number(r.electricity_kwh || 0);
-                    elecTarget += Number(r.electricity_target_kwh || 0);
-                    waterActual += Number(r.water_m3 || 0);
-                    waterTarget += Number(r.water_target_m3 || 0);
-                    woodActual += Number(r.wood_kg || 0);
-                    woodTarget += Number(r.wood_target_kg || 0);
-                });
-
-                setEnergyHistory(eData.map(r => ({
-                    name: format(new Date(r.work_date), 'dd/MM'),
-                    ElectricityActual: Number(r.electricity_kwh || 0),
-                    ElectricityTarget: Number(r.electricity_target_kwh || 0),
-                    WaterActual: Number(r.water_m3 || 0),
-                    WaterTarget: Number(r.water_target_m3 || 0),
-                    WoodActual: Number(r.wood_kg || 0),
-                    WoodTarget: Number(r.wood_target_kg || 0)
-                })));
-            }
+            // 3. Build Remaining KPIs (Energy already fetched above)
 
             // Calculate FGWH KPIs
             let fgwhActual = 0, fgwhTarget = 0;
@@ -467,7 +487,8 @@ export default function DashboardPage() {
             }
 
             setKpiSummary({
-                steamActual, steamTarget, fgwhActual, fgwhTarget, elecActual, elecTarget, waterActual, waterTarget, woodActual, woodTarget, contActual, contTarget
+                steamActual, steamTarget, fgwhActual, fgwhTarget, elecActual, elecTarget, waterActual, waterTarget, woodActual, woodTarget, contActual, contTarget,
+                totalEmission: totalEmissionTons, totalEmissionTarget: 265
             });
 
             // Still populate legacy states for the Master Table if needed
@@ -733,6 +754,12 @@ export default function DashboardPage() {
                                     </Bar>
                                 )}
                                 <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
+                                {deptCode === "ALL" && (
+                                    <>
+                                        <YAxis yAxisId="emission" orientation="right" hide />
+                                        <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#ef4444" dot={true} strokeWidth={2} name="Phát thải (T CO₂e)" />
+                                    </>
+                                )}
                                 <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
                             </ComposedChart>
                         </ResponsiveContainer>
@@ -783,7 +810,7 @@ export default function DashboardPage() {
                 </div>
 
                 {selectedDept === 'all' && (
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6 mt-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 mt-4">
                         <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
                             <GaugeChart value={kpiSummary.steamActual} target={kpiSummary.steamTarget} label="TIẾN ĐỘ HẤP / STEAMING" unit="T" color="#f59e0b" />
                         </Card>
@@ -791,13 +818,7 @@ export default function DashboardPage() {
                             <GaugeChart value={kpiSummary.contActual} target={kpiSummary.contTarget} label="CONTAINER / ĐÓNG CÔNG" unit="Cont" color="#10b981" />
                         </Card>
                         <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
-                            <GaugeChart value={kpiSummary.elecActual} target={kpiSummary.elecTarget} label="ĐIỆN TIÊU THỤ" unit="kWh" color="#eab308" formatValue={(v) => Number(v).toLocaleString()} inverse />
-                        </Card>
-                        <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
-                            <GaugeChart value={kpiSummary.waterActual} target={kpiSummary.waterTarget} label="NƯỚC TIÊU THỤ" unit="m³" color="#3b82f6" formatValue={(v) => Number(v).toLocaleString()} inverse />
-                        </Card>
-                        <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
-                            <GaugeChart value={kpiSummary.woodActual} target={kpiSummary.woodTarget} label="CỦI TIÊU THỤ" unit="T" color="#f97316" formatValue={(v) => Number(v).toLocaleString()} inverse />
+                            <GaugeChart value={kpiSummary.totalEmission} target={kpiSummary.totalEmissionTarget} label="TỔNG PHÁT THẢI (SCOPE 1+2)" unit="T CO₂e" color="#ef4444" formatValue={(v) => Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })} />
                         </Card>
                     </div>
                 )}
