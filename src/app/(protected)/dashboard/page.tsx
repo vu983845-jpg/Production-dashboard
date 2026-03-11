@@ -575,6 +575,11 @@ export default function DashboardPage() {
         const isReachTonnage = summary.totalActual >= summary.totalPlan && summary.totalPlan > 0;
         const isReached = isReachTonnage;
 
+        const displayHistory = history.map((h: any) => ({
+            ...h,
+            DailyNeeded: id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && h.Plan > 0 ? Number(dailyNeeded) : undefined
+        }));
+
         const actualNum = summary.totalActual;
         const planNum = summary.totalPlan;
         const unit = id === 'virtual-container' ? "Cont" : "T";
@@ -606,7 +611,7 @@ export default function DashboardPage() {
                     <CardContent className="pt-4 flex-1 flex flex-col">
                         <div className="flex-1">
                             <ResponsiveContainer width="100%" height={160}>
-                                <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
+                                <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
                                     <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
                                     <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
@@ -741,11 +746,11 @@ export default function DashboardPage() {
                     {/* Sparkline chart */}
                     <div className="h-36 w-full mt-auto border-t pt-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
+                            <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
                                 <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                 {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
-                                    <ReferenceLine y={Number(dailyNeeded)} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'top', value: `Cần: ${dailyNeeded} Cont`, fill: '#10b981', fontSize: 10 }} />
+                                    <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Cần làm/Ngày" connectNulls={false} />
                                 )}
                                 {deptCode === "SHELL" && (
                                     <>
