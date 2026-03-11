@@ -766,8 +766,8 @@ export default function DashboardPage() {
                                                 return <Cell key={`isp-cell-${index}`} fill={ispColor} />;
                                             })}
                                         </Bar>
+                                        <Bar dataKey="IspPlan" name="KH ISP" radius={[2, 2, 0, 0]} fill="#94a3b8" opacity={0.5} />
                                         <Line type="step" dataKey="NonIspActual" stroke="transparent" dot={false} strokeWidth={0} name="Non-ISP (Thực tế)" />
-                                        <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch ISP" />
                                     </>
                                 ) : (
                                     <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
