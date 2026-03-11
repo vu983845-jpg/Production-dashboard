@@ -744,7 +744,7 @@ export default function DashboardPage() {
                             <ComposedChart data={history} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
                                 <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                                {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && (
+                                {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                     <ReferenceLine y={Number(dailyNeeded)} stroke="#10b981" strokeDasharray="3 3" label={{ position: 'top', value: `Cần: ${dailyNeeded} Cont`, fill: '#10b981', fontSize: 10 }} />
                                 )}
                                 {deptCode === "SHELL" && (
