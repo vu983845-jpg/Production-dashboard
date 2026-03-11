@@ -96,6 +96,7 @@ export default function DashboardPage() {
         let sumIsp = 0, countIsp = 0;
         let sumSw = 0, countSw = 0;
         let tElecCons = 0, tElecTarget = 0;
+        let tActualIspCS = 0;
 
         // MTD (Month To Date) Calculation Logic
         const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -155,6 +156,7 @@ export default function DashboardPage() {
                 if (Number(r.unpeel_pct) > 0) { sumUnpeel += Number(r.unpeel_pct); countUnpeel++; }
                 if (Number(r.isp_pct) > 0) { sumIsp += Number(r.isp_pct); countIsp++; }
                 if (Number(r.sw_pct) > 0) { sumSw += Number(r.sw_pct); countSw++; }
+                tActualIspCS += Number(r.isp_ton || 0);
             } else {
                 if (Number(r.avg_broken_pct) > 0) { sumBroken += Number(r.avg_broken_pct); countBroken++; }
                 if (Number(r.avg_unpeel_pct) > 0) { sumUnpeel += Number(r.avg_unpeel_pct); countUnpeel++; }
@@ -203,6 +205,8 @@ export default function DashboardPage() {
             totalActualIsp: tActualIsp,
             totalPlanNonIsp: tPlanNonIsp,
             totalActualNonIsp: tActualNonIsp,
+            totalActualIspCS: tActualIspCS,
+            totalActualNonIspCS: Math.max(0, tActual - tActualIspCS),
             totalElectricityConsumption: tElecCons,
             totalTargetElectricityKwh: tElecTarget
         };
@@ -338,13 +342,14 @@ export default function DashboardPage() {
                     // To build an accurate history (Actual vs Plan per day), we must group regions by Work_Date!
                     const recordsByDay = records.reduce((dayAcc: any, r: any) => {
                         if (!dayAcc[r.work_date]) {
-                            dayAcc[r.work_date] = { plan: 0, actual: 0, plan_cont: 0, actual_cont: 0, elec: 0 };
+                            dayAcc[r.work_date] = { plan: 0, actual: 0, plan_cont: 0, actual_cont: 0, elec: 0, isp: 0 };
                         }
                         dayAcc[r.work_date].plan += Number(r.plan_ton);
                         dayAcc[r.work_date].actual += Number(r.actual_ton);
                         dayAcc[r.work_date].plan_cont += Number(r.plan_container || 0);
                         dayAcc[r.work_date].actual_cont += Number(r.actual_container || 0);
                         dayAcc[r.work_date].elec += Number(r.electricity_consumption_kwh || 0);
+                        dayAcc[r.work_date].isp += Number(r.isp_ton || 0);
                         return dayAcc;
                     }, {});
 
@@ -354,7 +359,9 @@ export default function DashboardPage() {
                         Plan: recordsByDay[d].plan,
                         ContActual: recordsByDay[d].actual_cont,
                         ContPlan: recordsByDay[d].plan_cont,
-                        Intensity: recordsByDay[d].actual > 0 ? Number((recordsByDay[d].elec / recordsByDay[d].actual).toFixed(2)) : 0
+                        Intensity: recordsByDay[d].actual > 0 ? Number((recordsByDay[d].elec / recordsByDay[d].actual).toFixed(2)) : 0,
+                        IspActual: recordsByDay[d].isp,
+                        NonIspActual: Math.max(0, recordsByDay[d].actual - recordsByDay[d].isp)
                     }));
 
                     dashboards[key] = {
@@ -699,13 +706,19 @@ export default function DashboardPage() {
                                         <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name="kWh/T" />
                                     </>
                                 )}
-                                <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
-                                    {history.map((entry: any, index: number) => {
-                                        // If there is a plan AND actual is less than plan -> Red. Otherwise -> Green.
-                                        const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
-                                        return <Cell key={`cell-${index}`} fill={color} />;
-                                    })}
-                                </Bar>
+                                {deptCode === "CS" ? (
+                                    <>
+                                        <Bar dataKey="IspActual" name="ISP (Thực tế)" stackId="a" fill="#3b82f6" />
+                                        <Bar dataKey="NonIspActual" name="Non-ISP (Thực tế)" stackId="a" fill="#94a3b8" radius={[2, 2, 0, 0]} />
+                                    </>
+                                ) : (
+                                    <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
+                                        {history.map((entry: any, index: number) => {
+                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
+                                            return <Cell key={`cell-${index}`} fill={color} />;
+                                        })}
+                                    </Bar>
+                                )}
                                 <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
                                 <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
                             </ComposedChart>
