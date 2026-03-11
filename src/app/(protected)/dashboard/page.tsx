@@ -760,20 +760,15 @@ export default function DashboardPage() {
                                 )}
                                 {deptCode === "CS" ? (
                                     <>
-                                        <Bar dataKey="Actual" name="Sản lượng" radius={[2, 2, 0, 0]}>
-                                            {displayHistory.map((entry: any, index: number) => {
-                                                const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
-                                                return <Cell key={`act-cell-${index}`} fill={color} />;
-                                            })}
-                                        </Bar>
+                                        <Bar dataKey="Actual" name="Sản lượng" radius={[2, 2, 0, 0]} fill="#cbd5e1" />
                                         <Bar dataKey="IspActual" name="ISP" radius={[2, 2, 0, 0]}>
                                             {displayHistory.map((entry: any, index: number) => {
-                                                const ispColor = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#f97316" : "#3b82f6";
+                                                const ispColor = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#ef4444" : "#22c55e";
                                                 return <Cell key={`isp-cell-${index}`} fill={ispColor} />;
                                             })}
                                         </Bar>
                                         <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="KH Sản lượng" />
-                                        <Line type="step" dataKey="IspPlan" stroke="#3b82f6" strokeDasharray="5 5" dot={false} strokeWidth={1} name="KH ISP" />
+                                        <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="5 5" dot={false} strokeWidth={1} name="KH ISP" />
                                         <Line type="step" dataKey="NonIspActual" stroke="transparent" dot={false} strokeWidth={0} name="Non-ISP" />
                                     </>
                                 ) : (
