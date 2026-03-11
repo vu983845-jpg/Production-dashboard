@@ -550,8 +550,8 @@ export default function DashboardPage() {
 
         if (isFgwh) {
             return (
-                <Card key={id} className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col border-primary/50 border-2">
-                    <CardHeader className="pb-2 bg-gray-50/50 border-b">
+                <Card key={id} className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full border-primary/50 border-2">
+                    <CardHeader className="pb-2 bg-gray-50/50 border-b flex-shrink-0">
                         <CardTitle className="text-md font-bold flex flex-wrap justify-between items-center gap-4 text-primary">
                             <span className="flex items-center gap-2">
                                 FGWH - Kho Thành Phẩm
@@ -634,7 +634,7 @@ export default function DashboardPage() {
                         </div>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-4 flex-1">
+                <CardContent className="pt-4 flex-1 flex flex-col">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         {(
                             <>
