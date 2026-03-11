@@ -121,6 +121,8 @@ export default function DashboardPage() {
 
         let tPlanMTD = 0;
         let tPlanContMTD = 0;
+        let remainingWorkingDays = 0;
+        let remainingContWorkingDays = 0;
 
         records.forEach(r => {
             const planVal = Number(isTotal ? r.total_plan_ton : r.plan_ton || 0);
@@ -133,6 +135,12 @@ export default function DashboardPage() {
             if (r.work_date <= cutoffDate) {
                 tPlanMTD += planVal;
                 tPlanContMTD += planContVal;
+            }
+
+            // Count remaining planned days to naturally respect the cutoff date from Admin Plan
+            if (r.work_date >= todayStr) {
+                if (planVal > 0) remainingWorkingDays++;
+                if (planContVal > 0) remainingContWorkingDays++;
             }
 
             tActual += Number(isTotal ? r.total_actual_ton : r.actual_ton || 0);
@@ -210,7 +218,9 @@ export default function DashboardPage() {
             totalActualIspCS: tActualIspCS,
             totalActualNonIspCS: Math.max(0, tActual - tActualIspCS),
             totalElectricityConsumption: tElecCons,
-            totalTargetElectricityKwh: tElecTarget
+            totalTargetElectricityKwh: tElecTarget,
+            remainingWorkingDays,
+            remainingContWorkingDays
         };
     };
 
@@ -555,7 +565,10 @@ export default function DashboardPage() {
         const { summary, history } = data;
 
         const isFgwh = id === 'fgwh';
-        const remainingDays = getRemainingWorkingDays(selectedMonth);
+        
+        // Use the dynamically computed remaining planned days to respect "cutoff" limits
+        const remainingDays = id === 'virtual-container' ? summary.remainingContWorkingDays : summary.remainingWorkingDays;
+
         const remainingTarget = Math.max(0, summary.totalPlan - summary.totalActual);
         const dailyNeeded = remainingDays > 0 ? (remainingTarget / remainingDays).toFixed(2) : "0";
 
