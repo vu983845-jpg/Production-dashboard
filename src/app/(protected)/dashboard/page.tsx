@@ -552,17 +552,17 @@ export default function DashboardPage() {
             return (
                 <Card key={id} className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full border-primary/50 border-2">
                     <CardHeader className="pb-2 bg-gray-50/50 border-b flex-shrink-0">
-                        <CardTitle className="text-md font-bold flex flex-wrap justify-between items-center gap-4 text-primary">
-                            <span className="flex items-center gap-2">
+                        <CardTitle className="text-md font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-4 text-primary">
+                            <span className="flex items-center gap-2 whitespace-nowrap">
                                 FGWH - Kho Thành Phẩm
                                 <FileSymlink className="h-4 w-4 text-primary" />
                             </span>
-                            <div className="flex items-center gap-6">
+                            <div className="flex flex-row flex-wrap items-center gap-4 mt-2 md:mt-0">
                                 <div className="flex flex-col items-end">
                                     <span className="text-[10px] text-muted-foreground uppercase mb-0.5">ISP (Thực tế / KH)</span>
                                     <span className="text-xl font-black text-blue-700">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></span>
                                 </div>
-                                <div className="flex flex-col items-end">
+                                <div className="flex flex-col items-end border-l pl-4 border-gray-200 ml-2">
                                     <span className="text-[10px] text-muted-foreground uppercase mb-0.5">Non-ISP (Thực tế / KH)</span>
                                     <span className="text-xl font-black text-slate-700">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></span>
                                 </div>
