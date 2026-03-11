@@ -777,7 +777,9 @@ export default function DashboardPage() {
                                         })}
                                     </Bar>
                                 )}
-                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
+                                {deptCode !== "CS" && (
+                                    <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
+                                )}
                                 {deptCode === "ALL" && (
                                     <>
                                         <YAxis yAxisId="emission" orientation="right" hide />
