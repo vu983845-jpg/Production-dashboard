@@ -820,15 +820,36 @@ export default function DashboardPage() {
                         </div>
                     ) : deptCode === "ALL" && showCo2Intensity ? (
                         <div className="h-36 w-full mt-auto border-t pt-2">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={displayHistory.map((d: any) => ({ ...d, CO2ePerTon: d.Actual > 0 ? Number(((d.Emission || 0) * 1000 / d.Actual).toFixed(2)) : 0 }))} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
-                                    <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
-                                    <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                                        formatter={(val: any) => [`${Number(val).toFixed(2)} kg CO₂e/T`, 'Cường độ CO₂e']} />
-                                    <Bar dataKey="CO2ePerTon" name="kg CO₂e/T" radius={[2, 2, 0, 0]} fill="#10b981" />
-                                    <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
-                                </ComposedChart>
-                            </ResponsiveContainer>
+                            {(() => {
+                                const co2TargetKgPerTon = planNum > 0 ? (265 * 1000) / planNum : 0;
+                                const co2Data = displayHistory.map((d: any) => ({
+                                    ...d,
+                                    CO2ePerTon: d.Actual > 0 ? Number(((d.Emission || 0) * 1000 / d.Actual).toFixed(2)) : 0,
+                                    Target: Number(co2TargetKgPerTon.toFixed(2))
+                                }));
+                                return (
+                                    <>
+                                        <p className="text-[9px] text-muted-foreground text-right pr-1">Target: {co2TargetKgPerTon.toFixed(1)} kg CO₂e/T</p>
+                                        <ResponsiveContainer width="100%" height="88%">
+                                            <ComposedChart data={co2Data} margin={{ top: 2, right: 0, left: 0, bottom: 20 }}>
+                                                <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={25} minTickGap={10} tickMargin={5} />
+                                                <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                                    formatter={(val: any, name?: string) => [
+                                                        `${Number(val).toFixed(2)} kg CO₂e/T`,
+                                                        name === 'CO2ePerTon' ? 'Thực tế' : 'Mục tiêu'
+                                                    ]} />
+                                                <Bar dataKey="CO2ePerTon" name="kg CO₂e/T" radius={[2, 2, 0, 0]}>
+                                                    {co2Data.map((entry: any, index: number) => (
+                                                        <Cell key={`co2-${index}`} fill={entry.CO2ePerTon > co2TargetKgPerTon ? "#ef4444" : "#22c55e"} />
+                                                    ))}
+                                                </Bar>
+                                                <Line type="step" dataKey="Target" stroke="#f59e0b" strokeDasharray="4 2" dot={false} strokeWidth={1.5} name="Mục tiêu" />
+                                                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '2px' }} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </>
+                                );
+                            })()}
                         </div>
                     ) : (
                     <div className="h-36 w-full mt-auto border-t pt-2">
