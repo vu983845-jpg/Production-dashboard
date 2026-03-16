@@ -1382,6 +1382,7 @@ export default function InputPage() {
                             </div>
                         </div>
                     </TabsContent>
+                )}
                 {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
                     <TabsContent value="shelling-lines" className="space-y-4">
                         <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
