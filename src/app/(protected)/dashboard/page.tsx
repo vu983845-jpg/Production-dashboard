@@ -651,7 +651,7 @@ export default function DashboardPage() {
                                 </span>
                             </div>
 
-                            <div className={`flex flex-col items-end ${deptCode === 'PACK' || deptCode === 'CS' ? 'border-r pr-4 border-gray-200' : ''}`}>
+                            <div className={`flex flex-col items-end ${deptCode === 'PACK' ? 'border-r pr-4 border-gray-200' : ''}`}>
                                 <span className="text-[10px] text-muted-foreground mb-0.5">MTD ACHIEVEMENT</span>
                                 <div className="flex items-center gap-2">
                                     <span className={`text-2xl font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'}`}>
@@ -660,15 +660,6 @@ export default function DashboardPage() {
                                     {summary.achivementPct >= 100 ? <TrendingUp className="h-6 w-6 text-green-500" /> : <TrendingDown className="h-6 w-6 text-red-500" />}
                                 </div>
                             </div>
-                            {deptCode === 'CS' && (
-                                <div className="flex flex-col items-end pl-0 md:pl-2">
-                                    <span className="text-[10px] text-muted-foreground uppercase mb-0.5 text-blue-600">ISP (Thực tế/KH)</span>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-xl font-black text-blue-700">{summary.totalActualIspCS?.toFixed(1) ?? 0}</span>
-                                        <span className="text-sm text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span>
-                                    </div>
-                                </div>
-                            )}
 
                         </div>
                     </CardTitle>
@@ -740,6 +731,17 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 )}
+                                {deptCode === "CS" && (
+                                    <div className="col-span-2 md:col-span-2 flex items-center justify-center p-2 rounded-lg bg-blue-50/50 border border-blue-100 h-20 mt-auto">
+                                        <GaugeChart
+                                            value={summary.totalActualIspCS || 0}
+                                            target={summary.totalPlanIsp || 100}
+                                            label="ISP (Thực tế / KH)"
+                                            unit="T"
+                                            color="#2563eb"
+                                        />
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
@@ -758,30 +760,13 @@ export default function DashboardPage() {
                                         <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name="kWh/T" />
                                     </>
                                 )}
-                                {deptCode === "CS" ? (
-                                    <>
-                                        <Bar dataKey="Actual" name="Sản lượng" radius={[2, 2, 0, 0]} fill="#cbd5e1" />
-                                        <Bar dataKey="IspActual" name="ISP" radius={[2, 2, 0, 0]}>
-                                            {displayHistory.map((entry: any, index: number) => {
-                                                const ispColor = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#ef4444" : "#22c55e";
-                                                return <Cell key={`isp-cell-${index}`} fill={ispColor} />;
-                                            })}
-                                        </Bar>
-                                        <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="KH Sản lượng" />
-                                        <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="5 5" dot={false} strokeWidth={1} name="KH ISP" />
-                                        <Line type="step" dataKey="NonIspActual" stroke="transparent" dot={false} strokeWidth={0} name="Non-ISP" />
-                                    </>
-                                ) : (
-                                    <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
-                                        {displayHistory.map((entry: any, index: number) => {
-                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
-                                            return <Cell key={`cell-${index}`} fill={color} />;
-                                        })}
-                                    </Bar>
-                                )}
-                                {deptCode !== "CS" && (
-                                    <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
-                                )}
+                                <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
+                                    {displayHistory.map((entry: any, index: number) => {
+                                        const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
+                                        return <Cell key={`cell-${index}`} fill={color} />;
+                                    })}
+                                </Bar>
+                                <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
                                 {deptCode === "ALL" && (
                                     <>
                                         <YAxis yAxisId="emission" orientation="right" hide />
