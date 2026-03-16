@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
@@ -499,6 +499,10 @@ export default function InputPage() {
 
             toast.success("Đã lưu Actual thành công")
             fetchHistory(selectedDept)
+            // Auto-save shelling line data when dept is SHELL
+            if (departments.find(d => d.id === selectedDept)?.code === 'SHELL') {
+                saveShellingLines()
+            }
         }
         setIsSaving(false)
     }
@@ -724,7 +728,6 @@ export default function InputPage() {
                     <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>
                     {role === 'admin' && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
                     {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
-                    {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-lines">Lines Shelling</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="production" className="space-y-4">
@@ -819,14 +822,81 @@ export default function InputPage() {
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
-                                                                <TableRow>
-                                                                    <TableCell className="font-medium align-middle">Sản lượng thực tế (Tấn)</TableCell>
-                                                                    <TableCell className="p-2 align-middle">
-                                                                        <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
-                                                                            <FormItem><FormControl><Input type="number" step="0.001" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
-                                                                        )} />
-                                                                    </TableCell>
-                                                                </TableRow>
+                                                                {departments.find(d => d.id === selectedDept)?.code === 'SHELL' ? (
+                                                                    <>
+                                                                        <TableRow>
+                                                                            <TableCell colSpan={2} className="p-0 pb-0">
+                                                                                <div className="bg-blue-50/60 border-b px-4 pt-3 pb-1">
+                                                                                    <p className="text-xs font-semibold text-blue-700 mb-2">📊 Sản lượng theo từng Line (Tấn)</p>
+                                                                                    <div className="grid grid-cols-5 gap-2 mb-2">
+                                                                                        {SHELLING_LINES.map(line => {
+                                                                                            const lColors: Record<string, string> = { A: 'border-blue-400', B: 'border-green-400', C: 'border-amber-400', D: 'border-red-400', D1: 'border-purple-400' }
+                                                                                            return (
+                                                                                                <div key={line} className="flex flex-col items-center">
+                                                                                                    <label className={`text-[10px] font-bold mb-1 ${lColors[line].replace('border-','text-')}`}>{line}</label>
+                                                                                                    <input
+                                                                                                        type="number" step="0.001" min="0"
+                                                                                                        className={`w-full text-right p-1 rounded border-2 ${lColors[line]} bg-white text-sm focus:outline-none`}
+                                                                                                        value={shellingLineData[line]?.actual_ton || ''}
+                                                                                                        onChange={e => {
+                                                                                                            const val = Number(e.target.value) || 0
+                                                                                                            setShellingLineData(prev => {
+                                                                                                                const next = { ...prev, [line]: { ...prev[line], actual_ton: val } }
+                                                                                                                const total = SHELLING_LINES.reduce((s, l) => s + (next[l]?.actual_ton || 0), 0)
+                                                                                                                formActual.setValue('actual_ton', total)
+                                                                                                                return next
+                                                                                                            })
+                                                                                                        }}
+                                                                                                    />
+                                                                                                </div>
+                                                                                            )
+                                                                                        })}
+                                                                                    </div>
+                                                                                    <p className="text-[10px] font-semibold text-blue-800 text-right">
+                                                                                        Tổng: <span className="text-base font-black">{SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l]?.actual_ton || 0), 0).toFixed(3)}</span> T
+                                                                                    </p>
+                                                                                </div>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell colSpan={2} className="p-0">
+                                                                                <div className="bg-green-50/40 border-b px-4 pt-2 pb-3">
+                                                                                    <p className="text-xs font-semibold text-green-700 mb-2">⏱ Thời gian chạy máy (Giờ)</p>
+                                                                                    <div className="grid grid-cols-5 gap-2">
+                                                                                        {SHELLING_LINES.map(line => (
+                                                                                            <div key={line} className="flex flex-col items-center">
+                                                                                                <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
+                                                                                                <input
+                                                                                                    type="number" step="0.1" min="0" max="24"
+                                                                                                    className="w-full text-right p-1 rounded border-2 border-green-300 bg-white text-sm focus:outline-none"
+                                                                                                    value={shellingLineData[line]?.run_hours || ''}
+                                                                                                    onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], run_hours: Number(e.target.value) || 0 } }))}
+                                                                                                />
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow className="bg-blue-50">
+                                                                            <TableCell className="font-semibold text-blue-800">Tổng sản lượng Shelling (Tấn)</TableCell>
+                                                                            <TableCell className="p-2 align-middle">
+                                                                                <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
+                                                                                    <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 focus-visible:ring-1 shadow-none font-bold text-blue-900" /></FormControl></FormItem>
+                                                                                )} />
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    </>
+                                                                ) : (
+                                                                    <TableRow>
+                                                                        <TableCell className="font-medium align-middle">Sản lượng thực tế (Tấn)</TableCell>
+                                                                        <TableCell className="p-2 align-middle">
+                                                                            <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
+                                                                                <FormItem><FormControl><Input type="number" step="0.001" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
+                                                                            )} />
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                )}
                                                                 {departments.find(d => d.id === selectedDept)?.code === "CS" && (
                                                                     <TableRow>
                                                                         <TableCell className="font-medium text-blue-600 align-middle">Sản lượng ISP (Tấn)</TableCell>
@@ -1382,92 +1452,7 @@ export default function InputPage() {
                             </div>
                         </div>
                     </TabsContent>
-                )}
-                {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
-                    <TabsContent value="shelling-lines" className="space-y-4">
-                        <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
-                            <div className="p-6">
-                                <div className="flex justify-between items-center mb-4">
-                                    <div>
-                                        <h3 className="font-semibold text-lg">Shelling Lines — {format(date, "dd/MM/yyyy")}</h3>
-                                        <p className="text-sm text-muted-foreground mt-1">Nhập sản lượng và thời gian chạy máy cho từng line cắt trong ngày</p>
-                                    </div>
-                                    <Button onClick={saveShellingLines} disabled={isSaving} size="sm">
-                                        <Save className="mr-2 h-4 w-4" />
-                                        {isSaving ? 'Đang lưu...' : 'Lưu Lines'}
-                                    </Button>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader className="bg-muted">
-                                            <TableRow>
-                                                <TableHead className="w-[80px] text-center font-bold">Line</TableHead>
-                                                <TableHead className="text-center">Sản lượng (Tấn)</TableHead>
-                                                <TableHead className="text-center">TG Chạy Máy (Giờ)</TableHead>
-                                                <TableHead className="text-center bg-green-50 text-green-700">Hiệu suất (T/Giờ)</TableHead>
-                                                <TableHead className="text-center">Ghi chú</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {SHELLING_LINES.map(line => {
-                                                const entry = shellingLineData[line]
-                                                const efficiency = entry.run_hours > 0 ? (entry.actual_ton / entry.run_hours).toFixed(2) : '—'
-                                                return (
-                                                    <TableRow key={line}>
-                                                        <TableCell className="text-center font-bold text-lg text-primary">{line}</TableCell>
-                                                        <TableCell className="p-2">
-                                                            <input
-                                                                type="number" step="0.001" min="0"
-                                                                className="w-full text-right p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
-                                                                value={entry.actual_ton || ''}
-                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], actual_ton: Number(e.target.value) } }))}
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell className="p-2">
-                                                            <input
-                                                                type="number" step="0.1" min="0" max="24"
-                                                                className="w-full text-right p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
-                                                                value={entry.run_hours || ''}
-                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], run_hours: Number(e.target.value) } }))}
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell className="text-center bg-green-50">
-                                                            <span className={`font-bold text-sm ${entry.run_hours > 0 ? 'text-green-700' : 'text-muted-foreground'}`}>
-                                                                {efficiency} {entry.run_hours > 0 ? 'T/h' : ''}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell className="p-2">
-                                                            <input
-                                                                type="text"
-                                                                className="w-full p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
-                                                                placeholder="Ghi chú..."
-                                                                value={entry.note || ''}
-                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], note: e.target.value } }))}
-                                                            />
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )
-                                            })}
-                                            <TableRow className="bg-muted/30 font-semibold">
-                                                <TableCell className="text-center text-sm text-muted-foreground">TỔNG</TableCell>
-                                                <TableCell className="text-right text-primary font-bold pr-4">
-                                                    {SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].actual_ton || 0), 0).toFixed(3)} T
-                                                </TableCell>
-                                                <TableCell className="text-right text-amber-700 font-bold pr-4">
-                                                    {SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].run_hours || 0), 0).toFixed(1)} Giờ
-                                                </TableCell>
-                                                <TableCell className="text-center bg-green-50 text-green-700 font-bold">
-                                                    {(() => { const tot = SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].actual_ton || 0), 0); const hrs = SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].run_hours || 0), 0); return hrs > 0 ? (tot / hrs).toFixed(2) + ' T/h' : '—' })()}
-                                                </TableCell>
-                                                <TableCell />
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        </div>
-                    </TabsContent>
-                )}
+                )}
             </Tabs>
         </div>
     );
