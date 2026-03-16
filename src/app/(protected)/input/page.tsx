@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
@@ -117,6 +117,19 @@ export default function InputPage() {
 
     // Shelling Monthly Energy State
     const [shellingMonthlyEnergyData, setShellingMonthlyEnergyData] = useState<ShellingMonthlyEnergyRecord[]>([])
+
+    // Shelling Line Tracking State
+    const SHELLING_LINES = ['A', 'B', 'C', 'D', 'D1'] as const
+    type ShellLine = typeof SHELLING_LINES[number]
+    type ShellLineEntry = { actual_ton: number; run_hours: number; note: string }
+    const [shellingLineData, setShellingLineData] = useState<Record<ShellLine, ShellLineEntry>>({
+        A: { actual_ton: 0, run_hours: 0, note: '' },
+        B: { actual_ton: 0, run_hours: 0, note: '' },
+        C: { actual_ton: 0, run_hours: 0, note: '' },
+        D: { actual_ton: 0, run_hours: 0, note: '' },
+        D1: { actual_ton: 0, run_hours: 0, note: '' }
+    })
+
 
     // Forms
     const formActual = useForm<z.infer<typeof actualSchema>>({
@@ -274,7 +287,9 @@ export default function InputPage() {
 
         fetchRecords()
         if (selectedDept) fetchHistory(selectedDept)
-    }, [selectedDept, date, formActual, formKpi])
+        const deptCodeLine = departments.find(d => d.id === selectedDept)?.code
+        if (deptCodeLine === 'SHELL') fetchShellingLineData()
+    }, [selectedDept, date, formActual, formKpi, departments])
 
     // Fetch History
     async function fetchHistory(deptId: string) {
@@ -528,6 +543,44 @@ export default function InputPage() {
         setIsSaving(false)
     }
 
+    async function fetchShellingLineData() {
+        const formattedDate = format(date, "yyyy-MM-dd")
+        const { data } = await supabase
+            .from('shelling_line_daily')
+            .select('*')
+            .eq('work_date', formattedDate)
+        if (data) {
+            const newState = { A: { actual_ton: 0, run_hours: 0, note: '' }, B: { actual_ton: 0, run_hours: 0, note: '' }, C: { actual_ton: 0, run_hours: 0, note: '' }, D: { actual_ton: 0, run_hours: 0, note: '' }, D1: { actual_ton: 0, run_hours: 0, note: '' } } as Record<ShellLine, { actual_ton: number; run_hours: number; note: string }>
+            data.forEach((r: any) => {
+                if (SHELLING_LINES.includes(r.line_code)) {
+                    newState[r.line_code as ShellLine] = { actual_ton: Number(r.actual_ton || 0), run_hours: Number(r.run_hours || 0), note: r.note || '' }
+                }
+            })
+            setShellingLineData(newState)
+        }
+    }
+
+    async function saveShellingLines() {
+        setIsSaving(true)
+        const formattedDate = format(date, "yyyy-MM-dd")
+        const payload = SHELLING_LINES.map(line => ({
+            work_date: formattedDate,
+            line_code: line,
+            actual_ton: shellingLineData[line as ShellLine].actual_ton,
+            run_hours: shellingLineData[line as ShellLine].run_hours,
+            note: shellingLineData[line as ShellLine].note || null,
+            updated_by: userId,
+            updated_at: new Date().toISOString()
+        }))
+        const { error } = await supabase.from('shelling_line_daily').upsert(payload, { onConflict: 'work_date,line_code' })
+        if (error) {
+            toast.error('Lỗi khi lưu Shelling Lines: ' + error.message)
+        } else {
+            toast.success('Đã lưu dữ liệu Shelling Lines thành công')
+        }
+        setIsSaving(false)
+    }
+
     async function saveShellingEnergy() {
         setIsSaving(true)
         const shellDept = departments.find(d => d.code === 'SHELL');
@@ -671,6 +724,7 @@ export default function InputPage() {
                     <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>
                     {role === 'admin' && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
                     {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
+                    {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-lines">Lines Shelling</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="production" className="space-y-4">
@@ -1324,6 +1378,175 @@ export default function InputPage() {
                                         <Save className="mr-2 h-4 w-4" />
                                         {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Điện Shelling'}
                                     </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+                {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
+                    <TabsContent value="shelling-lines" className="space-y-4">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                        <h3 className="font-semibold text-lg">Shelling Lines — {format(date, "dd/MM/yyyy")}</h3>
+                                        <p className="text-sm text-muted-foreground mt-1">Nhap san luong va thoi gian chay may cho tung line cat</p>
+                                    </div>
+                                    <Button onClick={saveShellingLines} disabled={isSaving} size="sm">
+                                        <Save className="mr-2 h-4 w-4" />
+                                        {isSaving ? 'Dang luu...' : 'Luu Lines'}
+                                    </Button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-muted">
+                                            <TableRow>
+                                                <TableHead className="w-[80px] text-center font-bold">Line</TableHead>
+                                                <TableHead className="text-center">San luong (Tan)</TableHead>
+                                                <TableHead className="text-center">TG Chay May (Gio)</TableHead>
+                                                <TableHead className="text-center bg-green-50 text-green-700">Hieu suat (T/Gio)</TableHead>
+                                                <TableHead className="text-center">Ghi chu</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {SHELLING_LINES.map(line => {
+                                                const entry = shellingLineData[line]
+                                                const efficiency = entry.run_hours > 0 ? (entry.actual_ton / entry.run_hours).toFixed(2) : '—'
+                                                return (
+                                                    <TableRow key={line}>
+                                                        <TableCell className="text-center font-bold text-lg text-primary">{line}</TableCell>
+                                                        <TableCell className="p-2">
+                                                            <input
+                                                                type="number" step="0.001" min="0"
+                                                                className="w-full text-right p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                                value={entry.actual_ton || ''}
+                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], actual_ton: Number(e.target.value) } }))}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="p-2">
+                                                            <input
+                                                                type="number" step="0.1" min="0" max="24"
+                                                                className="w-full text-right p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                                value={entry.run_hours || ''}
+                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], run_hours: Number(e.target.value) } }))}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="text-center bg-green-50">
+                                                            <span className={`font-bold text-sm ${entry.run_hours > 0 ? 'text-green-700' : 'text-muted-foreground'}`}>
+                                                                {efficiency} {entry.run_hours > 0 ? 'T/h' : ''}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="p-2">
+                                                            <input
+                                                                type="text"
+                                                                className="w-full p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                                placeholder="Ghi chu..."
+                                                                value={entry.note || ''}
+                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], note: e.target.value } }))}
+                                                            />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
+                                            <TableRow className="bg-muted/30 font-semibold">
+                                                <TableCell className="text-center text-sm text-muted-foreground">TONG</TableCell>
+                                                <TableCell className="text-right text-primary font-bold pr-4">
+                                                    {SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].actual_ton || 0), 0).toFixed(3)} T
+                                                </TableCell>
+                                                <TableCell className="text-right text-amber-700 font-bold pr-4">
+                                                    {SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].run_hours || 0), 0).toFixed(1)} Gio
+                                                </TableCell>
+                                                <TableCell className="text-center bg-green-50 text-green-700 font-bold">
+                                                    {(() => { const tot = SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].actual_ton || 0), 0); const hrs = SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].run_hours || 0), 0); return hrs > 0 ? (tot / hrs).toFixed(2) + ' T/h' : '—' })()}
+                                                </TableCell>
+                                                <TableCell />
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+                )}
+                {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
+                    <TabsContent value="shelling-lines" className="space-y-4">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                        <h3 className="font-semibold text-lg">Shelling Lines — {format(date, "dd/MM/yyyy")}</h3>
+                                        <p className="text-sm text-muted-foreground mt-1">Nhập sản lượng và thời gian chạy máy cho từng line cắt trong ngày</p>
+                                    </div>
+                                    <Button onClick={saveShellingLines} disabled={isSaving} size="sm">
+                                        <Save className="mr-2 h-4 w-4" />
+                                        {isSaving ? 'Đang lưu...' : 'Lưu Lines'}
+                                    </Button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-muted">
+                                            <TableRow>
+                                                <TableHead className="w-[80px] text-center font-bold">Line</TableHead>
+                                                <TableHead className="text-center">Sản lượng (Tấn)</TableHead>
+                                                <TableHead className="text-center">TG Chạy Máy (Giờ)</TableHead>
+                                                <TableHead className="text-center bg-green-50 text-green-700">Hiệu suất (T/Giờ)</TableHead>
+                                                <TableHead className="text-center">Ghi chú</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {SHELLING_LINES.map(line => {
+                                                const entry = shellingLineData[line]
+                                                const efficiency = entry.run_hours > 0 ? (entry.actual_ton / entry.run_hours).toFixed(2) : '—'
+                                                return (
+                                                    <TableRow key={line}>
+                                                        <TableCell className="text-center font-bold text-lg text-primary">{line}</TableCell>
+                                                        <TableCell className="p-2">
+                                                            <input
+                                                                type="number" step="0.001" min="0"
+                                                                className="w-full text-right p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                                value={entry.actual_ton || ''}
+                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], actual_ton: Number(e.target.value) } }))}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="p-2">
+                                                            <input
+                                                                type="number" step="0.1" min="0" max="24"
+                                                                className="w-full text-right p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                                value={entry.run_hours || ''}
+                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], run_hours: Number(e.target.value) } }))}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="text-center bg-green-50">
+                                                            <span className={`font-bold text-sm ${entry.run_hours > 0 ? 'text-green-700' : 'text-muted-foreground'}`}>
+                                                                {efficiency} {entry.run_hours > 0 ? 'T/h' : ''}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="p-2">
+                                                            <input
+                                                                type="text"
+                                                                className="w-full p-2 rounded border border-input bg-transparent text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                                placeholder="Ghi chú..."
+                                                                value={entry.note || ''}
+                                                                onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], note: e.target.value } }))}
+                                                            />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
+                                            <TableRow className="bg-muted/30 font-semibold">
+                                                <TableCell className="text-center text-sm text-muted-foreground">TỔNG</TableCell>
+                                                <TableCell className="text-right text-primary font-bold pr-4">
+                                                    {SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].actual_ton || 0), 0).toFixed(3)} T
+                                                </TableCell>
+                                                <TableCell className="text-right text-amber-700 font-bold pr-4">
+                                                    {SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].run_hours || 0), 0).toFixed(1)} Giờ
+                                                </TableCell>
+                                                <TableCell className="text-center bg-green-50 text-green-700 font-bold">
+                                                    {(() => { const tot = SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].actual_ton || 0), 0); const hrs = SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l].run_hours || 0), 0); return hrs > 0 ? (tot / hrs).toFixed(2) + ' T/h' : '—' })()}
+                                                </TableCell>
+                                                <TableCell />
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             </div>
                         </div>

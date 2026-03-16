@@ -44,6 +44,11 @@ export default function DashboardPage() {
         }
     }>({})
 
+    // Shelling line view
+    const SHELLING_LINES_DASH = ['A', 'B', 'C', 'D', 'D1'] as const
+    const [shellingLineMonthData, setShellingLineMonthData] = useState<Record<string, { actual_ton: number; run_hours: number }>>({})
+    const [shellingViewMode, setShellingViewMode] = useState<'overview' | 'lines'>('overview')
+
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
     const [kpiSummary, setKpiSummary] = useState({
         steamActual: 0, steamTarget: 0,
@@ -516,6 +521,23 @@ export default function DashboardPage() {
                 if (selectedDept !== 'all') {
                     setDailyRecords(dData.filter(d => d.department_id === selectedDept));
                 }
+            }
+
+            // Fetch Shelling Line Data for the month
+            const { data: shellLineData } = await supabase
+                .from('shelling_line_daily')
+                .select('line_code, actual_ton, run_hours')
+                .gte('work_date', startFilter)
+                .lte('work_date', endFilter)
+
+            if (shellLineData) {
+                const aggregated: Record<string, { actual_ton: number; run_hours: number }> = {}
+                shellLineData.forEach((r: any) => {
+                    if (!aggregated[r.line_code]) aggregated[r.line_code] = { actual_ton: 0, run_hours: 0 }
+                    aggregated[r.line_code].actual_ton += Number(r.actual_ton || 0)
+                    aggregated[r.line_code].run_hours += Number(r.run_hours || 0)
+                })
+                setShellingLineMonthData(aggregated)
             }
         }
         fetchDashboard()
