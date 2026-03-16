@@ -1,18 +1,42 @@
 const fs = require('fs');
-const path = require('path');
+const f = 'src/app/(protected)/dashboard/page.tsx';
+let c = fs.readFileSync(f, 'utf8');
 
-const filePath = path.join(__dirname, 'src/app/(protected)/dashboard/page.tsx');
-let content = fs.readFileSync(filePath, 'utf8');
+// ── 1. Add shellingLineMonthData fetch inside fetchDashboard ──────────────────
+// Find the right spot: right before the closing of fetchDashboard
+const fetchEnd = `        }
+        fetchDashboard()
+    }, [selectedDept, selectedMonth])`;
 
-// 1. Add toggle button in the SHELL card header - after the CardHeader closing tag search
-// We replace the specific section in the default card return  
-// Looking for: {/* Sparkline chart */} section of the card and replace the whole chart section for SHELL
+const fetchEndNew = `            // Fetch Shelling Line MTD data
+            const { data: shellLineData } = await supabase
+                .from('shelling_line_daily')
+                .select('line_code, actual_ton, run_hours')
+                .gte('work_date', startFilter)
+                .lte('work_date', endFilter)
 
-const lineColors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'];
-const lineColorMap = "const LINE_COLORS: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D: '#ef4444', D1: '#8b5cf6' };";
+            if (shellLineData) {
+                const agg: Record<string, { actual_ton: number; run_hours: number }> = {}
+                shellLineData.forEach((r: any) => {
+                    if (!agg[r.line_code]) agg[r.line_code] = { actual_ton: 0, run_hours: 0 }
+                    agg[r.line_code].actual_ton += Number(r.actual_ton || 0)
+                    agg[r.line_code].run_hours += Number(r.run_hours || 0)
+                })
+                setShellingLineMonthData(agg)
+            }
+        }
+        fetchDashboard()
+    }, [selectedDept, selectedMonth])`;
 
-// Find the sparkline chart section and replace it with the toggle+mode logic
-const oldSparkline = `                    {/* Sparkline chart */}
+if (c.includes(fetchEnd)) {
+    c = c.replace(fetchEnd, fetchEndNew);
+    console.log('✓ Added shelling line fetch');
+} else {
+    console.log('⚠ fetchEnd marker not found');
+}
+
+// ── 2. Replace the sparkline chart block with toggle + conditional render ──────
+const sparklineOld = `                    {/* Sparkline chart */}
                     <div className="h-36 w-full mt-auto border-t pt-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
@@ -30,7 +54,7 @@ const oldSparkline = `                    {/* Sparkline chart */}
                                 <Bar dataKey="Actual" name="Th\u1ef1c t\u1ebf" radius={[2, 2, 0, 0]}>
                                     {displayHistory.map((entry: any, index: number) => {
                                         const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
-                                        return <Cell key={\`cell-\${index}\`} fill={color} />;
+                                        return <Cell key={`cell-${index}`} fill={color} />;
                                     })}
                                 </Bar>
                                 <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="K\u1ebf ho\u1ea1ch" />
@@ -45,45 +69,41 @@ const oldSparkline = `                    {/* Sparkline chart */}
                         </ResponsiveContainer>
                     </div>`;
 
-const newSparkline = `                    {/* Toggle for SHELL: Overview / Line view */}
+const sparklineNew = `                    {/* Toggle for SHELL overview vs line view */}
                     {deptCode === "SHELL" && (
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs text-muted-foreground">Ch\u1ebf \u0111\u1ed9:</span>
-                            <button
-                                onClick={() => setShellingViewMode('overview')}
-                                className={\`text-xs px-2 py-0.5 rounded-full border transition-colors \${shellingViewMode === 'overview' ? 'bg-primary text-white border-primary' : 'border-gray-300 text-muted-foreground hover:border-primary'}\`}
-                            >Overview</button>
-                            <button
-                                onClick={() => setShellingViewMode('lines')}
-                                className={\`text-xs px-2 py-0.5 rounded-full border transition-colors \${shellingViewMode === 'lines' ? 'bg-primary text-white border-primary' : 'border-gray-300 text-muted-foreground hover:border-primary'}\`}
-                            >Theo Line</button>
+                        <div className="flex items-center gap-1.5 mb-2 mt-1">
+                            <span className="text-[10px] text-muted-foreground">Ch\u1ebf \u0111\u1ed9:</span>
+                            <button onClick={() => setShellingViewMode('overview')}
+                                className={\`text-[10px] px-2 py-0.5 rounded-full border transition-all \${shellingViewMode === 'overview' ? 'bg-primary text-white border-primary font-semibold' : 'border-gray-300 text-muted-foreground hover:border-primary'}\`}>
+                                Overview
+                            </button>
+                            <button onClick={() => setShellingViewMode('lines')}
+                                className={\`text-[10px] px-2 py-0.5 rounded-full border transition-all \${shellingViewMode === 'lines' ? 'bg-primary text-white border-primary font-semibold' : 'border-gray-300 text-muted-foreground hover:border-primary'}\`}>
+                                Theo Line
+                            </button>
                         </div>
                     )}
                     {/* Sparkline chart */}
                     {deptCode === "SHELL" && shellingViewMode === 'lines' ? (
-                        <div className="w-full mt-auto border-t pt-3">
-                            <div className="space-y-2">
-                                {SHELLING_LINES_DASH.map(line => {
-                                    const lineColors: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D: '#ef4444', D1: '#8b5cf6' };
-                                    const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 };
-                                    const efficiency = ld.run_hours > 0 ? (ld.actual_ton / ld.run_hours).toFixed(2) : '\u2014';
-                                    const color = lineColors[line] || '#64748b';
-                                    return (
-                                        <div key={line} className="flex items-center gap-2">
-                                            <span className="text-xs font-bold w-6 text-center" style={{ color }}>{line}</span>
-                                            <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
-                                                <div
-                                                    className="h-full rounded-full transition-all"
-                                                    style={{ width: \`\${Math.min(100, summary.totalActual > 0 ? (ld.actual_ton / summary.totalActual) * 100 : 0)}%\`, backgroundColor: color }}
-                                                />
-                                            </div>
-                                            <span className="text-[10px] font-semibold w-12 text-right" style={{ color }}>{ld.actual_ton.toFixed(1)}T</span>
-                                            <span className="text-[10px] text-muted-foreground w-10 text-right">{ld.run_hours.toFixed(0)}h</span>
-                                            <span className="text-[10px] font-bold text-green-700 w-14 text-right">{efficiency !== '\u2014' ? efficiency + ' T/h' : '\u2014'}</span>
+                        <div className="w-full mt-auto border-t pt-3 space-y-1.5">
+                            {SHELLING_LINES_DASH.map(line => {
+                                const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D: '#ef4444', D1: '#8b5cf6' }
+                                const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 }
+                                const eff = ld.run_hours > 0 ? (ld.actual_ton / ld.run_hours).toFixed(2) : '\u2014'
+                                const pct = summary.totalActual > 0 ? Math.min(100, (ld.actual_ton / summary.totalActual) * 100) : 0
+                                const color = lc[line] || '#64748b'
+                                return (
+                                    <div key={line} className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color }}>{line}</span>
+                                        <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                            <div className="h-full rounded-full transition-all" style={{ width: \`\${pct}%\`, backgroundColor: color }} />
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                        <span className="text-[10px] font-bold w-11 text-right shrink-0" style={{ color }}>{ld.actual_ton.toFixed(1)}T</span>
+                                        <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">{ld.run_hours.toFixed(0)}h</span>
+                                        <span className="text-[10px] font-bold text-emerald-700 w-14 text-right shrink-0">{eff !== '\u2014' ? eff + ' T/h' : '\u2014'}</span>
+                                    </div>
+                                )
+                            })}
                         </div>
                     ) : (
                     <div className="h-36 w-full mt-auto border-t pt-2">
@@ -119,11 +139,19 @@ const newSparkline = `                    {/* Toggle for SHELL: Overview / Line 
                     </div>
                     )}`;
 
-if (!content.includes('{/* Sparkline chart */}')) {
-    console.error('Sparkline marker not found!');
-    process.exit(1);
+// Normalize to match file (CRLF)
+const sparklineOldCRLF = sparklineOld.replace(/\n/g, '\r\n');
+const sparklineNewCRLF = sparklineNew.replace(/\n/g, '\r\n');
+
+if (c.includes(sparklineOldCRLF)) {
+    c = c.replace(sparklineOldCRLF, sparklineNewCRLF);
+    console.log('✓ Replaced sparkline with toggle + line view');
+} else if (c.includes(sparklineOld)) {
+    c = c.replace(sparklineOld, sparklineNew);
+    console.log('✓ Replaced sparkline (LF version)');
+} else {
+    console.log('⚠ Sparkline marker not found');
 }
 
-content = content.replace(oldSparkline, newSparkline);
-fs.writeFileSync(filePath, content, 'utf8');
-console.log('Done! Dashboard updated.');
+fs.writeFileSync(f, c, 'utf8');
+console.log('Done! File written.');

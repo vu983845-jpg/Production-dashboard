@@ -767,7 +767,43 @@ export default function DashboardPage() {
                             </>
                         )}
                     </div>
-                    {/* Sparkline chart */}
+                    {/* Toggle for SHELL: Overview vs Line view */}
+                    {deptCode === "SHELL" && (
+                        <div className="flex items-center gap-1.5 mb-2 mt-1">
+                            <span className="text-[10px] text-muted-foreground">Chế độ:</span>
+                            <button onClick={() => setShellingViewMode('overview')}
+                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${shellingViewMode === 'overview' ? 'bg-primary text-white border-primary font-semibold' : 'border-gray-300 text-muted-foreground hover:border-primary'}`}>
+                                Overview
+                            </button>
+                            <button onClick={() => setShellingViewMode('lines')}
+                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${shellingViewMode === 'lines' ? 'bg-primary text-white border-primary font-semibold' : 'border-gray-300 text-muted-foreground hover:border-primary'}`}>
+                                Theo Line
+                            </button>
+                        </div>
+                    )}
+                    {/* Sparkline chart or Line view */}
+                    {deptCode === "SHELL" && shellingViewMode === 'lines' ? (
+                        <div className="w-full mt-auto border-t pt-3 space-y-1.5">
+                            {SHELLING_LINES_DASH.map(line => {
+                                const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D: '#ef4444', D1: '#8b5cf6' }
+                                const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 }
+                                const eff = ld.run_hours > 0 ? (ld.actual_ton / ld.run_hours).toFixed(2) : '—'
+                                const pct = summary.totalActual > 0 ? Math.min(100, (ld.actual_ton / summary.totalActual) * 100) : 0
+                                const color = lc[line] || '#64748b'
+                                return (
+                                    <div key={line} className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color }}>{line}</span>
+                                        <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                        </div>
+                                        <span className="text-[10px] font-bold w-11 text-right shrink-0" style={{ color }}>{ld.actual_ton.toFixed(1)}T</span>
+                                        <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">{ld.run_hours.toFixed(0)}h</span>
+                                        <span className="text-[10px] font-bold text-emerald-700 w-14 text-right shrink-0">{eff !== '—' ? eff + ' T/h' : '—'}</span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    ) : (
                     <div className="h-36 w-full mt-auto border-t pt-2">
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
@@ -799,6 +835,7 @@ export default function DashboardPage() {
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
+                    )}
                 </CardContent>
             </Card>
         );
