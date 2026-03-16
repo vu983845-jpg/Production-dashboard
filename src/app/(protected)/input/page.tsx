@@ -818,7 +818,7 @@ export default function InputPage() {
                                                             <TableHeader className="bg-muted/50">
                                                                 <TableRow>
                                                                     <TableHead className="w-1/2">Chỉ tiêu</TableHead>
-                                                                    <TableHead className="w-1/2">Giá trị nhập</TableHead>
+                                                                    <TableHead className="w-1/2"><span>Giá trị nhập</span><span className="ml-2 text-[10px] font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{format(date, "dd/MM/yyyy")}</span></TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
