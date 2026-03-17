@@ -830,7 +830,7 @@ export default function InputPage() {
                                                                                     <p className="text-xs font-semibold text-blue-700 mb-2">📊 Sản lượng theo từng Line (Tấn)</p>
                                                                                     <div className="grid grid-cols-5 gap-2 mb-2">
                                                                                         {SHELLING_LINES.map(line => {
-                                                                                            const lColors: Record<string, string> = { A: 'border-blue-400', B: 'border-green-400', C: 'border-amber-400', D: 'border-red-400', D1: 'border-purple-400' }
+                                                                                            const lColors: Record<string, string> = { A: 'border-blue-400', B: 'border-green-400', C: 'border-amber-400', D1: 'border-red-400', D2: 'border-purple-400' }
                                                                                             return (
                                                                                                 <div key={line} className="flex flex-col items-center">
                                                                                                     <label className={`text-[10px] font-bold mb-1 ${lColors[line].replace('border-','text-')}`}>{line}</label>
