@@ -416,11 +416,11 @@ export default function InputPage() {
                 const prevDayStr = format(subDays(d, 1), "yyyy-MM-dd");
 
                 const existingKpi = kpiData?.find(r => r.work_date === dayStr);
-                const prevActual = actualData?.find(r => r.work_date === prevDayStr);
+                const existingActual = actualData?.find(r => r.work_date === dayStr);
 
                 return {
                     work_date: dayStr,
-                    actual_ton: prevActual?.actual_ton ? Number(prevActual.actual_ton) : 0,
+                    actual_ton: existingActual?.actual_ton ? Number(existingActual.actual_ton) : 0,
                     electricity_meter_reading: existingKpi?.electricity_meter_reading !== null && existingKpi?.electricity_meter_reading !== undefined ? Number(existingKpi.electricity_meter_reading) : undefined,
                     electricity_kwh: 0,
                     electricity_target_kwh: 0,
