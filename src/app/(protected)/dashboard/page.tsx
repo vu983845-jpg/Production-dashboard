@@ -614,7 +614,7 @@ export default function DashboardPage() {
             return (
                 <Card key={id} className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full border-primary/50 border-2">
                     <CardHeader className="pb-2 bg-gray-50/50 border-b flex-shrink-0">
-                        <CardTitle className="text-md font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-4 text-primary">
+                        <CardTitle className="text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-4 text-primary">
                             <span className="flex items-center gap-2 whitespace-nowrap">
                                 FGWH - Kho Thành Phẩm
                                 <FileSymlink className="h-4 w-4 text-primary" />
@@ -656,7 +656,7 @@ export default function DashboardPage() {
         return (
             <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full ${isTotal ? 'border-primary/50 border-2' : ''}`}>
                 <CardHeader className="pb-2 bg-gray-50/50 border-b flex-shrink-0">
-                    <CardTitle className={`text-md font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-4 ${isTotal ? 'text-primary' : ''}`}>
+                    <CardTitle className={`text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-4 ${isTotal ? 'text-primary' : ''}`}>
                         <span className="flex items-center gap-2 uppercase tracking-wider whitespace-nowrap">
                             {name}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
@@ -664,23 +664,23 @@ export default function DashboardPage() {
 
                         <div className="flex flex-row flex-wrap items-center gap-4 xl:gap-6 mt-2 md:mt-0">
                             <div className="flex flex-col items-end border-r pr-4 border-gray-200">
-                                <span className="text-[10px] text-muted-foreground mb-0.5">THÁNG / MONTHLY</span>
+                                <span className="text-[11px] text-muted-foreground mb-0.5">THÁNG / MONTHLY</span>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl font-black text-slate-800">{actualNum.toFixed(1)}</span>
-                                    <span className="text-sm text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span>
+                                    <span className="text-3xl font-black text-slate-800">{actualNum.toFixed(1)}</span>
+                                    <span className="text-base text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span>
                                 </div>
-                                <span className={`text-[10px] font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <span className={`text-xs font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     {variance >= 0 ? `+${variance.toFixed(1)}` : variance.toFixed(1)} {unit}
                                 </span>
                             </div>
 
                             <div className={`flex flex-col items-end ${deptCode === 'PACK' ? 'border-r pr-4 border-gray-200' : ''}`}>
-                                <span className="text-[10px] text-muted-foreground mb-0.5">MTD ACHIEVEMENT</span>
+                                <span className="text-[11px] text-muted-foreground mb-0.5">MTD ACHIEVEMENT</span>
                                 <div className="flex items-center gap-2">
-                                    <span className={`text-2xl font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span className={`text-3xl font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'}`}>
                                         {summary.achivementPct.toFixed(1)}%
                                     </span>
-                                    {summary.achivementPct >= 100 ? <TrendingUp className="h-6 w-6 text-green-500" /> : <TrendingDown className="h-6 w-6 text-red-500" />}
+                                    {summary.achivementPct >= 100 ? <TrendingUp className="h-7 w-7 text-green-500" /> : <TrendingDown className="h-7 w-7 text-red-500" />}
                                 </div>
                             </div>
 
@@ -693,15 +693,15 @@ export default function DashboardPage() {
                             <>
                                         <div>
                                             <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
-                                            <div className={`text-md font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
+                                            <div className={`text-lg font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
                                                 {isReached ? 'Đạt' : `${dailyNeeded} ${unit}`}
                                             </div>
                                         </div>
                                         {id !== 'virtual-container' && (
                                             <div>
                                                 <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
-                                                <div className="text-md font-bold text-amber-600 flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" /> {summary.downtime}p
+                                                <div className="text-lg font-bold text-amber-600 flex items-center gap-1">
+                                                    <Clock className="h-4 w-4" /> {summary.downtime}p
                                                 </div>
                                             </div>
                                         )}
@@ -709,7 +709,7 @@ export default function DashboardPage() {
                                 {["PEEL_MC", "SHELL"].includes(deptCode) && (
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Tỷ lệ Bể (%)</p>
-                                        <div className="text-md font-bold text-red-600 flex items-center gap-1">
+                                        <div className="text-lg font-bold text-red-600 flex items-center gap-1">
                                             {summary.brokenPct.toFixed(1)}%
                                         </div>
                                     </div>
@@ -718,13 +718,13 @@ export default function DashboardPage() {
                                     <>
                                         <div>
                                             <p className="text-xs text-muted-foreground mb-1">Điện (kWh)</p>
-                                            <div className="text-md font-bold text-amber-600 flex items-center gap-1">
+                                            <div className="text-lg font-bold text-amber-600 flex items-center gap-1">
                                                 {summary.totalElectricityConsumption?.toLocaleString()} / {summary.totalTargetElectricityKwh?.toLocaleString()}
                                             </div>
                                         </div>
                                         <div>
                                             <p className="text-xs text-muted-foreground mb-1">kWh / Tấn</p>
-                                            <div className="text-md font-bold text-amber-700 flex items-center gap-1">
+                                            <div className="text-lg font-bold text-amber-700 flex items-center gap-1">
                                                 {summary.totalActual > 0 ? (summary.totalElectricityConsumption / summary.totalActual).toFixed(2) : "0.00"}
                                             </div>
                                         </div>
@@ -733,7 +733,7 @@ export default function DashboardPage() {
                                 {["PEEL_MC"].includes(deptCode) && (
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Sót lụa (%)</p>
-                                        <div className="text-md font-bold text-orange-600 flex items-center gap-1">
+                                        <div className="text-lg font-bold text-orange-600 flex items-center gap-1">
                                             {summary.unpeelPct.toFixed(1)}%
                                         </div>
                                     </div>
@@ -741,7 +741,7 @@ export default function DashboardPage() {
                                 {["HAND"].includes(deptCode) && (
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Tỷ lệ ISP (%)</p>
-                                        <div className="text-md font-bold text-blue-600 flex items-center gap-1">
+                                        <div className="text-lg font-bold text-blue-600 flex items-center gap-1">
                                             {summary.ispPct.toFixed(1)}%
                                         </div>
                                     </div>
@@ -749,7 +749,7 @@ export default function DashboardPage() {
                                 {["BORMA"].includes(deptCode) && (
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Tỷ lệ SW (%)</p>
-                                        <div className="text-md font-bold text-amber-700 flex items-center gap-1">
+                                        <div className="text-lg font-bold text-amber-700 flex items-center gap-1">
                                             {summary.swPct.toFixed(1)}%
                                         </div>
                                     </div>
