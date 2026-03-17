@@ -45,7 +45,7 @@ export default function DashboardPage() {
     }>({})
 
     // Shelling line view
-    const SHELLING_LINES_DASH = ['A', 'B', 'C', 'D', 'D1'] as const
+    const SHELLING_LINES_DASH = ['A', 'B', 'C', 'D1', 'D2'] as const
     const [shellingLineMonthData, setShellingLineMonthData] = useState<Record<string, { actual_ton: number; run_hours: number }>>({})
     const [shellingViewMode, setShellingViewMode] = useState<'overview' | 'lines'>('overview')
     const [showCo2Intensity, setShowCo2Intensity] = useState(false)
@@ -800,7 +800,7 @@ export default function DashboardPage() {
                     {deptCode === "SHELL" && shellingViewMode === 'lines' ? (
                         <div className="w-full mt-auto border-t pt-3 space-y-1.5">
                             {SHELLING_LINES_DASH.map(line => {
-                                const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D: '#ef4444', D1: '#8b5cf6' }
+                                const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D1: '#ef4444', D2: '#8b5cf6' }
                                 const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 }
                                 const eff = ld.run_hours > 0 ? (ld.actual_ton / ld.run_hours).toFixed(2) : '—'
                                 const pct = summary.totalActual > 0 ? Math.min(100, (ld.actual_ton / summary.totalActual) * 100) : 0

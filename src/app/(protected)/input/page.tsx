@@ -119,15 +119,15 @@ export default function InputPage() {
     const [shellingMonthlyEnergyData, setShellingMonthlyEnergyData] = useState<ShellingMonthlyEnergyRecord[]>([])
 
     // Shelling Line Tracking State
-    const SHELLING_LINES = ['A', 'B', 'C', 'D', 'D1'] as const
+    const SHELLING_LINES = ['A', 'B', 'C', 'D1', 'D2'] as const
     type ShellLine = typeof SHELLING_LINES[number]
     type ShellLineEntry = { actual_ton: number; run_hours: number; note: string }
     const [shellingLineData, setShellingLineData] = useState<Record<ShellLine, ShellLineEntry>>({
         A: { actual_ton: 0, run_hours: 0, note: '' },
         B: { actual_ton: 0, run_hours: 0, note: '' },
         C: { actual_ton: 0, run_hours: 0, note: '' },
-        D: { actual_ton: 0, run_hours: 0, note: '' },
-        D1: { actual_ton: 0, run_hours: 0, note: '' }
+        D1: { actual_ton: 0, run_hours: 0, note: '' },
+        D2: { actual_ton: 0, run_hours: 0, note: '' }
     })
 
 
@@ -554,7 +554,7 @@ export default function InputPage() {
             .select('*')
             .eq('work_date', formattedDate)
         if (data) {
-            const newState = { A: { actual_ton: 0, run_hours: 0, note: '' }, B: { actual_ton: 0, run_hours: 0, note: '' }, C: { actual_ton: 0, run_hours: 0, note: '' }, D: { actual_ton: 0, run_hours: 0, note: '' }, D1: { actual_ton: 0, run_hours: 0, note: '' } } as Record<ShellLine, { actual_ton: number; run_hours: number; note: string }>
+            const newState = { A: { actual_ton: 0, run_hours: 0, note: '' }, B: { actual_ton: 0, run_hours: 0, note: '' }, C: { actual_ton: 0, run_hours: 0, note: '' }, D1: { actual_ton: 0, run_hours: 0, note: '' }, D2: { actual_ton: 0, run_hours: 0, note: '' } } as Record<ShellLine, { actual_ton: number; run_hours: number; note: string }>
             data.forEach((r: any) => {
                 if (SHELLING_LINES.includes(r.line_code)) {
                     newState[r.line_code as ShellLine] = { actual_ton: Number(r.actual_ton || 0), run_hours: Number(r.run_hours || 0), note: r.note || '' }
