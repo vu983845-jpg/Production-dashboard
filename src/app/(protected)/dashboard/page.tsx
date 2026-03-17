@@ -755,13 +755,14 @@ export default function DashboardPage() {
                                     </div>
                                 )}
                                 {deptCode === "CS" && (
-                                    <div className="col-span-2 md:col-span-2 flex items-center justify-center p-2 rounded-lg bg-blue-50/50 border border-blue-100 h-20 mt-auto">
+                                    <div className="col-span-2 md:col-span-2 p-2 rounded-lg bg-blue-50/50 border border-blue-100 h-auto min-h-[80px] md:h-20 mt-auto">
                                         <GaugeChart
                                             value={summary.totalActualIspCS || 0}
                                             target={summary.totalPlanIsp || 100}
                                             label="ISP (Thực tế / KH)"
                                             unit="T"
                                             color="#2563eb"
+                                            height={80}
                                         />
                                     </div>
                                 )}

@@ -60,37 +60,22 @@ export function GaugeChart({
     }
 
     return (
-        <div className="flex flex-col sm:flex-row items-center justify-between w-full h-full gap-2 sm:gap-4">
-            {/* Labels & Targets */}
-            <div className="flex flex-col justify-center items-center sm:items-start flex-1 text-center sm:text-left min-w-0 w-full">
-                <div className="font-bold text-[10px] sm:text-xs text-muted-foreground line-clamp-2 leading-tight uppercase tracking-wider">
-                    {label}
-                </div>
-                <div className="flex items-baseline gap-1 mt-1 sm:mt-2 text-sm sm:text-base font-bold text-foreground">
-                    <span>{formattedValue}</span>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground font-normal">{unit}</span>
-                </div>
-                <div className="text-[9px] sm:text-[11px] text-muted-foreground font-medium mt-0.5 opacity-80">
-                    Mục tiêu: {formattedTarget} {unit}
-                </div>
-            </div>
-
-            {/* SVG Gauge */}
-            <div className="relative w-24 h-16 sm:w-28 sm:h-18 shrink-0 flex flex-col items-center justify-end pb-1 mt-2 sm:mt-0">
+        <div className="flex flex-col items-center w-full h-full gap-1">
+            {/* SVG Gauge on top */}
+            <div className="relative w-24 h-14 shrink-0 flex items-end justify-center">
                 <svg
                     viewBox="0 0 100 55"
-                    className="absolute inset-x-0 bottom-0 w-full h-full overflow-visible"
+                    className="absolute inset-0 w-full h-full overflow-visible"
                     preserveAspectRatio="xMidYMax meet"
                 >
                     {/* Background Arc */}
                     <path
                         d={`M 10 50 A 40 40 0 0 1 90 50`}
                         fill="none"
-                        stroke="#e2e8f0" // slate-200
+                        stroke="#e2e8f0"
                         strokeWidth="10"
                         strokeLinecap="round"
                     />
-
                     {/* Progress Arc */}
                     <path
                         d={`M 10 50 A 40 40 0 0 1 90 50`}
@@ -99,18 +84,29 @@ export function GaugeChart({
                         strokeWidth="10"
                         strokeLinecap="round"
                         strokeDasharray={strokeDasharray}
-                        style={{
-                            transition: "stroke-dasharray 1s ease-out"
-                        }}
+                        style={{ transition: "stroke-dasharray 1s ease-out" }}
                     />
                 </svg>
-
-                {/* Numbers overlay inside arc */}
-                <div className="relative z-10 flex flex-col items-center justify-end leading-none translate-y-1 sm:translate-y-2">
+                {/* Percentage overlay */}
+                <div className="relative z-10 flex flex-col items-center justify-end leading-none pb-0.5">
                     <div className={`flex items-baseline gap-0.5 ${trendColor}`}>
-                        <span className="text-lg sm:text-xl font-bold tracking-tight">{rawPercent.toFixed(0)}</span>
-                        <span className="text-[9px] sm:text-[10px] font-bold">%</span>
+                        <span className="text-lg font-bold tracking-tight">{rawPercent.toFixed(0)}</span>
+                        <span className="text-[9px] font-bold">%</span>
                     </div>
+                </div>
+            </div>
+
+            {/* Labels below the arc */}
+            <div className="flex flex-col items-center text-center leading-tight">
+                <div className="font-bold text-[9px] text-muted-foreground uppercase tracking-wider line-clamp-2">
+                    {label}
+                </div>
+                <div className="flex items-baseline gap-0.5 mt-0.5">
+                    <span className="text-sm font-bold text-foreground">{formattedValue}</span>
+                    <span className="text-[9px] text-muted-foreground">{unit}</span>
+                </div>
+                <div className="text-[9px] text-muted-foreground opacity-80">
+                    MT: {formattedTarget} {unit}
                 </div>
             </div>
         </div>
