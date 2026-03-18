@@ -34,6 +34,7 @@ interface SummaryData {
 interface ShellingLineRecord {
     work_date: string
     line_code: string
+    shift_name?: string
     actual_ton: number
     run_hours: number
 }
@@ -165,7 +166,7 @@ export default function ReportPage() {
         if (selectedDept === "SHELL") {
             const { data: ld } = await supabase
                 .from("shelling_line_daily")
-                .select("work_date,line_code,actual_ton,run_hours")
+                .select("work_date,line_code,shift_name,actual_ton,run_hours")
                 .gte("work_date", start)
                 .lte("work_date", end)
             setShellingLines(ld ?? [])
@@ -206,11 +207,24 @@ export default function ReportPage() {
             summaryRows.push(["SHELLING LINES - T/tháng",""])
             const lines = ["A","B","C","D1","D2"]
             lines.forEach(l => {
-                const lineTons = shellingLines.filter(r => r.line_code === l).reduce((s,r) => s + Number(r.actual_ton), 0)
-                const lineHours = shellingLines.filter(r => r.line_code === l).reduce((s,r) => s + Number(r.run_hours), 0)
-                summaryRows.push([`Line ${l} - Sản lượng (T)`, lineTons.toFixed(2)])
-                summaryRows.push([`Line ${l} - Giờ chạy (h)`, lineHours.toFixed(1)])
-                summaryRows.push([`Line ${l} - Hiệu suất (T/h)`, lineHours > 0 ? (lineTons/lineHours).toFixed(3) : "—"])
+                const lineRows = shellingLines.filter(r => r.line_code === l)
+                const lineTons = lineRows.reduce((s,r) => s + Number(r.actual_ton), 0)
+                const lineHours = lineRows.reduce((s,r) => s + Number(r.run_hours), 0)
+                summaryRows.push([`Line ${l} Tổng - Sản lượng (T)`, lineTons.toFixed(2)])
+                summaryRows.push([`Line ${l} Tổng - Giờ chạy (h)`, lineHours.toFixed(1)])
+                summaryRows.push([`Line ${l} Tổng - Hiệu suất (T/h)`, lineHours > 0 ? (lineTons/lineHours).toFixed(3) : "—"])
+                
+                const shifts = ['Ca 1', 'Ca 2', 'Ca 3']
+                shifts.forEach(shift => {
+                    const shiftRows = lineRows.filter(r => (r.shift_name || 'Ca 1') === shift)
+                    const shiftTons = shiftRows.reduce((s,r) => s + Number(r.actual_ton), 0)
+                    const shiftHours = shiftRows.reduce((s,r) => s + Number(r.run_hours), 0)
+                    if (shiftTons > 0 || shiftHours > 0) {
+                        summaryRows.push([`Line ${l} (${shift}) - Sản lượng (T)`, shiftTons.toFixed(2)])
+                        summaryRows.push([`Line ${l} (${shift}) - Giờ chạy (h)`, shiftHours.toFixed(1)])
+                        summaryRows.push([`Line ${l} (${shift}) - Hiệu suất (T/h)`, shiftHours > 0 ? (shiftTons/shiftHours).toFixed(3) : "—"])
+                    }
+                })
             })
         }
 
@@ -238,16 +252,17 @@ export default function ReportPage() {
 
         // Sheet 3: Shelling lines detail (if applicable)
         if (shellingLines.length > 0) {
-            const slHeaders = ["Ngày", "Line", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)"]
+            const slHeaders = ["Ngày", "Line", "Ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)"]
             const slRows = [slHeaders, ...shellingLines.map(r => [
                 fmtDate(r.work_date),
                 r.line_code,
+                r.shift_name || 'Ca 1',
                 Number(r.actual_ton).toFixed(2),
                 Number(r.run_hours).toFixed(1),
                 Number(r.run_hours) > 0 ? (Number(r.actual_ton) / Number(r.run_hours)).toFixed(3) : "—",
             ])]
             const ws3 = XLSX.utils.aoa_to_sheet(slRows)
-            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }]
+            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }]
             XLSX.utils.book_append_sheet(wb, ws3, "Shelling Lines")
         }
 
@@ -374,22 +389,47 @@ export default function ReportPage() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {["A","B","C","D1","D2"].map(line => {
-                                                const rows = shellingLines.filter(r => r.line_code === line)
-                                                const tons = rows.reduce((s,r) => s + Number(r.actual_ton), 0)
-                                                const hours = rows.reduce((s,r) => s + Number(r.run_hours), 0)
+                                            {["A","B","C","D1","D2"].flatMap(line => {
+                                                const lineRows = shellingLines.filter(r => r.line_code === line)
+                                                const tons = lineRows.reduce((s,r) => s + Number(r.actual_ton), 0)
+                                                const hours = lineRows.reduce((s,r) => s + Number(r.run_hours), 0)
+                                                
+                                                if (tons === 0 && hours === 0) return []
+                                                
                                                 const eff = hours > 0 ? tons/hours : 0
                                                 const pctTot = summary.totalActual > 0 ? (tons/summary.totalActual*100) : 0
                                                 const colors: Record<string,string> = { A:"text-blue-600", B:"text-emerald-600", C:"text-amber-600", D1:"text-red-600", D2:"text-purple-600" }
-                                                return (
-                                                    <tr key={line} className="border-b hover:bg-muted/20">
-                                                        <td className={`p-2 font-black ${colors[line]}`}>{line}</td>
-                                                        <td className="p-2 text-right font-semibold">{tons.toFixed(2)}</td>
-                                                        <td className="p-2 text-right text-muted-foreground">{hours.toFixed(1)}</td>
-                                                        <td className="p-2 text-right font-semibold text-emerald-700">{eff > 0 ? eff.toFixed(3) : "—"}</td>
-                                                        <td className="p-2 text-right text-muted-foreground">{pctTot.toFixed(1)}%</td>
-                                                    </tr>
-                                                )
+                                                
+                                                const shifts = ['Ca 1', 'Ca 2', 'Ca 3']
+                                                const shiftElems = shifts.map(shift => {
+                                                    const shiftRows = lineRows.filter(r => (r.shift_name || 'Ca 1') === shift)
+                                                    const sTons = shiftRows.reduce((s,r) => s + Number(r.actual_ton), 0)
+                                                    const sHours = shiftRows.reduce((s,r) => s + Number(r.run_hours), 0)
+                                                    if (sTons === 0 && sHours === 0) return null
+                                                    
+                                                    const sEff = sHours > 0 ? sTons/sHours : 0
+                                                    const sPctTot = summary.totalActual > 0 ? (sTons/summary.totalActual*100) : 0
+                                                    return (
+                                                        <tr key={`${line}-${shift}`} className="border-b hover:bg-muted/20 text-sm">
+                                                            <td className="p-2 pl-6 font-medium text-muted-foreground">↳ {shift}</td>
+                                                            <td className="p-2 text-right font-medium">{sTons.toFixed(2)}</td>
+                                                            <td className="p-2 text-right text-muted-foreground">{sHours.toFixed(1)}</td>
+                                                            <td className="p-2 text-right font-medium text-emerald-700">{sEff > 0 ? sEff.toFixed(3) : "—"}</td>
+                                                            <td className="p-2 text-right text-muted-foreground">{sPctTot.toFixed(1)}%</td>
+                                                        </tr>
+                                                    )
+                                                })
+                                                
+                                                return [
+                                                    <tr key={line} className="border-b bg-muted/10">
+                                                        <td className={`p-2 font-black ${colors[line]}`}>{line} (Tổng)</td>
+                                                        <td className="p-2 text-right font-bold">{tons.toFixed(2)}</td>
+                                                        <td className="p-2 text-right font-semibold text-slate-600">{hours.toFixed(1)}</td>
+                                                        <td className="p-2 text-right font-bold text-emerald-700">{eff > 0 ? eff.toFixed(3) : "—"}</td>
+                                                        <td className="p-2 text-right font-semibold text-slate-600">{pctTot.toFixed(1)}%</td>
+                                                    </tr>,
+                                                    ...shiftElems
+                                                ]
                                             })}
                                         </tbody>
                                     </table>

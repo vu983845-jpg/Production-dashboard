@@ -121,13 +121,17 @@ export default function InputPage() {
     // Shelling Line Tracking State
     const SHELLING_LINES = ['A', 'B', 'C', 'D1', 'D2'] as const
     type ShellLine = typeof SHELLING_LINES[number]
+    type ShellShift = 'Ca 1' | 'Ca 2' | 'Ca 3'
     type ShellLineEntry = { actual_ton: number; run_hours: number; note: string }
-    const [shellingLineData, setShellingLineData] = useState<Record<ShellLine, ShellLineEntry>>({
-        A: { actual_ton: 0, run_hours: 0, note: '' },
-        B: { actual_ton: 0, run_hours: 0, note: '' },
-        C: { actual_ton: 0, run_hours: 0, note: '' },
-        D1: { actual_ton: 0, run_hours: 0, note: '' },
-        D2: { actual_ton: 0, run_hours: 0, note: '' }
+    
+    const initShiftObj = () => ({ 'Ca 1': { actual_ton: 0, run_hours: 0, note: '' }, 'Ca 2': { actual_ton: 0, run_hours: 0, note: '' }, 'Ca 3': { actual_ton: 0, run_hours: 0, note: '' } });
+    
+    const [shellingLineData, setShellingLineData] = useState<Record<ShellLine, Record<ShellShift, ShellLineEntry>>>({
+        A: initShiftObj(),
+        B: initShiftObj(),
+        C: initShiftObj(),
+        D1: initShiftObj(),
+        D2: initShiftObj()
     })
 
 
@@ -554,10 +558,11 @@ export default function InputPage() {
             .select('*')
             .eq('work_date', formattedDate)
         if (data) {
-            const newState = { A: { actual_ton: 0, run_hours: 0, note: '' }, B: { actual_ton: 0, run_hours: 0, note: '' }, C: { actual_ton: 0, run_hours: 0, note: '' }, D1: { actual_ton: 0, run_hours: 0, note: '' }, D2: { actual_ton: 0, run_hours: 0, note: '' } } as Record<ShellLine, { actual_ton: number; run_hours: number; note: string }>
+            const newState = { A: initShiftObj(), B: initShiftObj(), C: initShiftObj(), D1: initShiftObj(), D2: initShiftObj() } as Record<ShellLine, Record<ShellShift, { actual_ton: number; run_hours: number; note: string }>>
             data.forEach((r: any) => {
+                const shift = (r.shift_name || 'Ca 1') as ShellShift;
                 if (SHELLING_LINES.includes(r.line_code)) {
-                    newState[r.line_code as ShellLine] = { actual_ton: Number(r.actual_ton || 0), run_hours: Number(r.run_hours || 0), note: r.note || '' }
+                    newState[r.line_code as ShellLine][shift] = { actual_ton: Number(r.actual_ton || 0), run_hours: Number(r.run_hours || 0), note: r.note || '' }
                 }
             })
             setShellingLineData(newState)
@@ -567,16 +572,19 @@ export default function InputPage() {
     async function saveShellingLines() {
         setIsSaving(true)
         const formattedDate = format(date, "yyyy-MM-dd")
-        const payload = SHELLING_LINES.map(line => ({
-            work_date: formattedDate,
-            line_code: line,
-            actual_ton: shellingLineData[line as ShellLine].actual_ton,
-            run_hours: shellingLineData[line as ShellLine].run_hours,
-            note: shellingLineData[line as ShellLine].note || null,
-            updated_by: userId,
-            updated_at: new Date().toISOString()
-        }))
-        const { error } = await supabase.from('shelling_line_daily').upsert(payload, { onConflict: 'work_date,line_code' })
+        const payload = SHELLING_LINES.flatMap(line => 
+            (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => ({
+                work_date: formattedDate,
+                line_code: line,
+                shift_name: shift,
+                actual_ton: shellingLineData[line as ShellLine][shift].actual_ton,
+                run_hours: shellingLineData[line as ShellLine][shift].run_hours,
+                note: shellingLineData[line as ShellLine][shift].note || null,
+                updated_by: userId,
+                updated_at: new Date().toISOString()
+            }))
+        )
+        const { error } = await supabase.from('shelling_line_daily').upsert(payload, { onConflict: 'work_date,line_code,shift_name' })
         if (error) {
             toast.error('Lỗi khi lưu Shelling Lines: ' + error.message)
         } else {
@@ -828,32 +836,40 @@ export default function InputPage() {
                                                                             <TableCell colSpan={2} className="p-0 pb-0">
                                                                                 <div className="bg-blue-50/60 border-b px-4 pt-3 pb-1">
                                                                                     <p className="text-xs font-semibold text-blue-700 mb-2">📊 Sản lượng theo từng Line (Tấn)</p>
-                                                                                    <div className="grid grid-cols-5 gap-2 mb-2">
-                                                                                        {SHELLING_LINES.map(line => {
-                                                                                            const lColors: Record<string, string> = { A: 'border-blue-400', B: 'border-green-400', C: 'border-amber-400', D1: 'border-red-400', D2: 'border-purple-400' }
-                                                                                            return (
-                                                                                                <div key={line} className="flex flex-col items-center">
-                                                                                                    <label className={`text-[10px] font-bold mb-1 ${lColors[line].replace('border-','text-')}`}>{line}</label>
-                                                                                                    <input
-                                                                                                        type="number" step="0.001" min="0"
-                                                                                                        className={`w-full text-right p-1 rounded border-2 ${lColors[line]} bg-white text-sm focus:outline-none`}
-                                                                                                        value={shellingLineData[line]?.actual_ton || ''}
-                                                                                                        onChange={e => {
-                                                                                                            const val = Number(e.target.value) || 0
-                                                                                                            setShellingLineData(prev => {
-                                                                                                                const next = { ...prev, [line]: { ...prev[line], actual_ton: val } }
-                                                                                                                const total = SHELLING_LINES.reduce((s, l) => s + (next[l]?.actual_ton || 0), 0)
-                                                                                                                formActual.setValue('actual_ton', total)
-                                                                                                                return next
-                                                                                                            })
-                                                                                                        }}
-                                                                                                    />
-                                                                                                </div>
-                                                                                            )
-                                                                                        })}
-                                                                                    </div>
+                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
+                                                                                        <div key={shift} className="mb-3">
+                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
+                                                                                            <div className="grid grid-cols-5 gap-2">
+                                                                                                {SHELLING_LINES.map(line => {
+                                                                                                    const lColors: Record<string, string> = { A: 'border-blue-400', B: 'border-green-400', C: 'border-amber-400', D1: 'border-red-400', D2: 'border-purple-400' }
+                                                                                                    return (
+                                                                                                        <div key={`${line}-${shift}`} className="flex flex-col items-center">
+                                                                                                            <label className={`text-[10px] font-bold mb-1 ${lColors[line].replace('border-','text-')}`}>{line}</label>
+                                                                                                            <input
+                                                                                                                type="number" step="0.001" min="0"
+                                                                                                                className={`w-full text-right p-1 rounded border-2 ${lColors[line]} bg-white text-sm focus:outline-none`}
+                                                                                                                value={shellingLineData[line]?.[shift]?.actual_ton || ''}
+                                                                                                                onChange={e => {
+                                                                                                                    const val = Number(e.target.value) || 0
+                                                                                                                    setShellingLineData(prev => {
+                                                                                                                        const next = { ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], actual_ton: val } } }
+                                                                                                                        let total = 0
+                                                                                                                        SHELLING_LINES.forEach(l => {
+                                                                                                                            (['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).forEach(s => total += (next[l]?.[s]?.actual_ton || 0))
+                                                                                                                        })
+                                                                                                                        formActual.setValue('actual_ton', total)
+                                                                                                                        return next
+                                                                                                                    })
+                                                                                                                }}
+                                                                                                            />
+                                                                                                        </div>
+                                                                                                    )
+                                                                                                })}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ))}
                                                                                     <p className="text-[10px] font-semibold text-blue-800 text-right">
-                                                                                        Tổng: <span className="text-base font-black">{SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l]?.actual_ton || 0), 0).toFixed(3)}</span> T
+                                                                                        Tổng 3 ca: <span className="text-base font-black">{SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l]?.['Ca 1']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 2']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 3']?.actual_ton || 0), 0).toFixed(3)}</span> T
                                                                                     </p>
                                                                                 </div>
                                                                             </TableCell>
@@ -862,19 +878,24 @@ export default function InputPage() {
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-green-50/40 border-b px-4 pt-2 pb-3">
                                                                                     <p className="text-xs font-semibold text-green-700 mb-2">⏱ Thời gian chạy máy (Giờ)</p>
-                                                                                    <div className="grid grid-cols-5 gap-2">
-                                                                                        {SHELLING_LINES.map(line => (
-                                                                                            <div key={line} className="flex flex-col items-center">
-                                                                                                <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
-                                                                                                <input
-                                                                                                    type="number" step="0.1" min="0" max="24"
-                                                                                                    className="w-full text-right p-1 rounded border-2 border-green-300 bg-white text-sm focus:outline-none"
-                                                                                                    value={shellingLineData[line]?.run_hours || ''}
-                                                                                                    onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], run_hours: Number(e.target.value) || 0 } }))}
-                                                                                                />
+                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
+                                                                                        <div key={shift} className="mb-3">
+                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
+                                                                                            <div className="grid grid-cols-5 gap-2">
+                                                                                                {SHELLING_LINES.map(line => (
+                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
+                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
+                                                                                                        <input
+                                                                                                            type="number" step="0.1" min="0" max="24"
+                                                                                                            className="w-full text-right p-1 rounded border-2 border-green-300 bg-white text-sm focus:outline-none"
+                                                                                                            value={shellingLineData[line]?.[shift]?.run_hours || ''}
+                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], run_hours: Number(e.target.value) || 0 } } }))}
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                ))}
                                                                                             </div>
-                                                                                        ))}
-                                                                                    </div>
+                                                                                        </div>
+                                                                                    ))}
                                                                                 </div>
                                                                             </TableCell>
                                                                         </TableRow>
