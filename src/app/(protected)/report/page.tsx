@@ -97,13 +97,15 @@ export default function ReportPage() {
         const start = format(startOfMonth(new Date(selectedYear, selectedMonth - 1, 1)), "yyyy-MM-dd")
         const end   = format(endOfMonth(new Date(selectedYear, selectedMonth - 1, 1)), "yyyy-MM-dd")
 
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from("v_dashboard_daily")
-            .select("work_date,actual_ton,plan_ton,downtime_min,input_ton,output_ton,avg_broken_pct,avg_unpeel_pct,note")
+            .select("*")
             .eq("dept_code", selectedDept)
             .gte("work_date", start)
             .lte("work_date", end)
             .order("work_date")
+
+        if (error) console.error("Report query error:", error)
 
         const rows: DailyRecord[] = (data ?? []).map((r: any) => ({
             work_date:      r.work_date,
@@ -112,8 +114,8 @@ export default function ReportPage() {
             downtime_min:   Number(r.downtime_min || 0),
             input_ton:      Number(r.input_ton || 0),
             output_ton:     Number(r.output_ton || 0),
-            avg_broken_pct: Number(r.avg_broken_pct || 0),
-            avg_unpeel_pct: Number(r.avg_unpeel_pct || 0),
+            avg_broken_pct: Number(r.broken_pct || r.avg_broken_pct || 0),
+            avg_unpeel_pct: Number(r.unpeel_pct || r.avg_unpeel_pct || 0),
             note:           r.note || "",
         }))
         setRecords(rows)
