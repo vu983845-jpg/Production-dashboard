@@ -623,11 +623,11 @@ export default function DashboardPage() {
                             <div className="flex flex-row flex-wrap items-center gap-4 mt-2 md:mt-0">
                                 <div className="flex flex-col items-end">
                                     <span className="text-[10px] text-muted-foreground uppercase mb-0.5">ISP (Thực tế / KH)</span>
-                                    <span className="text-xl font-black text-blue-700">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></span>
+                                    <span className="text-lg md:text-xl font-black text-blue-700">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-xs md:text-sm font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></span>
                                 </div>
                                 <div className="flex flex-col items-end border-l pl-4 border-gray-200 ml-2">
                                     <span className="text-[10px] text-muted-foreground uppercase mb-0.5">Non-ISP (Thực tế / KH)</span>
-                                    <span className="text-xl font-black text-slate-700">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-sm font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></span>
+                                    <span className="text-lg md:text-xl font-black text-slate-700">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-xs md:text-sm font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></span>
                                 </div>
                             </div>
                         </CardTitle>
@@ -663,25 +663,25 @@ export default function DashboardPage() {
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
 
-                        <div className="flex flex-row flex-wrap items-center gap-4 xl:gap-6 mt-2 md:mt-0">
-                            <div className="flex flex-col items-end border-r pr-4 border-gray-200">
-                                <span className="text-[11px] text-muted-foreground mb-0.5">THÁNG / MONTHLY</span>
+                        <div className="flex flex-row flex-wrap items-center gap-3 md:gap-4 xl:gap-6 mt-2 md:mt-0">
+                            <div className="flex flex-col items-end border-r pr-3 md:pr-4 border-gray-200">
+                                <span className="text-[10px] md:text-[11px] text-muted-foreground mb-0.5">THÁNG / MONTHLY</span>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl font-black text-slate-800">{actualNum.toFixed(1)}</span>
-                                    <span className="text-base text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span>
+                                    <span className="text-2xl md:text-3xl font-black text-slate-800">{actualNum.toFixed(1)}</span>
+                                    <span className="text-xs md:text-base text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span>
                                 </div>
-                                <span className={`text-xs font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <span className={`text-[10px] md:text-xs font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     {variance >= 0 ? `+${variance.toFixed(1)}` : variance.toFixed(1)} {unit}
                                 </span>
                             </div>
 
-                            <div className={`flex flex-col items-end ${deptCode === 'PACK' ? 'border-r pr-4 border-gray-200' : ''}`}>
-                                <span className="text-[11px] text-muted-foreground mb-0.5">MTD ACHIEVEMENT</span>
-                                <div className="flex items-center gap-2">
-                                    <span className={`text-3xl font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'}`}>
+                            <div className={`flex flex-col items-end ${deptCode === 'PACK' ? 'border-r pr-3 md:pr-4 border-gray-200' : ''}`}>
+                                <span className="text-[10px] md:text-[11px] text-muted-foreground mb-0.5">MTD ACHIEVEMENT</span>
+                                <div className="flex items-center gap-1.5 md:gap-2">
+                                    <span className={`text-2xl md:text-3xl font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'}`}>
                                         {summary.achivementPct.toFixed(1)}%
                                     </span>
-                                    {summary.achivementPct >= 100 ? <TrendingUp className="h-7 w-7 text-green-500" /> : <TrendingDown className="h-7 w-7 text-red-500" />}
+                                    {summary.achivementPct >= 100 ? <TrendingUp className="h-5 w-5 md:h-7 md:w-7 text-green-500" /> : <TrendingDown className="h-5 w-5 md:h-7 md:w-7 text-red-500" />}
                                 </div>
                             </div>
 
