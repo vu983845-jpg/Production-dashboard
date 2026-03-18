@@ -614,8 +614,8 @@ export default function DashboardPage() {
         if (isFgwh) {
             return (
                 <Card key={id} className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full border-primary/50 border-2">
-                    <CardHeader className="pb-2 bg-gray-50/50 border-b flex-shrink-0">
-                        <CardTitle className="text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-4 text-primary">
+                    <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gray-50/50 border-b flex-shrink-0">
+                        <CardTitle className="text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 text-primary">
                             <span className="flex items-center gap-2 whitespace-nowrap">
                                 FGWH - Kho Thành Phẩm
                                 <FileSymlink className="h-4 w-4 text-primary" />
@@ -632,7 +632,7 @@ export default function DashboardPage() {
                             </div>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-4 flex-1 flex flex-col">
+                    <CardContent className="p-3 pt-3 md:p-5 md:pt-4 flex-1 flex flex-col">
                         <div className="flex-1">
                             <ResponsiveContainer width="100%" height={160}>
                                 <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
@@ -656,8 +656,8 @@ export default function DashboardPage() {
 
         return (
             <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full ${isTotal ? 'border-primary/50 border-2' : ''}`}>
-                <CardHeader className="pb-2 bg-gray-50/50 border-b flex-shrink-0">
-                    <CardTitle className={`text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-4 ${isTotal ? 'text-primary' : ''}`}>
+                <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gray-50/50 border-b flex-shrink-0">
+                    <CardTitle className={`text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 ${isTotal ? 'text-primary' : ''}`}>
                         <span className="flex items-center gap-2 uppercase tracking-wider whitespace-nowrap">
                             {name}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
@@ -688,8 +688,8 @@ export default function DashboardPage() {
                         </div>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-4 flex-1 flex flex-col">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <CardContent className="p-3 pt-3 md:p-5 md:pt-4 flex-1 flex flex-col">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-2 md:mb-4">
                         {(
                             <>
                                         <div>
@@ -983,21 +983,21 @@ export default function DashboardPage() {
                 </div>
 
                 {selectedDept === 'all' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 mt-4">
-                        <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4 mt-2 md:mb-6 md:mt-4">
+                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white">
                             <GaugeChart value={kpiSummary.steamActual} target={kpiSummary.steamTarget} label="TIẾN ĐỘ HẤP / STEAMING" unit="T" color="#f59e0b" />
                         </Card>
-                        <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
+                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white">
                             <GaugeChart value={kpiSummary.contActual} target={kpiSummary.contTarget} label="CONTAINER / ĐÓNG CÔNG" unit="Cont" color="#10b981" />
                         </Card>
-                        <Card className="p-4 flex flex-col justify-center pb-2 bg-white">
+                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white">
                             <GaugeChart value={kpiSummary.totalEmission} target={kpiSummary.totalEmissionTarget} label="TỔNG PHÁT THẢI (SCOPE 1+2)" unit="T CO₂e" color="#ef4444" formatValue={(v) => Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })} />
                         </Card>
                     </div>
                 )}
 
                 <TabsContent value="stations" className="mt-0">
-                    <div className="mb-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
                         {/* Total Factory Card - Full Width / 2 columns */}
                         {renderMiniDashboard("all", t('all_factory_card'), true)}
 
@@ -1006,7 +1006,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* MINI DASHBOARDS GRID */}
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
                         {/* Department Cards - exclude FGWH since it has its own card above */}
                         {departments.filter(d => d.code !== 'FGWH').map(d => renderMiniDashboard(d.id, d.name_en))}
                         {/* Virtual Container Card */}
@@ -1015,7 +1015,7 @@ export default function DashboardPage() {
                 </TabsContent>
 
                 <TabsContent value="regions" className="mt-0">
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
                         {renderMiniDashboard("region-RCN", t('region_rcn'), true)}
                         {renderMiniDashboard("region-LCA", t('region_lca'), true)}
                         {renderMiniDashboard("region-HCA", t('region_hca'), true)}
@@ -1025,11 +1025,11 @@ export default function DashboardPage() {
 
             {
                 selectedDept === 'all' && energyHistory.length > 0 && (
-                    <Card className="mt-4 bg-white">
-                        <CardHeader className="pb-2">
+                    <Card className="mt-3 md:mt-4 bg-white">
+                        <CardHeader className="p-3 pb-2 md:p-5 md:pb-3">
                             <CardTitle className="text-xl">Theo dõi Điện - Nước - Củi ({format(selectedMonth, 'MM/yyyy')})</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-2 pt-0 md:p-5 md:pt-0">
                             {/* DESKTOP VIEW: Combined Chart with 3 Y-Axes */}
                             <div className="hidden md:block h-80 w-full pb-4">
                                 <ResponsiveContainer width="100%" height="100%">
