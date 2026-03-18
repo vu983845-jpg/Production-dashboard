@@ -7,6 +7,7 @@ import {
     LayoutDashboard,
     ClipboardEdit,
     FileSpreadsheet,
+    FileText,
     Users,
     LogOut,
     Menu,
@@ -64,6 +65,12 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             href: "/admin/plan",
             icon: FileSpreadsheet,
             roles: ["admin", "dept_user"],
+        },
+        {
+            title: "Báo cáo",
+            href: "/report",
+            icon: FileText,
+            roles: ["admin", "dept_user", "viewer"],
         },
         {
             title: t("nav.users"),
