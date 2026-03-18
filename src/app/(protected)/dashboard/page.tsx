@@ -48,6 +48,7 @@ export default function DashboardPage() {
     const SHELLING_LINES_DASH = ['A', 'B', 'C', 'D1', 'D2'] as const
     const [shellingLineMonthData, setShellingLineMonthData] = useState<Record<string, { actual_ton: number; run_hours: number }>>({})
     const [shellingViewMode, setShellingViewMode] = useState<'overview' | 'lines'>('overview')
+    const [shellingSubView, setShellingSubView] = useState<'production' | 'capacity'>('production')
     const [showCo2Intensity, setShowCo2Intensity] = useState(false)
 
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
@@ -799,25 +800,76 @@ export default function DashboardPage() {
                     )}
                     {/* Sparkline chart or Line view */}
                     {deptCode === "SHELL" && shellingViewMode === 'lines' ? (
-                        <div className="w-full mt-auto border-t pt-3 space-y-1.5">
-                            {SHELLING_LINES_DASH.map(line => {
-                                const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D1: '#ef4444', D2: '#8b5cf6' }
-                                const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 }
-                                const eff = ld.run_hours > 0 ? (ld.actual_ton / ld.run_hours).toFixed(2) : '—'
-                                const pct = summary.totalActual > 0 ? Math.min(100, (ld.actual_ton / summary.totalActual) * 100) : 0
-                                const color = lc[line] || '#64748b'
-                                return (
-                                    <div key={line} className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color }}>{line}</span>
-                                        <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                        <div className="w-full mt-auto border-t pt-2 space-y-1.5">
+                            {/* Sub-tab toggle */}
+                            <div className="flex items-center gap-1 mb-1">
+                                <button onClick={() => setShellingSubView('production')}
+                                    className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'production' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
+                                    📊 Sản lượng MTD
+                                </button>
+                                <button onClick={() => setShellingSubView('capacity')}
+                                    className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'capacity' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
+                                    ⚡ Công suất
+                                </button>
+                            </div>
+
+                            {shellingSubView === 'production' ? (
+                                /* Production MTD view */
+                                SHELLING_LINES_DASH.map(line => {
+                                    const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D1: '#ef4444', D2: '#8b5cf6' }
+                                    const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 }
+                                    const eff = ld.run_hours > 0 ? (ld.actual_ton / ld.run_hours).toFixed(2) : '—'
+                                    const pct = summary.totalActual > 0 ? Math.min(100, (ld.actual_ton / summary.totalActual) * 100) : 0
+                                    const color = lc[line] || '#64748b'
+                                    return (
+                                        <div key={line} className="flex items-center gap-2">
+                                            <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color }}>{line}</span>
+                                            <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                            </div>
+                                            <span className="text-[10px] font-bold w-11 text-right shrink-0" style={{ color }}>{ld.actual_ton.toFixed(1)}T</span>
+                                            <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">{ld.run_hours.toFixed(0)}h</span>
+                                            <span className="text-[10px] font-bold text-emerald-700 w-14 text-right shrink-0">{eff !== '—' ? eff + ' T/h' : '—'}</span>
                                         </div>
-                                        <span className="text-[10px] font-bold w-11 text-right shrink-0" style={{ color }}>{ld.actual_ton.toFixed(1)}T</span>
-                                        <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">{ld.run_hours.toFixed(0)}h</span>
-                                        <span className="text-[10px] font-bold text-emerald-700 w-14 text-right shrink-0">{eff !== '—' ? eff + ' T/h' : '—'}</span>
-                                    </div>
+                                    )
+                                })
+                            ) : (() => {
+                                /* Capacity view */
+                                const designCapDay: Record<string, number> = { A: 33.6, B: 43.2, C: 36.0, D1: 28.8, D2: 28.8 }
+                                const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D1: '#ef4444', D2: '#8b5cf6' }
+                                // Days elapsed = count of days that have any actual production this month
+                                const daysElapsed = Math.max(1, displayHistory.filter((d: any) => d.Actual > 0).length)
+                                return (
+                                    <>
+                                        {SHELLING_LINES_DASH.map(line => {
+                                            const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 }
+                                            const design = designCapDay[line]
+                                            const actualPerDay = ld.actual_ton / daysElapsed
+                                            const capPct = design > 0 ? Math.min(150, (actualPerDay / design) * 100) : 0
+                                            const barColor = capPct >= 90 ? '#22c55e' : capPct >= 60 ? '#f59e0b' : '#ef4444'
+                                            const lineColor = lc[line] || '#64748b'
+                                            return (
+                                                <div key={line} className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color: lineColor }}>{line}</span>
+                                                    <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                                        <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, capPct)}%`, backgroundColor: barColor }} />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold w-14 text-right shrink-0" style={{ color: barColor }}>
+                                                        {actualPerDay.toFixed(1)}<span className="font-normal text-muted-foreground">/{design}T</span>
+                                                    </span>
+                                                    <span className="text-[10px] font-bold w-9 text-right shrink-0" style={{ color: barColor }}>
+                                                        {capPct.toFixed(0)}%
+                                                    </span>
+                                                </div>
+                                            )
+                                        })}
+                                        <div className="text-[8px] text-muted-foreground pt-1 border-t flex justify-between">
+                                            <span>Thực tế TB/Ngày vs Thiết kế (T/ngày)</span>
+                                            <span>{daysElapsed} ngày có SL</span>
+                                        </div>
+                                    </>
                                 )
-                            })}
+                            })()}
                         </div>
                     ) : deptCode === "ALL" && showCo2Intensity ? (
                         <div className="h-36 w-full mt-auto border-t pt-2">
