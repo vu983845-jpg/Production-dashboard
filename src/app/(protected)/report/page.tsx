@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
-import { Download, Search, FileText, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { Download, Search, FileText, TrendingUp, TrendingDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import * as XLSX from "xlsx"
@@ -37,21 +37,15 @@ interface ShellingLineRecord {
     run_hours: number
 }
 
-// ── Departments list ─────────────────────────────────────────────────────────
-const DEPARTMENTS = [
-    { code: "SHELL",   name: "Shelling (Bóc vỏ lụa)" },
-    { code: "PEEL_MC", name: "Peeling Machine (Bóc vỏ lãng)" },
-    { code: "CS",      name: "Color Sorter (Phân loại màu)" },
-    { code: "BORMA",   name: "Borma" },
-    { code: "PACK",    name: "Packing (Đóng gói)" },
-    { code: "STEAM",   name: "Steaming (Hấp)" },
-    { code: "RCN",     name: "RCN (Nguyên liệu)" },
-]
+// ── Dept type ────────────────────────────────────────────────────────────────
+interface Department {
+    id: string
+    code: string
+    name_vi: string
+    name_en: string
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function pct(actual: number, plan: number) {
-    return plan > 0 ? ((actual / plan) * 100).toFixed(1) + "%" : "—"
-}
 
 function fmtDate(d: string) {
     try { return format(parseISO(d), "dd/MM/yyyy") } catch { return d }
@@ -74,16 +68,28 @@ export default function ReportPage() {
     const currentYear = new Date().getFullYear()
     const currentMonth = new Date().getMonth() + 1
 
+    const [departments, setDepartments] = useState<Department[]>([])
     const [selectedYear, setSelectedYear] = useState(currentYear)
     const [selectedMonth, setSelectedMonth] = useState(currentMonth)
-    const [selectedDept, setSelectedDept] = useState(DEPARTMENTS[0].code)
+    const [selectedDept, setSelectedDept] = useState("")
     const [loading, setLoading] = useState(false)
     const [records, setRecords] = useState<DailyRecord[]>([])
     const [summary, setSummary] = useState<SummaryData | null>(null)
     const [shellingLines, setShellingLines] = useState<ShellingLineRecord[]>([])
     const [hasData, setHasData] = useState(false)
 
-    const dept = DEPARTMENTS.find(d => d.code === selectedDept)!
+    // Load departments from DB (same as dashboard)
+    useEffect(() => {
+        supabase.from("departments").select("id, code, name_vi, name_en").order("sort_order")
+            .then(({ data }) => {
+                if (data && data.length > 0) {
+                    setDepartments(data)
+                    setSelectedDept(data[0].code)
+                }
+            })
+    }, [])
+
+    const dept = departments.find(d => d.code === selectedDept)
 
     const fetchReport = useCallback(async () => {
         setLoading(true)
@@ -146,7 +152,8 @@ export default function ReportPage() {
 
     // ── Excel Export ─────────────────────────────────────────────────────────
     const exportExcel = () => {
-        if (!summary) return
+        if (!summary || !dept) return
+        const deptName = dept.name_vi || dept.name_en
         const monthLabel = `${String(selectedMonth).padStart(2,"0")}/${selectedYear}`
         const wb = XLSX.utils.book_new()
 
@@ -154,7 +161,7 @@ export default function ReportPage() {
         const achievePct = summary.totalPlan > 0 ? (summary.totalActual / summary.totalPlan * 100).toFixed(1) : "—"
         const summaryRows = [
             ["BÁO CÁO THÁNG " + monthLabel, ""],
-            ["Bộ phận", dept.name],
+            ["Bộ phận", deptName],
             ["", ""],
             ["Chỉ tiêu", "Giá trị"],
             ["Sản lượng thực tế (T)", summary.totalActual.toFixed(2)],
@@ -262,7 +269,7 @@ export default function ReportPage() {
                             <label className="text-xs font-semibold text-muted-foreground uppercase">Bộ phận</label>
                             <select value={selectedDept} onChange={e => setSelectedDept(e.target.value)}
                                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                                {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
+                                {departments.map(d => <option key={d.code} value={d.code}>{d.name_vi || d.name_en}</option>)}
                             </select>
                         </div>
                         <Button onClick={fetchReport} disabled={loading} className="gap-2">
@@ -270,7 +277,7 @@ export default function ReportPage() {
                             {loading ? "Đang tải..." : "Xem báo cáo"}
                         </Button>
                         {hasData && (
-                            <Button variant="outline" onClick={exportExcel} className="gap-2 text-green-700 border-green-600 hover:bg-green-50">
+                            <Button variant="outline" onClick={exportExcel} disabled={!dept} className="gap-2 text-green-700 border-green-600 hover:bg-green-50">
                                 <Download className="h-4 w-4" />
                                 Xuất Excel
                             </Button>
@@ -280,12 +287,12 @@ export default function ReportPage() {
             </Card>
 
             {/* Results */}
-            {hasData && summary && (
+            {hasData && summary && dept && (
                 <>
                     {/* Title */}
                     <div className="flex items-center justify-between">
                         <h2 className="text-lg font-bold">
-                            {dept.name} — Tháng {String(selectedMonth).padStart(2,"0")}/{selectedYear}
+                            {dept.name_vi || dept.name_en} — Tháng {String(selectedMonth).padStart(2,"0")}/{selectedYear}
                         </h2>
                         <span className="text-sm text-muted-foreground">{summary.daysWithData} ngày có sản lượng</span>
                     </div>
