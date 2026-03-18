@@ -799,25 +799,49 @@ export default function DashboardPage() {
                     )}
                     {/* Sparkline chart or Line view */}
                     {deptCode === "SHELL" && shellingViewMode === 'lines' ? (
-                        <div className="w-full mt-auto border-t pt-3 space-y-1.5">
+                        <div className="w-full mt-auto border-t pt-3 space-y-2">
                             {SHELLING_LINES_DASH.map(line => {
                                 const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D1: '#ef4444', D2: '#8b5cf6' }
+                                const designCap: Record<string, number> = { A: 1.4, B: 1.8, C: 1.5, D1: 1.2, D2: 1.2 } // T/h
                                 const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 }
-                                const eff = ld.run_hours > 0 ? (ld.actual_ton / ld.run_hours).toFixed(2) : '—'
+                                const effTh = ld.run_hours > 0 ? ld.actual_ton / ld.run_hours : 0
+                                const capPct = designCap[line] > 0 ? Math.min(150, (effTh / designCap[line]) * 100) : 0
+                                const capColor = capPct >= 90 ? '#22c55e' : capPct >= 60 ? '#f59e0b' : '#ef4444'
                                 const pct = summary.totalActual > 0 ? Math.min(100, (ld.actual_ton / summary.totalActual) * 100) : 0
                                 const color = lc[line] || '#64748b'
                                 return (
-                                    <div key={line} className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color }}>{line}</span>
-                                        <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                    <div key={line} className="space-y-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color }}>{line}</span>
+                                            {/* Production share bar */}
+                                            <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                            </div>
+                                            <span className="text-[10px] font-bold w-10 text-right shrink-0" style={{ color }}>{ld.actual_ton.toFixed(1)}T</span>
+                                            <span className="text-[10px] text-muted-foreground w-7 text-right shrink-0">{ld.run_hours.toFixed(0)}h</span>
                                         </div>
-                                        <span className="text-[10px] font-bold w-11 text-right shrink-0" style={{ color }}>{ld.actual_ton.toFixed(1)}T</span>
-                                        <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">{ld.run_hours.toFixed(0)}h</span>
-                                        <span className="text-[10px] font-bold text-emerald-700 w-14 text-right shrink-0">{eff !== '—' ? eff + ' T/h' : '—'}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] text-muted-foreground w-5 text-center shrink-0">CS</span>
+                                            {/* Capacity utilization bar */}
+                                            <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                                <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, capPct)}%`, backgroundColor: capColor }} />
+                                            </div>
+                                            <span className="text-[10px] font-bold w-10 text-right shrink-0" style={{ color: capColor }}>
+                                                {ld.run_hours > 0 ? `${capPct.toFixed(0)}%` : '—'}
+                                            </span>
+                                            <span className="text-[9px] text-muted-foreground w-7 text-right shrink-0">
+                                                {ld.run_hours > 0 ? `${(effTh * 1000).toFixed(0)}kg` : ''}
+                                            </span>
+                                        </div>
                                     </div>
                                 )
                             })}
+                            <div className="flex items-center gap-1 pt-1 border-t">
+                                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"/><span className="text-[8px] text-muted-foreground">≥90%</span></div>
+                                <div className="flex items-center gap-1 ml-1"><div className="w-2 h-2 rounded-full bg-amber-500"/><span className="text-[8px] text-muted-foreground">60–90%</span></div>
+                                <div className="flex items-center gap-1 ml-1"><div className="w-2 h-2 rounded-full bg-red-500"/><span className="text-[8px] text-muted-foreground">&lt;60%</span></div>
+                                <span className="text-[8px] text-muted-foreground ml-auto">CS = % Công suất thiết kế</span>
+                            </div>
                         </div>
                     ) : deptCode === "ALL" && showCo2Intensity ? (
                         <div className="h-36 w-full mt-auto border-t pt-2">
