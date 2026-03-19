@@ -47,7 +47,7 @@ export default function DashboardPage() {
     // Shelling line view
     const SHELLING_LINES_DASH = ['A', 'B', 'C', 'D1', 'D2'] as const
     const [shellingLineMonthData, setShellingLineMonthData] = useState<Record<string, { actual_ton: number; run_hours: number }>>({})
-    const [shellingViewMode, setShellingViewMode] = useState<'overview' | 'lines'>('overview')
+    const [deptViewModes, setDeptViewModes] = useState<Record<string, 'chart' | 'details' | 'lines'>>({})
     const [shellingSubView, setShellingSubView] = useState<'production' | 'capacity'>('production')
     const [showCo2Intensity, setShowCo2Intensity] = useState(false)
 
@@ -715,78 +715,84 @@ export default function DashboardPage() {
                                                 </div>
                                             </div>
                                         )}
-
-                                {["PEEL_MC", "SHELL"].includes(deptCode) && (
+                                {(isTotal || isFgwh) && ["PEEL_MC", "SHELL"].includes(deptCode) && (
                                     <div>
-                                        <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Tỷ lệ Bể (%)</p>
-                                        <div className={`font-bold text-red-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
+                                        <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Tỷ lệ Bể (%)</p>
+                                        <div className={`font-bold text-red-600 flex items-center gap-1 text-lg`}>
                                             {summary.brokenPct.toFixed(1)}%
                                         </div>
                                     </div>
                                 )}
-                                {deptCode === "SHELL" && (
+                                {(isTotal || isFgwh) && deptCode === "SHELL" && (
                                     <>
                                         <div>
-                                            <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Điện (kWh)</p>
-                                            <div className={`font-bold text-amber-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
+                                            <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Điện (kWh)</p>
+                                            <div className={`font-bold text-amber-600 flex items-center gap-1 text-lg`}>
                                                 {summary.totalElectricityConsumption?.toLocaleString()} / {summary.totalTargetElectricityKwh?.toLocaleString()}
                                             </div>
                                         </div>
                                         <div>
-                                            <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>kWh / Tấn</p>
-                                            <div className={`font-bold text-amber-700 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
+                                            <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>kWh / Tấn</p>
+                                            <div className={`font-bold text-amber-700 flex items-center gap-1 text-lg`}>
                                                 {summary.totalActual > 0 ? (summary.totalElectricityConsumption / summary.totalActual).toFixed(2) : "0.00"}
                                             </div>
                                         </div>
                                     </>
                                 )}
-                                {["PEEL_MC"].includes(deptCode) && (
+                                {(isTotal || isFgwh) && ["PEEL_MC"].includes(deptCode) && (
                                     <div>
-                                        <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Sót lụa (%)</p>
-                                        <div className={`font-bold text-orange-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
+                                        <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Sót lụa (%)</p>
+                                        <div className={`font-bold text-orange-600 flex items-center gap-1 text-lg`}>
                                             {summary.unpeelPct.toFixed(1)}%
                                         </div>
                                     </div>
                                 )}
-                                {["HAND"].includes(deptCode) && (
+                                {(isTotal || isFgwh) && ["HAND"].includes(deptCode) && (
                                     <div>
-                                        <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Tỷ lệ ISP (%)</p>
-                                        <div className={`font-bold text-blue-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
+                                        <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Tỷ lệ ISP (%)</p>
+                                        <div className={`font-bold text-blue-600 flex items-center gap-1 text-lg`}>
                                             {summary.ispPct.toFixed(1)}%
                                         </div>
                                     </div>
                                 )}
-                                {["BORMA"].includes(deptCode) && (
+                                {(isTotal || isFgwh) && ["BORMA"].includes(deptCode) && (
                                     <div>
-                                        <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Tỷ lệ SW (%)</p>
-                                        <div className={`font-bold text-amber-700 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
+                                        <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Tỷ lệ SW (%)</p>
+                                        <div className={`font-bold text-amber-700 flex items-center gap-1 text-lg`}>
                                             {summary.swPct.toFixed(1)}%
                                         </div>
                                     </div>
                                 )}
-                                {deptCode === "CS" && (
+                                {(isTotal || isFgwh) && deptCode === "CS" && (
                                     <div className={`col-span-2 md:col-span-2 p-1 md:p-2 rounded-md bg-blue-50/50 border border-blue-100 flex items-center justify-between`}>
-                                        <span className={`text-blue-800 font-bold ${(isTotal || isFgwh) ? 'text-sm' : 'text-[10px]'}`}>ISP (Thực tế/KH):</span>
-                                        <span className={`font-black text-blue-600 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 100} T</span>
+                                        <span className={`text-blue-800 font-bold text-sm`}>ISP (Thực tế/KH):</span>
+                                        <span className={`font-black text-blue-600 text-lg`}>{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 100} T</span>
                                     </div>
                                 )}
                             </>
                         )}
                     </div>
-                    {/* Toggle for SHELL: Overview vs Line view */}
-                    {deptCode === "SHELL" && (
-                        <div className="flex items-center gap-1.5 mb-2 mt-1">
-                            <span className="text-[10px] text-muted-foreground">Chế độ:</span>
-                            <button onClick={() => setShellingViewMode('overview')}
-                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${shellingViewMode === 'overview' ? 'bg-primary text-white border-primary font-semibold' : 'border-gray-300 text-muted-foreground hover:border-primary'}`}>
-                                Overview
+
+                    {/* Sub-view Toggles for Standard Cards */}
+                    {!(isTotal || isFgwh) && (["PEEL_MC", "SHELL", "HAND", "BORMA", "CS"].includes(deptCode)) && (
+                        <div className="flex items-center gap-1 my-1 justify-center bg-slate-100/50 rounded-md p-0.5">
+                            <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'chart'}))}
+                                className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${(!deptViewModes[id] || deptViewModes[id] === 'chart') ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
+                                Biểu đồ
                             </button>
-                            <button onClick={() => setShellingViewMode('lines')}
-                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${shellingViewMode === 'lines' ? 'bg-primary text-white border-primary font-semibold' : 'border-gray-300 text-muted-foreground hover:border-primary'}`}>
-                                Theo Line
+                            <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'details'}))}
+                                className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'details' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
+                                Chi tiết
                             </button>
+                            {deptCode === 'SHELL' && (
+                                <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'lines'}))}
+                                    className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'lines' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
+                                    Theo Line
+                                </button>
+                            )}
                         </div>
                     )}
+
                     {/* CO2e Intensity toggle for ALL card */}
                     {deptCode === "ALL" && (
                         <div className="flex items-center gap-1.5 mb-2 mt-1">
@@ -801,10 +807,55 @@ export default function DashboardPage() {
                             </button>
                         </div>
                     )}
-                    {/* Sparkline chart or Line view */}
-                    {deptCode === "SHELL" && shellingViewMode === 'lines' ? (
-                        <div className="w-full mt-auto border-t pt-2 space-y-1.5">
-                            {/* Sub-tab toggle */}
+                    
+                    {/* View Switching Logic */}
+                    {!(isTotal || isFgwh) && deptViewModes[id] === 'details' ? (
+                        <div className="flex-1 w-full mt-auto bg-slate-50/80 rounded-md border border-slate-100 p-2 grid grid-cols-2 gap-2 content-center items-center">
+                            {["PEEL_MC", "SHELL"].includes(deptCode) && (
+                                <div>
+                                    <p className="text-[9px] text-muted-foreground mb-0.5">Tỷ lệ Bể (%)</p>
+                                    <div className="font-bold text-red-600 text-[11px]">{summary.brokenPct.toFixed(1)}%</div>
+                                </div>
+                            )}
+                            {deptCode === "SHELL" && (
+                                <>
+                                    <div>
+                                        <p className="text-[9px] text-muted-foreground mb-0.5">Điện (kWh)</p>
+                                        <div className="font-bold text-amber-600 text-[11px]">{summary.totalElectricityConsumption?.toLocaleString()} / {summary.totalTargetElectricityKwh?.toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] text-muted-foreground mb-0.5">kWh / Tấn</p>
+                                        <div className="font-bold text-amber-700 text-[11px]">{summary.totalActual > 0 ? (summary.totalElectricityConsumption / summary.totalActual).toFixed(2) : "0.00"}</div>
+                                    </div>
+                                </>
+                            )}
+                            {["PEEL_MC"].includes(deptCode) && (
+                                <div>
+                                    <p className="text-[9px] text-muted-foreground mb-0.5">Sót lụa (%)</p>
+                                    <div className="font-bold text-orange-600 text-[11px]">{summary.unpeelPct.toFixed(1)}%</div>
+                                </div>
+                            )}
+                            {["HAND"].includes(deptCode) && (
+                                <div>
+                                    <p className="text-[9px] text-muted-foreground mb-0.5">Tỷ lệ ISP (%)</p>
+                                    <div className="font-bold text-blue-600 text-[11px]">{summary.ispPct.toFixed(1)}%</div>
+                                </div>
+                            )}
+                            {["BORMA"].includes(deptCode) && (
+                                <div>
+                                    <p className="text-[9px] text-muted-foreground mb-0.5">Tỷ lệ SW (%)</p>
+                                    <div className="font-bold text-amber-700 text-[11px]">{summary.swPct.toFixed(1)}%</div>
+                                </div>
+                            )}
+                            {deptCode === "CS" && (
+                                <div className="col-span-2 p-1 bg-blue-50/50 border border-blue-100 rounded flex justify-between items-center">
+                                    <span className="text-blue-800 font-bold text-[9px]">ISP (Thực tế/KH):</span>
+                                    <span className="font-black text-blue-600 text-[11px]">{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 100} T</span>
+                                </div>
+                            )}
+                        </div>
+                    ) : deptCode === "SHELL" && deptViewModes[id] === 'lines' ? (
+                        <div className="w-full mt-auto border-t pt-2 space-y-1.5 flex-1 flex flex-col justify-center">
                             <div className="flex items-center gap-1 mb-1">
                                 <button onClick={() => setShellingSubView('production')}
                                     className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'production' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
@@ -817,7 +868,6 @@ export default function DashboardPage() {
                             </div>
 
                             {shellingSubView === 'production' ? (
-                                /* Production MTD view */
                                 SHELLING_LINES_DASH.map(line => {
                                     const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D1: '#ef4444', D2: '#8b5cf6' }
                                     const ld = shellingLineMonthData[line] || { actual_ton: 0, run_hours: 0 }
@@ -837,10 +887,8 @@ export default function DashboardPage() {
                                     )
                                 })
                             ) : (() => {
-                                /* Capacity view */
                                 const designCapDay: Record<string, number> = { A: 33.6, B: 43.2, C: 36.0, D1: 28.8, D2: 28.8 }
                                 const lc: Record<string, string> = { A: '#3b82f6', B: '#10b981', C: '#f59e0b', D1: '#ef4444', D2: '#8b5cf6' }
-                                // Days elapsed = count of days that have any actual production this month
                                 const daysElapsed = Math.max(1, displayHistory.filter((d: any) => d.Actual > 0).length)
                                 return (
                                     <>
@@ -908,7 +956,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className={`w-full mt-auto border-t ${(isTotal || isFgwh) ? 'h-36 pt-2' : 'h-10 opacity-75'}`}>
+                    <div className={`flex-1 w-full mt-1 border-t ${(isTotal || isFgwh) ? 'min-h-[144px] pt-3' : 'min-h-[80px] pt-1 opacity-80'}`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 2, right: 0, left: 0, bottom: (isTotal || isFgwh) ? 25 : 0 }}>
                                 <XAxis dataKey="name" hide={!(isTotal || isFgwh)} tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={(isTotal || isFgwh) ? 30 : 0} minTickGap={10} tickMargin={5} />
