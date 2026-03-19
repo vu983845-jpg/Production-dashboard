@@ -679,7 +679,7 @@ export default function InputPage() {
                 const aTon = sData.actual_ton || 0;
                 const dMin = sData.downtime_min || 0;
                 const mp = sData.manpower || 0;
-                const runHrs = (aTon > 0 || mp > 0 || dMin > 0) ? Math.max(0, 7 - dMin / 60) : 0;
+                const runHrs = (aTon > 0) ? Math.max(0, 7 - dMin / 60) : 0;
 
                 return {
                     work_date: formattedDate,
@@ -1014,7 +1014,7 @@ export default function InputPage() {
                                                                                                     const aTon = shellingLineData[line]?.[shift]?.actual_ton || 0;
                                                                                                     const dMin = shellingLineData[line]?.[shift]?.downtime_min || 0;
                                                                                                     const mp = shellingLineData[line]?.[shift]?.manpower || 0;
-                                                                                                    const runHrs = (aTon > 0 || mp > 0 || dMin > 0) ? Math.max(0, 7 - dMin / 60) : 0;
+                                                                                                    const runHrs = (aTon > 0) ? Math.max(0, 7 - dMin / 60) : 0;
                                                                                                     return (
                                                                                                     <div key={`${line}-${shift}`} className="flex flex-col items-center">
                                                                                                         <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
