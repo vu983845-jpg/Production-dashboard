@@ -657,7 +657,7 @@ export default function DashboardPage() {
             );
         }
         return (
-            <Card key={id} className={`h-full bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col ring-1 ring-black/5 ${isTotal ? 'ring-primary/40 shadow-primary/10' : ''}`}>
+            <Card key={id} className={`bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full ring-1 ring-black/5 ${isTotal ? 'ring-primary/40 shadow-primary/10' : ''}`}>
                 {/* Subtle gradient glow in background */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -703,7 +703,7 @@ export default function DashboardPage() {
                         )}
                     </div>
                 </CardHeader>
-                <CardContent className={`flex-1 min-h-0 flex flex-col ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
+                <CardContent className={`flex flex-col justify-start ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
 
 
                     {/* Sub-view Toggles for Standard Cards */}
@@ -889,29 +889,26 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className="flex-1 w-full min-h-[0px] relative mt-1 pt-1 border-t opacity-90">
-                        <div className="absolute inset-x-0 top-2 bottom-0">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={displayHistory} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
-                                    <XAxis 
-                                        dataKey="name" 
-                                        tick={{ fontSize: 9, dy: 5, fill: '#64748b' }} 
-                                        tickLine={false} 
-                                        axisLine={{ stroke: '#e2e8f0' }}
-                                        height={18}
-                                        tickFormatter={(val) => {
-                                            // Only show 'val' if it is a major interval like 1, 8, 15, 22, 29
-                                            const day = parseInt(val, 10);
-                                            if (!isNaN(day) && (day === 1 || day === 8 || day === 15 || day === 22 || day === 29)) {
-                                                return val;
-                                            }
-                                            return '';
-                                        }}
-                                        minTickGap={1} 
-                                        interval={0}
-                                        tickMargin={4} 
-                                    />
-                                    <Tooltip contentStyle={{ fontSize: '10px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                    <div className={`w-full bg-slate-50/30 rounded-lg mt-2 pt-1 border-t opacity-90 ${(isTotal || isFgwh) ? 'h-[160px] md:h-[200px]' : 'h-[100px] md:h-[120px]'}`}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
+                                <XAxis 
+                                    dataKey="name" 
+                                    tick={{ fontSize: 9, dy: 5, fill: '#64748b' }} 
+                                    tickLine={false} 
+                                    axisLine={{ stroke: '#e2e8f0' }}
+                                    height={20}
+                                    tickFormatter={(val) => {
+                                        const day = parseInt(val, 10);
+                                        if (!isNaN(day) && (day === 1 || day === 8 || day === 15 || day === 22 || day === 29)) {
+                                            return val;
+                                        }
+                                        return '';
+                                    }}
+                                    interval={0}
+                                    tickMargin={4} 
+                                />
+                                <Tooltip contentStyle={{ fontSize: '10px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Cần làm/Ngày" connectNulls={false} />
                                     )}
@@ -935,9 +932,8 @@ export default function DashboardPage() {
                                         </>
                                     )}
                                     {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />}
-                                </ComposedChart>
-                            </ResponsiveContainer>
-                        </div>
+                            </ComposedChart>
+                        </ResponsiveContainer>
                     </div>
                     )}
                 </CardContent>
