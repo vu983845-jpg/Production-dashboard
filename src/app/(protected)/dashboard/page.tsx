@@ -594,7 +594,7 @@ export default function DashboardPage() {
         const remainingDays = id === 'virtual-container' ? summary.remainingContWorkingDays : summary.remainingWorkingDays;
 
         const remainingTarget = Math.max(0, summary.totalPlan - summary.totalActual);
-        const dailyNeeded = remainingDays > 0 ? (remainingTarget / remainingDays).toFixed(2) : "0";
+        const dailyNeeded = remainingDays > 0 ? (remainingTarget / remainingDays).toFixed(1) : "0";
 
         const isReachTonnage = summary.totalActual >= summary.totalPlan && summary.totalPlan > 0;
         const isReached = isReachTonnage;
