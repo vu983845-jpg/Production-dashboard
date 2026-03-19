@@ -39,9 +39,10 @@ interface ShellingLineRecord {
     shift_leader?: string
     actual_ton: number
     run_hours: number
-    downtime_min?: number
-    manpower?: number
-    note?: string
+    downtime_min: number;
+    manpower: number;
+    broken_pct: number;
+    note: string | null;
 }
 
 // ── Dept type ────────────────────────────────────────────────────────────────
@@ -173,7 +174,7 @@ export default function ReportPage() {
         if (selectedDept === "SHELL") {
             const { data: ld } = await supabase
                 .from("shelling_line_daily")
-                .select("work_date,line_code,shift_name,shift_leader,actual_ton,run_hours,downtime_min,manpower,note")
+                .select("work_date,line_code,shift_name,shift_leader,actual_ton,run_hours,downtime_min,manpower,broken_pct,note")
                 .gte("work_date", start)
                 .lte("work_date", end)
                 .order("work_date", { ascending: true })
@@ -334,7 +335,7 @@ export default function ReportPage() {
     const leaderCompareData = (() => {
         if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
         const map = new Map<string, { leader: string; totalTon: number; totalManpower: number; totalDowntime: number; totalRunHours: number }>();
-        const validLeaders = ['Mrs. Tâm', 'Ms. Linh', 'Mr. Trí'];
+        const validLeaders = ['Mrs.Tâm', 'Ms.Linh', 'Mr.Trí'];
         validLeaders.forEach(l => map.set(l, { leader: l, totalTon: 0, totalManpower: 0, totalDowntime: 0, totalRunHours: 0 }));
         
         shellingLines.forEach(r => {
@@ -471,9 +472,9 @@ export default function ReportPage() {
                                         className="h-8 text-xs rounded border border-slate-300 bg-white px-2 focus:outline-none focus:border-primary font-medium shadow-sm transition-colors"
                                     >
                                         <option value="Tất cả">Tất cả</option>
-                                        <option value="Mrs. Tâm">Mrs. Tâm</option>
-                                        <option value="Ms. Linh">Ms. Linh</option>
-                                        <option value="Mr. Trí">Mr. Trí</option>
+                                        <option value="Mrs.Tâm">Mrs. Tâm</option>
+                                        <option value="Ms.Linh">Ms. Linh</option>
+                                        <option value="Mr.Trí">Mr. Trí</option>
                                     </select>
                                 </div>
                             </CardHeader>
@@ -746,6 +747,7 @@ export default function ReportPage() {
                                                 <th className="text-right p-3 font-semibold">Sản lượng (T)</th>
                                                 <th className="text-right p-3 font-semibold">Giờ chạy (h)</th>
                                                 <th className="text-right p-3 font-semibold px-6">Dừng máy (phút)</th>
+                                                <th className="text-right p-3 font-semibold text-red-600">% Bể</th>
                                                 <th className="text-left p-3 font-semibold">Ghi chú</th>
                                             </tr>
                                         </thead>
@@ -758,6 +760,7 @@ export default function ReportPage() {
                                                     <td className="p-3 text-right font-bold text-primary">{Number(r.actual_ton) > 0 ? Number(r.actual_ton).toFixed(2) : "—"}</td>
                                                     <td className="p-3 text-right font-medium text-muted-foreground">{Number(r.run_hours) > 0 ? Number(r.run_hours).toFixed(1) : "—"}</td>
                                                     <td className="p-3 text-right font-medium text-amber-600 px-6">{Number(r.downtime_min) > 0 ? `${r.downtime_min}p` : "—"}</td>
+                                                    <td className="p-3 text-right font-medium text-red-600">{Number(r.broken_pct) > 0 ? `${Number(r.broken_pct)}%` : "—"}</td>
                                                     <td className="p-3 text-left text-muted-foreground text-xs max-w-[200px] truncate" title={r.note || ""}>{r.note || "—"}</td>
                                                 </tr>
                                             ))}
@@ -768,6 +771,11 @@ export default function ReportPage() {
                                                 <td className="p-2 text-primary">{shellingLines.reduce((s, r)=>s+Number(r.actual_ton),0).toFixed(2)}</td>
                                                 <td className="p-2 text-muted-foreground">{shellingLines.reduce((s, r)=>s+Number(r.run_hours),0).toFixed(1)}</td>
                                                 <td className="p-2 text-amber-600 px-6">{shellingLines.reduce((s, r)=>s+Number(r.downtime_min||0),0)}p</td>
+                                                <td className="p-2 text-red-600">
+                                                    {(shellingLines.filter(r => Number(r.broken_pct)>0).length > 0) ? 
+                                                        (shellingLines.reduce((s, r)=>s+Number(r.broken_pct||0),0) / shellingLines.filter(r => Number(r.broken_pct)>0).length).toFixed(2) + '%' 
+                                                        : "—"}
+                                                </td>
                                                 <td></td>
                                             </tr>
                                         </tfoot>

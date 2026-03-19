@@ -123,9 +123,12 @@ export default function InputPage() {
     const SHELLING_LINES = ['A', 'B', 'C', 'D1', 'D2'] as const
     type ShellLine = typeof SHELLING_LINES[number]
     type ShellShift = 'Ca 1' | 'Ca 2' | 'Ca 3'
-    type ShellLineEntry = { actual_ton: number; run_hours: number; downtime_min: number; manpower: number; note: string }
+    type ShellLineEntry = { actual_ton: number; run_hours: number; downtime_min?: number;
+    manpower?: number;
+    broken_pct?: number;
+    note: string; }
     
-    const initShiftObj = () => ({ 'Ca 1': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, note: '' }, 'Ca 2': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, note: '' }, 'Ca 3': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, note: '' } });
+    const initShiftObj = () => ({ 'Ca 1': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, note: '' }, 'Ca 2': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, note: '' }, 'Ca 3': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, note: '' } });
     
     const [shellingLineData, setShellingLineData] = useState<Record<ShellLine, Record<ShellShift, ShellLineEntry>>>({
         A: initShiftObj(),
@@ -643,7 +646,8 @@ export default function InputPage() {
                         actual_ton: Number(r.actual_ton || 0), 
                         run_hours: Number(r.run_hours || 0), 
                         downtime_min: ddsDownMap[r.line_code as ShellLine][shift], // Override with sync data
-                        manpower: Number(r.manpower || 0),
+                        manpower: Number(r.manpower) || 0,
+                        broken_pct: Number(r.broken_pct) || 0,
                         note: r.note || '' 
                     }
                 }
@@ -679,6 +683,7 @@ export default function InputPage() {
                 const aTon = sData.actual_ton || 0;
                 const dMin = sData.downtime_min || 0;
                 const mp = sData.manpower || 0;
+                const brk = sData.broken_pct || 0;
                 const runHrs = (aTon > 0) ? Math.max(0, 7 - dMin / 60) : 0;
 
                 return {
@@ -690,6 +695,7 @@ export default function InputPage() {
                     run_hours: runHrs,
                     downtime_min: dMin,
                     manpower: mp,
+                    broken_pct: brk,
                     note: sData.note || null,
                     updated_by: userId,
                     updated_at: new Date().toISOString()
@@ -790,6 +796,31 @@ export default function InputPage() {
         }
         setIsSaving(false)
     }
+
+    const handleShellingLineChange = (line: ShellLine, shift: ShellShift, field: keyof ShellLineEntry, value: number | string) => {
+        setShellingLineData(prev => {
+            const next = {
+                ...prev,
+                [line]: {
+                    ...prev[line],
+                    [shift]: {
+                        ...prev[line][shift],
+                        [field]: value
+                    }
+                }
+            };
+
+            // Recalculate total actual_ton for formActual
+            if (field === 'actual_ton') {
+                let total = 0;
+                SHELLING_LINES.forEach(l => {
+                    (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).forEach(s => total += (next[l]?.[s]?.actual_ton || 0));
+                });
+                formActual.setValue('actual_ton', total);
+            }
+            return next;
+        });
+    };
 
     return (
         <div className="flex-col md:flex">
@@ -971,7 +1002,7 @@ export default function InputPage() {
                                                                                                 {SHELLING_LINES.map(line => {
                                                                                                     const lColors: Record<string, string> = { A: 'border-blue-400', B: 'border-green-400', C: 'border-amber-400', D1: 'border-red-400', D2: 'border-purple-400' }
                                                                                                     return (
-                                                                                                        <div key={`${line}-${shift}`} className="flex flex-col items-center">
+                                                                                                        <div key={`${line}-${shift}`} className="flex flex-col items-center flex-1">
                                                                                                             <label className={`text-[10px] font-bold mb-1 ${lColors[line].replace('border-','text-')}`}>{line}</label>
                                                                                                             <input
                                                                                                                 type="number" step="0.001" min="0"
@@ -1073,6 +1104,31 @@ export default function InputPage() {
                                                                                                             className="w-full text-right p-1 rounded border-2 border-amber-200 bg-white text-sm focus:outline-none"
                                                                                                             value={shellingLineData[line]?.[shift]?.manpower || ''}
                                                                                                             onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], manpower: Number(e.target.value) || 0 } } }))}
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell colSpan={2} className="p-0">
+                                                                                <div className="bg-red-50/40 border-b px-4 pt-2 pb-3">
+                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">💔 Tỷ lệ Bể (% Broken)</p>
+                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
+                                                                                        <div key={shift} className="mb-3">
+                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
+                                                                                            <div className="grid grid-cols-5 gap-2">
+                                                                                                {SHELLING_LINES.map(line => (
+                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
+                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
+                                                                                                        <input
+                                                                                                            type="number" step="0.1" min="0" max="100"
+                                                                                                            className="w-full text-right p-1 rounded border-2 border-red-200 bg-white text-sm focus:outline-none focus:border-red-500"
+                                                                                                            value={shellingLineData[line]?.[shift]?.broken_pct || ''}
+                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], broken_pct: Number(e.target.value) || 0 } } }))}
                                                                                                         />
                                                                                                     </div>
                                                                                                 ))}
