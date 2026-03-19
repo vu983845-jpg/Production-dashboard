@@ -663,115 +663,49 @@ export default function DashboardPage() {
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                <CardHeader className={`${(isTotal || isFgwh) ? 'p-3 pb-2 md:p-5 md:pb-3' : 'p-2 pb-1.5'} bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0 relative z-10`}>
-                    <CardTitle className={`flex flex-row flex-wrap justify-between items-start md:items-center gap-1.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg md:gap-4 text-primary' : 'text-xs md:text-sm text-slate-800'}`}>
-                        <span className="flex items-center gap-1.5 uppercase font-bold tracking-tight whitespace-nowrap">
-                            {!(isTotal || isFgwh) && <div className={`w-1.5 h-1.5 rounded-full ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'}`} />}
+                <CardHeader className={`${(isTotal || isFgwh) ? 'p-2 md:p-4' : 'p-1.5 md:p-2'} bg-gradient-to-b from-slate-50/80 to-transparent border-b border-slate-200/50 flex-shrink-0 relative z-10`}>
+                    <div className="flex justify-between items-start mb-1.5 px-0.5">
+                        <span className={`flex items-center gap-1.5 uppercase font-black tracking-tight whitespace-nowrap ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-[11px] md:text-xs text-slate-800'}`}>
+                            {!(isTotal || isFgwh) && <div className={`w-1.5 h-1.5 rounded-full ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
                             {name}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
+                        
+                        <div className="flex items-center gap-1">
+                            <span className={`font-black ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-500'} ${(isTotal || isFgwh) ? 'text-xl md:text-2xl' : 'text-sm md:text-base'}`}>
+                                {summary.achivementPct.toFixed(0)}%
+                            </span>
+                        </div>
+                    </div>
 
-                        <div className={`flex flex-row flex-wrap items-center gap-2 mt-1 md:mt-0 ${(isTotal || isFgwh) ? 'md:gap-4 xl:gap-6' : ''}`}>
-                            <div className="flex flex-col items-end border-r pr-2 border-gray-200">
-                                {(isTotal || isFgwh) && <span className="text-[9px] md:text-[10px] text-muted-foreground mb-0.5">THÁNG / MTD</span>}
-                                <div className="flex items-baseline gap-1">
-                                    <span className={`font-black text-slate-800 ${(isTotal || isFgwh) ? 'text-2xl md:text-3xl' : 'text-base md:text-lg'}`}>{actualNum.toFixed(1)}</span>
-                                    <span className={`text-muted-foreground ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[9px]'}`}>/ {planNum.toFixed(1)} {unit}</span>
-                                </div>
-                                {(isTotal || isFgwh) && (
-                                    <span className={`text-[9px] md:text-[10px] font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {variance >= 0 ? `+${variance.toFixed(1)}` : variance.toFixed(1)} {unit}
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className={`flex flex-col items-end ${deptCode === 'PACK' && (isTotal || isFgwh) ? 'border-r pr-2 md:pr-3 border-gray-200' : ''}`}>
-                                {(isTotal || isFgwh) && <span className="text-[9px] md:text-[10px] text-muted-foreground mb-0.5">ACHV %</span>}
-                                <div className="flex items-center gap-1">
-                                    <span className={`font-black ${summary.achivementPct >= 100 ? 'text-green-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-600'} ${(isTotal || isFgwh) ? 'text-2xl md:text-3xl' : 'text-base md:text-lg'}`}>
-                                        {summary.achivementPct.toFixed(0)}%
-                                    </span>
-                                    {(isTotal || isFgwh) && (summary.achivementPct >= 100 ? <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-green-500" /> : <TrendingDown className="h-4 w-4 md:h-5 md:w-5 text-red-500" />)}
-                                </div>
+                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : 'grid-cols-3'} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
+                        <div className="flex flex-col items-center justify-center px-1">
+                            <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>MTD / KH</span>
+                            <div className="flex items-baseline gap-0.5 mt-0.5">
+                                <span className={`font-bold text-slate-800 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'}`}>{actualNum.toFixed(1)}</span>
+                                <span className={`text-slate-500 ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[8px] md:text-[9px]'}`}>/{planNum.toFixed(1)}</span>
                             </div>
                         </div>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className={`flex-1 flex flex-col ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
-                    <div className={`grid grid-cols-2 gap-1.5 mb-1 ${(isTotal || isFgwh) ? 'md:grid-cols-4 md:gap-4 md:mb-4' : 'opacity-80'}`}>
-                        {(
-                            <>
-                                        <div>
-                                            <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>{t('daily_needed')}</p>
-                                            <div className={`font-bold ${isReached ? 'text-green-600' : 'text-primary'} ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
-                                                {isReached ? 'Đạt' : `${dailyNeeded} ${unit}`}
-                                            </div>
-                                        </div>
-                                        {id !== 'virtual-container' && (
-                                            <div>
-                                                <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>{t('downtime')}</p>
-                                                <div className={`font-bold text-amber-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
-                                                    {(isTotal || isFgwh) && <Clock className="h-4 w-4" />} {summary.downtime}p
-                                                </div>
-                                            </div>
-                                        )}
-                                {(isTotal || isFgwh) && ["PEEL_MC", "SHELL"].includes(deptCode) && (
-                                    <div>
-                                        <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Tỷ lệ Bể (%)</p>
-                                        <div className={`font-bold text-red-600 flex items-center gap-1 text-lg`}>
-                                            {summary.brokenPct.toFixed(1)}%
-                                        </div>
-                                    </div>
-                                )}
-                                {(isTotal || isFgwh) && deptCode === "SHELL" && (
-                                    <>
-                                        <div>
-                                            <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Điện (kWh)</p>
-                                            <div className={`font-bold text-amber-600 flex items-center gap-1 text-lg`}>
-                                                {summary.totalElectricityConsumption?.toLocaleString()} / {summary.totalTargetElectricityKwh?.toLocaleString()}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>kWh / Tấn</p>
-                                            <div className={`font-bold text-amber-700 flex items-center gap-1 text-lg`}>
-                                                {summary.totalActual > 0 ? (summary.totalElectricityConsumption / summary.totalActual).toFixed(2) : "0.00"}
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                                {(isTotal || isFgwh) && ["PEEL_MC"].includes(deptCode) && (
-                                    <div>
-                                        <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Sót lụa (%)</p>
-                                        <div className={`font-bold text-orange-600 flex items-center gap-1 text-lg`}>
-                                            {summary.unpeelPct.toFixed(1)}%
-                                        </div>
-                                    </div>
-                                )}
-                                {(isTotal || isFgwh) && ["HAND"].includes(deptCode) && (
-                                    <div>
-                                        <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Tỷ lệ ISP (%)</p>
-                                        <div className={`font-bold text-blue-600 flex items-center gap-1 text-lg`}>
-                                            {summary.ispPct.toFixed(1)}%
-                                        </div>
-                                    </div>
-                                )}
-                                {(isTotal || isFgwh) && ["BORMA"].includes(deptCode) && (
-                                    <div>
-                                        <p className={`text-muted-foreground mb-0.5 text-xs mb-1`}>Tỷ lệ SW (%)</p>
-                                        <div className={`font-bold text-amber-700 flex items-center gap-1 text-lg`}>
-                                            {summary.swPct.toFixed(1)}%
-                                        </div>
-                                    </div>
-                                )}
-                                {(isTotal || isFgwh) && deptCode === "CS" && (
-                                    <div className={`col-span-2 md:col-span-2 p-1 md:p-2 rounded-md bg-blue-50/50 border border-blue-100 flex items-center justify-between`}>
-                                        <span className={`text-blue-800 font-bold text-sm`}>ISP (Thực tế/KH):</span>
-                                        <span className={`font-black text-blue-600 text-lg`}>{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 100} T</span>
-                                    </div>
-                                )}
-                            </>
+
+                        <div className="flex flex-col items-center justify-center px-1">
+                            <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>CẦN ĐẠT / NGÀY</span>
+                            <div className={`font-bold mt-0.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'} ${isReached ? 'text-emerald-600' : 'text-primary'}`}>
+                                {isReached ? 'Đạt' : `${dailyNeeded} ${unit}`}
+                            </div>
+                        </div>
+
+                        {id !== 'virtual-container' && (
+                            <div className="flex flex-col items-center justify-center px-1">
+                                <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>DOWNTIME</span>
+                                <div className={`font-bold mt-0.5 text-amber-600 flex items-center gap-0.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'}`}>
+                                    {(isTotal || isFgwh) && <Clock className="h-3 w-3" />} {summary.downtime}p
+                                </div>
+                            </div>
                         )}
                     </div>
+                </CardHeader>
+                <CardContent className={`flex-1 flex flex-col ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
+
 
                     {/* Sub-view Toggles for Standard Cards */}
                     {!(isTotal || isFgwh) && (["PEEL_MC", "SHELL", "HAND", "BORMA", "CS"].includes(deptCode)) && (
