@@ -703,7 +703,7 @@ export default function DashboardPage() {
                         )}
                     </div>
                 </CardHeader>
-                <CardContent className={`flex flex-col justify-start ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
+                <CardContent className={`flex-1 flex flex-col justify-start ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
 
 
                     {/* Sub-view Toggles for Standard Cards */}
@@ -889,7 +889,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className={`w-full bg-slate-50/30 rounded-lg mt-2 pt-1 border-t opacity-90 ${(isTotal || isFgwh) ? 'h-[160px] md:h-[200px]' : 'h-[100px] md:h-[120px]'}`}>
+                    <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh) ? 'h-[160px] md:h-[200px]' : 'h-[100px] md:h-[120px]'}`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
                                 <XAxis 
