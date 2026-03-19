@@ -657,7 +657,7 @@ export default function DashboardPage() {
             );
         }
         return (
-            <Card key={id} className={`bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col h-full ring-1 ring-black/5 ${isTotal ? 'ring-primary/40 shadow-primary/10' : ''}`}>
+            <Card key={id} className={`bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col ring-1 ring-black/5 ${isTotal ? 'ring-primary/40 shadow-primary/10' : ''}`}>
                 {/* Subtle gradient glow in background */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -703,7 +703,7 @@ export default function DashboardPage() {
                         )}
                     </div>
                 </CardHeader>
-                <CardContent className={`flex-1 min-h-0 flex flex-col ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
+                <CardContent className={`flex-1 flex flex-col ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
 
 
                     {/* Sub-view Toggles for Standard Cards */}
@@ -889,12 +889,11 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className={`flex-1 w-full mt-1 border-t min-h-0 relative opacity-80 ${(isTotal || isFgwh) ? 'pt-3' : 'pt-1'}`}>
-                        <div className={`absolute inset-x-0 bottom-0 ${(isTotal || isFgwh) ? 'top-3' : 'top-1'}`}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={displayHistory} margin={{ top: 2, right: 0, left: 0, bottom: (isTotal || isFgwh) ? 25 : 0 }}>
-                                    <XAxis dataKey="name" hide={!(isTotal || isFgwh)} tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={(isTotal || isFgwh) ? 30 : 0} minTickGap={10} tickMargin={5} />
-                                    <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                    <div className={`w-full mt-auto border-t opacity-90 ${(isTotal || isFgwh) ? 'pt-3 h-48 md:h-56' : 'pt-2 h-36 md:h-44'}`}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={displayHistory} margin={{ top: 2, right: 0, left: 0, bottom: (isTotal || isFgwh) ? 25 : 0 }}>
+                                <XAxis dataKey="name" hide={!(isTotal || isFgwh)} tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={(isTotal || isFgwh) ? 30 : 0} minTickGap={10} tickMargin={5} />
+                                <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                 {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                     <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Cần làm/Ngày" connectNulls={false} />
                                 )}
@@ -920,7 +919,6 @@ export default function DashboardPage() {
                                 {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />}
                             </ComposedChart>
                         </ResponsiveContainer>
-                        </div>
                     </div>
                     )}
                 </CardContent>
