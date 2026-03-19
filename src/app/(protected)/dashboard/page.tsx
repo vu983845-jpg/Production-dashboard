@@ -663,40 +663,39 @@ export default function DashboardPage() {
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0 relative z-10">
-                    <CardTitle className={`text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 ${isTotal ? 'text-primary' : 'text-slate-800'}`}>
-                        <span className="flex items-center gap-2 uppercase tracking-wider whitespace-nowrap">
+                <CardHeader className={`p-3 pb-2 ${(isTotal || isFgwh) ? 'md:p-5 md:pb-3' : 'md:p-3'} bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0 relative z-10`}>
+                    <CardTitle className={`text-sm md:text-base font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 ${(isTotal || isFgwh) ? 'md:gap-4' : ''} ${isTotal ? 'text-primary text-lg' : 'text-slate-800'}`}>
+                        <span className="flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap">
                             {name}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
 
-                        <div className="flex flex-row flex-wrap items-center gap-3 md:gap-4 xl:gap-6 mt-2 md:mt-0">
-                            <div className="flex flex-col items-end border-r pr-3 md:pr-4 border-gray-200">
-                                <span className="text-[10px] md:text-[11px] text-muted-foreground mb-0.5">THÁNG / MONTHLY</span>
+                        <div className={`flex flex-row flex-wrap items-center gap-2 mt-2 md:mt-0 ${(isTotal || isFgwh) ? 'md:gap-4 xl:gap-6' : ''}`}>
+                            <div className="flex flex-col items-end border-r pr-2 md:pr-3 border-gray-200">
+                                <span className="text-[9px] md:text-[10px] text-muted-foreground mb-0.5">THÁNG / MTD</span>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl md:text-3xl font-black text-slate-800">{actualNum.toFixed(1)}</span>
-                                    <span className="text-xs md:text-base text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span>
+                                    <span className={`font-black text-slate-800 ${(isTotal || isFgwh) ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'}`}>{actualNum.toFixed(1)}</span>
+                                    <span className="text-[10px] md:text-xs text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span>
                                 </div>
-                                <span className={`text-[10px] md:text-xs font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <span className={`text-[9px] md:text-[10px] font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     {variance >= 0 ? `+${variance.toFixed(1)}` : variance.toFixed(1)} {unit}
                                 </span>
                             </div>
 
-                            <div className={`flex flex-col items-end ${deptCode === 'PACK' ? 'border-r pr-3 md:pr-4 border-gray-200' : ''}`}>
-                                <span className="text-[10px] md:text-[11px] text-muted-foreground mb-0.5">MTD ACHIEVEMENT</span>
-                                <div className="flex items-center gap-1.5 md:gap-2">
-                                    <span className={`text-2xl md:text-3xl font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {summary.achivementPct.toFixed(1)}%
+                            <div className={`flex flex-col items-end ${deptCode === 'PACK' ? 'border-r pr-2 md:pr-3 border-gray-200' : ''}`}>
+                                <span className="text-[9px] md:text-[10px] text-muted-foreground mb-0.5">ACHV %</span>
+                                <div className="flex items-center gap-1">
+                                    <span className={`font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'} ${(isTotal || isFgwh) ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'}`}>
+                                        {summary.achivementPct.toFixed(0)}%
                                     </span>
-                                    {summary.achivementPct >= 100 ? <TrendingUp className="h-5 w-5 md:h-7 md:w-7 text-green-500" /> : <TrendingDown className="h-5 w-5 md:h-7 md:w-7 text-red-500" />}
+                                    {summary.achivementPct >= 100 ? <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-green-500" /> : <TrendingDown className="h-4 w-4 md:h-5 md:w-5 text-red-500" />}
                                 </div>
                             </div>
-
                         </div>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="p-3 pt-3 md:p-5 md:pt-4 flex-1 flex flex-col">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-2 md:mb-4">
+                <CardContent className={`p-3 pt-3 flex-1 flex flex-col ${(isTotal || isFgwh) ? 'md:p-5 md:pt-4' : 'md:p-3'}`}>
+                    <div className={`grid grid-cols-2 gap-2 mb-2 ${(isTotal || isFgwh) ? 'md:grid-cols-4 md:gap-4 md:mb-4' : ''}`}>
                         {(
                             <>
                                         <div>
@@ -912,10 +911,10 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className="h-36 w-full mt-auto border-t pt-2">
+                    <div className={`w-full mt-auto border-t pt-2 ${(isTotal || isFgwh) ? 'h-36' : 'h-20'}`}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
-                                <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
+                            <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: (isTotal || isFgwh) ? 25 : 5 }}>
+                                <XAxis dataKey="name" hide={!(isTotal || isFgwh)} tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={(isTotal || isFgwh) ? 30 : 0} minTickGap={10} tickMargin={5} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                 {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                     <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Cần làm/Ngày" connectNulls={false} />
@@ -939,7 +938,7 @@ export default function DashboardPage() {
                                         <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#ef4444" dot={true} strokeWidth={2} name="Phát thải (T CO₂e)" />
                                     </>
                                 )}
-                                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
+                                {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />}
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -1007,16 +1006,16 @@ export default function DashboardPage() {
                 )}
 
                 <TabsContent value="stations" className="mt-0">
-                    <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-2">
                         {/* Total Factory Card - Full Width / 2 columns */}
-                        {renderMiniDashboard("all", t('all_factory_card'), true)}
+                        <div className="lg:col-span-1">{renderMiniDashboard("all", t('all_factory_card'), true)}</div>
 
                         {/* FGWH Finished Goods Warehouse Card */}
-                        {renderMiniDashboard("fgwh", "FGWH - Kho Thành Phẩm", true)}
+                        <div className="lg:col-span-1">{renderMiniDashboard("fgwh", "FGWH - Kho Thành Phẩm", true)}</div>
                     </div>
 
-                    {/* MINI DASHBOARDS GRID */}
-                    <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
+                    {/* DEPARTMENT MINI DASHBOARDS (DENSE BENTO GRID) */}
+                    <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                         {/* Department Cards - exclude FGWH since it has its own card above */}
                         {departments.filter(d => d.code !== 'FGWH').map(d => renderMiniDashboard(d.id, d.name_en))}
                         {/* Virtual Container Card */}
@@ -1025,7 +1024,7 @@ export default function DashboardPage() {
                 </TabsContent>
 
                 <TabsContent value="regions" className="mt-0">
-                    <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-3">
                         {renderMiniDashboard("region-RCN", t('region_rcn'), true)}
                         {renderMiniDashboard("region-LCA", t('region_lca'), true)}
                         {renderMiniDashboard("region-HCA", t('region_hca'), true)}
