@@ -332,6 +332,22 @@ export default function ReportPage() {
         return Array.from(map.values());
     })();
 
+    const brokenChartData = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        const lines = filteredShellingLines.filter(r => r.line_code === selectedShellLine);
+        const map = new Map<string, any>();
+        lines.forEach(r => {
+            const dateStr = format(parseISO(r.work_date), 'dd/MM');
+            if (!map.has(dateStr)) map.set(dateStr, { name: dateStr });
+            const curr = map.get(dateStr);
+            const brk = Number(r.broken_pct);
+            if (r.shift_name === 'Ca 1' && brk > 0) curr.Ca1 = brk;
+            if (r.shift_name === 'Ca 2' && brk > 0) curr.Ca2 = brk;
+            if (r.shift_name === 'Ca 3' && brk > 0) curr.Ca3 = brk;
+        });
+        return Array.from(map.values());
+    })();
+
     const leaderCompareData = (() => {
         if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
         const map = new Map<string, { leader: string; totalTon: number; totalManpower: number; totalDowntime: number; totalRunHours: number }>();
@@ -600,6 +616,29 @@ export default function ReportPage() {
                                                 <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/Ng)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
                                                 <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/Ng)" stroke="#f97316" strokeWidth={2} dot={{ r: 2 }} />
                                                 <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/Ng)" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Chart 5: % Broken per shift */}
+                            <Card>
+                                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-xs font-bold text-red-700">💔 % Bể theo từng ca (Line {selectedShellLine})</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-64 w-full mt-2">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={brokenChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
+                                                <Tooltip contentStyle={{ fontSize: '11px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`]} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (% Bể)" stroke="#f43f5e" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (% Bể)" stroke="#fb923c" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (% Bể)" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
