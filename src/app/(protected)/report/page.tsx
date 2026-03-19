@@ -7,6 +7,7 @@ import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
 import { Download, Search, FileText, TrendingUp, TrendingDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import * as XLSX from "xlsx"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -80,6 +81,7 @@ export default function ReportPage() {
     const [records, setRecords] = useState<DailyRecord[]>([])
     const [summary, setSummary] = useState<SummaryData | null>(null)
     const [shellingLines, setShellingLines] = useState<ShellingLineRecord[]>([])
+    const [selectedShellLine, setSelectedShellLine] = useState("A")
     const [hasData, setHasData] = useState(false)
 
     // Load departments from DB (same as dashboard)
@@ -275,6 +277,35 @@ export default function ReportPage() {
         XLSX.writeFile(wb, `BaoCao_${dept.code}_${monthLabel.replace("/","-")}.xlsx`)
     }
 
+    // ── Chart Data Computations ──────────────────────────────────────────────
+    const perfChartData = (() => {
+        if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
+        const lines = shellingLines.filter(r => r.line_code === selectedShellLine);
+        const map = new Map<string, any>();
+        lines.forEach(r => {
+            const dateStr = format(parseISO(r.work_date), 'dd/MM');
+            if (!map.has(dateStr)) map.set(dateStr, { name: dateStr });
+            const curr = map.get(dateStr);
+            const eff = Number(r.run_hours) > 0 ? Number(r.actual_ton) / Number(r.run_hours) : 0;
+            if (r.shift_name === 'Ca 1') curr.Ca1 = Number(eff.toFixed(2));
+            if (r.shift_name === 'Ca 2') curr.Ca2 = Number(eff.toFixed(2));
+            if (r.shift_name === 'Ca 3') curr.Ca3 = Number(eff.toFixed(2));
+        });
+        return Array.from(map.values());
+    })();
+
+    const downChartData = (() => {
+        if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
+        const map = new Map<string, any>();
+        shellingLines.forEach(r => {
+            const dateStr = format(parseISO(r.work_date), 'dd/MM');
+            if (!map.has(dateStr)) map.set(dateStr, { name: dateStr, A: 0, B: 0, C: 0, D1: 0, D2: 0 });
+            const curr = map.get(dateStr);
+            curr[r.line_code] += Number(r.downtime_min || 0);
+        });
+        return Array.from(map.values());
+    })();
+
     const achievePct = summary && summary.totalPlan > 0 ? (summary.totalActual / summary.totalPlan * 100) : null
 
     return (
@@ -442,6 +473,66 @@ export default function ReportPage() {
                                 </div>
                             </CardContent>
                         </Card>
+                    )}
+
+                    {/* Shelling Analytics Charts */}
+                    {selectedDept === "SHELL" && shellingLines.length > 0 && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* Chart 1: Performance */}
+                            <Card>
+                                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-sm font-bold">Hiệu suất T/h (Line {selectedShellLine})</CardTitle>
+                                    <select 
+                                        value={selectedShellLine} 
+                                        onChange={e => setSelectedShellLine(e.target.value)}
+                                        className="h-7 text-xs rounded-md border border-input bg-background px-2 focus:outline-none"
+                                    >
+                                        {["A", "B", "C", "D1", "D2"].map(l => <option key={l} value={l}>Line {l}</option>)}
+                                    </select>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-64 w-full mt-2">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={perfChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <YAxis tick={{ fontSize: 10 }} />
+                                                <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/h)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }} />
+                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/h)" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
+                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/h)" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Chart 2: Downtime */}
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-bold">Phân tích Dừng Máy (Phút)</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-64 w-full mt-2">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={downChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <YAxis tick={{ fontSize: 10 }} />
+                                                <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                <Bar dataKey="A" stackId="a" fill="#3b82f6" name="Line A" />
+                                                <Bar dataKey="B" stackId="a" fill="#10b981" name="Line B" />
+                                                <Bar dataKey="C" stackId="a" fill="#f59e0b" name="Line C" />
+                                                <Bar dataKey="D1" stackId="a" fill="#ef4444" name="Line D1" />
+                                                <Bar dataKey="D2" stackId="a" fill="#8b5cf6" name="Line D2" />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     )}
 
                     {/* Daily Detail Table */}
