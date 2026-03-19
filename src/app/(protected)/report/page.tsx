@@ -39,6 +39,7 @@ interface ShellingLineRecord {
     actual_ton: number
     run_hours: number
     downtime_min?: number
+    manpower?: number
     note?: string
 }
 
@@ -170,7 +171,7 @@ export default function ReportPage() {
         if (selectedDept === "SHELL") {
             const { data: ld } = await supabase
                 .from("shelling_line_daily")
-                .select("work_date,line_code,shift_name,actual_ton,run_hours,downtime_min,note")
+                .select("work_date,line_code,shift_name,actual_ton,run_hours,downtime_min,manpower,note")
                 .gte("work_date", start)
                 .lte("work_date", end)
                 .order("work_date", { ascending: true })
@@ -258,7 +259,7 @@ export default function ReportPage() {
 
         // Sheet 3: Shelling lines detail (if applicable)
         if (shellingLines.length > 0) {
-            const slHeaders = ["Ngày", "Line", "Ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)", "Dừng máy (phút)", "Ghi chú"]
+            const slHeaders = ["Ngày", "Line", "Ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)", "Nhân sự (Ng)", "Năng suất (T/Ng)", "Dừng máy (phút)", "Ghi chú"]
             const slRows = [slHeaders, ...shellingLines.map(r => [
                 fmtDate(r.work_date),
                 r.line_code,
@@ -266,11 +267,13 @@ export default function ReportPage() {
                 Number(r.actual_ton).toFixed(2),
                 Number(r.run_hours).toFixed(1),
                 Number(r.run_hours) > 0 ? (Number(r.actual_ton) / Number(r.run_hours)).toFixed(3) : "—",
+                Number(r.manpower || 0),
+                Number(r.manpower) > 0 ? (Number(r.actual_ton) / Number(r.manpower)).toFixed(3) : "—",
                 Number(r.downtime_min || 0),
                 r.note || ""
             ])]
             const ws3 = XLSX.utils.aoa_to_sheet(slRows)
-            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 30 }]
+            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 30 }]
             XLSX.utils.book_append_sheet(wb, ws3, "Shelling Line Details")
         }
 
@@ -302,6 +305,22 @@ export default function ReportPage() {
             if (!map.has(dateStr)) map.set(dateStr, { name: dateStr, A: 0, B: 0, C: 0, D1: 0, D2: 0 });
             const curr = map.get(dateStr);
             curr[r.line_code] += Number(r.downtime_min || 0);
+        });
+        return Array.from(map.values());
+    })();
+
+    const manpowerChartData = (() => {
+        if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
+        const lines = shellingLines.filter(r => r.line_code === selectedShellLine);
+        const map = new Map<string, any>();
+        lines.forEach(r => {
+            const dateStr = format(parseISO(r.work_date), 'dd/MM');
+            if (!map.has(dateStr)) map.set(dateStr, { name: dateStr });
+            const curr = map.get(dateStr);
+            const eff = Number(r.manpower) > 0 ? Number(r.actual_ton) / Number(r.manpower) : 0;
+            if (r.shift_name === 'Ca 1') curr.Ca1 = Number(eff.toFixed(2));
+            if (r.shift_name === 'Ca 2') curr.Ca2 = Number(eff.toFixed(2));
+            if (r.shift_name === 'Ca 3') curr.Ca3 = Number(eff.toFixed(2));
         });
         return Array.from(map.values());
     })();
@@ -422,6 +441,8 @@ export default function ReportPage() {
                                                 <th className="text-right p-2 font-semibold">Sản lượng (T)</th>
                                                 <th className="text-right p-2 font-semibold">Giờ chạy (h)</th>
                                                 <th className="text-right p-2 font-semibold">Hiệu suất (T/h)</th>
+                                                <th className="text-right p-2 font-semibold">Nhân sự (Ng)</th>
+                                                <th className="text-right p-2 font-semibold">Năng suất (T/Ng)</th>
                                                 <th className="text-right p-2 font-semibold">% tổng SL</th>
                                             </tr>
                                         </thead>
@@ -430,10 +451,12 @@ export default function ReportPage() {
                                                 const lineRows = shellingLines.filter(r => r.line_code === line)
                                                 const tons = lineRows.reduce((s,r) => s + Number(r.actual_ton), 0)
                                                 const hours = lineRows.reduce((s,r) => s + Number(r.run_hours), 0)
+                                                const manpower = lineRows.reduce((s,r) => s + Number(r.manpower || 0), 0)
                                                 
                                                 if (tons === 0 && hours === 0) return []
                                                 
                                                 const eff = hours > 0 ? tons/hours : 0
+                                                const mpEff = manpower > 0 ? tons/manpower : 0
                                                 const pctTot = summary.totalActual > 0 ? (tons/summary.totalActual*100) : 0
                                                 const colors: Record<string,string> = { A:"text-blue-600", B:"text-emerald-600", C:"text-amber-600", D1:"text-red-600", D2:"text-purple-600" }
                                                 
@@ -442,9 +465,11 @@ export default function ReportPage() {
                                                     const shiftRows = lineRows.filter(r => (r.shift_name || 'Ca 1') === shift)
                                                     const sTons = shiftRows.reduce((s,r) => s + Number(r.actual_ton), 0)
                                                     const sHours = shiftRows.reduce((s,r) => s + Number(r.run_hours), 0)
+                                                    const sManpower = shiftRows.reduce((s,r) => s + Number(r.manpower || 0), 0)
                                                     if (sTons === 0 && sHours === 0) return null
                                                     
                                                     const sEff = sHours > 0 ? sTons/sHours : 0
+                                                    const sMpEff = sManpower > 0 ? sTons/sManpower : 0
                                                     const sPctTot = summary.totalActual > 0 ? (sTons/summary.totalActual*100) : 0
                                                     return (
                                                         <tr key={`${line}-${shift}`} className="border-b hover:bg-muted/20 text-sm">
@@ -452,6 +477,8 @@ export default function ReportPage() {
                                                             <td className="p-2 text-right font-medium">{sTons.toFixed(2)}</td>
                                                             <td className="p-2 text-right text-muted-foreground">{sHours.toFixed(1)}</td>
                                                             <td className="p-2 text-right font-medium text-emerald-700">{sEff > 0 ? sEff.toFixed(3) : "—"}</td>
+                                                            <td className="p-2 text-right text-amber-600">{sManpower}</td>
+                                                            <td className="p-2 text-right font-medium text-blue-600">{sMpEff > 0 ? sMpEff.toFixed(3) : "—"}</td>
                                                             <td className="p-2 text-right text-muted-foreground">{sPctTot.toFixed(1)}%</td>
                                                         </tr>
                                                     )
@@ -463,6 +490,8 @@ export default function ReportPage() {
                                                         <td className="p-2 text-right font-bold">{tons.toFixed(2)}</td>
                                                         <td className="p-2 text-right font-semibold text-slate-600">{hours.toFixed(1)}</td>
                                                         <td className="p-2 text-right font-bold text-emerald-700">{eff > 0 ? eff.toFixed(3) : "—"}</td>
+                                                        <td className="p-2 text-right font-semibold text-amber-600">{manpower}</td>
+                                                        <td className="p-2 text-right font-bold text-blue-700">{mpEff > 0 ? mpEff.toFixed(3) : "—"}</td>
                                                         <td className="p-2 text-right font-semibold text-slate-600">{pctTot.toFixed(1)}%</td>
                                                     </tr>,
                                                     ...shiftElems
@@ -477,11 +506,11 @@ export default function ReportPage() {
 
                     {/* Shelling Analytics Charts */}
                     {selectedDept === "SHELL" && shellingLines.length > 0 && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             {/* Chart 1: Performance */}
                             <Card>
                                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-sm font-bold">Hiệu suất T/h (Line {selectedShellLine})</CardTitle>
+                                    <CardTitle className="text-xs font-bold">Hiệu suất T/h (Line {selectedShellLine})</CardTitle>
                                     <select 
                                         value={selectedShellLine} 
                                         onChange={e => setSelectedShellLine(e.target.value)}
@@ -508,10 +537,33 @@ export default function ReportPage() {
                                 </CardContent>
                             </Card>
 
+                            {/* Chart 3: Manpower */}
+                            <Card>
+                                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-xs font-bold text-amber-700">NS Nhân sự Tấn/Ng (Line {selectedShellLine})</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-64 w-full mt-2">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={manpowerChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <YAxis tick={{ fontSize: 10 }} />
+                                                <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/Ng)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
+                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/Ng)" stroke="#f97316" strokeWidth={2} dot={{ r: 2 }} />
+                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/Ng)" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
                             {/* Chart 2: Downtime */}
                             <Card>
                                 <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm font-bold">Phân tích Dừng Máy (Phút)</CardTitle>
+                                    <CardTitle className="text-xs font-bold">Phân tích Dừng Máy (Phút)</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-64 w-full mt-2">

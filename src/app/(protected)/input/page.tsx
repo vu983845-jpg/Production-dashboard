@@ -122,9 +122,9 @@ export default function InputPage() {
     const SHELLING_LINES = ['A', 'B', 'C', 'D1', 'D2'] as const
     type ShellLine = typeof SHELLING_LINES[number]
     type ShellShift = 'Ca 1' | 'Ca 2' | 'Ca 3'
-    type ShellLineEntry = { actual_ton: number; run_hours: number; downtime_min: number; note: string }
+    type ShellLineEntry = { actual_ton: number; run_hours: number; downtime_min: number; manpower: number; note: string }
     
-    const initShiftObj = () => ({ 'Ca 1': { actual_ton: 0, run_hours: 0, downtime_min: 0, note: '' }, 'Ca 2': { actual_ton: 0, run_hours: 0, downtime_min: 0, note: '' }, 'Ca 3': { actual_ton: 0, run_hours: 0, downtime_min: 0, note: '' } });
+    const initShiftObj = () => ({ 'Ca 1': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, note: '' }, 'Ca 2': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, note: '' }, 'Ca 3': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, note: '' } });
     
     const [shellingLineData, setShellingLineData] = useState<Record<ShellLine, Record<ShellShift, ShellLineEntry>>>({
         A: initShiftObj(),
@@ -578,6 +578,7 @@ export default function InputPage() {
                         actual_ton: Number(r.actual_ton || 0), 
                         run_hours: Number(r.run_hours || 0), 
                         downtime_min: Number(r.downtime_min || 0),
+                        manpower: Number(r.manpower || 0),
                         note: r.note || '' 
                     }
                 }
@@ -597,6 +598,7 @@ export default function InputPage() {
                 actual_ton: shellingLineData[line as ShellLine][shift].actual_ton,
                 run_hours: shellingLineData[line as ShellLine][shift].run_hours,
                 downtime_min: shellingLineData[line as ShellLine][shift].downtime_min,
+                manpower: shellingLineData[line as ShellLine][shift].manpower,
                 note: shellingLineData[line as ShellLine][shift].note || null,
                 updated_by: userId,
                 updated_at: new Date().toISOString()
@@ -933,6 +935,31 @@ export default function InputPage() {
                                                                                                             className="w-full text-right p-1 rounded border-2 border-red-200 bg-white text-sm focus:outline-none"
                                                                                                             value={shellingLineData[line]?.[shift]?.downtime_min || ''}
                                                                                                             onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], downtime_min: Number(e.target.value) || 0 } } }))}
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell colSpan={2} className="p-0">
+                                                                                <div className="bg-amber-50/40 border-b px-4 pt-2 pb-3">
+                                                                                    <p className="text-xs font-semibold text-amber-700 mb-2">🧑‍🤝‍🧑 Nhân sự tham gia (Người)</p>
+                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
+                                                                                        <div key={shift} className="mb-3">
+                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
+                                                                                            <div className="grid grid-cols-5 gap-2">
+                                                                                                {SHELLING_LINES.map(line => (
+                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
+                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
+                                                                                                        <input
+                                                                                                            type="number" step="1" min="0"
+                                                                                                            className="w-full text-right p-1 rounded border-2 border-amber-200 bg-white text-sm focus:outline-none"
+                                                                                                            value={shellingLineData[line]?.[shift]?.manpower || ''}
+                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], manpower: Number(e.target.value) || 0 } } }))}
                                                                                                         />
                                                                                                     </div>
                                                                                                 ))}
