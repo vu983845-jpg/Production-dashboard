@@ -37,6 +37,8 @@ interface ShellingLineRecord {
     shift_name?: string
     actual_ton: number
     run_hours: number
+    downtime_min?: number
+    note?: string
 }
 
 // ── Dept type ────────────────────────────────────────────────────────────────
@@ -166,9 +168,11 @@ export default function ReportPage() {
         if (selectedDept === "SHELL") {
             const { data: ld } = await supabase
                 .from("shelling_line_daily")
-                .select("work_date,line_code,shift_name,actual_ton,run_hours")
+                .select("work_date,line_code,shift_name,actual_ton,run_hours,downtime_min,note")
                 .gte("work_date", start)
                 .lte("work_date", end)
+                .order("work_date", { ascending: true })
+                .order("line_code", { ascending: true })
             setShellingLines(ld ?? [])
         } else {
             setShellingLines([])
@@ -252,7 +256,7 @@ export default function ReportPage() {
 
         // Sheet 3: Shelling lines detail (if applicable)
         if (shellingLines.length > 0) {
-            const slHeaders = ["Ngày", "Line", "Ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)"]
+            const slHeaders = ["Ngày", "Line", "Ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)", "Dừng máy (phút)", "Ghi chú"]
             const slRows = [slHeaders, ...shellingLines.map(r => [
                 fmtDate(r.work_date),
                 r.line_code,
@@ -260,10 +264,12 @@ export default function ReportPage() {
                 Number(r.actual_ton).toFixed(2),
                 Number(r.run_hours).toFixed(1),
                 Number(r.run_hours) > 0 ? (Number(r.actual_ton) / Number(r.run_hours)).toFixed(3) : "—",
+                Number(r.downtime_min || 0),
+                r.note || ""
             ])]
             const ws3 = XLSX.utils.aoa_to_sheet(slRows)
-            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }]
-            XLSX.utils.book_append_sheet(wb, ws3, "Shelling Lines")
+            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 30 }]
+            XLSX.utils.book_append_sheet(wb, ws3, "Shelling Line Details")
         }
 
         XLSX.writeFile(wb, `BaoCao_${dept.code}_${monthLabel.replace("/","-")}.xlsx`)
@@ -505,6 +511,56 @@ export default function ReportPage() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Shelling Daily Detail Table */}
+                    {selectedDept === "SHELL" && shellingLines.length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-bold flex items-center justify-between">
+                                    <span>Chi tiết từng ca Shelling</span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b bg-muted/50">
+                                                <th className="text-left p-3 font-semibold whitespace-nowrap">Ngày</th>
+                                                <th className="text-center p-3 font-semibold">Line</th>
+                                                <th className="text-center p-3 font-semibold">Ca</th>
+                                                <th className="text-right p-3 font-semibold">Sản lượng (T)</th>
+                                                <th className="text-right p-3 font-semibold">Giờ chạy (h)</th>
+                                                <th className="text-right p-3 font-semibold px-6">Dừng máy (phút)</th>
+                                                <th className="text-left p-3 font-semibold">Ghi chú</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {shellingLines.map(r => (
+                                                <tr key={`${r.work_date}-${r.line_code}-${r.shift_name}`} className="border-b hover:bg-muted/20 text-sm">
+                                                    <td className="p-3 font-medium whitespace-nowrap">{fmtDate(r.work_date)}</td>
+                                                    <td className="p-3 text-center font-bold text-slate-700">{r.line_code}</td>
+                                                    <td className="p-3 text-center text-muted-foreground">{r.shift_name || 'Ca 1'}</td>
+                                                    <td className="p-3 text-right font-bold text-primary">{Number(r.actual_ton) > 0 ? Number(r.actual_ton).toFixed(2) : "—"}</td>
+                                                    <td className="p-3 text-right font-medium text-muted-foreground">{Number(r.run_hours) > 0 ? Number(r.run_hours).toFixed(1) : "—"}</td>
+                                                    <td className="p-3 text-right font-medium text-amber-600 px-6">{Number(r.downtime_min) > 0 ? `${r.downtime_min}p` : "—"}</td>
+                                                    <td className="p-3 text-left text-muted-foreground text-xs max-w-[200px] truncate" title={r.note || ""}>{r.note || "—"}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="border-t-2 bg-muted/30 font-bold text-right text-xs">
+                                                <td colSpan={3} className="p-2">Tổng Tháng:</td>
+                                                <td className="p-2 text-primary">{shellingLines.reduce((s, r)=>s+Number(r.actual_ton),0).toFixed(2)}</td>
+                                                <td className="p-2 text-muted-foreground">{shellingLines.reduce((s, r)=>s+Number(r.run_hours),0).toFixed(1)}</td>
+                                                <td className="p-2 text-amber-600 px-6">{shellingLines.reduce((s, r)=>s+Number(r.downtime_min||0),0)}p</td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </>
             )}
 

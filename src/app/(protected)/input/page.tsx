@@ -920,7 +920,7 @@ export default function InputPage() {
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-red-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">⏸ Thời gian chết - Downtime (Phút)</p>
+                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">⏸ Thời gian dừng máy - Downtime (Phút)</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
