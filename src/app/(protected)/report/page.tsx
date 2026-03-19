@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { ddsClient } from "@/lib/supabase/dds-client"
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
@@ -36,6 +36,7 @@ interface ShellingLineRecord {
     work_date: string
     line_code: string
     shift_name?: string
+    shift_leader?: string
     actual_ton: number
     run_hours: number
     downtime_min?: number
@@ -83,6 +84,7 @@ export default function ReportPage() {
     const [summary, setSummary] = useState<SummaryData | null>(null)
     const [shellingLines, setShellingLines] = useState<ShellingLineRecord[]>([])
     const [selectedShellLine, setSelectedShellLine] = useState("A")
+    const [selectedLeader, setSelectedLeader] = useState("Tất cả")
     const [hasData, setHasData] = useState(false)
 
     // Load departments from DB (same as dashboard)
@@ -171,7 +173,7 @@ export default function ReportPage() {
         if (selectedDept === "SHELL") {
             const { data: ld } = await supabase
                 .from("shelling_line_daily")
-                .select("work_date,line_code,shift_name,actual_ton,run_hours,downtime_min,manpower,note")
+                .select("work_date,line_code,shift_name,shift_leader,actual_ton,run_hours,downtime_min,manpower,note")
                 .gte("work_date", start)
                 .lte("work_date", end)
                 .order("work_date", { ascending: true })
@@ -280,10 +282,14 @@ export default function ReportPage() {
         XLSX.writeFile(wb, `BaoCao_${dept.code}_${monthLabel.replace("/","-")}.xlsx`)
     }
 
-    // ── Chart Data Computations ──────────────────────────────────────────────
+    const filteredShellingLines = useMemo(() => {
+        if (selectedLeader === "Tất cả") return shellingLines;
+        return shellingLines.filter(r => r.shift_leader === selectedLeader);
+    }, [shellingLines, selectedLeader]);
+
     const perfChartData = (() => {
-        if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
-        const lines = shellingLines.filter(r => r.line_code === selectedShellLine);
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        const lines = filteredShellingLines.filter(r => r.line_code === selectedShellLine);
         const map = new Map<string, any>();
         lines.forEach(r => {
             const dateStr = format(parseISO(r.work_date), 'dd/MM');
@@ -298,9 +304,9 @@ export default function ReportPage() {
     })();
 
     const downChartData = (() => {
-        if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
         const map = new Map<string, any>();
-        shellingLines.forEach(r => {
+        filteredShellingLines.forEach(r => {
             const dateStr = format(parseISO(r.work_date), 'dd/MM');
             if (!map.has(dateStr)) map.set(dateStr, { name: dateStr, A: 0, B: 0, C: 0, D1: 0, D2: 0 });
             const curr = map.get(dateStr);
@@ -310,8 +316,8 @@ export default function ReportPage() {
     })();
 
     const manpowerChartData = (() => {
-        if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
-        const lines = shellingLines.filter(r => r.line_code === selectedShellLine);
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        const lines = filteredShellingLines.filter(r => r.line_code === selectedShellLine);
         const map = new Map<string, any>();
         lines.forEach(r => {
             const dateStr = format(parseISO(r.work_date), 'dd/MM');
@@ -323,6 +329,29 @@ export default function ReportPage() {
             if (r.shift_name === 'Ca 3') curr.Ca3 = Number(eff.toFixed(2));
         });
         return Array.from(map.values());
+    })();
+
+    const leaderCompareData = (() => {
+        if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
+        const map = new Map<string, { leader: string; totalTon: number; totalManpower: number; totalDowntime: number }>();
+        const validLeaders = ['Mrs. Tâm', 'Ms. Linh', 'Mr. Trí'];
+        validLeaders.forEach(l => map.set(l, { leader: l, totalTon: 0, totalManpower: 0, totalDowntime: 0 }));
+        
+        shellingLines.forEach(r => {
+            const l = r.shift_leader;
+            if (l && map.has(l)) {
+                const curr = map.get(l)!;
+                curr.totalTon += Number(r.actual_ton || 0);
+                curr.totalManpower += Number(r.manpower || 0);
+                curr.totalDowntime += Number(r.downtime_min || 0);
+            }
+        });
+        
+        return Array.from(map.values()).map(r => ({
+            name: r.leader,
+            Năng_Suất: r.totalManpower > 0 ? Number((r.totalTon / r.totalManpower).toFixed(3)) : 0,
+            Downtime: r.totalDowntime
+        }));
     })();
 
     const achievePct = summary && summary.totalPlan > 0 ? (summary.totalActual / summary.totalPlan * 100) : null
@@ -429,8 +458,21 @@ export default function ReportPage() {
                     {/* Shelling Lines Summary */}
                     {selectedDept === "SHELL" && (
                         <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-bold">Shelling Lines — Tổng tháng</CardTitle>
+                            <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-slate-50/50">
+                                <CardTitle className="text-sm font-bold text-slate-800">Shelling Lines — Tổng tháng</CardTitle>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Bộ lọc Tổ Trưởng:</span>
+                                    <select 
+                                        value={selectedLeader} 
+                                        onChange={e => setSelectedLeader(e.target.value)}
+                                        className="h-8 text-xs rounded border border-slate-300 bg-white px-2 focus:outline-none focus:border-primary font-medium shadow-sm transition-colors"
+                                    >
+                                        <option value="Tất cả">Tất cả</option>
+                                        <option value="Mrs. Tâm">Mrs. Tâm</option>
+                                        <option value="Ms. Linh">Ms. Linh</option>
+                                        <option value="Mr. Trí">Mr. Trí</option>
+                                    </select>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="overflow-x-auto">
@@ -448,7 +490,7 @@ export default function ReportPage() {
                                         </thead>
                                         <tbody>
                                             {["A","B","C","D1","D2"].flatMap(line => {
-                                                const lineRows = shellingLines.filter(r => r.line_code === line)
+                                                const lineRows = filteredShellingLines.filter(r => r.line_code === line)
                                                 const tons = lineRows.reduce((s,r) => s + Number(r.actual_ton), 0)
                                                 const hours = lineRows.reduce((s,r) => s + Number(r.run_hours), 0)
                                                 const manpower = lineRows.reduce((s,r) => s + Number(r.manpower || 0), 0)
@@ -579,6 +621,29 @@ export default function ReportPage() {
                                                 <Bar dataKey="C" stackId="a" fill="#f59e0b" name="Line C" />
                                                 <Bar dataKey="D1" stackId="a" fill="#ef4444" name="Line D1" />
                                                 <Bar dataKey="D2" stackId="a" fill="#8b5cf6" name="Line D2" />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Chart 4: Leader Comparison */}
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-xs font-bold text-violet-700">So sánh Tổ Trưởng (Tháng)</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-64 w-full mt-2">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={leaderCompareData} margin={{ top: 5, right: -15, left: -25, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
+                                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                                                <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                <Bar yAxisId="left" dataKey="Downtime" name="Downtime (Phút)" fill="#f43f5e" barSize={25} radius={[2, 2, 0, 0]} />
+                                                <Line yAxisId="right" type="monotone" dataKey="Năng_Suất" name="Năng Suất (T/Ng)" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>

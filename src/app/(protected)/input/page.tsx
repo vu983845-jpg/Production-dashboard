@@ -135,6 +135,12 @@ export default function InputPage() {
     })
     
     const shellingFetchRef = useRef<string>("");
+    const SHIFT_LEADERS = ['Mrs. Tâm', 'Ms. Linh', 'Mr. Trí']
+    const [shiftLeaders, setShiftLeaders] = useState<Record<ShellShift, string>>({
+        'Ca 1': '',
+        'Ca 2': '',
+        'Ca 3': ''
+    })
 
 
     // Forms
@@ -571,8 +577,10 @@ export default function InputPage() {
 
         if (data) {
             const newState = { A: initShiftObj(), B: initShiftObj(), C: initShiftObj(), D1: initShiftObj(), D2: initShiftObj() } as Record<ShellLine, Record<ShellShift, ShellLineEntry>>
+            const newLeaders = { 'Ca 1': '', 'Ca 2': '', 'Ca 3': '' } as Record<ShellShift, string>
             data.forEach((r: any) => {
                 const shift = (r.shift_name || 'Ca 1') as ShellShift;
+                if (r.shift_leader) newLeaders[shift] = r.shift_leader;
                 if (SHELLING_LINES.includes(r.line_code)) {
                     newState[r.line_code as ShellLine][shift] = { 
                         actual_ton: Number(r.actual_ton || 0), 
@@ -584,6 +592,7 @@ export default function InputPage() {
                 }
             })
             setShellingLineData(newState)
+            setShiftLeaders(newLeaders)
         }
     }
 
@@ -595,6 +604,7 @@ export default function InputPage() {
                 work_date: formattedDate,
                 line_code: line,
                 shift_name: shift,
+                shift_leader: shiftLeaders[shift] || null,
                 actual_ton: shellingLineData[line as ShellLine][shift].actual_ton,
                 run_hours: shellingLineData[line as ShellLine][shift].run_hours,
                 downtime_min: shellingLineData[line as ShellLine][shift].downtime_min,
@@ -854,6 +864,22 @@ export default function InputPage() {
                                                                     <>
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0 pb-0">
+                                                                                <div className="bg-slate-50/60 border-b px-4 pt-3 pb-2 flex gap-4 overflow-x-auto">
+                                                                                    <p className="text-xs font-semibold text-slate-700 whitespace-nowrap self-center mr-2">👤 Tổ trưởng:</p>
+                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (
+                                                                                        <div key={shift} className="flex flex-col items-start min-w-[120px]">
+                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
+                                                                                            <select
+                                                                                                value={shiftLeaders[shift]}
+                                                                                                onChange={e => setShiftLeaders(prev => ({ ...prev, [shift]: e.target.value }))}
+                                                                                                className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white focus:outline-none focus:border-primary"
+                                                                                            >
+                                                                                                <option value="">-- Trống --</option>
+                                                                                                {SHIFT_LEADERS.map(l => <option key={l} value={l}>{l}</option>)}
+                                                                                            </select>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
                                                                                 <div className="bg-blue-50/60 border-b px-4 pt-3 pb-1">
                                                                                     <p className="text-xs font-semibold text-blue-700 mb-2">📊 Sản lượng theo từng Line (Tấn)</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
