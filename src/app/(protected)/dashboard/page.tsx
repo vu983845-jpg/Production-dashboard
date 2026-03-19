@@ -663,60 +663,63 @@ export default function DashboardPage() {
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                <CardHeader className={`p-3 pb-2 ${(isTotal || isFgwh) ? 'md:p-5 md:pb-3' : 'md:p-3'} bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0 relative z-10`}>
-                    <CardTitle className={`text-sm md:text-base font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 ${(isTotal || isFgwh) ? 'md:gap-4' : ''} ${isTotal ? 'text-primary text-lg' : 'text-slate-800'}`}>
-                        <span className="flex items-center gap-1.5 uppercase tracking-wider whitespace-nowrap">
+                <CardHeader className={`${(isTotal || isFgwh) ? 'p-3 pb-2 md:p-5 md:pb-3' : 'p-2 pb-1.5'} bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0 relative z-10`}>
+                    <CardTitle className={`flex flex-row flex-wrap justify-between items-start md:items-center gap-1.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg md:gap-4 text-primary' : 'text-xs md:text-sm text-slate-800'}`}>
+                        <span className="flex items-center gap-1.5 uppercase font-bold tracking-tight whitespace-nowrap">
+                            {!(isTotal || isFgwh) && <div className={`w-1.5 h-1.5 rounded-full ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'}`} />}
                             {name}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
 
-                        <div className={`flex flex-row flex-wrap items-center gap-2 mt-2 md:mt-0 ${(isTotal || isFgwh) ? 'md:gap-4 xl:gap-6' : ''}`}>
-                            <div className="flex flex-col items-end border-r pr-2 md:pr-3 border-gray-200">
-                                <span className="text-[9px] md:text-[10px] text-muted-foreground mb-0.5">THÁNG / MTD</span>
+                        <div className={`flex flex-row flex-wrap items-center gap-2 mt-1 md:mt-0 ${(isTotal || isFgwh) ? 'md:gap-4 xl:gap-6' : ''}`}>
+                            <div className="flex flex-col items-end border-r pr-2 border-gray-200">
+                                {(isTotal || isFgwh) && <span className="text-[9px] md:text-[10px] text-muted-foreground mb-0.5">THÁNG / MTD</span>}
                                 <div className="flex items-baseline gap-1">
-                                    <span className={`font-black text-slate-800 ${(isTotal || isFgwh) ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'}`}>{actualNum.toFixed(1)}</span>
-                                    <span className="text-[10px] md:text-xs text-muted-foreground">/ {planNum.toFixed(1)} {unit}</span>
+                                    <span className={`font-black text-slate-800 ${(isTotal || isFgwh) ? 'text-2xl md:text-3xl' : 'text-base md:text-lg'}`}>{actualNum.toFixed(1)}</span>
+                                    <span className={`text-muted-foreground ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[9px]'}`}>/ {planNum.toFixed(1)} {unit}</span>
                                 </div>
-                                <span className={`text-[9px] md:text-[10px] font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {variance >= 0 ? `+${variance.toFixed(1)}` : variance.toFixed(1)} {unit}
-                                </span>
+                                {(isTotal || isFgwh) && (
+                                    <span className={`text-[9px] md:text-[10px] font-bold ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {variance >= 0 ? `+${variance.toFixed(1)}` : variance.toFixed(1)} {unit}
+                                    </span>
+                                )}
                             </div>
 
-                            <div className={`flex flex-col items-end ${deptCode === 'PACK' ? 'border-r pr-2 md:pr-3 border-gray-200' : ''}`}>
-                                <span className="text-[9px] md:text-[10px] text-muted-foreground mb-0.5">ACHV %</span>
+                            <div className={`flex flex-col items-end ${deptCode === 'PACK' && (isTotal || isFgwh) ? 'border-r pr-2 md:pr-3 border-gray-200' : ''}`}>
+                                {(isTotal || isFgwh) && <span className="text-[9px] md:text-[10px] text-muted-foreground mb-0.5">ACHV %</span>}
                                 <div className="flex items-center gap-1">
-                                    <span className={`font-black ${summary.achivementPct >= 100 ? 'text-green-600' : 'text-red-600'} ${(isTotal || isFgwh) ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'}`}>
+                                    <span className={`font-black ${summary.achivementPct >= 100 ? 'text-green-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-600'} ${(isTotal || isFgwh) ? 'text-2xl md:text-3xl' : 'text-base md:text-lg'}`}>
                                         {summary.achivementPct.toFixed(0)}%
                                     </span>
-                                    {summary.achivementPct >= 100 ? <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-green-500" /> : <TrendingDown className="h-4 w-4 md:h-5 md:w-5 text-red-500" />}
+                                    {(isTotal || isFgwh) && (summary.achivementPct >= 100 ? <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-green-500" /> : <TrendingDown className="h-4 w-4 md:h-5 md:w-5 text-red-500" />)}
                                 </div>
                             </div>
                         </div>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className={`p-3 pt-3 flex-1 flex flex-col ${(isTotal || isFgwh) ? 'md:p-5 md:pt-4' : 'md:p-3'}`}>
-                    <div className={`grid grid-cols-2 gap-2 mb-2 ${(isTotal || isFgwh) ? 'md:grid-cols-4 md:gap-4 md:mb-4' : ''}`}>
+                <CardContent className={`flex-1 flex flex-col ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
+                    <div className={`grid grid-cols-2 gap-1.5 mb-1 ${(isTotal || isFgwh) ? 'md:grid-cols-4 md:gap-4 md:mb-4' : 'opacity-80'}`}>
                         {(
                             <>
                                         <div>
-                                            <p className="text-xs text-muted-foreground mb-1">{t('daily_needed')}</p>
-                                            <div className={`text-lg font-bold ${isReached ? 'text-green-600' : 'text-primary'}`}>
+                                            <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>{t('daily_needed')}</p>
+                                            <div className={`font-bold ${isReached ? 'text-green-600' : 'text-primary'} ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
                                                 {isReached ? 'Đạt' : `${dailyNeeded} ${unit}`}
                                             </div>
                                         </div>
                                         {id !== 'virtual-container' && (
                                             <div>
-                                                <p className="text-xs text-muted-foreground mb-1">{t('downtime')}</p>
-                                                <div className="text-lg font-bold text-amber-600 flex items-center gap-1">
-                                                    <Clock className="h-4 w-4" /> {summary.downtime}p
+                                                <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>{t('downtime')}</p>
+                                                <div className={`font-bold text-amber-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
+                                                    {(isTotal || isFgwh) && <Clock className="h-4 w-4" />} {summary.downtime}p
                                                 </div>
                                             </div>
                                         )}
 
                                 {["PEEL_MC", "SHELL"].includes(deptCode) && (
                                     <div>
-                                        <p className="text-xs text-muted-foreground mb-1">Tỷ lệ Bể (%)</p>
-                                        <div className="text-lg font-bold text-red-600 flex items-center gap-1">
+                                        <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Tỷ lệ Bể (%)</p>
+                                        <div className={`font-bold text-red-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
                                             {summary.brokenPct.toFixed(1)}%
                                         </div>
                                     </div>
@@ -724,14 +727,14 @@ export default function DashboardPage() {
                                 {deptCode === "SHELL" && (
                                     <>
                                         <div>
-                                            <p className="text-xs text-muted-foreground mb-1">Điện (kWh)</p>
-                                            <div className="text-lg font-bold text-amber-600 flex items-center gap-1">
+                                            <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Điện (kWh)</p>
+                                            <div className={`font-bold text-amber-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
                                                 {summary.totalElectricityConsumption?.toLocaleString()} / {summary.totalTargetElectricityKwh?.toLocaleString()}
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-xs text-muted-foreground mb-1">kWh / Tấn</p>
-                                            <div className="text-lg font-bold text-amber-700 flex items-center gap-1">
+                                            <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>kWh / Tấn</p>
+                                            <div className={`font-bold text-amber-700 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
                                                 {summary.totalActual > 0 ? (summary.totalElectricityConsumption / summary.totalActual).toFixed(2) : "0.00"}
                                             </div>
                                         </div>
@@ -739,38 +742,32 @@ export default function DashboardPage() {
                                 )}
                                 {["PEEL_MC"].includes(deptCode) && (
                                     <div>
-                                        <p className="text-xs text-muted-foreground mb-1">Sót lụa (%)</p>
-                                        <div className="text-lg font-bold text-orange-600 flex items-center gap-1">
+                                        <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Sót lụa (%)</p>
+                                        <div className={`font-bold text-orange-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
                                             {summary.unpeelPct.toFixed(1)}%
                                         </div>
                                     </div>
                                 )}
                                 {["HAND"].includes(deptCode) && (
                                     <div>
-                                        <p className="text-xs text-muted-foreground mb-1">Tỷ lệ ISP (%)</p>
-                                        <div className="text-lg font-bold text-blue-600 flex items-center gap-1">
+                                        <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Tỷ lệ ISP (%)</p>
+                                        <div className={`font-bold text-blue-600 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
                                             {summary.ispPct.toFixed(1)}%
                                         </div>
                                     </div>
                                 )}
                                 {["BORMA"].includes(deptCode) && (
                                     <div>
-                                        <p className="text-xs text-muted-foreground mb-1">Tỷ lệ SW (%)</p>
-                                        <div className="text-lg font-bold text-amber-700 flex items-center gap-1">
+                                        <p className={`text-muted-foreground mb-0.5 ${(isTotal || isFgwh) ? 'text-xs mb-1' : 'text-[9px] tracking-tight'}`}>Tỷ lệ SW (%)</p>
+                                        <div className={`font-bold text-amber-700 flex items-center gap-1 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>
                                             {summary.swPct.toFixed(1)}%
                                         </div>
                                     </div>
                                 )}
                                 {deptCode === "CS" && (
-                                    <div className="col-span-2 md:col-span-2 p-2 rounded-lg bg-blue-50/50 border border-blue-100 h-auto min-h-[80px] md:h-20 mt-auto">
-                                        <GaugeChart
-                                            value={summary.totalActualIspCS || 0}
-                                            target={summary.totalPlanIsp || 100}
-                                            label="ISP (Thực tế / KH)"
-                                            unit="T"
-                                            color="#2563eb"
-                                            height={80}
-                                        />
+                                    <div className={`col-span-2 md:col-span-2 p-1 md:p-2 rounded-md bg-blue-50/50 border border-blue-100 flex items-center justify-between`}>
+                                        <span className={`text-blue-800 font-bold ${(isTotal || isFgwh) ? 'text-sm' : 'text-[10px]'}`}>ISP (Thực tế/KH):</span>
+                                        <span className={`font-black text-blue-600 ${(isTotal || isFgwh) ? 'text-lg' : 'text-[11px]'}`}>{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 100} T</span>
                                     </div>
                                 )}
                             </>
@@ -911,9 +908,9 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className={`w-full mt-auto border-t pt-2 ${(isTotal || isFgwh) ? 'h-36' : 'h-20'}`}>
+                    <div className={`w-full mt-auto border-t ${(isTotal || isFgwh) ? 'h-36 pt-2' : 'h-10 opacity-75'}`}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: (isTotal || isFgwh) ? 25 : 5 }}>
+                            <ComposedChart data={displayHistory} margin={{ top: 2, right: 0, left: 0, bottom: (isTotal || isFgwh) ? 25 : 0 }}>
                                 <XAxis dataKey="name" hide={!(isTotal || isFgwh)} tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={(isTotal || isFgwh) ? 30 : 0} minTickGap={10} tickMargin={5} />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                 {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
@@ -992,16 +989,37 @@ export default function DashboardPage() {
                 </div>
 
                 {selectedDept === 'all' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4 mt-2 md:mb-6 md:mt-4">
-                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                            <GaugeChart value={kpiSummary.steamActual} target={kpiSummary.steamTarget} label="TIẾN ĐỘ HẤP / STEAMING" unit="T" color="#f59e0b" />
-                        </Card>
-                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                            <GaugeChart value={kpiSummary.contActual} target={kpiSummary.contTarget} label="CONTAINER / ĐÓNG CÔNG" unit="Cont" color="#10b981" />
-                        </Card>
-                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                            <GaugeChart value={kpiSummary.totalEmission} target={kpiSummary.totalEmissionTarget} label="TỔNG PHÁT THẢI (SCOPE 1+2)" unit="T CO₂e" color="#ef4444" formatValue={(v) => Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })} />
-                        </Card>
+                    <div className="flex flex-col sm:flex-row gap-2 md:gap-4 mb-4 mt-2 bg-white/40 backdrop-blur-md border border-white/60 p-2 md:p-3 rounded-xl shadow-sm">
+                        <div className="flex-1 flex justify-between items-center px-2 md:px-4 border-b sm:border-b-0 sm:border-r border-slate-300/40 pb-2 sm:pb-0">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${kpiSummary.steamActual >= kpiSummary.steamTarget ? 'bg-emerald-500' : 'bg-amber-500'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
+                                <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">HẤP / STEAM</span>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-lg md:text-2xl font-black text-slate-900">{kpiSummary.steamActual}</span>
+                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {kpiSummary.steamTarget} T</span>
+                            </div>
+                        </div>
+                        <div className="flex-1 flex justify-between items-center px-2 md:px-4 border-b sm:border-b-0 sm:border-r border-slate-300/40 py-2 sm:py-0">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${kpiSummary.contActual >= kpiSummary.contTarget ? 'bg-blue-500' : 'bg-amber-500'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
+                                <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CONTAINER</span>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-lg md:text-2xl font-black text-slate-900">{kpiSummary.contActual}</span>
+                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {kpiSummary.contTarget} C</span>
+                            </div>
+                        </div>
+                        <div className="flex-1 flex justify-between items-center px-2 md:px-4 pt-2 sm:pt-0">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'bg-rose-500' : 'bg-red-600'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
+                                <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CO₂e (SCOPE 1+2)</span>
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-lg md:text-2xl font-black text-slate-900">{Number(kpiSummary.totalEmission).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {kpiSummary.totalEmissionTarget} T</span>
+                            </div>
+                        </div>
                     </div>
                 )}
 
