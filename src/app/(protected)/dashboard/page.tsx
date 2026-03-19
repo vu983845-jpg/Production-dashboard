@@ -992,8 +992,8 @@ export default function DashboardPage() {
                                 <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">HẤP / STEAM</span>
                             </div>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-lg md:text-2xl font-black text-slate-900">{kpiSummary.steamActual}</span>
-                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {kpiSummary.steamTarget} T</span>
+                                <span className="text-lg md:text-2xl font-black text-slate-900">{Number(kpiSummary.steamActual).toLocaleString(undefined, {maximumFractionDigits:1})}</span>
+                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {Number(kpiSummary.steamTarget).toLocaleString(undefined, {maximumFractionDigits:1})} T</span>
                             </div>
                         </div>
                         <div className="flex-1 flex justify-between items-center px-2 md:px-4 border-b sm:border-b-0 sm:border-r border-slate-300/40 py-2 sm:py-0">
@@ -1002,8 +1002,8 @@ export default function DashboardPage() {
                                 <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CONTAINER</span>
                             </div>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-lg md:text-2xl font-black text-slate-900">{kpiSummary.contActual}</span>
-                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {kpiSummary.contTarget} C</span>
+                                <span className="text-lg md:text-2xl font-black text-slate-900">{Number(kpiSummary.contActual).toLocaleString(undefined, {maximumFractionDigits:1})}</span>
+                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {Number(kpiSummary.contTarget).toLocaleString(undefined, {maximumFractionDigits:1})} C</span>
                             </div>
                         </div>
                         <div className="flex-1 flex justify-between items-center px-2 md:px-4 pt-2 sm:pt-0">
