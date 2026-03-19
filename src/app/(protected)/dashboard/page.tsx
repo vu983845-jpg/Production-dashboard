@@ -613,9 +613,12 @@ export default function DashboardPage() {
 
         if (isFgwh) {
             return (
-                <Card key={id} className="bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full border-primary/50 border-2">
-                    <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gray-50/50 border-b flex-shrink-0">
-                        <CardTitle className="text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 text-primary">
+                <Card key={id} className="bg-white/70 backdrop-blur-xl border border-white/50 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col h-full ring-1 ring-black/5">
+                    {/* Glossy highlight effect on top edge */}
+                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent z-10"></div>
+                    
+                    <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0">
+                        <CardTitle className="text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 text-slate-800">
                             <span className="flex items-center gap-2 whitespace-nowrap">
                                 FGWH - Kho Thành Phẩm
                                 <FileSymlink className="h-4 w-4 text-primary" />
@@ -655,9 +658,13 @@ export default function DashboardPage() {
         }
 
         return (
-            <Card key={id} className={`bg-white shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col h-full ${isTotal ? 'border-primary/50 border-2' : ''}`}>
-                <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gray-50/50 border-b flex-shrink-0">
-                    <CardTitle className={`text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 ${isTotal ? 'text-primary' : ''}`}>
+            <Card key={id} className={`bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col h-full ring-1 ring-black/5 ${isTotal ? 'ring-primary/40 shadow-primary/10' : ''}`}>
+                {/* Subtle gradient glow in background */}
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0 relative z-10">
+                    <CardTitle className={`text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 ${isTotal ? 'text-primary' : 'text-slate-800'}`}>
                         <span className="flex items-center gap-2 uppercase tracking-wider whitespace-nowrap">
                             {name}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
@@ -943,11 +950,14 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="flex-col md:flex">
+        <div className="flex-col md:flex w-full relative z-0">
+            {/* Ambient Background Gradient for Glassmorphism to pop out */}
+            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-emerald-50 pointer-events-none -z-10"></div>
+            
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 border-b pb-4 mb-4">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 pb-4 mb-4 backdrop-blur-sm sticky top-0 z-40 bg-white/40 border-b border-white/60 rounded-b-2xl px-2">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">{t('command_center')}</h2>
+                        <h2 className="text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 drop-shadow-sm">{t('command_center')}</h2>
                     </div>
                     <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
                         <TabsList>
@@ -984,13 +994,13 @@ export default function DashboardPage() {
 
                 {selectedDept === 'all' && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4 mt-2 md:mb-6 md:mt-4">
-                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white">
+                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <GaugeChart value={kpiSummary.steamActual} target={kpiSummary.steamTarget} label="TIẾN ĐỘ HẤP / STEAMING" unit="T" color="#f59e0b" />
                         </Card>
-                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white">
+                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <GaugeChart value={kpiSummary.contActual} target={kpiSummary.contTarget} label="CONTAINER / ĐÓNG CÔNG" unit="Cont" color="#10b981" />
                         </Card>
-                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white">
+                        <Card className="p-3 md:p-4 flex flex-col justify-center pb-2 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                             <GaugeChart value={kpiSummary.totalEmission} target={kpiSummary.totalEmissionTarget} label="TỔNG PHÁT THẢI (SCOPE 1+2)" unit="T CO₂e" color="#ef4444" formatValue={(v) => Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })} />
                         </Card>
                     </div>
@@ -1025,11 +1035,12 @@ export default function DashboardPage() {
 
             {
                 selectedDept === 'all' && energyHistory.length > 0 && (
-                    <Card className="mt-3 md:mt-4 bg-white">
-                        <CardHeader className="p-3 pb-2 md:p-5 md:pb-3">
-                            <CardTitle className="text-xl">Theo dõi Điện - Nước - Củi ({format(selectedMonth, 'MM/yyyy')})</CardTitle>
+                    <Card className="mt-3 md:mt-4 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-blue-500/5 pointer-events-none"></div>
+                        <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-white/40 border-b border-white/50 relative z-10">
+                            <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">Theo dõi Điện - Nước - Củi ({format(selectedMonth, 'MM/yyyy')})</CardTitle>
                         </CardHeader>
-                        <CardContent className="p-2 pt-0 md:p-5 md:pt-0">
+                        <CardContent className="p-2 pt-4 md:p-5 md:pt-4 relative z-10">
                             {/* DESKTOP VIEW: Combined Chart with 3 Y-Axes */}
                             <div className="hidden md:block h-80 w-full pb-4">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -1104,13 +1115,13 @@ export default function DashboardPage() {
             }
 
             <div className="grid gap-4 mt-4">
-                <Card className="bg-white">
-                    <CardHeader>
-                        <CardTitle className="text-xl">{t('master_data_table')}</CardTitle>
+                <Card className="bg-white/70 backdrop-blur-xl border border-white/50 shadow-md">
+                    <CardHeader className="border-b border-white/50 bg-white/40">
+                        <CardTitle className="text-xl font-bold text-slate-800">{t('master_data_table')}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
+                    <CardContent className="p-0">
+                        <Table className="bg-transparent">
+                            <TableHeader className="bg-slate-50/50">
                                 {selectedDept === 'all' ? (
                                     <TableRow>
                                         <TableHead>{t('col_dept')}</TableHead>
