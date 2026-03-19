@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
 import { cn } from "@/lib/utils"
+import { ddsClient } from "@/lib/supabase/dds-client"
 
 export type MonthlyEnergyRecord = {
     work_date: string;
@@ -573,7 +574,63 @@ export default function InputPage() {
             .select('*')
             .eq('work_date', formattedDate)
             
+        // Fetch DDS downtime
+        const prevDay = format(subDays(date, 1), "yyyy-MM-dd")
+        const nextDay = format(subDays(date, -1), "yyyy-MM-dd")
+        const { data: ddsIssues } = await ddsClient
+            .from('issues')
+            .select('department, duration_mins, start_time, machine_area')
+            .eq('is_downtime', true)
+            .eq('status', 'Closed')
+            .eq('department', 'Shelling')
+            .gte('start_time', `${prevDay}T00:00:00Z`)
+            .lte('start_time', `${nextDay}T23:59:59Z`)
+
         if (shellingFetchRef.current !== currentRef) return; // Race condition escape
+
+        // Map DDS issues to Line and Shift
+        const ddsDownMap: Record<ShellLine, Record<ShellShift, number>> = {
+            A: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+            B: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+            C: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+            D1: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+            D2: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+        }
+        
+        if (ddsIssues) {
+            const targetDateStr = formattedDate
+            ddsIssues.forEach((iss: any) => {
+                const area = (iss.machine_area || "").toUpperCase()
+                let targetLine: ShellLine | null = null
+                if (area.includes('D2')) targetLine = 'D2'
+                else if (area.includes('D1')) targetLine = 'D1'
+                else if (area.includes('A')) targetLine = 'A'
+                else if (area.includes('B')) targetLine = 'B'
+                else if (area.includes('C')) targetLine = 'C'
+                
+                if (targetLine) {
+                    const st = new Date(iss.start_time)
+                    const vnHour = (st.getUTCHours() + 7) % 24
+                    const vnDate = new Date(st.getTime() + 7 * 60 * 60 * 1000)
+                    const vnDateStr = vnDate.toISOString().split('T')[0]
+                    
+                    let issueWorkDate = vnDateStr;
+                    if (vnHour >= 0 && vnHour < 6) {
+                        const prev = new Date(vnDate.getTime() - 24 * 60 * 60 * 1000)
+                        issueWorkDate = prev.toISOString().split('T')[0]
+                    }
+                    
+                    if (issueWorkDate === targetDateStr) {
+                        let shift: ShellShift = 'Ca 1'
+                        if (vnHour >= 6 && vnHour < 14) shift = 'Ca 1'
+                        else if (vnHour >= 14 && vnHour < 22) shift = 'Ca 2'
+                        else shift = 'Ca 3'
+                        
+                        ddsDownMap[targetLine][shift] += Number(iss.duration_mins || 0)
+                    }
+                }
+            })
+        }
 
         if (data) {
             const newState = { A: initShiftObj(), B: initShiftObj(), C: initShiftObj(), D1: initShiftObj(), D2: initShiftObj() } as Record<ShellLine, Record<ShellShift, ShellLineEntry>>
@@ -585,14 +642,31 @@ export default function InputPage() {
                     newState[r.line_code as ShellLine][shift] = { 
                         actual_ton: Number(r.actual_ton || 0), 
                         run_hours: Number(r.run_hours || 0), 
-                        downtime_min: Number(r.downtime_min || 0),
+                        downtime_min: ddsDownMap[r.line_code as ShellLine][shift], // Override with sync data
                         manpower: Number(r.manpower || 0),
                         note: r.note || '' 
                     }
                 }
             })
+            // Fill missing db lines with synced down map
+            SHELLING_LINES.forEach(l => {
+                (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).forEach(s => {
+                    if (newState[l][s].downtime_min === 0 && ddsDownMap[l][s] > 0) {
+                        newState[l][s].downtime_min = ddsDownMap[l][s]
+                    }
+                })
+            })
             setShellingLineData(newState)
             setShiftLeaders(newLeaders)
+        } else {
+            // No data in db yet, set just downtime
+            const newState = { A: initShiftObj(), B: initShiftObj(), C: initShiftObj(), D1: initShiftObj(), D2: initShiftObj() } as Record<ShellLine, Record<ShellShift, ShellLineEntry>>
+            SHELLING_LINES.forEach(l => {
+                (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).forEach(s => {
+                    newState[l][s].downtime_min = ddsDownMap[l][s]
+                })
+            })
+            setShellingLineData(newState)
         }
     }
 
@@ -600,19 +674,27 @@ export default function InputPage() {
         setIsSaving(true)
         const formattedDate = format(date, "yyyy-MM-dd")
         const payload = SHELLING_LINES.flatMap(line => 
-            (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => ({
-                work_date: formattedDate,
-                line_code: line,
-                shift_name: shift,
-                shift_leader: shiftLeaders[shift] || null,
-                actual_ton: shellingLineData[line as ShellLine][shift].actual_ton,
-                run_hours: shellingLineData[line as ShellLine][shift].run_hours,
-                downtime_min: shellingLineData[line as ShellLine][shift].downtime_min,
-                manpower: shellingLineData[line as ShellLine][shift].manpower,
-                note: shellingLineData[line as ShellLine][shift].note || null,
-                updated_by: userId,
-                updated_at: new Date().toISOString()
-            }))
+            (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => {
+                const sData = shellingLineData[line as ShellLine][shift];
+                const aTon = sData.actual_ton || 0;
+                const dMin = sData.downtime_min || 0;
+                const mp = sData.manpower || 0;
+                const runHrs = (aTon > 0 || mp > 0 || dMin > 0) ? Math.max(0, 7 - dMin / 60) : 0;
+
+                return {
+                    work_date: formattedDate,
+                    line_code: line,
+                    shift_name: shift,
+                    shift_leader: shiftLeaders[shift] || null,
+                    actual_ton: aTon,
+                    run_hours: runHrs,
+                    downtime_min: dMin,
+                    manpower: mp,
+                    note: sData.note || null,
+                    updated_by: userId,
+                    updated_at: new Date().toISOString()
+                }
+            })
         )
         const { error } = await supabase.from('shelling_line_daily').upsert(payload, { onConflict: 'work_date,line_code,shift_name' })
         if (error) {
@@ -928,17 +1010,22 @@ export default function InputPage() {
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
                                                                                             <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => (
+                                                                                                {SHELLING_LINES.map(line => {
+                                                                                                    const aTon = shellingLineData[line]?.[shift]?.actual_ton || 0;
+                                                                                                    const dMin = shellingLineData[line]?.[shift]?.downtime_min || 0;
+                                                                                                    const mp = shellingLineData[line]?.[shift]?.manpower || 0;
+                                                                                                    const runHrs = (aTon > 0 || mp > 0 || dMin > 0) ? Math.max(0, 7 - dMin / 60) : 0;
+                                                                                                    return (
                                                                                                     <div key={`${line}-${shift}`} className="flex flex-col items-center">
                                                                                                         <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
                                                                                                         <input
-                                                                                                            type="number" step="0.1" min="0" max="24"
-                                                                                                            className="w-full text-right p-1 rounded border-2 border-green-300 bg-white text-sm focus:outline-none"
-                                                                                                            value={shellingLineData[line]?.[shift]?.run_hours || ''}
-                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], run_hours: Number(e.target.value) || 0 } } }))}
+                                                                                                            type="number" step="0.1" min="0" max="24" readOnly
+                                                                                                            className="w-full text-right p-1 rounded border-2 border-green-300 bg-green-50 text-sm focus:outline-none text-green-800 font-semibold cursor-not-allowed"
+                                                                                                            value={runHrs > 0 ? runHrs.toFixed(1) : ''}
+                                                                                                            title="Tự động tính = 7 giờ - Dừng máy"
                                                                                                         />
                                                                                                     </div>
-                                                                                                ))}
+                                                                                                )})}
                                                                                             </div>
                                                                                         </div>
                                                                                     ))}
@@ -957,10 +1044,10 @@ export default function InputPage() {
                                                                                                     <div key={`${line}-${shift}`} className="flex flex-col items-center">
                                                                                                         <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
                                                                                                         <input
-                                                                                                            type="number" step="1" min="0"
-                                                                                                            className="w-full text-right p-1 rounded border-2 border-red-200 bg-white text-sm focus:outline-none"
+                                                                                                            type="number" step="1" min="0" readOnly
+                                                                                                            className="w-full text-right p-1 rounded border-2 border-red-200 bg-red-50 text-sm focus:outline-none text-red-700 font-semibold cursor-not-allowed"
                                                                                                             value={shellingLineData[line]?.[shift]?.downtime_min || ''}
-                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], downtime_min: Number(e.target.value) || 0 } } }))}
+                                                                                                            title="Dữ liệu tự động đồng bộ từ Hệ thống Cảnh báo Sự cố"
                                                                                                         />
                                                                                                     </div>
                                                                                                 ))}
