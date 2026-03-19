@@ -333,9 +333,9 @@ export default function ReportPage() {
 
     const leaderCompareData = (() => {
         if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
-        const map = new Map<string, { leader: string; totalTon: number; totalManpower: number; totalDowntime: number }>();
+        const map = new Map<string, { leader: string; totalTon: number; totalManpower: number; totalDowntime: number; totalRunHours: number }>();
         const validLeaders = ['Mrs. Tâm', 'Ms. Linh', 'Mr. Trí'];
-        validLeaders.forEach(l => map.set(l, { leader: l, totalTon: 0, totalManpower: 0, totalDowntime: 0 }));
+        validLeaders.forEach(l => map.set(l, { leader: l, totalTon: 0, totalManpower: 0, totalDowntime: 0, totalRunHours: 0 }));
         
         shellingLines.forEach(r => {
             const l = r.shift_leader;
@@ -344,13 +344,16 @@ export default function ReportPage() {
                 curr.totalTon += Number(r.actual_ton || 0);
                 curr.totalManpower += Number(r.manpower || 0);
                 curr.totalDowntime += Number(r.downtime_min || 0);
+                curr.totalRunHours += Number(r.run_hours || 0);
             }
         });
         
         return Array.from(map.values()).map(r => ({
             name: r.leader,
-            Năng_Suất: r.totalManpower > 0 ? Number((r.totalTon / r.totalManpower).toFixed(3)) : 0,
-            Downtime: r.totalDowntime
+            Sản_Lượng: Number(r.totalTon.toFixed(2)),
+            Downtime: r.totalDowntime,
+            Hiệu_Suất_T_h: r.totalRunHours > 0 ? Number((r.totalTon / r.totalRunHours).toFixed(3)) : 0,
+            Năng_Suất_TNg: r.totalManpower > 0 ? Number((r.totalTon / r.totalManpower).toFixed(3)) : 0
         }));
     })();
 
@@ -628,22 +631,26 @@ export default function ReportPage() {
                             </Card>
 
                             {/* Chart 4: Leader Comparison */}
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-xs font-bold text-violet-700">So sánh Tổ Trưởng (Tháng)</CardTitle>
+                            <Card className="col-span-1 lg:col-span-3">
+                                <CardHeader className="pb-0">
+                                    <CardTitle className="text-sm font-bold text-violet-700">So sánh Tổng quan Tổ Trưởng (Tháng)</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="h-64 w-full mt-2">
+                                    <div className="h-72 w-full mt-4">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={leaderCompareData} margin={{ top: 5, right: -15, left: -25, bottom: 0 }}>
+                                            <ComposedChart data={leaderCompareData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 'bold' }} />
                                                 <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
                                                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-                                                <Tooltip contentStyle={{ fontSize: '11px' }} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                <Bar yAxisId="left" dataKey="Downtime" name="Downtime (Phút)" fill="#f43f5e" barSize={25} radius={[2, 2, 0, 0]} />
-                                                <Line yAxisId="right" type="monotone" dataKey="Năng_Suất" name="Năng Suất (T/Ng)" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} />
+                                                <Tooltip contentStyle={{ fontSize: '13px' }} cursor={{fill: 'transparent'}} />
+                                                <Legend wrapperStyle={{ fontSize: '12px', bottom: -5 }} />
+                                                
+                                                <Bar yAxisId="left" dataKey="Sản_Lượng" name="Tổng Sản lượng (Tấn)" fill="#3b82f6" barSize={40} radius={[4, 4, 0, 0]} />
+                                                <Bar yAxisId="left" dataKey="Downtime" name="Tổng Dừng máy (Phút)" fill="#f43f5e" barSize={40} radius={[4, 4, 0, 0]} />
+                                                
+                                                <Line yAxisId="right" type="monotone" dataKey="Hiệu_Suất_T_h" name="Hiệu suất (Tấn/Giờ)" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} />
+                                                <Line yAxisId="right" type="monotone" dataKey="Năng_Suất_TNg" name="Năng suất (Tấn/Người)" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 5 }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
