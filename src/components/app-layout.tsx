@@ -59,7 +59,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             title: t("nav.input"),
             href: "/input",
             icon: ClipboardEdit,
-            roles: ["admin", "dept_user"],
+            roles: ["admin", "dept_user", "HSE", "maint"],
         },
         {
             title: t("nav.plan"),

@@ -2047,7 +2047,7 @@ export default function InputPage() {
                 )}
 
                 {/* OTHER ELECTRICITY METER TAB */}
-                {(role === 'admin' || role === 'HSE') && <TabsContent value="other-elec" className="space-y-4">
+                {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsContent value="other-elec" className="space-y-4">
                     <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative">
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-4">
