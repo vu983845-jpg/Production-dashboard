@@ -181,7 +181,10 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             <footer className="mt-auto border-t bg-background px-4 py-3 sm:px-6">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                     <UserGuide />
-                    <span className="text-xs text-muted-foreground/60 italic font-medium">V.H</span>
+                    <div className="flex items-center gap-4">
+                        <img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=vicc-la-dashboard&count_bg=%233B82F6&title_bg=%231E293B&title=L%C6%B0%E1%BB%A3t+truy+c%E1%BA%ADp&edge_flat=true" alt="Lượt truy cập" className="h-4 opacity-80 hover:opacity-100 transition-opacity" />
+                        <span className="text-xs text-muted-foreground/60 italic font-medium">V.H</span>
+                    </div>
                 </div>
             </footer>
         </div>
