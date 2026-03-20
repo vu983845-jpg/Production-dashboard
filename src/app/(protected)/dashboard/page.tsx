@@ -494,7 +494,8 @@ export default function DashboardPage() {
                             const m2 = Math.max(0, (curr.meter2||0) - (prev.meter2||0)) * 1000;
                             const m3 = Math.max(0, (curr.meter3||0) - (prev.meter3||0)) * 1000;
                             const dailyTotal = m1 + m2 + m3;
-                            dailyCompressorKwhMap[curr.work_date] = dailyTotal;
+                            const normalizedDate = format(new Date(curr.work_date), 'yyyy-MM-dd');
+                            dailyCompressorKwhMap[normalizedDate] = dailyTotal;
                             totalCompressorKwhMtd += dailyTotal;
                         }
                     });
@@ -507,7 +508,8 @@ export default function DashboardPage() {
                         
                         // Inject into history for the line chart
                         dashboards[key].history = dashboards[key].history.map((h: any) => {
-                            const kwh = dailyCompressorKwhMap[h.workDate] || 0;
+                            const normalizedHDate = format(new Date(h.workDate), 'yyyy-MM-dd');
+                            const kwh = dailyCompressorKwhMap[normalizedHDate] || 0;
                             return {
                                 ...h,
                                 Intensity: h.Actual > 0 ? Number((kwh / h.Actual).toFixed(2)) : 0
@@ -1014,7 +1016,7 @@ export default function DashboardPage() {
                                     {(deptCode === "SHELL" || deptCode === "PEEL_MC") && (
                                         <>
                                             <YAxis yAxisId="intensity" orientation="right" hide />
-                                            <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke={deptCode === "PEEL_MC" ? "#9333ea" : "#f59e0b"} dot={false} strokeWidth={2} name="kWh/T" />
+                                            <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name="kWh/T" />
                                         </>
                                     )}
                                     <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
