@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, startOfMonth, startOfWeek, isSunday, endOfMonth, addDays } from "date-fns"
+import { format, startOfMonth, startOfWeek, isSunday, endOfMonth, addDays, subDays } from "date-fns"
 import { vi } from "date-fns/locale"
 import {
     FileSymlink,
@@ -468,6 +468,40 @@ export default function DashboardPage() {
                         history: contHistory
                     };
                 }
+
+                // 2.5 Fetch Compressor MTD Data for PEEL_MC and CS
+                const prevMonthDateStr = format(subDays(startOfMonth(selectedMonth), 1), "yyyy-MM-dd");
+                const { data: compData } = await supabase
+                    .from('daily_compressor')
+                    .select('*')
+                    .gte('work_date', prevMonthDateStr) // Get from prev day to calculate first day diff
+                    .lte('work_date', endFilter)
+                    .order('work_date');
+
+                let totalCompressorKwhMtd = 0;
+                if (compData && compData.length > 0) {
+                    const mapByDate = Object.fromEntries(compData.map(c => [c.work_date, c]));
+                    const daysInSelectedMonth = compData.filter(c => c.work_date >= startFilter);
+                    
+                    daysInSelectedMonth.forEach(curr => {
+                        // Try to find previous day
+                        const prevDateStr = format(subDays(new Date(curr.work_date), 1), "yyyy-MM-dd");
+                        const prev = mapByDate[prevDateStr];
+                        if (prev) {
+                            const m1 = Math.max(0, (curr.meter1||0) - (prev.meter1||0)) * 1000;
+                            const m2 = Math.max(0, (curr.meter2||0) - (prev.meter2||0)) * 1000;
+                            const m3 = Math.max(0, (curr.meter3||0) - (prev.meter3||0)) * 1000;
+                            totalCompressorKwhMtd += (m1 + m2 + m3);
+                        }
+                    });
+                }
+
+                Object.keys(dashboards).forEach(key => {
+                    const deptInfo = departments.find(d => d.id === key);
+                    if (deptInfo && (deptInfo.code === 'PEEL_MC' || deptInfo.code === 'CS')) {
+                        dashboards[key].summary.totalCompressorKwhMtd = totalCompressorKwhMtd;
+                    }
+                });
             }
 
             setDashboardsData(dashboards);
@@ -678,7 +712,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : 'grid-cols-3'} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
+                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((['PEEL_MC', 'CS'].includes(deptCode) && summary.totalCompressorKwhMtd !== undefined && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
                         <div className="flex flex-col items-center justify-center px-1">
                             <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>MTD / KH</span>
                             <div className="flex items-baseline gap-0.5 mt-0.5">
@@ -699,6 +733,15 @@ export default function DashboardPage() {
                                 <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>DOWNTIME</span>
                                 <div className={`font-bold mt-0.5 text-amber-600 flex items-center gap-0.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'}`}>
                                     {(isTotal || isFgwh) && <Clock className="h-3 w-3" />} {Number((summary.downtime / 60).toFixed(1))}h
+                                </div>
+                            </div>
+                        )}
+
+                        {(['PEEL_MC', 'CS'].includes(deptCode) && summary.totalCompressorKwhMtd !== undefined && !isTotal) && (
+                            <div className="flex flex-col items-center justify-center px-1">
+                                <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>Đ. NÉN KHÍ</span>
+                                <div className={`font-bold mt-0.5 text-purple-600 flex items-center gap-0.5 text-[10px] md:text-xs`}>
+                                    {summary.totalCompressorKwhMtd.toLocaleString('en-US', {maximumFractionDigits: 0})} <span className="text-[8px] font-normal text-slate-400">kWh</span>
                                 </div>
                             </div>
                         )}
