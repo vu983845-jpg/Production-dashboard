@@ -1062,16 +1062,17 @@ export default function DashboardPage() {
                         {/* Total Factory Card - Full Width / 2 columns */}
                         <div className="lg:col-span-1">{renderMiniDashboard("all", t('all_factory_card'), true)}</div>
 
-                        {/* FGWH Finished Goods Warehouse Card */}
-                        <div className="lg:col-span-1">{renderMiniDashboard("fgwh", "FGWH - Kho Thành Phẩm", true)}</div>
+                        {/* Virtual Container Card */}
+                        <div className="lg:col-span-1">{renderMiniDashboard("virtual-container", "Container")}</div>
                     </div>
 
                     {/* DEPARTMENT MINI DASHBOARDS (DENSE BENTO GRID) */}
                     <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                        {/* Department Cards - exclude FGWH since it has its own card above */}
+                        {/* Department Cards - exclude FGWH since it will be appended separately below */}
                         {departments.filter(d => d.code !== 'FGWH').map(d => renderMiniDashboard(d.id, d.name_en))}
-                        {/* Virtual Container Card */}
-                        {renderMiniDashboard("virtual-container", "Container")}
+                        
+                        {/* FGWH Finished Goods Warehouse Card */}
+                        {renderMiniDashboard("fgwh", "FGWH - Kho Thành Phẩm", true)}
                     </div>
                 </TabsContent>
 
