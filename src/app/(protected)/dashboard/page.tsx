@@ -49,7 +49,9 @@ export default function DashboardPage() {
     const [shellingLineMonthData, setShellingLineMonthData] = useState<Record<string, { actual_ton: number; run_hours: number }>>({})
     const [deptViewModes, setDeptViewModes] = useState<Record<string, 'chart' | 'details' | 'lines' | 'isp'>>({})
     const [shellingSubView, setShellingSubView] = useState<'production' | 'capacity'>('production')
-    const [showCo2Intensity, setShowCo2Intensity] = useState(false)
+    const [showCo2Intensity, setShowCo2Intensity] = useState(false);
+    
+    const [debugProps, setDebugProps] = useState<any>({});
 
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
     const [kpiSummary, setKpiSummary] = useState({
@@ -481,6 +483,8 @@ export default function DashboardPage() {
 
                 let totalCompressorKwhMtd = 0;
                 let dailyCompressorKwhMap: Record<string, number> = {};
+                let localDebugProps: any = { compDataLength: compData?.length || 0, mapKeys: [] };
+                
                 if (compData && compData.length > 0) {
                     const mapByDate = Object.fromEntries(compData.map(c => [c.work_date, c]));
                     const daysInSelectedMonth = compData.filter(c => c.work_date >= startFilter);
@@ -499,7 +503,10 @@ export default function DashboardPage() {
                             totalCompressorKwhMtd += dailyTotal;
                         }
                     });
+                    localDebugProps.mapKeys = Object.keys(dailyCompressorKwhMap);
                 }
+                localDebugProps.totalKwh = totalCompressorKwhMtd;
+                setDebugProps(localDebugProps);
 
                 Object.keys(dashboards).forEach(key => {
                     const deptInfo = departments.find(d => d.id === key);
@@ -1039,9 +1046,10 @@ export default function DashboardPage() {
                         </ResponsiveContainer>
                         
                         {deptCode === 'PEEL_MC' && (
-                            <div className="absolute top-0 left-0 text-[8px] bg-black text-lime-400 p-1 rounded z-50 pointer-events-none opacity-80 max-h-32 overflow-hidden">
-                                {displayHistory.filter((h:any) => h.Intensity > 0).map((h:any) => `${h.workDate}: ${h.Intensity}`).join(" | ")}
-                                {displayHistory.filter((h:any) => h.Intensity > 0).length === 0 && "NO INTENSITY DATA"}
+                            <div className="absolute top-0 left-0 text-[8px] bg-black text-lime-400 p-1 rounded z-50 pointer-events-none opacity-80 overflow-hidden line-clamp-6 w-full">
+                                D_MAP_KEYS: {debugProps.mapKeys?.join(",") || "NONE"} <br/>
+                                C_LEN: {debugProps.compDataLength} | TOTAL: {debugProps.totalKwh} <br/>
+                                ERR: {displayHistory.filter((h:any) => h.Intensity > 0).length === 0 ? "NO HIST INTENSITY" : "OK"}
                             </div>
                         )}
                     </div>
