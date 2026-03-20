@@ -738,7 +738,12 @@ export default function ReportPage() {
                             {/* Chart 6: Size Performance */}
                             <Card className="col-span-1 lg:col-span-3 lg:col-start-1">
                                 <CardHeader className="pb-0">
-                                    <CardTitle className="text-sm font-bold text-teal-700">Phân tích Hiệu suất & Tỷ lệ Bể theo Kích cỡ (Size)</CardTitle>
+                                    <div className="flex flex-col gap-1">
+                                        <CardTitle className="text-sm font-bold text-teal-700">Phân tích Hiệu suất & Tỷ lệ Bể theo Kích cỡ (Size)</CardTitle>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                                            💡 <span className="font-semibold text-slate-700">Mẹo Xem:</span> Di chuột (hover) vào hình cột để xem danh sách các Máy (Line) đang chạy Size hạt đó. Hoặc cuộn xuống bảng <span className="font-semibold">Chi tiết từng ca Shelling</span> cuối trang để xem cụ thể.
+                                        </p>
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
