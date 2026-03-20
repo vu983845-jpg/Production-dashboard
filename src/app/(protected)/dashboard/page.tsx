@@ -509,8 +509,10 @@ export default function DashboardPage() {
                 setDebugProps(localDebugProps);
 
                 Object.keys(dashboards).forEach(key => {
-                    const deptInfo = departments.find(d => d.id === key);
-                    if (deptInfo && deptInfo.code === 'PEEL_MC') {
+                    const recordsInfo = grouped[key] || [];
+                    const dCode = recordsInfo.length > 0 ? recordsInfo[0].dept_code : null;
+
+                    if (dCode === 'PEEL_MC') {
                         dashboards[key].summary.totalCompressorKwhMtd = totalCompressorKwhMtd;
                         
                         // Inject into history for the line chart
@@ -1047,9 +1049,7 @@ export default function DashboardPage() {
                         
                         {deptCode === 'PEEL_MC' && (
                             <div className="absolute top-0 left-0 text-[8px] bg-black text-lime-400 p-1 rounded z-50 pointer-events-none opacity-80 overflow-hidden line-clamp-6 w-full">
-                                D_MAP_KEYS: {debugProps.mapKeys?.join(",") || "NONE"} <br/>
-                                C_LEN: {debugProps.compDataLength} | TOTAL: {debugProps.totalKwh} <br/>
-                                ERR: {displayHistory.filter((h:any) => h.Intensity > 0).length === 0 ? "NO HIST INTENSITY" : "OK"}
+                                ERR: {displayHistory.filter((h:any) => h.Intensity > 0).length === 0 ? "NO HIST INT" : "OK"} | MAP: {debugProps.mapKeys?.length} DYS
                             </div>
                         )}
                     </div>
