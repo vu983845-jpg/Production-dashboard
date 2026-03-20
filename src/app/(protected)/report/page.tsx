@@ -378,33 +378,37 @@ export default function ReportPage() {
 
     const sizePerfChartData = (() => {
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
-        const map = new Map<string, { size: string, totalTon: number, totalRunHours: number }>();
+        const map = new Map<string, { size: string, totalTon: number, totalRunHours: number, lines: Set<string> }>();
         filteredShellingLines.forEach(r => {
             if (!r.size) return;
-            if (!map.has(r.size)) map.set(r.size, { size: r.size, totalTon: 0, totalRunHours: 0 });
+            if (!map.has(r.size)) map.set(r.size, { size: r.size, totalTon: 0, totalRunHours: 0, lines: new Set() });
             const curr = map.get(r.size)!;
             curr.totalTon += Number(r.actual_ton || 0);
             curr.totalRunHours += Number(r.run_hours || 0);
+            if (r.line_code) curr.lines.add(r.line_code);
         });
         return Array.from(map.values()).map(r => ({
             name: r.size,
-            Hiệu_Suất_T_h: r.totalRunHours > 0 ? Number((r.totalTon / r.totalRunHours).toFixed(3)) : 0
+            Hiệu_Suất_T_h: r.totalRunHours > 0 ? Number((r.totalTon / r.totalRunHours).toFixed(3)) : 0,
+            Lines: Array.from(r.lines).sort().join(', ')
         })).sort((a,b) => a.name.localeCompare(b.name));
     })();
 
     const sizeBrokenChartData = (() => {
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
-        const map = new Map<string, { size: string, totalBroken: number, count: number }>();
+        const map = new Map<string, { size: string, totalBroken: number, count: number, lines: Set<string> }>();
         filteredShellingLines.forEach(r => {
             if (!r.size || !Number(r.broken_pct)) return;
-            if (!map.has(r.size)) map.set(r.size, { size: r.size, totalBroken: 0, count: 0 });
+            if (!map.has(r.size)) map.set(r.size, { size: r.size, totalBroken: 0, count: 0, lines: new Set() });
             const curr = map.get(r.size)!;
             curr.totalBroken += Number(r.broken_pct);
             curr.count += 1;
+            if (r.line_code) curr.lines.add(r.line_code);
         });
         return Array.from(map.values()).map(r => ({
             name: r.size,
-            Tỷ_Lệ_Bể: r.count > 0 ? Number((r.totalBroken / r.count).toFixed(2)) : 0
+            Tỷ_Lệ_Bể: r.count > 0 ? Number((r.totalBroken / r.count).toFixed(2)) : 0,
+            Lines: Array.from(r.lines).sort().join(', ')
         })).sort((a,b) => a.name.localeCompare(b.name));
     })();
 
@@ -746,7 +750,7 @@ export default function ReportPage() {
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                     <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
                                                     <YAxis tick={{ fontSize: 10 }} />
-                                                    <Tooltip contentStyle={{ fontSize: '12px' }} cursor={{fill: 'transparent'}} />
+                                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: any, props: any) => [`${Number(v).toFixed(2)} T/h`, `Hiệu suất (Line: ${props.payload.Lines})`]} cursor={{fill: 'transparent'}} />
                                                     <Bar dataKey="Hiệu_Suất_T_h" name="Hiệu suất (T/h)" fill="#0d9488" barSize={30} radius={[4, 4, 0, 0]} />
                                                 </ComposedChart>
                                             </ResponsiveContainer>
@@ -760,7 +764,7 @@ export default function ReportPage() {
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                     <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
                                                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`]} cursor={{fill: 'transparent'}} />
+                                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: any, props: any) => [`${Number(v).toFixed(2)}%`, `Tỷ lệ Bể (Line: ${props.payload.Lines})`]} cursor={{fill: 'transparent'}} />
                                                     <Bar dataKey="Tỷ_Lệ_Bể" name="Tỷ lệ Bể (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
                                                 </ComposedChart>
                                             </ResponsiveContainer>
