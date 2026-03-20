@@ -1089,8 +1089,26 @@ export default function DashboardPage() {
                 selectedDept === 'all' && energyHistory.length > 0 && (
                     <Card className="mt-3 md:mt-4 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-blue-500/5 pointer-events-none"></div>
-                        <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-white/40 border-b border-white/50 relative z-10">
-                            <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">Theo dõi Điện - Nước - Củi ({format(selectedMonth, 'MM/yyyy')})</CardTitle>
+                        <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-white/40 border-b border-white/50 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">
+                                Theo dõi Điện - Nước - Củi ({format(selectedMonth, 'MM/yyyy')})
+                            </CardTitle>
+                            <div className="flex flex-wrap items-center gap-4 md:gap-6 bg-white/50 px-4 py-2 rounded-lg border border-white/80 shadow-sm">
+                                <div className="flex flex-col items-start md:items-end">
+                                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Điện (kWh)</span>
+                                    <span className="text-sm font-black text-amber-600">{Number(kpiSummary.elecActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.elecTarget).toLocaleString()}</span></span>
+                                </div>
+                                <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
+                                <div className="flex flex-col items-start md:items-end">
+                                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Nước (m³)</span>
+                                    <span className="text-sm font-black text-blue-600">{Number(kpiSummary.waterActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.waterTarget).toLocaleString()}</span></span>
+                                </div>
+                                <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
+                                <div className="flex flex-col items-start md:items-end">
+                                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Củi (Tấn)</span>
+                                    <span className="text-sm font-black text-orange-600">{Number(kpiSummary.woodActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.woodTarget).toLocaleString()}</span></span>
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-2 pt-4 md:p-5 md:pt-4 relative z-10">
                             {/* DESKTOP VIEW: Combined Chart with 3 Y-Axes */}
