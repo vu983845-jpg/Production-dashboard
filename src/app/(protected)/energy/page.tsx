@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, subDays } from "date-fns"
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, subDays, differenceInDays } from "date-fns"
 import { vi } from "date-fns/locale"
 import { CalendarIcon, ChevronLeft, ChevronRight, Zap, Loader2 } from "lucide-react"
 import {
@@ -83,12 +83,14 @@ export default function EnergyDashboardPage() {
                     for (let i = 1; i < rawData.length; i++) {
                         const prev = rawData[i - 1]
                         const curr = rawData[i]
+                        const diffDays = differenceInDays(new Date(curr.work_date), new Date(prev.work_date)) || 1
+                        
                         let mapped: any = { work_date: curr.work_date, fmtDate: format(new Date(curr.work_date), "dd/MM") }
                         
                         Object.keys(curr).forEach(k => {
                             if (k !== 'work_date' && k !== 'id' && k !== 'created_at' && k !== 'updated_at' && typeof curr[k] === 'number') {
                                 if (curr[k] !== null && prev[k] !== null && curr[k] !== undefined && prev[k] !== undefined) {
-                                    mapped[k] = Math.max(0, curr[k] - prev[k]) * multiplier
+                                    mapped[k] = Math.max(0, (curr[k] - prev[k]) / diffDays) * multiplier
                                 } else {
                                     mapped[k] = 0
                                 }
