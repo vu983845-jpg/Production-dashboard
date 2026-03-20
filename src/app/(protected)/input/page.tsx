@@ -359,7 +359,7 @@ export default function InputPage() {
     // Load Energy when date changes
     useEffect(() => {
         async function fetchEnergy() {
-            if (!date || role !== 'admin') return;
+            if (!date || (role !== 'admin' && role !== 'HSE')) return;
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
             const prevDateObj = subDays(startOfMonth(date), 1);
@@ -412,7 +412,7 @@ export default function InputPage() {
     // Load Compressor Meter Data
     useEffect(() => {
         async function fetchCompressor() {
-            if (!date || role !== 'admin') return;
+            if (!date || (role !== 'admin' && role !== 'HSE')) return;
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
             const prevDateStr = format(subDays(startOfMonth(date), 1), "yyyy-MM-dd");
@@ -960,9 +960,9 @@ export default function InputPage() {
             <Tabs defaultValue="production" className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>
-                    {role === 'admin' && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE') && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
                     {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
-                    {role === 'admin' && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE') && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="production" className="space-y-4">
@@ -1629,7 +1629,7 @@ export default function InputPage() {
                     )}
                 </TabsContent>
 
-                {role === 'admin' && (
+                {(role === 'admin' || role === 'HSE') && (
                     <TabsContent value="energy" className="space-y-4">
                         <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
                             <div className="p-6">
@@ -1794,7 +1794,7 @@ export default function InputPage() {
                     </TabsContent>
                 )}
 
-                {role === 'admin' && (
+                {(role === 'admin' || role === 'HSE') && (
                     <TabsContent value="compressor" className="space-y-4">
                         <div className="rounded-xl border bg-card text-card-foreground shadow">
                             <div className="p-6">
