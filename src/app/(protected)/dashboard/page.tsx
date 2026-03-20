@@ -50,8 +50,6 @@ export default function DashboardPage() {
     const [deptViewModes, setDeptViewModes] = useState<Record<string, 'chart' | 'details' | 'lines' | 'isp'>>({})
     const [shellingSubView, setShellingSubView] = useState<'production' | 'capacity'>('production')
     const [showCo2Intensity, setShowCo2Intensity] = useState(false);
-    
-    const [debugProps, setDebugProps] = useState<any>({});
 
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
     const [kpiSummary, setKpiSummary] = useState({
@@ -483,7 +481,6 @@ export default function DashboardPage() {
 
                 let totalCompressorKwhMtd = 0;
                 let dailyCompressorKwhMap: Record<string, number> = {};
-                let localDebugProps: any = { compDataLength: compData?.length || 0, mapKeys: [] };
                 
                 if (compData && compData.length > 0) {
                     const mapByDate = Object.fromEntries(compData.map(c => [c.work_date, c]));
@@ -503,10 +500,7 @@ export default function DashboardPage() {
                             totalCompressorKwhMtd += dailyTotal;
                         }
                     });
-                    localDebugProps.mapKeys = Object.keys(dailyCompressorKwhMap);
                 }
-                localDebugProps.totalKwh = totalCompressorKwhMtd;
-                setDebugProps(localDebugProps);
 
                 Object.keys(dashboards).forEach(key => {
                     const recordsInfo = grouped[key] || [];
@@ -1035,7 +1029,6 @@ export default function DashboardPage() {
                                         })}
                                     </Bar>
                                     <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
-//...
 
                                     {deptCode === "ALL" && (
                                         <>
@@ -1046,12 +1039,6 @@ export default function DashboardPage() {
                                     {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />}
                             </ComposedChart>
                         </ResponsiveContainer>
-                        
-                        {deptCode === 'PEEL_MC' && (
-                            <div className="absolute top-0 left-0 text-[8px] bg-black text-lime-400 p-1 rounded z-50 pointer-events-none opacity-80 overflow-hidden line-clamp-6 w-full">
-                                ERR: {displayHistory.filter((h:any) => h.Intensity > 0).length === 0 ? "NO HIST INT" : "OK"} | MAP: {debugProps.mapKeys?.length} DYS
-                            </div>
-                        )}
                     </div>
                     )}
                 </CardContent>
