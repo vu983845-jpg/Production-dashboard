@@ -412,6 +412,25 @@ export default function ReportPage() {
         })).sort((a,b) => a.name.localeCompare(b.name));
     })();
 
+    const lineSizeBrokenChartData = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        const map = new Map<string, { line: string, size: string, totalBroken: number, count: number }>();
+        filteredShellingLines.forEach(r => {
+            if (!r.line_code || !r.size || !Number(r.broken_pct)) return;
+            const key = `${r.line_code}-${r.size}`;
+            if (!map.has(key)) map.set(key, { line: r.line_code, size: r.size, totalBroken: 0, count: 0 });
+            const curr = map.get(key)!;
+            curr.totalBroken += Number(r.broken_pct);
+            curr.count += 1;
+        });
+        return Array.from(map.values()).map(r => ({
+            name: `${r.line} (${r.size})`,
+            Line: r.line,
+            Size: r.size,
+            Tỷ_Lệ_Bể: r.count > 0 ? Number((r.totalBroken / r.count).toFixed(2)) : 0
+        })).sort((a, b) => a.name.localeCompare(b.name));
+    })();
+
     const achievePct = summary && summary.totalPlan > 0 ? (summary.totalActual / summary.totalPlan * 100) : null
 
     return (
@@ -777,6 +796,28 @@ export default function ReportPage() {
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Chart 7: Line-Size Broken Pct */}
+                            {lineSizeBrokenChartData.length > 0 && (
+                            <Card className="col-span-1 lg:col-span-3 lg:col-start-1">
+                                <CardHeader className="pb-0">
+                                    <CardTitle className="text-sm font-bold text-rose-700">Chi tiết Tỷ lệ bể (%) theo từng Line & Size</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-72 w-full mt-4">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={lineSizeBrokenChartData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} angle={-30} textAnchor="end" />
+                                                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                                                <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`, `Tỷ lệ Bể`]} cursor={{fill: 'transparent'}} />
+                                                <Bar dataKey="Tỷ_Lệ_Bể" name="Tỷ lệ Bể (%)" fill="#be123c" barSize={35} radius={[4, 4, 0, 0]} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            )}
                         </div>
                     )}
 
