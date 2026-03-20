@@ -73,6 +73,8 @@ import { createClient } from "@/lib/supabase/client"
 // Schemas
 const actualSchema = z.object({
     actual_ton: z.coerce.number().min(0, "Giá trị phải >= 0"),
+    pass1_ton: z.coerce.number().min(0, "Pass 1 >= 0").optional().default(0),
+    pass2_ton: z.coerce.number().min(0, "Pass 2 >= 0").optional().default(0),
     isp_ton: z.coerce.number().min(0, "Giá trị ISP >= 0").optional().default(0),
     actual_container: z.coerce.number().min(0, "Số container >= 0").optional().default(0),
     note: z.string().optional(),
@@ -153,6 +155,8 @@ export default function InputPage() {
         resolver: zodResolver(actualSchema),
         defaultValues: {
             actual_ton: 0,
+            pass1_ton: 0,
+            pass2_ton: 0,
             isp_ton: 0,
             actual_container: 0,
             note: "",
@@ -225,13 +229,15 @@ export default function InputPage() {
                 // Initial reset without electricity, will be updated after KPI fetch
                 formActual.reset({
                     actual_ton: Number(actualData?.actual_ton || 0),
+                    pass1_ton: Number(actualData?.pass1_ton || 0),
+                    pass2_ton: Number(actualData?.pass2_ton || 0),
                     isp_ton: Number(actualData?.isp_ton || 0),
                     actual_container: Number(actualData?.actual_container || 0),
                     note: actualData?.note || "",
                     electricity_meter_reading: 0,
                 })
             } else {
-                formActual.reset({ actual_ton: 0, isp_ton: 0, actual_container: 0, note: "", electricity_meter_reading: 0 })
+                formActual.reset({ actual_ton: 0, pass1_ton: 0, pass2_ton: 0, isp_ton: 0, actual_container: 0, note: "", electricity_meter_reading: 0 })
             }
 
             // Fetch FGWH data if dept is FGWH
@@ -493,6 +499,8 @@ export default function InputPage() {
                 department_id: selectedDept,
                 work_date: formattedDate,
                 actual_ton: values.actual_ton,
+                pass1_ton: values.pass1_ton,
+                pass2_ton: values.pass2_ton,
                 isp_ton: values.isp_ton,
                 actual_container: values.actual_container,
                 note: values.note,
@@ -1174,6 +1182,51 @@ export default function InputPage() {
                                                                             <TableCell className="p-2 align-middle">
                                                                                 <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
                                                                                     <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 focus-visible:ring-1 shadow-none font-bold text-blue-900" /></FormControl></FormItem>
+                                                                                )} />
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    </>
+                                                                ) : departments.find(d => d.id === selectedDept)?.code === 'HAND' ? (
+                                                                    <>
+                                                                        <TableRow>
+                                                                            <TableCell className="font-medium align-middle text-blue-700">Pass 1 (Tấn)</TableCell>
+                                                                            <TableCell className="p-2 align-middle">
+                                                                                <FormField control={formActual.control} name="pass1_ton" render={({ field }) => (
+                                                                                    <FormItem><FormControl><Input type="number" step="0.001"
+                                                                                        {...field}
+                                                                                        className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none"
+                                                                                        onChange={e => {
+                                                                                            field.onChange(e)
+                                                                                            const p1 = Number(e.target.value) || 0
+                                                                                            const p2 = Number(formActual.getValues('pass2_ton')) || 0
+                                                                                            formActual.setValue('actual_ton', p1 + p2)
+                                                                                        }}
+                                                                                    /></FormControl></FormItem>
+                                                                                )} />
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell className="font-medium align-middle text-green-700">Pass 2 (Tấn)</TableCell>
+                                                                            <TableCell className="p-2 align-middle">
+                                                                                <FormField control={formActual.control} name="pass2_ton" render={({ field }) => (
+                                                                                    <FormItem><FormControl><Input type="number" step="0.001"
+                                                                                        {...field}
+                                                                                        className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none"
+                                                                                        onChange={e => {
+                                                                                            field.onChange(e)
+                                                                                            const p2 = Number(e.target.value) || 0
+                                                                                            const p1 = Number(formActual.getValues('pass1_ton')) || 0
+                                                                                            formActual.setValue('actual_ton', p1 + p2)
+                                                                                        }}
+                                                                                    /></FormControl></FormItem>
+                                                                                )} />
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow className="bg-blue-50">
+                                                                            <TableCell className="font-semibold text-blue-800">Tổng sản lượng (Tấn)</TableCell>
+                                                                            <TableCell className="p-2 align-middle">
+                                                                                <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
+                                                                                    <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 shadow-none font-bold text-blue-900 cursor-not-allowed" /></FormControl></FormItem>
                                                                                 )} />
                                                                             </TableCell>
                                                                         </TableRow>
