@@ -381,7 +381,7 @@ export default function InputPage() {
     // Load Energy when date changes
     useEffect(() => {
         async function fetchEnergy() {
-            if (!date || (role !== 'admin' && role !== 'HSE')) return;
+            if (!date || (role !== 'admin' && role !== 'HSE' && role !== 'maint')) return;
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
             const prevDateObj = subDays(startOfMonth(date), 1);
@@ -434,7 +434,7 @@ export default function InputPage() {
     // Load Compressor Meter Data
     useEffect(() => {
         async function fetchCompressor() {
-            if (!date || (role !== 'admin' && role !== 'HSE')) return;
+            if (!date || (role !== 'admin' && role !== 'HSE' && role !== 'maint')) return;
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
             const prevDateStr = format(subDays(startOfMonth(date), 1), "yyyy-MM-dd");
@@ -482,7 +482,7 @@ export default function InputPage() {
         fetchCompressor();
         
         async function fetchOtherElec() {
-            if (role !== 'admin' && role !== 'HSE') return;
+            if (role !== 'admin' && role !== 'HSE' && role !== 'maint') return;
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
 
@@ -538,7 +538,7 @@ export default function InputPage() {
     useEffect(() => {
         async function fetchShellingEnergy() {
             if (!date) return;
-            const hasShellAccess = role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL');
+            const hasShellAccess = role === 'admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL');
             if (!hasShellAccess) return;
 
             const shellDept = departments.find(d => d.code === 'SHELL');
@@ -1060,10 +1060,10 @@ export default function InputPage() {
             <Tabs defaultValue="production" className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>
-                    {(role === 'admin' || role === 'HSE') && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
-                    {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
-                    {(role === 'admin' || role === 'HSE') && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
-                    {(role === 'admin' || role === 'HSE') && <TabsTrigger value="other-elec">⚡ Điện Khác</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsTrigger value="other-elec">⚡ Điện Khác</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="production" className="space-y-4">
