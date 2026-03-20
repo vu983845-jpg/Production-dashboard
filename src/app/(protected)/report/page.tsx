@@ -299,22 +299,24 @@ export default function ReportPage() {
 
         // Sheet 3: Shelling lines detail (if applicable)
         if (shellingLines.length > 0) {
-            const slHeaders = ["Ngày", "Line", "Ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)", "Nhân sự (Ng)", "Năng suất (T/Ng)", "Dừng máy (phút)", "Size", "Ghi chú"]
+            const slHeaders = ["Ngày", "Line", "Ca", "Trưởng ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)", "Nhân sự (Ng)", "Năng suất (T/Ng)", "Dừng máy (phút)", "Tỷ lệ bể (%)", "Size", "Ghi chú"]
             const slRows = [slHeaders, ...shellingLines.map(r => [
                 fmtDate(r.work_date),
                 r.line_code,
                 r.shift_name || 'Ca 1',
+                r.shift_leader || '',
                 Number(r.actual_ton).toFixed(2),
                 Number(r.run_hours).toFixed(1),
                 Number(r.run_hours) > 0 ? (Number(r.actual_ton) / Number(r.run_hours)).toFixed(3) : "—",
                 Number(r.manpower || 0),
                 Number(r.manpower) > 0 ? (Number(r.actual_ton) / Number(r.manpower)).toFixed(3) : "—",
                 Number(r.downtime_min || 0),
+                r.broken_pct ? Number(r.broken_pct).toFixed(2) + "%" : "",
                 r.size || "",
                 r.note || ""
             ])]
             const ws3 = XLSX.utils.aoa_to_sheet(slRows)
-            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 30 }]
+            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 30 }]
             XLSX.utils.book_append_sheet(wb, ws3, "Shelling Line Details")
         }
 
