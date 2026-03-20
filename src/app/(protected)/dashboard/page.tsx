@@ -698,7 +698,7 @@ export default function DashboardPage() {
                             <div className="flex flex-col items-center justify-center px-1">
                                 <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>DOWNTIME</span>
                                 <div className={`font-bold mt-0.5 text-amber-600 flex items-center gap-0.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'}`}>
-                                    {(isTotal || isFgwh) && <Clock className="h-3 w-3" />} {summary.downtime}p
+                                    {(isTotal || isFgwh) && <Clock className="h-3 w-3" />} {Number((summary.downtime / 60).toFixed(1))}h
                                 </div>
                             </div>
                         )}
@@ -885,7 +885,7 @@ export default function DashboardPage() {
                                     <Tooltip contentStyle={{ fontSize: '10px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
                                     <Bar dataKey="IspActual" name="ISP Thực tế (Tấn)" radius={[2, 2, 0, 0]}>
                                         {displayHistory.map((entry: any, index: number) => {
-                                            const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#ef4444" : "#3b82f6";
+                                            const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#ef4444" : "#22c55e";
                                             return <Cell key={`isp-cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
