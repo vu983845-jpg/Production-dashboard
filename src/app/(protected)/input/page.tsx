@@ -125,6 +125,28 @@ export default function InputPage() {
     type CompressorRecord = { work_date: string; meter1?: number; meter2?: number; meter3?: number; kwh1: number; kwh2: number; kwh3: number; total_kwh: number; };
     const [compressorData, setCompressorData] = useState<CompressorRecord[]>([]);
 
+    // Other Electricity State
+    type OtherElecRecord = { 
+        work_date: string; 
+        cooling_fan?: number; 
+        boiler?: number; 
+        office?: number; 
+        db_ac_hca?: number; 
+        eco2?: number; 
+        canteen?: number; 
+        transformer?: number; 
+        maintenance?: number; 
+        kwh_cooling_fan: number; 
+        kwh_boiler: number; 
+        kwh_office: number; 
+        kwh_db_ac_hca: number; 
+        kwh_eco2: number; 
+        kwh_canteen: number; 
+        kwh_transformer: number; 
+        kwh_maintenance: number; 
+    };
+    const [otherElecData, setOtherElecData] = useState<OtherElecRecord[]>([]);
+
     // Shelling Line Tracking State
     const SHELLING_LINES = ['A', 'B', 'C', 'D1', 'D2'] as const
     type ShellLine = typeof SHELLING_LINES[number]
@@ -458,6 +480,58 @@ export default function InputPage() {
             setCompressorData(compiled);
         }
         fetchCompressor();
+        
+        async function fetchOtherElec() {
+            if (role !== 'admin' && role !== 'HSE') return;
+            const startStr = format(startOfMonth(date), "yyyy-MM-dd");
+            const endStr = format(endOfMonth(date), "yyyy-MM-dd");
+
+            const { data } = await supabase
+                .from("daily_electricity_others")
+                .select("*")
+                .gte("work_date", startStr)
+                .lte("work_date", endStr)
+                .order('work_date', { ascending: true });
+
+            const daysInMonth = eachDayOfInterval({ start: startOfMonth(date), end: endOfMonth(date) });
+            const compiled: OtherElecRecord[] = daysInMonth.map(d => {
+                const dayStr = format(d, "yyyy-MM-dd");
+                const existing = data?.find(r => r.work_date === dayStr);
+                return {
+                    work_date: dayStr,
+                    cooling_fan: existing?.cooling_fan !== null && existing?.cooling_fan !== undefined ? Number(existing.cooling_fan) : undefined,
+                    boiler: existing?.boiler !== null && existing?.boiler !== undefined ? Number(existing.boiler) : undefined,
+                    office: existing?.office !== null && existing?.office !== undefined ? Number(existing.office) : undefined,
+                    db_ac_hca: existing?.db_ac_hca !== null && existing?.db_ac_hca !== undefined ? Number(existing.db_ac_hca) : undefined,
+                    eco2: existing?.eco2 !== null && existing?.eco2 !== undefined ? Number(existing.eco2) : undefined,
+                    canteen: existing?.canteen !== null && existing?.canteen !== undefined ? Number(existing.canteen) : undefined,
+                    transformer: existing?.transformer !== null && existing?.transformer !== undefined ? Number(existing.transformer) : undefined,
+                    maintenance: existing?.maintenance !== null && existing?.maintenance !== undefined ? Number(existing.maintenance) : undefined,
+                    kwh_cooling_fan: 0, kwh_boiler: 0, kwh_office: 0, kwh_db_ac_hca: 0, kwh_eco2: 0, kwh_canteen: 0, kwh_transformer: 0, kwh_maintenance: 0
+                };
+            });
+
+            // Calculate daily consumption
+            const calc = (curr: number|undefined, prev: number|undefined) => {
+                if (curr === undefined || prev === undefined) return 0;
+                return Math.max(0, curr - prev); // Result directly in kWh
+            };
+
+            for (let i = 1; i < compiled.length; i++) {
+                const prev = compiled[i - 1];
+                compiled[i].kwh_cooling_fan = calc(compiled[i].cooling_fan, prev.cooling_fan);
+                compiled[i].kwh_boiler = calc(compiled[i].boiler, prev.boiler);
+                compiled[i].kwh_office = calc(compiled[i].office, prev.office);
+                compiled[i].kwh_db_ac_hca = calc(compiled[i].db_ac_hca, prev.db_ac_hca);
+                compiled[i].kwh_eco2 = calc(compiled[i].eco2, prev.eco2);
+                compiled[i].kwh_canteen = calc(compiled[i].canteen, prev.canteen);
+                compiled[i].kwh_transformer = calc(compiled[i].transformer, prev.transformer);
+                compiled[i].kwh_maintenance = calc(compiled[i].maintenance, prev.maintenance);
+            }
+            setOtherElecData(compiled);
+        }
+        fetchOtherElec();
+
     }, [date, role])
 
     // Load Shelling Energy
@@ -612,6 +686,32 @@ export default function InputPage() {
             fetchHistory(selectedDept)
         }
         setIsSaving(false)
+    }
+    async function saveOtherElec() {
+        setIsSaving(true);
+        const payload = otherElecData
+            .filter(r => r.cooling_fan !== undefined || r.boiler !== undefined || r.office !== undefined || r.db_ac_hca !== undefined || r.eco2 !== undefined || r.canteen !== undefined || r.transformer !== undefined || r.maintenance !== undefined)
+            .map(r => ({
+                work_date: r.work_date,
+                cooling_fan: r.cooling_fan,
+                boiler: r.boiler,
+                office: r.office,
+                db_ac_hca: r.db_ac_hca,
+                eco2: r.eco2,
+                canteen: r.canteen,
+                transformer: r.transformer,
+                maintenance: r.maintenance,
+                updated_at: new Date().toISOString()
+            }));
+
+        const { error } = await supabase.from('daily_electricity_others').upsert(payload, { onConflict: 'work_date' });
+
+        if (error) {
+            toast.error("Lỗi khi lưu Điện Khác: " + error.message);
+        } else {
+            toast.success("Đã cập nhật số liệu Điện Khác");
+        }
+        setIsSaving(false);
     }
 
     async function saveCompressor() {
@@ -963,6 +1063,7 @@ export default function InputPage() {
                     {(role === 'admin' || role === 'HSE') && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
                     {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
                     {(role === 'admin' || role === 'HSE') && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE') && <TabsTrigger value="other-elec">⚡ Điện Khác</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="production" className="space-y-4">
@@ -1943,7 +2044,104 @@ export default function InputPage() {
                             </div>
                         </div>
                     </TabsContent>
-                )}
+                )}
+
+                {/* OTHER ELECTRICITY METER TAB */}
+                {(role === 'admin' || role === 'HSE') && <TabsContent value="other-elec" className="space-y-4">
+                    <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-semibold text-lg text-emerald-800">⚡ Điện Khác (HCA) — Nhập Chỉ số KWh: Tháng {format(date, "MM/yyyy")}</h3>
+                                <Button onClick={saveOtherElec} disabled={isSaving} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                    <Save className="mr-2 h-4 w-4" />
+                                    {isSaving ? 'Đang lưu...' : 'Lưu toàn bộ tháng'}
+                                </Button>
+                                <div className="text-xs text-muted-foreground italic mb-2 absolute top-2 right-4">
+                                    * Nhập CHỈ SỐ kwh trên các đồng hồ con. Hệ thống sẽ tự động trừ lùi để ra mức Tiêu thụ.
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto w-full relative h-[650px] custom-scrollbar border bg-slate-50/50 rounded-lg">
+                                <Table className="w-full border-collapse">
+                                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                                        <TableRow className="border-b bg-emerald-50">
+                                            <TableHead className="w-24 whitespace-nowrap text-emerald-800 font-bold border-r">Ngày</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Cooling Fan</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Boiler</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Office</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">DB-AC HCA</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">ECO2</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Canteen</TableHead>
+                                            <TableHead className="font-bold min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">ĐH Maint (HCA+Shell)</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {otherElecData.map((row, index) => {
+                                            const handleChange = (field: 'cooling_fan' | 'boiler' | 'office' | 'db_ac_hca' | 'eco2' | 'canteen' | 'transformer' | 'maintenance', val: number | undefined) => {
+                                                const newData = [...otherElecData];
+                                                newData[index][field] = val;
+                                                
+                                                const calc = (curr: number|undefined, prev: number|undefined) => {
+                                                    if (curr === undefined || prev === undefined) return 0;
+                                                    return Math.max(0, curr - prev);
+                                                };
+
+                                                for (let i = index > 0 ? index : 1; i < newData.length; i++) {
+                                                    const prevRec = newData[i - 1];
+                                                    newData[i].kwh_cooling_fan = calc(newData[i].cooling_fan, prevRec?.cooling_fan);
+                                                    newData[i].kwh_boiler = calc(newData[i].boiler, prevRec?.boiler);
+                                                    newData[i].kwh_office = calc(newData[i].office, prevRec?.office);
+                                                    newData[i].kwh_db_ac_hca = calc(newData[i].db_ac_hca, prevRec?.db_ac_hca);
+                                                    newData[i].kwh_eco2 = calc(newData[i].eco2, prevRec?.eco2);
+                                                    newData[i].kwh_canteen = calc(newData[i].canteen, prevRec?.canteen);
+                                                    newData[i].kwh_transformer = calc(newData[i].transformer, prevRec?.transformer);
+                                                    newData[i].kwh_maintenance = calc(newData[i].maintenance, prevRec?.maintenance);
+                                                }
+                                                setOtherElecData(newData);
+                                            };
+
+                                            const renderInput = (label: string, field: 'cooling_fan' | 'boiler' | 'office' | 'db_ac_hca' | 'eco2' | 'canteen' | 'transformer' | 'maintenance', val: number|undefined, kwh: number) => (
+                                                <TableCell className="p-1 border-r bg-white" key={field}>
+                                                    <div className="flex flex-col gap-1 items-center">
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            className="h-8 text-[11px] text-center border-emerald-200 focus-visible:ring-emerald-500 w-full hover:bg-emerald-50 focus:bg-emerald-50"
+                                                            value={val === undefined ? "" : val}
+                                                            onChange={(e) => handleChange(field, e.target.value ? Number(e.target.value) : undefined)}
+                                                            placeholder={`${label}`}
+                                                        />
+                                                        <div className="text-[10px] text-emerald-600/80 font-medium whitespace-nowrap bg-emerald-50/50 px-2 py-0.5 rounded border border-emerald-100/50 min-w-16 text-center shadow-sm">
+                                                            {kwh.toLocaleString('en-US', {maximumFractionDigits:1})} kWh
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                            );
+
+                                            return (
+                                                <TableRow key={row.work_date} className="hover:bg-emerald-50/20">
+                                                    <TableCell className="font-medium bg-emerald-50/30 border-r py-3 px-2 text-center text-xs sticky left-0 z-10 backdrop-blur-md">
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="font-bold text-slate-700">{format(new Date(row.work_date), 'dd/MM/yyyy')}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    {renderInput("Fan", 'cooling_fan', row.cooling_fan, row.kwh_cooling_fan)}
+                                                    {renderInput("Boiler", 'boiler', row.boiler, row.kwh_boiler)}
+                                                    {renderInput("Office", 'office', row.office, row.kwh_office)}
+                                                    {renderInput("DB-AC", 'db_ac_hca', row.db_ac_hca, row.kwh_db_ac_hca)}
+                                                    {renderInput("ECO2", 'eco2', row.eco2, row.kwh_eco2)}
+                                                    {renderInput("Canteen", 'canteen', row.canteen, row.kwh_canteen)}
+                                                    {renderInput("Transf", 'transformer', row.transformer, row.kwh_transformer)}
+                                                    {renderInput("Maint", 'maintenance', row.maintenance, row.kwh_maintenance)}
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+                    </div>
+                </TabsContent>}
+
             </Tabs>
         </div>
     );
