@@ -62,13 +62,19 @@ export default function EnergyDashboardPage() {
                     .lte("work_date", endDateStr)
                     .order("work_date", { ascending: true })
 
-                // 4. Fetch Shelling KPIs (Shelling Energy) - already in consumption
-                const { data: shelling } = await supabase
-                    .from("daily_kpi")
-                    .select("work_date, energy_kwh")
-                    .gte("work_date", startDateStr)
-                    .lte("work_date", endDateStr)
-                    .order("work_date", { ascending: true })
+                // 4. Fetch Shelling KPIs (Shelling Energy) - Need to fetch Dept ID first
+                const { data: shellDept } = await supabase.from("departments").select("id").eq("code", "SHELL").single()
+                let shelling: any[] = []
+                if (shellDept) {
+                    const { data: shellingRaw } = await supabase
+                        .from("daily_kpi")
+                        .select("work_date, electricity_meter_reading")
+                        .eq("department_id", shellDept.id)
+                        .gte("work_date", fetchStartStr)
+                        .lte("work_date", endDateStr)
+                        .order("work_date", { ascending: true })
+                    shelling = shellingRaw || []
+                }
 
                 // Compute Deltas
                 const computeDeltas = (rawData: any[], multiplier = 1, startDate: string) => {
@@ -97,11 +103,15 @@ export default function EnergyDashboardPage() {
 
                 const compDeltas = computeDeltas(compressorsRaw || [], 1000, startDateStr) // MNK index is MWh, graph in kWh
                 const othersDeltas = computeDeltas(othersRaw || [], 1, startDateStr)       // Others index is exactly kWh
+                
+                // Shelling delta
+                const shellDeltasExtracted = computeDeltas(shelling, 1, startDateStr)
+                const shellMapped = shellDeltasExtracted.map(d => ({ ...d, energy_kwh: d.electricity_meter_reading }))
 
                 setEnergyData((energy || []).map(e => ({...e, fmtDate: format(new Date(e.work_date), "dd/MM")})))
                 setCompressorData(compDeltas)
                 setOtherElecData(othersDeltas)
-                setShellingData((shelling || []).map(s => ({...s, fmtDate: format(new Date(s.work_date), "dd/MM")})))
+                setShellingData(shellMapped)
 
             } catch (error) {
                 console.error("Error fetching energy dashboard data:", error)
@@ -240,27 +250,37 @@ export default function EnergyDashboardPage() {
                             <CardTitle>Điện Phụ Trợ Khác (Other Electricity)</CardTitle>
                             <CardDescription>Tiêu thụ điện 8 thiết bị/vùng phụ trợ (kWh)</CardDescription>
                         </CardHeader>
-                        <CardContent className="h-[450px]">
+                        <CardContent>
                             {otherElecData.length === 0 ? (
-                                <div className="h-full flex items-center justify-center text-muted-foreground">Chưa có dữ liệu tháng này</div>
+                                <div className="h-64 flex items-center justify-center text-muted-foreground">Chưa có dữ liệu tháng này</div>
                             ) : (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={otherElecData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => val.toLocaleString('en-US')} />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                                        <Line type="monotone" dataKey="cooling_fan" name="Cooling Fan" stroke="#F97316" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                                        <Line type="monotone" dataKey="boiler" name="Boiler" stroke="#EAB308" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                                        <Line type="monotone" dataKey="office" name="Office" stroke="#3B82F6" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                                        <Line type="monotone" dataKey="db_ac_hca" name="DB-AC HCA" stroke="#8B5CF6" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                                        <Line type="monotone" dataKey="eco2" name="ECO2" stroke="#10B981" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                                        <Line type="monotone" dataKey="canteen" name="Canteen" stroke="#F43F5E" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                                        <Line type="monotone" dataKey="transformer" name="Transformer" stroke="#64748B" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                                        <Line type="monotone" dataKey="maintenance" name="Đồng hồ Maint" stroke="#06B6D4" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {[
+                                        { key: 'cooling_fan', name: 'Cooling Fan', color: '#F97316' },
+                                        { key: 'boiler', name: 'Boiler', color: '#EAB308' },
+                                        { key: 'office', name: 'Office', color: '#3B82F6' },
+                                        { key: 'db_ac_hca', name: 'DB-AC HCA', color: '#8B5CF6' },
+                                        { key: 'eco2', name: 'ECO2', color: '#10B981' },
+                                        { key: 'canteen', name: 'Canteen', color: '#F43F5E' },
+                                        { key: 'transformer', name: 'Transformer', color: '#64748B' },
+                                        { key: 'maintenance', name: 'Đồng hồ Maint', color: '#06B6D4' }
+                                    ].map(meter => (
+                                        <div key={meter.key} className="border rounded-md p-3 bg-slate-50/50 h-[220px] flex flex-col">
+                                            <h4 className="text-xs font-semibold mb-2 text-slate-700">{meter.name}</h4>
+                                            <div className="flex-1 w-full relative">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <LineChart data={otherElecData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                                        <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
+                                                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10 }} tickFormatter={(val) => new Intl.NumberFormat('en-US', { notation: "compact" }).format(val)} />
+                                                        <Tooltip content={<CustomTooltip />} />
+                                                        <Line type="monotone" dataKey={meter.key} name={meter.name} stroke={meter.color} strokeWidth={2} dot={{r: 1}} activeDot={{ r: 4 }} />
+                                                    </LineChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </CardContent>
                     </Card>
