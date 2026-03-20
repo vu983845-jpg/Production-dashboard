@@ -645,6 +645,11 @@ export default function DashboardPage() {
 
         const deptCode = id === 'all' ? 'ALL' : (id.startsWith('region-') ? id.replace('region-', '') : (id === 'virtual-container' ? 'CONT' : (departments.find(d => d.id === id)?.code || "ALL")));
 
+        if (deptCode === 'PEEL_MC') {
+            console.log("PEEL_MC Dashboard Summary:", summary);
+            console.log("Total Compressor KPI:", summary.totalCompressorKwhMtd);
+        }
+
         if (isFgwh) {
             return (
                 <Card key={id} className="bg-white/70 backdrop-blur-xl border border-white/50 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col h-full ring-1 ring-black/5">
@@ -712,7 +717,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((['PEEL_MC', 'CS'].includes(deptCode) && summary.totalCompressorKwhMtd !== undefined && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
+                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((['PEEL_MC', 'CS'].includes(deptCode) && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
                         <div className="flex flex-col items-center justify-center px-1">
                             <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>MTD / KH</span>
                             <div className="flex items-baseline gap-0.5 mt-0.5">
@@ -737,11 +742,11 @@ export default function DashboardPage() {
                             </div>
                         )}
 
-                        {(['PEEL_MC', 'CS'].includes(deptCode) && summary.totalCompressorKwhMtd !== undefined && !isTotal) && (
+                        {(['PEEL_MC', 'CS'].includes(deptCode) && !isTotal) && (
                             <div className="flex flex-col items-center justify-center px-1">
                                 <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>Đ. NÉN KHÍ</span>
                                 <div className={`font-bold mt-0.5 text-purple-600 flex items-center gap-0.5 text-[10px] md:text-xs`}>
-                                    {summary.totalCompressorKwhMtd.toLocaleString('en-US', {maximumFractionDigits: 0})} <span className="text-[8px] font-normal text-slate-400">kWh</span>
+                                    {(summary.totalCompressorKwhMtd || 0).toLocaleString('en-US', {maximumFractionDigits: 0})} <span className="text-[8px] font-normal text-slate-400">kWh</span>
                                 </div>
                             </div>
                         )}
