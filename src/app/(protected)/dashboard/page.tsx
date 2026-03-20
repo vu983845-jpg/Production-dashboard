@@ -1026,6 +1026,8 @@ export default function DashboardPage() {
                                         })}
                                     </Bar>
                                     <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
+//...
+
                                     {deptCode === "ALL" && (
                                         <>
                                             <YAxis yAxisId="emission" orientation="right" hide />
@@ -1035,6 +1037,13 @@ export default function DashboardPage() {
                                     {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />}
                             </ComposedChart>
                         </ResponsiveContainer>
+                        
+                        {deptCode === 'PEEL_MC' && (
+                            <div className="absolute top-0 left-0 text-[8px] bg-black text-lime-400 p-1 rounded z-50 pointer-events-none opacity-80 max-h-32 overflow-hidden">
+                                {displayHistory.filter((h:any) => h.Intensity > 0).map((h:any) => `${h.workDate}: ${h.Intensity}`).join(" | ")}
+                                {displayHistory.filter((h:any) => h.Intensity > 0).length === 0 && "NO INTENSITY DATA"}
+                            </div>
+                        )}
                     </div>
                     )}
                 </CardContent>
