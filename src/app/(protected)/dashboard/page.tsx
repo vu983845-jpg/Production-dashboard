@@ -667,7 +667,7 @@ export default function DashboardPage() {
                         <span className={`flex items-center gap-1.5 uppercase font-black tracking-tight whitespace-nowrap ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-[11px] md:text-xs text-slate-800'}`}>
                             {!(isTotal || isFgwh) && <div className={`w-1.5 h-1.5 rounded-full ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
                             {name}
-                            {['CS', 'HAND'].includes(deptCode) && <span className="text-[9px] md:text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">ISP: {summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 0}T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%) MTD</span>}
+                            {['CS', 'HAND'].includes(deptCode) && <span className="text-[9px] md:text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">ISP: {summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp?.toFixed(1) || 0}T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%) MTD</span>}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
                         
@@ -790,7 +790,7 @@ export default function DashboardPage() {
                             {['CS', 'HAND'].includes(deptCode) && (
                                 <div className="col-span-2 p-1 bg-blue-50/50 border border-blue-100 rounded flex justify-between items-center">
                                     <span className="text-blue-800 font-bold text-[9px]">ISP (Thực tế/KH):</span>
-                                    <span className="font-black text-blue-600 text-[11px]">{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 100} T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%)</span>
+                                    <span className="font-black text-blue-600 text-[11px]">{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp?.toFixed(1) || 100} T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%)</span>
                                 </div>
                             )}
                         </div>
