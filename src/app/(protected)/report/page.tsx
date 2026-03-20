@@ -902,15 +902,15 @@ export default function ReportPage() {
                             return {
                                 name: fmtDate(r.work_date).slice(0, 5),
                                 work_date: r.work_date,
-                                S\u1ea3n_l\u01b0\u1ee3ng: r.actual_ton,
-                                kWh_M\u00e1y_N\u00e9n: kwh,
-                                kWh_T\u1ea5n: r.actual_ton > 0 ? Number((kwh / r.actual_ton).toFixed(1)) : 0,
+                                SanLuong: r.actual_ton,
+                                kwhMayNen: kwh,
+                                kwhTrenTan: r.actual_ton > 0 ? Number((kwh / r.actual_ton).toFixed(1)) : 0,
                             }
-                        }).filter(r => r.S\u1ea3n_l\u01b0\u1ee3ng > 0 || r.kWh_M\u00e1y_N\u00e9n > 0)
+                        }).filter(r => r.SanLuong > 0 || r.kwhMayNen > 0)
                         return (
                             <Card>
                                 <CardHeader className="pb-0">
-                                    <CardTitle className="text-sm font-bold text-purple-700">\ud83c\udf2c\ufe0f \u0110i\u1ec7n M\u00e1y N\u00e9n Kh\u00ed vs S\u1ea3n l\u01b0\u1ee3ng</CardTitle>
+                                    <CardTitle className="text-sm font-bold text-purple-700">🌬️ Điện Máy Nén Khí vs Sản lượng</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-72 w-full mt-4">
@@ -918,7 +918,7 @@ export default function ReportPage() {
                                             <ComposedChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                <YAxis yAxisId="left" tick={{ fontSize: 10 }} label={{ value: 'T\u1ea5n', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10 } }} />
+                                                <YAxis yAxisId="left" tick={{ fontSize: 10 }} label={{ value: 'Tấn', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10 } }} />
                                                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} label={{ value: 'kWh', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10 } }} />
                                                 <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: string | undefined) => {
                                                     if (name === 'kWh Máy Nén') return [`${Number(v).toLocaleString()} kWh`, name]
@@ -926,12 +926,12 @@ export default function ReportPage() {
                                                     return [v, name]
                                                 }} />
                                                 <Legend />
-                                                <Bar yAxisId="left" dataKey="S\u1ea3n_l\u01b0\u1ee3ng" name="S\u1ea3n l\u01b0\u1ee3ng" fill="#0d9488" barSize={20} radius={[3,3,0,0]} />
-                                                <Line yAxisId="right" type="monotone" dataKey="kWh_M\u00e1y_N\u00e9n" name="kWh M\u00e1y N\u00e9n" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3 }} />
+                                                <Bar yAxisId="left" dataKey="SanLuong" name="Sản lượng" fill="#0d9488" barSize={20} radius={[3,3,0,0]} />
+                                                <Line yAxisId="right" type="monotone" dataKey="kwhMayNen" name="kWh Máy Nén" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3 }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-2 text-center">Hover v\u00e0o bi\u1ec3u \u0111\u1ed3 \u0111\u1ec3 xem kWh/T\u1ea5n c\u1ee7a t\u1eebng ng\u00e0y</p>
+                                    <p className="text-xs text-muted-foreground mt-2 text-center">Hover vào biểu đồ để xem kWh/Tấn của từng ngày</p>
                                 </CardContent>
                             </Card>
                         )
