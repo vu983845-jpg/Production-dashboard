@@ -1,0 +1,296 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, subDays } from "date-fns"
+import { vi } from "date-fns/locale"
+import { CalendarIcon, ChevronLeft, ChevronRight, Zap, Loader2 } from "lucide-react"
+import {
+    AreaChart, Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart,
+    ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine
+} from "recharts"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { createClient } from "@/lib/supabase/client"
+
+
+export default function EnergyDashboardPage() {
+    const supabase = createClient()
+    const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()))
+    const [isLoading, setIsLoading] = useState(true)
+
+    // Data States
+    const [energyData, setEnergyData] = useState<any[]>([])
+    const [compressorData, setCompressorData] = useState<any[]>([])
+    const [otherElecData, setOtherElecData] = useState<any[]>([])
+    const [shellingData, setShellingData] = useState<any[]>([])
+
+    const goToPreviousMonth = () => setCurrentMonth(prev => subMonths(prev, 1))
+    const goToNextMonth = () => setCurrentMonth(prev => addMonths(prev, 1))
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            setIsLoading(true)
+            const startDateStr = format(startOfMonth(currentMonth), "yyyy-MM-dd")
+            const endDateStr = format(endOfMonth(currentMonth), "yyyy-MM-dd")
+            
+            // Fetch starting 1 day earlier to compute daily consumption (deltas)
+            const fetchStartStr = format(subDays(startOfMonth(currentMonth), 1), "yyyy-MM-dd")
+
+            try {
+                // 1. Fetch Main Energy (Factory Total) - already in daily consumption
+                const { data: energy } = await supabase
+                    .from("daily_energy")
+                    .select("*")
+                    .gte("work_date", startDateStr)
+                    .lte("work_date", endDateStr)
+                    .order("work_date", { ascending: true })
+
+                // 2. Fetch Compressors (MNK) - Raw Meter Index
+                const { data: compressorsRaw } = await supabase
+                    .from("daily_compressor")
+                    .select("*")
+                    .gte("work_date", fetchStartStr)
+                    .lte("work_date", endDateStr)
+                    .order("work_date", { ascending: true })
+
+                // 3. Fetch Other Electricity (8 meters) - Raw Meter Index
+                const { data: othersRaw } = await supabase
+                    .from("daily_electricity_others")
+                    .select("*")
+                    .gte("work_date", fetchStartStr)
+                    .lte("work_date", endDateStr)
+                    .order("work_date", { ascending: true })
+
+                // 4. Fetch Shelling KPIs (Shelling Energy) - already in consumption
+                const { data: shelling } = await supabase
+                    .from("daily_kpi")
+                    .select("work_date, energy_kwh")
+                    .gte("work_date", startDateStr)
+                    .lte("work_date", endDateStr)
+                    .order("work_date", { ascending: true })
+
+                // Compute Deltas
+                const computeDeltas = (rawData: any[], multiplier = 1, startDate: string) => {
+                    if (!rawData || rawData.length === 0) return []
+                    let result = []
+                    for (let i = 1; i < rawData.length; i++) {
+                        const prev = rawData[i - 1]
+                        const curr = rawData[i]
+                        let mapped: any = { work_date: curr.work_date, fmtDate: format(new Date(curr.work_date), "dd/MM") }
+                        
+                        Object.keys(curr).forEach(k => {
+                            if (k !== 'work_date' && k !== 'id' && k !== 'created_at' && k !== 'updated_at' && typeof curr[k] === 'number') {
+                                if (curr[k] !== null && prev[k] !== null && curr[k] !== undefined && prev[k] !== undefined) {
+                                    mapped[k] = Math.max(0, curr[k] - prev[k]) * multiplier
+                                } else {
+                                    mapped[k] = 0
+                                }
+                            }
+                        })
+                        if (curr.work_date >= startDate) {
+                            result.push(mapped)
+                        }
+                    }
+                    return result
+                }
+
+                const compDeltas = computeDeltas(compressorsRaw || [], 1000, startDateStr) // MNK index is MWh, graph in kWh
+                const othersDeltas = computeDeltas(othersRaw || [], 1, startDateStr)       // Others index is exactly kWh
+
+                setEnergyData((energy || []).map(e => ({...e, fmtDate: format(new Date(e.work_date), "dd/MM")})))
+                setCompressorData(compDeltas)
+                setOtherElecData(othersDeltas)
+                setShellingData((shelling || []).map(s => ({...s, fmtDate: format(new Date(s.work_date), "dd/MM")})))
+
+            } catch (error) {
+                console.error("Error fetching energy dashboard data:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchDashboardData()
+    }, [currentMonth, supabase])
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-background border rounded-lg shadow-lg p-3 text-sm">
+                    <p className="font-semibold mb-2">{label}</p>
+                    {payload.map((entry: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between gap-4">
+                            <span style={{ color: entry.color }}>
+                                {entry.name}:
+                            </span>
+                            <span className="font-mono font-medium">
+                                {Number(entry.value).toLocaleString('vi-VN')} kWh
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+        return null
+    }
+
+    return (
+        <div className="flex-1 space-y-4 md:space-y-6 max-w-7xl mx-auto w-full pb-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight whitespace-nowrap flex items-center gap-2 text-primary">
+                        <Zap className="h-6 w-6" />
+                        Dashboard Năng Lượng
+                    </h2>
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Theo dõi dữ liệu tiêu thụ điện năng toàn bộ nhà máy
+                    </p>
+                </div>
+                
+                {/* Month Selector */}
+                <div className="flex items-center gap-2 bg-background border rounded-md p-1 shadow-sm">
+                    <Button variant="ghost" size="icon" onClick={goToPreviousMonth} className="h-8 w-8 hover:bg-muted">
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center justify-center min-w-[140px] font-semibold text-sm">
+                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        {format(currentMonth, "MMMM - yyyy", { locale: vi })}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={goToNextMonth} className="h-8 w-8 hover:bg-muted" disabled={currentMonth >= startOfMonth(new Date())}>
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+
+            {isLoading ? (
+                <div className="flex justify-center items-center h-[500px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                    
+                    {/* FACTORY TOTAL ENERGY */}
+                    <Card className="col-span-2 shadow-sm">
+                        <CardHeader>
+                            <CardTitle>Điện Năng Toàn Nhà Máy (Main Energy)</CardTitle>
+                            <CardDescription>Tiêu thụ Điện (kWh) thực tế so với Target</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[350px]">
+                            {energyData.length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-muted-foreground">Chưa có dữ liệu tháng này</div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={energyData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                        <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => val.toLocaleString('en-US')} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        <Bar dataKey="electricity_kwh" name="Thực tế (Actual)" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                        <Line type="monotone" dataKey="electricity_target_kwh" name="Mục tiêu (Target)" stroke="#EF4444" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* AIR COMPRESSORS */}
+                    <Card className="col-span-2 shadow-sm">
+                        <CardHeader>
+                            <CardTitle>Hệ Thống Máy Nén Khí (Air Compressors)</CardTitle>
+                            <CardDescription>Tiêu thụ điện 3 Cụm MNK (kWh)</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[350px]">
+                            {compressorData.length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-muted-foreground">Chưa có dữ liệu tháng này</div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={compressorData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorMnk1" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
+                                                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                                            </linearGradient>
+                                            <linearGradient id="colorMnk2" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#EC4899" stopOpacity={0.3}/>
+                                                <stop offset="95%" stopColor="#EC4899" stopOpacity={0}/>
+                                            </linearGradient>
+                                            <linearGradient id="colorMnk3" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3}/>
+                                                <stop offset="95%" stopColor="#14B8A6" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                        <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => val.toLocaleString('en-US')} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        <Area type="monotone" dataKey="meter1" name="MNK Số 1" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorMnk1)" strokeWidth={2} />
+                                        <Area type="monotone" dataKey="meter2" name="MNK 2,4" stroke="#EC4899" fillOpacity={1} fill="url(#colorMnk2)" strokeWidth={2} />
+                                        <Area type="monotone" dataKey="meter3" name="MNK 3,5,6" stroke="#14B8A6" fillOpacity={1} fill="url(#colorMnk3)" strokeWidth={2} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* OTHER ELECTRICITY */}
+                    <Card className="col-span-2 shadow-sm">
+                        <CardHeader>
+                            <CardTitle>Điện Phụ Trợ Khác (Other Electricity)</CardTitle>
+                            <CardDescription>Tiêu thụ điện 8 thiết bị/vùng phụ trợ (kWh)</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[450px]">
+                            {otherElecData.length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-muted-foreground">Chưa có dữ liệu tháng này</div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={otherElecData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                        <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => val.toLocaleString('en-US')} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend wrapperStyle={{ paddingTop: "20px" }} />
+                                        <Line type="monotone" dataKey="cooling_fan" name="Cooling Fan" stroke="#F97316" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                                        <Line type="monotone" dataKey="boiler" name="Boiler" stroke="#EAB308" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                                        <Line type="monotone" dataKey="office" name="Office" stroke="#3B82F6" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                                        <Line type="monotone" dataKey="db_ac_hca" name="DB-AC HCA" stroke="#8B5CF6" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                                        <Line type="monotone" dataKey="eco2" name="ECO2" stroke="#10B981" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                                        <Line type="monotone" dataKey="canteen" name="Canteen" stroke="#F43F5E" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                                        <Line type="monotone" dataKey="transformer" name="Transformer" stroke="#64748B" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                                        <Line type="monotone" dataKey="maintenance" name="Đồng hồ Maint" stroke="#06B6D4" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* SHELLING ENERGY */}
+                    <Card className="col-span-2 shadow-sm">
+                        <CardHeader>
+                            <CardTitle>Điện Khu Vực Shelling</CardTitle>
+                            <CardDescription>Chỉ số tiêu thụ điện theo khu vực Shelling (kWh)</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[300px]">
+                            {shellingData.length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-muted-foreground">Chưa có dữ liệu tháng này</div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={shellingData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                        <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => val.toLocaleString('en-US')} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        <Bar dataKey="energy_kwh" name="Điện Shelling (kWh)" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                </div>
+            )}
+        </div>
+    )
+}

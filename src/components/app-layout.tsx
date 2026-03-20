@@ -12,6 +12,7 @@ import {
     LogOut,
     Menu,
     ArrowLeft,
+    Zap,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -77,6 +78,12 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             href: "/admin/users",
             icon: Users,
             roles: ["admin"],
+        },
+        {
+            title: "Năng lượng",
+            href: "/energy",
+            icon: Zap,
+            roles: ["admin", "dept_user", "viewer", "HSE", "plant_manager", "maint"],
         },
     ]
 
