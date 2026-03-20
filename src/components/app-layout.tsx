@@ -182,7 +182,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                     <UserGuide />
                     <div className="flex items-center gap-4">
-                        <img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=vicc-la-dashboard&count_bg=%233B82F6&title_bg=%231E293B&title=L%C6%B0%E1%BB%A3t+truy+c%E1%BA%ADp&edge_flat=true" alt="Lượt truy cập" className="h-4 opacity-80 hover:opacity-100 transition-opacity" />
+                        <img src="https://api.visitorbadge.io/api/visitors?path=vicc-la-dashboard&label=L%C6%B0%E1%BB%A3t%20truy%20c%E1%BA%ADp&countColor=%233b82f6" alt="Lượt truy cập" className="h-5 opacity-80 hover:opacity-100 transition-opacity" />
                         <span className="text-xs text-muted-foreground/60 italic font-medium">V.H</span>
                     </div>
                 </div>
