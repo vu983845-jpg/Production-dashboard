@@ -423,8 +423,8 @@ export default function DashboardPage() {
                     const history = Object.keys(recordsByDay).sort().map(d => ({
                         workDate: d,
                         name: format(new Date(d), 'dd/MM'),
-                        Actual: recordsByDay[d].actual,
-                        Plan: recordsByDay[d].plan,
+                        Actual: Number(recordsByDay[d].actual.toFixed(1)),
+                        Plan: Number(recordsByDay[d].plan.toFixed(1)),
                         ContActual: recordsByDay[d].actual_cont,
                         ContPlan: recordsByDay[d].plan_cont,
                         Intensity: recordsByDay[d].actual > 0 ? Number((recordsByDay[d].elec / recordsByDay[d].actual).toFixed(2)) : 0,
@@ -453,8 +453,8 @@ export default function DashboardPage() {
 
                     const contHistory = Object.keys(contRecordsByDay).sort().map(d => ({
                         name: format(new Date(d), 'dd/MM'),
-                        Actual: contRecordsByDay[d].actual,
-                        Plan: contRecordsByDay[d].plan,
+                        Actual: Number(contRecordsByDay[d].actual.toFixed(1)),
+                        Plan: Number(contRecordsByDay[d].plan.toFixed(1)),
                     }));
 
                     const packSummary = buildSummary(packRecords, false);
