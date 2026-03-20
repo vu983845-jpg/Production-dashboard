@@ -443,9 +443,9 @@ export default function InputPage() {
                 };
             });
 
-            // Compute daily kWh from meter diff. Day 0 uses prev month's last reading.
+            // Compute daily kWh from meter diff (input is MWh). Day 0 uses prev month's last reading.
             const calcKwh = (curr: number | undefined, prev: number | undefined) =>
-                curr !== undefined && prev !== undefined ? Math.max(0, curr - prev) : 0;
+                curr !== undefined && prev !== undefined ? Math.max(0, (curr - prev) * 1000) : 0;
 
             for (let i = 0; i < compiled.length; i++) {
                 const prevRec = i === 0 ? prevData : compiled[i - 1];
@@ -1788,6 +1788,80 @@ export default function InputPage() {
                                         <Save className="mr-2 h-4 w-4" />
                                         {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Tháng'}
                                     </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+                )}
+
+                {role === 'admin' && (
+                    <TabsContent value="compressor" className="space-y-4">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow">
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-semibold text-lg text-purple-800">🌬️ Máy nén khí — Chỉ số Điện: Tháng {format(date, "MM/yyyy")}</h3>
+                                    <Button onClick={saveCompressor} disabled={isSaving} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+                                        <Save className="mr-2 h-4 w-4" />
+                                        {isSaving ? 'Đang lưu...' : 'Lưu toàn bộ tháng'}
+                                    </Button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-muted">
+                                            <TableRow>
+                                                <TableHead rowSpan={2} className="border-r w-[60px] text-center">Ngày</TableHead>
+                                                <TableHead colSpan={3} className="border-r text-center text-purple-700 bg-purple-50/60">Đồng hồ (Chỉ số MWh)</TableHead>
+                                                <TableHead colSpan={3} className="border-r text-center text-indigo-700 bg-indigo-50/60">Tiêu thụ (kWh/ngày)</TableHead>
+                                                <TableHead className="text-center bg-rose-50/60 text-rose-700">Tổng kWh</TableHead>
+                                            </TableRow>
+                                            <TableRow>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 1</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 2</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 3</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 1</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 2</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 3</TableHead>
+                                                <TableHead className="text-center bg-rose-50/40 w-[90px] font-bold">Tổng</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {compressorData.map((row, index) => {
+                                                const handleMeterChange = (field: 'meter1' | 'meter2' | 'meter3', val: number | undefined) => {
+                                                    const newData = [...compressorData];
+                                                    newData[index][field] = val;
+                                                    // Recalculate kWh chain (input is MWh)
+                                                    const calcKwh = (curr: number | undefined, prev: number | undefined) =>
+                                                        curr !== undefined && prev !== undefined ? Math.max(0, (curr - prev) * 1000) : 0;
+                                                    for (let i = 0; i < newData.length; i++) {
+                                                        const prevRec = i === 0 ? null : newData[i - 1];
+                                                        newData[i].kwh1 = calcKwh(newData[i].meter1, prevRec?.meter1);
+                                                        newData[i].kwh2 = calcKwh(newData[i].meter2, prevRec?.meter2);
+                                                        newData[i].kwh3 = calcKwh(newData[i].meter3, prevRec?.meter3);
+                                                        newData[i].total_kwh = newData[i].kwh1 + newData[i].kwh2 + newData[i].kwh3;
+                                                    }
+                                                    setCompressorData(newData);
+                                                };
+                                                return (
+                                                    <TableRow key={row.work_date} className="hover:bg-purple-50/10">
+                                                        <TableCell className="border-r font-medium text-center text-xs">{format(parseISO(row.work_date), "dd/MM")}</TableCell>
+                                                        {(['meter1', 'meter2', 'meter3'] as const).map(m => (
+                                                            <TableCell key={m} className="border-r p-1">
+                                                                <input type="number" step="0.01"
+                                                                    className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-purple-400 bg-transparent text-sm font-semibold"
+                                                                    value={row[m] !== undefined ? row[m] : ''}
+                                                                    onChange={e => handleMeterChange(m, e.target.value === '' ? undefined : Number(e.target.value))}
+                                                                />
+                                                            </TableCell>
+                                                        ))}
+                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh1 > 0 ? row.kwh1.toLocaleString('en-US', {maximumFractionDigits: 0}) : '—'}</TableCell>
+                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh2 > 0 ? row.kwh2.toLocaleString('en-US', {maximumFractionDigits: 0}) : '—'}</TableCell>
+                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh3 > 0 ? row.kwh3.toLocaleString('en-US', {maximumFractionDigits: 0}) : '—'}</TableCell>
+                                                        <TableCell className="p-1 text-right font-black text-rose-700 bg-rose-50/20">{row.total_kwh > 0 ? row.total_kwh.toLocaleString('en-US', {maximumFractionDigits: 0}) : '—'}</TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
                                 </div>
                             </div>
                         </div>
