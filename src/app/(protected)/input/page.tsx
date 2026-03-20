@@ -1057,9 +1057,9 @@ export default function InputPage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="production" className="space-y-4">
+            <Tabs defaultValue={role === 'maint' ? 'other-elec' : 'production'} className="space-y-4">
                 <TabsList>
-                    <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>
+                    {role !== 'maint' && <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>}
                     {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
                     {(role === 'admin' || role === 'HSE' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
                     {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
