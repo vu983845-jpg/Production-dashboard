@@ -970,7 +970,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh) ? 'h-[160px] md:h-[200px]' : (id === 'virtual-container' ? 'h-[140px] md:h-[160px]' : 'h-[100px] md:h-[120px]')}`}>
+                    <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[160px] md:h-[200px]' : 'h-[100px] md:h-[120px]'}`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
                                 <XAxis 
