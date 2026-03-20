@@ -1038,6 +1038,33 @@ export default function InputPage() {
                                                                         </TableRow>
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0">
+                                                                                <div className="bg-purple-50/40 border-b px-4 pt-2 pb-3">
+                                                                                    <p className="text-xs font-semibold text-purple-700 mb-2">🏷️ Kích cỡ (Size)</p>
+                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
+                                                                                        <div key={shift} className="mb-3">
+                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
+                                                                                            <div className="grid grid-cols-5 gap-2">
+                                                                                                {SHELLING_LINES.map(line => (
+                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
+                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
+                                                                                                        <select
+                                                                                                            className="w-full text-center p-1 rounded border-2 border-purple-200 bg-white text-sm focus:outline-none focus:border-purple-500"
+                                                                                                            value={shellingLineData[line]?.[shift]?.size || ''}
+                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], size: e.target.value } } }))}
+                                                                                                        >
+                                                                                                            <option value="">--</option>
+                                                                                                            {['A+', 'A1', 'A2', 'B', 'B1', 'B2', 'C', 'C1', 'C2', 'D1', 'D2', 'E'].map(s => <option key={s} value={s}>{s}</option>)}
+                                                                                                        </select>
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                        <TableRow>
+                                                                            <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-green-50/40 border-b px-4 pt-2 pb-3">
                                                                                     <p className="text-xs font-semibold text-green-700 mb-2">⏱ Thời gian chạy máy (Giờ)</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
@@ -1141,33 +1168,7 @@ export default function InputPage() {
                                                                                 </div>
                                                                             </TableCell>
                                                                         </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell colSpan={2} className="p-0">
-                                                                                <div className="bg-purple-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-purple-700 mb-2">🏷️ Kích cỡ (Size)</p>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
-                                                                                        <div key={shift} className="mb-3">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => (
-                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
-                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
-                                                                                                        <select
-                                                                                                            className="w-full text-center p-1 rounded border-2 border-purple-200 bg-white text-sm focus:outline-none focus:border-purple-500"
-                                                                                                            value={shellingLineData[line]?.[shift]?.size || ''}
-                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], size: e.target.value } } }))}
-                                                                                                        >
-                                                                                                            <option value="">--</option>
-                                                                                                            {['A+', 'A1', 'A2', 'B', 'B1', 'B2', 'C', 'C1', 'C2', 'D1', 'D2', 'E'].map(s => <option key={s} value={s}>{s}</option>)}
-                                                                                                        </select>
-                                                                                                    </div>
-                                                                                                ))}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
+
                                                                         <TableRow className="bg-blue-50">
                                                                             <TableCell className="font-semibold text-blue-800">Tổng sản lượng Shelling (Tấn)</TableCell>
                                                                             <TableCell className="p-2 align-middle">
