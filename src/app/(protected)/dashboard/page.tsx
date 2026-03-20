@@ -421,6 +421,7 @@ export default function DashboardPage() {
                     }, {});
 
                     const history = Object.keys(recordsByDay).sort().map(d => ({
+                        workDate: d,
                         name: format(new Date(d), 'dd/MM'),
                         Actual: recordsByDay[d].actual,
                         Plan: recordsByDay[d].plan,
@@ -479,6 +480,7 @@ export default function DashboardPage() {
                     .order('work_date');
 
                 let totalCompressorKwhMtd = 0;
+                let dailyCompressorKwhMap: Record<string, number> = {};
                 if (compData && compData.length > 0) {
                     const mapByDate = Object.fromEntries(compData.map(c => [c.work_date, c]));
                     const daysInSelectedMonth = compData.filter(c => c.work_date >= startFilter);
@@ -491,15 +493,26 @@ export default function DashboardPage() {
                             const m1 = Math.max(0, (curr.meter1||0) - (prev.meter1||0)) * 1000;
                             const m2 = Math.max(0, (curr.meter2||0) - (prev.meter2||0)) * 1000;
                             const m3 = Math.max(0, (curr.meter3||0) - (prev.meter3||0)) * 1000;
-                            totalCompressorKwhMtd += (m1 + m2 + m3);
+                            const dailyTotal = m1 + m2 + m3;
+                            dailyCompressorKwhMap[curr.work_date] = dailyTotal;
+                            totalCompressorKwhMtd += dailyTotal;
                         }
                     });
                 }
 
                 Object.keys(dashboards).forEach(key => {
                     const deptInfo = departments.find(d => d.id === key);
-                    if (deptInfo && (deptInfo.code === 'PEEL_MC' || deptInfo.code === 'CS')) {
+                    if (deptInfo && deptInfo.code === 'PEEL_MC') {
                         dashboards[key].summary.totalCompressorKwhMtd = totalCompressorKwhMtd;
+                        
+                        // Inject into history for the line chart
+                        dashboards[key].history = dashboards[key].history.map((h: any) => {
+                            const kwh = dailyCompressorKwhMap[h.workDate] || 0;
+                            return {
+                                ...h,
+                                Intensity: h.Actual > 0 ? Number((kwh / h.Actual).toFixed(2)) : 0
+                            };
+                        });
                     }
                 });
             }
@@ -717,7 +730,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((['PEEL_MC', 'CS'].includes(deptCode) && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
+                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((deptCode === 'PEEL_MC' && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
                         <div className="flex flex-col items-center justify-center px-1">
                             <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>MTD / KH</span>
                             <div className="flex items-baseline gap-0.5 mt-0.5">
@@ -742,7 +755,7 @@ export default function DashboardPage() {
                             </div>
                         )}
 
-                        {(['PEEL_MC', 'CS'].includes(deptCode) && !isTotal) && (
+                        {(deptCode === 'PEEL_MC' && !isTotal) && (
                             <div className="flex flex-col items-center justify-center px-1">
                                 <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>Đ. NÉN KHÍ</span>
                                 <div className={`font-bold mt-0.5 text-purple-600 flex items-center gap-0.5 text-[10px] md:text-xs`}>
@@ -998,10 +1011,10 @@ export default function DashboardPage() {
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Cần làm/Ngày" connectNulls={false} />
                                     )}
-                                    {deptCode === "SHELL" && (
+                                    {(deptCode === "SHELL" || deptCode === "PEEL_MC") && (
                                         <>
                                             <YAxis yAxisId="intensity" orientation="right" hide />
-                                            <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name="kWh/T" />
+                                            <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke={deptCode === "PEEL_MC" ? "#9333ea" : "#f59e0b"} dot={false} strokeWidth={2} name="kWh/T" />
                                         </>
                                     )}
                                     <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
