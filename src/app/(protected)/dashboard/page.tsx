@@ -667,7 +667,7 @@ export default function DashboardPage() {
                         <span className={`flex items-center gap-1.5 uppercase font-black tracking-tight whitespace-nowrap ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-[11px] md:text-xs text-slate-800'}`}>
                             {!(isTotal || isFgwh) && <div className={`w-1.5 h-1.5 rounded-full ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
                             {name}
-                            {deptCode === 'CS' && <span className="text-[9px] md:text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">ISP: {summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 0}T MTD</span>}
+                            {['CS', 'HAND'].includes(deptCode) && <span className="text-[9px] md:text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">ISP: {summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 0}T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%) MTD</span>}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
                         
@@ -724,7 +724,7 @@ export default function DashboardPage() {
                                     Theo Line
                                 </button>
                             )}
-                            {deptCode === 'CS' && (
+                            {['CS', 'HAND'].includes(deptCode) && (
                                 <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'isp'}))}
                                     className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'isp' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
                                     ISP
@@ -787,10 +787,10 @@ export default function DashboardPage() {
                                     <div className="font-bold text-amber-700 text-[11px]">{summary.swPct.toFixed(1)}%</div>
                                 </div>
                             )}
-                            {deptCode === "CS" && (
+                            {['CS', 'HAND'].includes(deptCode) && (
                                 <div className="col-span-2 p-1 bg-blue-50/50 border border-blue-100 rounded flex justify-between items-center">
                                     <span className="text-blue-800 font-bold text-[9px]">ISP (Thực tế/KH):</span>
-                                    <span className="font-black text-blue-600 text-[11px]">{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 100} T</span>
+                                    <span className="font-black text-blue-600 text-[11px]">{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 100} T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%)</span>
                                 </div>
                             )}
                         </div>
@@ -862,7 +862,7 @@ export default function DashboardPage() {
                                 )
                             })()}
                         </div>
-                    ) : deptCode === "CS" && deptViewModes[id] === 'isp' ? (
+                    ) : ['CS', 'HAND'].includes(deptCode) && deptViewModes[id] === 'isp' ? (
                         <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 h-[100px] md:h-[120px]`}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
@@ -889,7 +889,7 @@ export default function DashboardPage() {
                                             return <Cell key={`isp-cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
-                                    <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="ISP Kế hoạch" />
+                                    {deptCode === 'CS' && <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="ISP Kế hoạch" />}
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>

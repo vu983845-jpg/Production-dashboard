@@ -298,7 +298,7 @@ export default function AdminPlanPage() {
                     ? getDistributedValue(monthlyPlanCont, 2)
                     : (existing.plan_container || 0);
 
-                const newPlanIsp = (selectedDeptCode === "CS" && (targetType === 'all' || targetType === 'isp' || targetType === 'prod'))
+                const newPlanIsp = (['CS', 'HAND'].includes(selectedDeptCode || "") && (targetType === 'all' || targetType === 'isp' || targetType === 'prod'))
                     ? getDistributedValue(targetIsp, 1) // Using targetIsp state variable as the total target ISP volume for the month
                     : (existing.plan_isp_ton || 0);
 
@@ -445,7 +445,7 @@ export default function AdminPlanPage() {
                                     <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Target SW (%)</label>
                                     <Input type="number" step="0.1" min="0" max="100" value={targetSw || ""} onChange={(e) => setTargetSw(Number(e.target.value))} placeholder="%" />
                                 </div>
-                                {departments.find(d => d.id === selectedDept)?.code === "CS" ? (
+                                {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || "") ? (
                                     <div className="space-y-1">
                                         <label className="text-sm border-b border-primary/20 block pb-1 text-muted-foreground">Tổng Target ISP (Tấn)</label>
                                         <Input type="number" step="0.1" min="0" value={targetIsp || ""} onChange={(e) => setTargetIsp(Number(e.target.value))} placeholder="VD: 50" />
@@ -477,7 +477,7 @@ export default function AdminPlanPage() {
                                     {isSavingMonthly ? "Đang xử lý..." : "Chia Đều Sản Xuất (Tấn)"}
                                 </Button>
                             </>
-                        ) : departments.find(d => d.id === selectedDept)?.code === "CS" ? (
+                        ) : ['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || "") ? (
                             <>
                                 <Button onClick={() => handleMonthlySave('isp')} disabled={isSavingMonthly} variant="outline" className="border-blue-600 text-blue-700 hover:bg-blue-50">
                                     {isSavingMonthly ? "Đang xử lý..." : "Chia Đều C.Tiêu ISP"}
@@ -525,7 +525,7 @@ export default function AdminPlanPage() {
                                         {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
                                             <TableHead>Kế hoạch Cont</TableHead>
                                         )}
-                                        {departments.find(d => d.id === selectedDept)?.code === "CS" && (
+                                        {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || "") && (
                                             <TableHead>Kế hoạch ISP (Tấn)</TableHead>
                                         )}
                                         {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
@@ -579,7 +579,7 @@ export default function AdminPlanPage() {
                                                         />
                                                     </TableCell>
                                                 )}
-                                                {deptCode === "CS" && (
+                                                {['CS', 'HAND'].includes(deptCode || "") && (
                                                     <TableCell>
                                                         <Input
                                                             type="number"

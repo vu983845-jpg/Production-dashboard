@@ -1157,7 +1157,7 @@ export default function InputPage() {
                                                                         </TableCell>
                                                                     </TableRow>
                                                                 )}
-                                                                {departments.find(d => d.id === selectedDept)?.code === "CS" && (
+                                                                {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (
                                                                     <TableRow>
                                                                         <TableCell className="font-medium text-blue-600 align-middle">Sản lượng ISP (Tấn)</TableCell>
                                                                         <TableCell className="p-2 align-middle">
