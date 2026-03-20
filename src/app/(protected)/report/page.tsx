@@ -88,6 +88,7 @@ export default function ReportPage() {
     const [selectedShellLine, setSelectedShellLine] = useState("A")
     const [selectedLeader, setSelectedLeader] = useState("Tất cả")
     const [hasData, setHasData] = useState(false)
+    const [compressorMonthly, setCompressorMonthly] = useState<{work_date: string; total_kwh: number}[]>([])
 
     // Load departments from DB (same as dashboard)
     useEffect(() => {
@@ -183,6 +184,41 @@ export default function ReportPage() {
             setShellingLines(ld ?? [])
         } else {
             setShellingLines([])
+        }
+
+        // Fetch compressor data for PEEL_MC and CS
+        if (['PEEL_MC', 'CS'].includes(selectedDept)) {
+            const { data: compData } = await supabase
+                .from('daily_compressor')
+                .select('work_date, meter1, meter2, meter3')
+                .gte('work_date', start)
+                .lte('work_date', end)
+                .order('work_date');
+
+            // Also fetch the day before the month for initial diff
+            const prevDateStr = format(new Date(selectedYear, selectedMonth - 2, 0), "yyyy-MM-dd");
+            const { data: prevComp } = await supabase
+                .from('daily_compressor')
+                .select('meter1, meter2, meter3')
+                .eq('work_date', prevDateStr)
+                .single();
+
+            if (compData && compData.length > 0) {
+                const calcKwh = (curr: number | null, prev: number | null) =>
+                    curr != null && prev != null ? Math.max(0, curr - prev) : 0;
+                const result: {work_date: string; total_kwh: number}[] = compData.map((row: any, i: number) => {
+                    const prevRow = i === 0 ? prevComp : compData[i - 1];
+                    const kwh = calcKwh(row.meter1, prevRow?.meter1 ?? null) +
+                                calcKwh(row.meter2, prevRow?.meter2 ?? null) +
+                                calcKwh(row.meter3, prevRow?.meter3 ?? null);
+                    return { work_date: row.work_date, total_kwh: kwh };
+                });
+                setCompressorMonthly(result);
+            } else {
+                setCompressorMonthly([]);
+            }
+        } else {
+            setCompressorMonthly([]);
         }
 
         setLoading(false)
@@ -857,6 +893,49 @@ export default function ReportPage() {
                             )}
                         </div>
                     )}
+
+                    {/* Compressor kWh vs Production Chart */}
+                    {['PEEL_MC', 'CS'].includes(selectedDept) && compressorMonthly.length > 0 && (() => {
+                        const chartData = records.map(r => {
+                            const comp = compressorMonthly.find(c => c.work_date === r.work_date)
+                            const kwh = comp?.total_kwh || 0
+                            return {
+                                name: fmtDate(r.work_date).slice(0, 5),
+                                work_date: r.work_date,
+                                S\u1ea3n_l\u01b0\u1ee3ng: r.actual_ton,
+                                kWh_M\u00e1y_N\u00e9n: kwh,
+                                kWh_T\u1ea5n: r.actual_ton > 0 ? Number((kwh / r.actual_ton).toFixed(1)) : 0,
+                            }
+                        }).filter(r => r.S\u1ea3n_l\u01b0\u1ee3ng > 0 || r.kWh_M\u00e1y_N\u00e9n > 0)
+                        return (
+                            <Card>
+                                <CardHeader className="pb-0">
+                                    <CardTitle className="text-sm font-bold text-purple-700">\ud83c\udf2c\ufe0f \u0110i\u1ec7n M\u00e1y N\u00e9n Kh\u00ed vs S\u1ea3n l\u01b0\u1ee3ng</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-72 w-full mt-4">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <YAxis yAxisId="left" tick={{ fontSize: 10 }} label={{ value: 'T\u1ea5n', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10 } }} />
+                                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} label={{ value: 'kWh', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10 } }} />
+                                                <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: string | undefined) => {
+                                                    if (name === 'kWh Máy Nén') return [`${Number(v).toLocaleString()} kWh`, name]
+                                                    if (name === 'Sản lượng') return [`${Number(v).toFixed(3)} Tấn`, name]
+                                                    return [v, name]
+                                                }} />
+                                                <Legend />
+                                                <Bar yAxisId="left" dataKey="S\u1ea3n_l\u01b0\u1ee3ng" name="S\u1ea3n l\u01b0\u1ee3ng" fill="#0d9488" barSize={20} radius={[3,3,0,0]} />
+                                                <Line yAxisId="right" type="monotone" dataKey="kWh_M\u00e1y_N\u00e9n" name="kWh M\u00e1y N\u00e9n" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3 }} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2 text-center">Hover v\u00e0o bi\u1ec3u \u0111\u1ed3 \u0111\u1ec3 xem kWh/T\u1ea5n c\u1ee7a t\u1eebng ng\u00e0y</p>
+                                </CardContent>
+                            </Card>
+                        )
+                    })()}
 
                     {/* Daily Detail Table */}
                     <Card>

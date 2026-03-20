@@ -121,6 +121,10 @@ export default function InputPage() {
     // Shelling Monthly Energy State
     const [shellingMonthlyEnergyData, setShellingMonthlyEnergyData] = useState<ShellingMonthlyEnergyRecord[]>([])
 
+    // Compressor Daily Meter State
+    type CompressorRecord = { work_date: string; meter1?: number; meter2?: number; meter3?: number; kwh1: number; kwh2: number; kwh3: number; total_kwh: number; };
+    const [compressorData, setCompressorData] = useState<CompressorRecord[]>([]);
+
     // Shelling Line Tracking State
     const SHELLING_LINES = ['A', 'B', 'C', 'D1', 'D2'] as const
     type ShellLine = typeof SHELLING_LINES[number]
@@ -405,6 +409,57 @@ export default function InputPage() {
         fetchEnergy();
     }, [date, role])
 
+    // Load Compressor Meter Data
+    useEffect(() => {
+        async function fetchCompressor() {
+            if (!date || role !== 'admin') return;
+            const startStr = format(startOfMonth(date), "yyyy-MM-dd");
+            const endStr = format(endOfMonth(date), "yyyy-MM-dd");
+            const prevDateStr = format(subDays(startOfMonth(date), 1), "yyyy-MM-dd");
+
+            const { data: monthData } = await supabase
+                .from('daily_compressor')
+                .select('*')
+                .gte('work_date', startStr)
+                .lte('work_date', endStr)
+                .order('work_date');
+
+            const { data: prevData } = await supabase
+                .from('daily_compressor')
+                .select('meter1, meter2, meter3')
+                .eq('work_date', prevDateStr)
+                .single();
+
+            const daysInMonth = eachDayOfInterval({ start: startOfMonth(date), end: endOfMonth(date) });
+            const compiled: CompressorRecord[] = daysInMonth.map(d => {
+                const dayStr = format(d, "yyyy-MM-dd");
+                const ex = monthData?.find((r: any) => r.work_date === dayStr);
+                return {
+                    work_date: dayStr,
+                    meter1: ex?.meter1 !== null && ex?.meter1 !== undefined ? Number(ex.meter1) : undefined,
+                    meter2: ex?.meter2 !== null && ex?.meter2 !== undefined ? Number(ex.meter2) : undefined,
+                    meter3: ex?.meter3 !== null && ex?.meter3 !== undefined ? Number(ex.meter3) : undefined,
+                    kwh1: 0, kwh2: 0, kwh3: 0, total_kwh: 0,
+                };
+            });
+
+            // Compute daily kWh from meter diff. Day 0 uses prev month's last reading.
+            const calcKwh = (curr: number | undefined, prev: number | undefined) =>
+                curr !== undefined && prev !== undefined ? Math.max(0, curr - prev) : 0;
+
+            for (let i = 0; i < compiled.length; i++) {
+                const prevRec = i === 0 ? prevData : compiled[i - 1];
+                compiled[i].kwh1 = calcKwh(compiled[i].meter1, prevRec?.meter1 ?? undefined);
+                compiled[i].kwh2 = calcKwh(compiled[i].meter2, prevRec?.meter2 ?? undefined);
+                compiled[i].kwh3 = calcKwh(compiled[i].meter3, prevRec?.meter3 ?? undefined);
+                compiled[i].total_kwh = compiled[i].kwh1 + compiled[i].kwh2 + compiled[i].kwh3;
+            }
+
+            setCompressorData(compiled);
+        }
+        fetchCompressor();
+    }, [date, role])
+
     // Load Shelling Energy
     useEffect(() => {
         async function fetchShellingEnergy() {
@@ -557,6 +612,23 @@ export default function InputPage() {
             fetchHistory(selectedDept)
         }
         setIsSaving(false)
+    }
+
+    async function saveCompressor() {
+        setIsSaving(true);
+        const payload = compressorData
+            .filter(r => r.meter1 !== undefined || r.meter2 !== undefined || r.meter3 !== undefined)
+            .map(r => ({
+                work_date: r.work_date,
+                meter1: r.meter1 ?? null,
+                meter2: r.meter2 ?? null,
+                meter3: r.meter3 ?? null,
+                updated_at: new Date().toISOString(),
+            }));
+        const { error } = await supabase.from('daily_compressor').upsert(payload, { onConflict: 'work_date' });
+        if (error) toast.error('Lỗi khi lưu Máy nén khí: ' + error.message);
+        else toast.success('Đã lưu dữ liệu Máy nén khí thành công');
+        setIsSaving(false);
     }
 
     async function saveEnergy() {
@@ -890,6 +962,7 @@ export default function InputPage() {
                     <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>
                     {role === 'admin' && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
                     {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
+                    {role === 'admin' && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="production" className="space-y-4">
