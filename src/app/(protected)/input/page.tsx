@@ -1186,7 +1186,7 @@ export default function InputPage() {
                                                                             </TableCell>
                                                                         </TableRow>
                                                                     </>
-                                                                ) : departments.find(d => d.id === selectedDept)?.code === 'HAND' ? (
+                                                                ) : departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' ? (
                                                                     <>
                                                                         <TableRow>
                                                                             <TableCell className="font-medium align-middle text-blue-700">Pass 1 (Tấn)</TableCell>
