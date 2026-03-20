@@ -42,6 +42,7 @@ interface ShellingLineRecord {
     downtime_min: number;
     manpower: number;
     broken_pct: number;
+    size: string | null;
     note: string | null;
 }
 
@@ -174,7 +175,7 @@ export default function ReportPage() {
         if (selectedDept === "SHELL") {
             const { data: ld } = await supabase
                 .from("shelling_line_daily")
-                .select("work_date,line_code,shift_name,shift_leader,actual_ton,run_hours,downtime_min,manpower,broken_pct,note")
+                .select("work_date,line_code,shift_name,shift_leader,actual_ton,run_hours,downtime_min,manpower,broken_pct,size,note")
                 .gte("work_date", start)
                 .lte("work_date", end)
                 .order("work_date", { ascending: true })
@@ -262,7 +263,7 @@ export default function ReportPage() {
 
         // Sheet 3: Shelling lines detail (if applicable)
         if (shellingLines.length > 0) {
-            const slHeaders = ["Ngày", "Line", "Ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)", "Nhân sự (Ng)", "Năng suất (T/Ng)", "Dừng máy (phút)", "Ghi chú"]
+            const slHeaders = ["Ngày", "Line", "Ca", "Sản lượng (T)", "Giờ chạy (h)", "Hiệu suất (T/h)", "Nhân sự (Ng)", "Năng suất (T/Ng)", "Dừng máy (phút)", "Size", "Ghi chú"]
             const slRows = [slHeaders, ...shellingLines.map(r => [
                 fmtDate(r.work_date),
                 r.line_code,
@@ -273,10 +274,11 @@ export default function ReportPage() {
                 Number(r.manpower || 0),
                 Number(r.manpower) > 0 ? (Number(r.actual_ton) / Number(r.manpower)).toFixed(3) : "—",
                 Number(r.downtime_min || 0),
+                r.size || "",
                 r.note || ""
             ])]
             const ws3 = XLSX.utils.aoa_to_sheet(slRows)
-            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 30 }]
+            ws3["!cols"] = [{ wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 30 }]
             XLSX.utils.book_append_sheet(wb, ws3, "Shelling Line Details")
         }
 
@@ -372,6 +374,38 @@ export default function ReportPage() {
             Hiệu_Suất_T_h: r.totalRunHours > 0 ? Number((r.totalTon / r.totalRunHours).toFixed(3)) : 0,
             Năng_Suất_TNg: r.totalManpower > 0 ? Number((r.totalTon / r.totalManpower).toFixed(3)) : 0
         }));
+    })();
+
+    const sizePerfChartData = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        const map = new Map<string, { size: string, totalTon: number, totalRunHours: number }>();
+        filteredShellingLines.forEach(r => {
+            if (!r.size) return;
+            if (!map.has(r.size)) map.set(r.size, { size: r.size, totalTon: 0, totalRunHours: 0 });
+            const curr = map.get(r.size)!;
+            curr.totalTon += Number(r.actual_ton || 0);
+            curr.totalRunHours += Number(r.run_hours || 0);
+        });
+        return Array.from(map.values()).map(r => ({
+            name: r.size,
+            Hiệu_Suất_T_h: r.totalRunHours > 0 ? Number((r.totalTon / r.totalRunHours).toFixed(3)) : 0
+        })).sort((a,b) => a.name.localeCompare(b.name));
+    })();
+
+    const sizeBrokenChartData = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        const map = new Map<string, { size: string, totalBroken: number, count: number }>();
+        filteredShellingLines.forEach(r => {
+            if (!r.size || !Number(r.broken_pct)) return;
+            if (!map.has(r.size)) map.set(r.size, { size: r.size, totalBroken: 0, count: 0 });
+            const curr = map.get(r.size)!;
+            curr.totalBroken += Number(r.broken_pct);
+            curr.count += 1;
+        });
+        return Array.from(map.values()).map(r => ({
+            name: r.size,
+            Tỷ_Lệ_Bể: r.count > 0 ? Number((r.totalBroken / r.count).toFixed(2)) : 0
+        })).sort((a,b) => a.name.localeCompare(b.name));
     })();
 
     const achievePct = summary && summary.totalPlan > 0 ? (summary.totalActual / summary.totalPlan * 100) : null
@@ -696,6 +730,44 @@ export default function ReportPage() {
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Chart 6: Size Performance */}
+                            <Card className="col-span-1 lg:col-span-3 lg:col-start-1">
+                                <CardHeader className="pb-0">
+                                    <CardTitle className="text-sm font-bold text-teal-700">Phân tích Hiệu suất & Tỷ lệ Bể theo Kích cỡ (Size)</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                        {/* Size Performance */}
+                                        <div className="h-64 w-full">
+                                            <p className="text-xs font-semibold text-center text-teal-800 mb-2">Hiệu suất (Tấn/Giờ) theo Size</p>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <ComposedChart data={sizePerfChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
+                                                    <YAxis tick={{ fontSize: 10 }} />
+                                                    <Tooltip contentStyle={{ fontSize: '12px' }} cursor={{fill: 'transparent'}} />
+                                                    <Bar dataKey="Hiệu_Suất_T_h" name="Hiệu suất (T/h)" fill="#0d9488" barSize={30} radius={[4, 4, 0, 0]} />
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+
+                                        {/* Size Broken Pct */}
+                                        <div className="h-64 w-full">
+                                            <p className="text-xs font-semibold text-center text-rose-800 mb-2">Tỷ lệ Bể TB (%) theo Size</p>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <ComposedChart data={sizeBrokenChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
+                                                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`]} cursor={{fill: 'transparent'}} />
+                                                    <Bar dataKey="Tỷ_Lệ_Bể" name="Tỷ lệ Bể (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     )}
 
@@ -786,6 +858,7 @@ export default function ReportPage() {
                                                 <th className="text-right p-3 font-semibold">Sản lượng (T)</th>
                                                 <th className="text-right p-3 font-semibold">Giờ chạy (h)</th>
                                                 <th className="text-right p-3 font-semibold px-6">Dừng máy (phút)</th>
+                                                <th className="text-center p-3 font-semibold text-purple-600">Size</th>
                                                 <th className="text-right p-3 font-semibold text-red-600">% Bể</th>
                                                 <th className="text-left p-3 font-semibold">Ghi chú</th>
                                             </tr>
@@ -799,6 +872,7 @@ export default function ReportPage() {
                                                     <td className="p-3 text-right font-bold text-primary">{Number(r.actual_ton) > 0 ? Number(r.actual_ton).toFixed(2) : "—"}</td>
                                                     <td className="p-3 text-right font-medium text-muted-foreground">{Number(r.run_hours) > 0 ? Number(r.run_hours).toFixed(1) : "—"}</td>
                                                     <td className="p-3 text-right font-medium text-amber-600 px-6">{Number(r.downtime_min) > 0 ? `${r.downtime_min}p` : "—"}</td>
+                                                    <td className="p-3 text-center font-bold text-purple-700">{r.size || "—"}</td>
                                                     <td className="p-3 text-right font-medium text-red-600">{Number(r.broken_pct) > 0 ? `${Number(r.broken_pct)}%` : "—"}</td>
                                                     <td className="p-3 text-left text-muted-foreground text-xs max-w-[200px] truncate" title={r.note || ""}>{r.note || "—"}</td>
                                                 </tr>
@@ -810,6 +884,7 @@ export default function ReportPage() {
                                                 <td className="p-2 text-primary">{shellingLines.reduce((s, r)=>s+Number(r.actual_ton),0).toFixed(2)}</td>
                                                 <td className="p-2 text-muted-foreground">{shellingLines.reduce((s, r)=>s+Number(r.run_hours),0).toFixed(1)}</td>
                                                 <td className="p-2 text-amber-600 px-6">{shellingLines.reduce((s, r)=>s+Number(r.downtime_min||0),0)}p</td>
+                                                <td></td>
                                                 <td className="p-2 text-red-600">
                                                     {(shellingLines.filter(r => Number(r.broken_pct)>0).length > 0) ? 
                                                         (shellingLines.reduce((s, r)=>s+Number(r.broken_pct||0),0) / shellingLines.filter(r => Number(r.broken_pct)>0).length).toFixed(2) + '%' 
