@@ -47,7 +47,7 @@ export default function DashboardPage() {
     // Shelling line view
     const SHELLING_LINES_DASH = ['A', 'B', 'C', 'D1', 'D2'] as const
     const [shellingLineMonthData, setShellingLineMonthData] = useState<Record<string, { actual_ton: number; run_hours: number }>>({})
-    const [deptViewModes, setDeptViewModes] = useState<Record<string, 'chart' | 'details' | 'lines'>>({})
+    const [deptViewModes, setDeptViewModes] = useState<Record<string, 'chart' | 'details' | 'lines' | 'isp'>>({})
     const [shellingSubView, setShellingSubView] = useState<'production' | 'capacity'>('production')
     const [showCo2Intensity, setShowCo2Intensity] = useState(false)
 
@@ -667,12 +667,13 @@ export default function DashboardPage() {
                         <span className={`flex items-center gap-1.5 uppercase font-black tracking-tight whitespace-nowrap ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-[11px] md:text-xs text-slate-800'}`}>
                             {!(isTotal || isFgwh) && <div className={`w-1.5 h-1.5 rounded-full ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
                             {name}
+                            {deptCode === 'CS' && <span className="text-[9px] md:text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">ISP: {summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp || 0}T MTD</span>}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
                         
                         <div className="flex items-center gap-1">
-                            <span className={`font-black ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-500'} ${(isTotal || isFgwh) ? 'text-xl md:text-2xl' : 'text-sm md:text-base'}`}>
-                                {summary.achivementPct.toFixed(0)}%
+                            <span className={`font-black flex items-baseline gap-0.5 ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-500'} ${(isTotal || isFgwh) ? 'text-xl md:text-2xl' : 'text-sm md:text-base'}`}>
+                                {summary.achivementPct.toFixed(0)}% <span className={`font-semibold tracking-normal uppercase text-muted-foreground ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[9px] md:text-[10px]'}`}>MTD</span>
                             </span>
                         </div>
                     </div>
@@ -721,6 +722,12 @@ export default function DashboardPage() {
                                 <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'lines'}))}
                                     className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'lines' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
                                     Theo Line
+                                </button>
+                            )}
+                            {deptCode === 'CS' && (
+                                <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'isp'}))}
+                                    className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'isp' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
+                                    ISP
                                 </button>
                             )}
                         </div>
@@ -854,6 +861,37 @@ export default function DashboardPage() {
                                     </>
                                 )
                             })()}
+                        </div>
+                    ) : deptCode === "CS" && deptViewModes[id] === 'isp' ? (
+                        <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 h-[100px] md:h-[120px]`}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
+                                    <XAxis 
+                                        dataKey="name" 
+                                        tick={{ fontSize: 9, dy: 5, fill: '#64748b' }} 
+                                        tickLine={false} 
+                                        axisLine={{ stroke: '#e2e8f0' }}
+                                        height={20}
+                                        tickFormatter={(val) => {
+                                            const day = parseInt(val, 10);
+                                            if (!isNaN(day) && (day === 1 || day === 8 || day === 15 || day === 22 || day === 29)) {
+                                                return val;
+                                            }
+                                            return '';
+                                        }}
+                                        interval={0}
+                                        tickMargin={4} 
+                                    />
+                                    <Tooltip contentStyle={{ fontSize: '10px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                                    <Bar dataKey="IspActual" name="ISP Thực tế (Tấn)" radius={[2, 2, 0, 0]}>
+                                        {displayHistory.map((entry: any, index: number) => {
+                                            const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#ef4444" : "#3b82f6";
+                                            return <Cell key={`isp-cell-${index}`} fill={color} />;
+                                        })}
+                                    </Bar>
+                                    <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="ISP Kế hoạch" />
+                                </ComposedChart>
+                            </ResponsiveContainer>
                         </div>
                     ) : deptCode === "ALL" && showCo2Intensity ? (
                         <div className="h-36 w-full mt-auto border-t pt-2">
