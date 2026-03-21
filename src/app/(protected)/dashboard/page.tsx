@@ -1258,7 +1258,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="overflow-x-auto w-full">
-                        <Table className="bg-transparent min-w-[500px]">
+                        <Table className="bg-transparent w-full text-xs sm:text-sm">
 
                             <TableHeader className="bg-slate-50/50">
                                 {selectedDept === 'all' ? (
@@ -1275,15 +1275,15 @@ export default function DashboardPage() {
                                         <TableHead>Ngày / Date</TableHead>
                                         <TableHead className="text-right">{t('col_plan')}</TableHead>
                                         <TableHead className="text-right">{t('col_actual')}</TableHead>
-                                        <TableHead className="text-right">Input (Tấn)</TableHead>
-                                        <TableHead className="text-right">Output (Tấn)</TableHead>
+                                        <TableHead className="text-right hidden sm:table-cell">Input (Tấn)</TableHead>
+                                        <TableHead className="text-right hidden sm:table-cell">Output (Tấn)</TableHead>
                                         {departments.find(d => d.id === selectedDept)?.code === 'PACK' && (
                                             <>
-                                                <TableHead className="text-right">Plan Cont</TableHead>
-                                                <TableHead className="text-right">Actual Cont</TableHead>
+                                                <TableHead className="text-right hidden md:table-cell">Plan Cont</TableHead>
+                                                <TableHead className="text-right hidden md:table-cell">Actual Cont</TableHead>
                                             </>
                                         )}
-                                        <TableHead className="text-right">{t('col_downtime')}</TableHead>
+                                        <TableHead className="text-right hidden md:table-cell">{t('col_downtime')}</TableHead>
                                     </TableRow>
                                 )}
                             </TableHeader>
@@ -1311,15 +1311,15 @@ export default function DashboardPage() {
                                             <TableCell className="font-medium">{format(new Date(d.work_date), 'dd/MM/yyyy')}</TableCell>
                                             <TableCell className="text-right">{Number(d.plan_ton).toFixed(2)}</TableCell>
                                             <TableCell className="text-right text-primary font-bold">{Number(d.actual_ton).toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">{Number(d.input_ton).toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">{Number(d.good_output_ton).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right hidden sm:table-cell">{Number(d.input_ton).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right hidden sm:table-cell">{Number(d.good_output_ton).toFixed(2)}</TableCell>
                                             {d.dept_code === 'PACK' && (
                                                 <>
-                                                    <TableCell className="text-right">{Number(d.plan_container || 0).toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right font-bold text-indigo-600">{Number(d.actual_container || 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right hidden md:table-cell">{Number(d.plan_container || 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-bold text-indigo-600 hidden md:table-cell">{Number(d.actual_container || 0).toFixed(2)}</TableCell>
                                                 </>
                                             )}
-                                            <TableCell className="text-right">{d.downtime_min}</TableCell>
+                                            <TableCell className="text-right hidden md:table-cell">{d.downtime_min}</TableCell>
                                         </TableRow>
                                     ))
                                 )}
