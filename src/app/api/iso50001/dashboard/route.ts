@@ -79,23 +79,28 @@ export async function GET(request: Request) {
         })
 
         // 4. Aggregate by SEU for monthly summary
+        const { data: allSeus } = await supabase.from('iso50001_seu_master').select('*')
+        
         const summaryBySeu: Record<number, any> = {}
-        for (const e of enriched) {
-            if (!summaryBySeu[e.seu_id]) {
-                summaryBySeu[e.seu_id] = {
-                    seu_id: e.seu_id,
-                    seu_name: e.seu?.name,
-                    energy_type: e.seu?.energy_type,
-                    unit: e.seu?.unit,
-                    total_actual: 0,
-                    total_expected: 0,
-                    total_rcn: 0,
-                    total_saving: 0,
-                    days: 0,
-                    has_baseline: !!baselineMap[e.seu_id],
-                    baseline: baselineMap[e.seu_id] || null,
-                }
+        for (const seu of (allSeus || [])) {
+            summaryBySeu[seu.seu_id] = {
+                seu_id: seu.seu_id,
+                seu_name: seu.name,
+                energy_type: seu.energy_type,
+                unit: seu.unit,
+                total_actual: 0,
+                total_expected: 0,
+                total_rcn: 0,
+                total_saving: 0,
+                days: 0,
+                has_baseline: !!baselineMap[seu.seu_id],
+                baseline: baselineMap[seu.seu_id] || null,
             }
+        }
+
+        for (const e of enriched) {
+            if (!summaryBySeu[e.seu_id]) continue // Defensive
+            
             const s = summaryBySeu[e.seu_id]
             s.total_actual += e.actual_energy || 0
             s.total_expected += e.expected_energy || 0
