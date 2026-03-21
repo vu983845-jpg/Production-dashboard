@@ -1867,6 +1867,39 @@ export default function InputPage() {
                                                                 }} />
                                                             {nextRowElec != null && <div className="text-[9px] text-amber-600 text-center absolute bottom-0 left-0 right-0">Trừ từ sau: {nextRowElec}</div>}
                                                         </TableCell>
+                                                        <TableCell className="border-r p-1 bg-amber-50/10 relative pb-4">
+                                                            <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm font-semibold"
+                                                                value={row.meter_peak !== undefined ? row.meter_peak : ''}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                    const newData = [...monthlyEnergyData];
+                                                                    newData[index].meter_peak = val;
+                                                                    setMonthlyEnergyData(recalcEnergyData(newData));
+                                                                }} />
+                                                            {row.electricity_peak_kwh !== undefined && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0">{row.electricity_peak_kwh} kWh</div>}
+                                                        </TableCell>
+                                                        <TableCell className="border-r p-1 bg-amber-50/10 relative pb-4">
+                                                            <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm font-semibold"
+                                                                value={row.meter_normal !== undefined ? row.meter_normal : ''}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                    const newData = [...monthlyEnergyData];
+                                                                    newData[index].meter_normal = val;
+                                                                    setMonthlyEnergyData(recalcEnergyData(newData));
+                                                                }} />
+                                                            {row.electricity_normal_kwh !== undefined && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0">{row.electricity_normal_kwh} kWh</div>}
+                                                        </TableCell>
+                                                        <TableCell className="border-r p-1 bg-amber-50/10 relative pb-4">
+                                                            <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm font-semibold"
+                                                                value={row.meter_offpeak !== undefined ? row.meter_offpeak : ''}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                    const newData = [...monthlyEnergyData];
+                                                                    newData[index].meter_offpeak = val;
+                                                                    setMonthlyEnergyData(recalcEnergyData(newData));
+                                                                }} />
+                                                            {row.electricity_offpeak_kwh !== undefined && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0">{row.electricity_offpeak_kwh} kWh</div>}
+                                                        </TableCell>
                                                         <TableCell className="border-r p-1">
                                                             <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", nextRowElec != null ? "bg-amber-50" : "bg-transparent focus:ring-1 focus:ring-amber-400")}
                                                                 readOnly={nextRowElec != null}
