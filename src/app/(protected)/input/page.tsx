@@ -459,10 +459,14 @@ export default function InputPage() {
                 .eq('work_date', prevDateStr)
                 .single();
 
-            const pElec = pData?.electricity_meter_reading !== null && pData?.electricity_meter_reading !== undefined ? Number(pData.electricity_meter_reading) : null;
-            const pWater = pData?.water_meter_reading !== null && pData?.water_meter_reading !== undefined ? Number(pData.water_meter_reading) : null;
+            const pElec   = pData?.electricity_meter_reading != null ? Number(pData.electricity_meter_reading) : null;
+            const pWater  = pData?.water_meter_reading != null         ? Number(pData.water_meter_reading) : null;
+            const pPeak   = pData?.meter_peak   != null                ? Number(pData.meter_peak) : null;
+            const pNormal = pData?.meter_normal  != null               ? Number(pData.meter_normal) : null;
+            const pOffpeak= pData?.meter_offpeak != null               ? Number(pData.meter_offpeak) : null;
 
-            setPrevMonthLastMeter({ elec: pElec, water: pWater });
+            const prevMonthObj = { elec: pElec, water: pWater, peak: pPeak, normal: pNormal, offpeak: pOffpeak };
+            setPrevMonthLastMeter(prevMonthObj);
 
             // Generate an array for every day in the month
             const daysInMonth = eachDayOfInterval({ start: startOfMonth(date), end: endOfMonth(date) });
@@ -489,7 +493,7 @@ export default function InputPage() {
                 };
             });
 
-            setMonthlyEnergyData(compiledData);
+            setMonthlyEnergyData(recalcEnergyData(compiledData, prevMonthObj));
         }
         fetchEnergy();
     }, [date, role])
