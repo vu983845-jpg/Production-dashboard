@@ -21,6 +21,7 @@ export default function ISO50001Page() {
     // Dashboard data
     const [entries, setEntries] = useState<DailyEntry[]>([])
     const [summaries, setSummaries] = useState<SeuSummary[]>([])
+    const [dashboardHistorical, setDashboardHistorical] = useState<MonthlyHistorical[]>([])
 
     // Baseline engine data  
     const [seus, setSeus] = useState<SeuMaster[]>([])
@@ -36,6 +37,7 @@ export default function ISO50001Page() {
             const json = await res.json()
             setEntries(json.entries || [])
             setSummaries(json.summaries || [])
+            setDashboardHistorical(json.historicalData || [])
         } catch (e) {
             console.error('ISO dashboard fetch error:', e)
         } finally {
@@ -111,7 +113,7 @@ export default function ISO50001Page() {
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                         </div>
                     ) : (
-                        <TabDashboard entries={entries} summaries={summaries} currentMonth={currentMonth} />
+                        <TabDashboard entries={entries} summaries={summaries} historical={dashboardHistorical} currentMonth={currentMonth} />
                     )}
                 </TabsContent>
 

@@ -10,15 +10,16 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, TrendingDown, TrendingUp, Zap, Flame } from "lucide-react"
-import { DailyEntry, SeuSummary, fmtNum, deviationColor, deviationBg } from "./types"
+import { DailyEntry, SeuSummary, MonthlyHistorical, fmtNum, deviationColor, deviationBg } from "./types"
 
 interface Props {
     entries: DailyEntry[]
     summaries: SeuSummary[]
+    historical: MonthlyHistorical[]
     currentMonth: Date
 }
 
-export function TabDashboard({ entries, summaries, currentMonth }: Props) {
+export function TabDashboard({ entries, summaries, historical, currentMonth }: Props) {
     const elecSummary = summaries.find(s => s.energy_type === 'electricity')
     const woodSummary = summaries.find(s => s.energy_type === 'wood')
 
@@ -115,6 +116,86 @@ export function TabDashboard({ entries, summaries, currentMonth }: Props) {
                 </CardContent>
             </Card>
 
+            {/* BẢNG 12 THÁNG LỊCH SỬ CHO TẤT CẢ SEU */}
+            <Card className="shadow-sm">
+                <CardHeader className="bg-slate-50/50 border-b pb-3">
+                    <CardTitle className="text-sm">Lịch Sử Năng Lượng (12 Tháng Gần Nhất)</CardTitle>
+                    <CardDescription className="text-xs">
+                        Dữ liệu raw data đã nhập ở tab Baseline Engine, so sánh với đường cơ sở hiện tại
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto max-h-[500px]">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-100/50 text-xs uppercase text-slate-500 border-b sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-4 py-3 font-semibold">Tháng</th>
+                                    <th className="px-4 py-3 font-semibold">Khu vực / SEU</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Sản lượng</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Thực tế</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Dự báo</th>
+                                    <th className="px-4 py-3 font-semibold text-right">% Tiết kiệm</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {historical.slice(0, 100).map(row => {
+                                    // Calculate expected and deviation
+                                    const seuSum = summaries.find(s => s.seu_id === row.seu_id)
+                                    const bl = seuSum?.baseline
+                                    const rcn = row.rcn_hap_duoc_kg || 0
+                                    const actual = row.actual_energy || 0
+                                    
+                                    let expected = null
+                                    let devPct = null
+                                    if (bl && rcn > 0) {
+                                        expected = Number(bl.slope) * rcn + Number(bl.intercept)
+                                        if (expected > 0) {
+                                            devPct = ((actual - expected) / expected) * 100
+                                        }
+                                    }
+                                    
+                                    const saving = devPct != null && devPct <= 0
+                                    const color = deviationColor(devPct)
+                                    const bg = deviationBg(devPct)
+                                    const unit = seuSum?.unit || row.seu?.unit || ''
+
+                                    return (
+                                        <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-4 py-2 font-mono text-muted-foreground whitespace-nowrap">
+                                                {format(new Date(row.month_year), 'MM/yyyy')}
+                                            </td>
+                                            <td className="px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap">
+                                                {seuSum?.energy_type === 'electricity' || row.seu?.energy_type === 'electricity' 
+                                                    ? <Zap className="h-3.5 w-3.5 text-blue-500" /> 
+                                                    : <Flame className="h-3.5 w-3.5 text-orange-500" />}
+                                                {seuSum?.seu_name || row.seu?.name}
+                                            </td>
+                                            <td className="px-4 py-2 text-right font-mono text-muted-foreground">
+                                                {fmtNum(rcn)} <span className="text-[10px]">kg</span>
+                                            </td>
+                                            <td className="px-4 py-2 text-right font-mono font-semibold">
+                                                {fmtNum(actual)} <span className="text-[10px] text-muted-foreground font-normal">{unit}</span>
+                                            </td>
+                                            <td className="px-4 py-2 text-right font-mono">
+                                                {expected != null ? (
+                                                    <>{fmtNum(expected)} <span className="text-[10px] text-muted-foreground font-normal">{unit}</span></>
+                                                ) : <span className="text-xs text-muted-foreground italic">N/A</span>}
+                                            </td>
+                                            <td className="px-4 py-2 text-right">
+                                                {devPct != null ? (
+                                                    <Badge variant="outline" className={`font-mono px-1.5 py-0 text-[11px] ${bg} ${color} border-transparent`}>
+                                                        {saving ? '' : '+'}{fmtNum(devPct)}%
+                                                    </Badge>
+                                                ) : <span className="text-xs text-muted-foreground italic">N/A</span>}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Summary KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

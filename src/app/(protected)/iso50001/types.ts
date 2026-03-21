@@ -14,7 +14,9 @@ export interface MonthlyHistorical {
     month_year: string  // 'YYYY-MM-DD'
     rcn_hap_duoc_kg: number
     actual_energy: number
+    ck_obtained_mt?: number
     notes?: string
+    seu?: SeuMaster
 }
 
 export interface BaselineModel {

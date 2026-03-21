@@ -41,6 +41,14 @@ export async function GET(request: Request) {
             baselineMap[b.seu_id] = b
         }
 
+        // 2.5 Fetch all historical monthly records for the 12-month table
+        const { data: historicalData, error: histErr } = await supabase
+            .from('iso50001_monthly_historical')
+            .select('*, seu:iso50001_seu_master(name, energy_type, unit)')
+            .order('month_year', { ascending: false })
+
+        if (histErr) throw histErr
+
         // 3. Compute per-entry KPIs
         const enriched = (entries || []).map((e: any) => {
             const bl = baselineMap[e.seu_id]
@@ -106,7 +114,7 @@ export async function GET(request: Request) {
             monthly_enpi_baseline: s.total_rcn > 0 ? s.total_expected / s.total_rcn : null,
         }))
 
-        return NextResponse.json({ entries: enriched, summaries })
+        return NextResponse.json({ entries: enriched, summaries, historicalData })
 
     } catch (err: any) {
         console.error('ISO 50001 dashboard error:', err)
