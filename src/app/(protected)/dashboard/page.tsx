@@ -1268,7 +1268,7 @@ export default function DashboardPage() {
                                         <TableHead className="text-right">{t('col_actual')}</TableHead>
                                         <TableHead className="text-right hidden sm:table-cell">{t('col_achv')}</TableHead>
                                         <TableHead className="text-right hidden sm:table-cell">{t('col_variance')}</TableHead>
-                                        <TableHead className="text-right hidden md:table-cell">{t('col_downtime')}</TableHead>
+                                        <TableHead className="text-right">{t('col_downtime')}</TableHead>
                                     </TableRow>
                                 ) : (
                                     <TableRow>
@@ -1283,7 +1283,10 @@ export default function DashboardPage() {
                                                 <TableHead className="text-right hidden md:table-cell">Actual Cont</TableHead>
                                             </>
                                         )}
-                                        <TableHead className="text-right hidden md:table-cell">{t('col_downtime')}</TableHead>
+                                        {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (
+                                            <TableHead className="text-right text-blue-600">ISP (T)</TableHead>
+                                        )}
+                                        <TableHead className="text-right">{t('col_downtime')}</TableHead>
                                     </TableRow>
                                 )}
                             </TableHeader>
@@ -1301,7 +1304,7 @@ export default function DashboardPage() {
                                                 <TableCell className={`text-right hidden sm:table-cell ${Number(variance) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                                                     {Number(variance) > 0 ? '+' : ''}{variance}
                                                 </TableCell>
-                                                <TableCell className="text-right hidden md:table-cell">{d.Down}</TableCell>
+                                                <TableCell className="text-right">{d.Down}</TableCell>
                                             </TableRow>
                                         )
                                     })
@@ -1319,7 +1322,13 @@ export default function DashboardPage() {
                                                     <TableCell className="text-right font-bold text-indigo-600 hidden md:table-cell">{Number(d.actual_container || 0).toFixed(2)}</TableCell>
                                                 </>
                                             )}
-                                            <TableCell className="text-right hidden md:table-cell">{d.downtime_min}</TableCell>
+                                            {['CS', 'HAND'].includes(d.dept_code) && (
+                                                <TableCell className="text-right text-blue-600 font-medium">
+                                                    {Number(d.isp_ton || 0).toFixed(1)}
+                                                    <span className="text-[10px] text-muted-foreground ml-1 hidden sm:inline">/ {Number(d.plan_isp_ton || 0).toFixed(1)}</span>
+                                                </TableCell>
+                                            )}
+                                            <TableCell className="text-right">{d.downtime_min}</TableCell>
                                         </TableRow>
                                     ))
                                 )}
