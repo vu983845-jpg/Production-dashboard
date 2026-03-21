@@ -43,7 +43,7 @@ export default function EnergyDashboardPage() {
                 const { data: energy } = await supabase
                     .from("daily_energy")
                     .select("*")
-                    .gte("work_date", startDateStr)
+                    .gte("work_date", fetchStartStr) // Changed to fetch 1 day earlier to compute deltas
                     .lte("work_date", endDateStr)
                     .order("work_date", { ascending: true })
 
@@ -111,7 +111,31 @@ export default function EnergyDashboardPage() {
                 const shellDeltasExtracted = computeDeltas(shelling, 1, startDateStr)
                 const shellMapped = shellDeltasExtracted.map(d => ({ ...d, energy_kwh: d.electricity_meter_reading }))
 
-                setEnergyData((energy || []).map(e => {
+                // Pre-process energy to compute kWh from meter readings if missing
+                const processedEnergy = [...(energy || [])];
+                for (let i = 1; i < processedEnergy.length; i++) {
+                    const curr = processedEnergy[i];
+                    const prev = processedEnergy[i - 1];
+                    const diffDays = differenceInDays(new Date(curr.work_date), new Date(prev.work_date)) || 1;
+                    
+                    if (!curr.electricity_peak_kwh && curr.meter_peak && prev.meter_peak) {
+                        curr.electricity_peak_kwh = Math.max(0, (curr.meter_peak - prev.meter_peak) / diffDays);
+                    }
+                    if (!curr.electricity_normal_kwh && curr.meter_normal && prev.meter_normal) {
+                        curr.electricity_normal_kwh = Math.max(0, (curr.meter_normal - prev.meter_normal) / diffDays);
+                    }
+                    if (!curr.electricity_offpeak_kwh && curr.meter_offpeak && prev.meter_offpeak) {
+                        curr.electricity_offpeak_kwh = Math.max(0, (curr.meter_offpeak - prev.meter_offpeak) / diffDays);
+                    }
+                    if (!curr.electricity_kwh && curr.electricity_meter_reading && prev.electricity_meter_reading) {
+                        curr.electricity_kwh = Math.max(0, (curr.electricity_meter_reading - prev.electricity_meter_reading) / diffDays);
+                    }
+                }
+
+                // Make sure to filter out the previous month's overlapping days
+                const validEnergy = processedEnergy.filter(e => e.work_date >= startDateStr);
+
+                setEnergyData(validEnergy.map(e => {
                     const p = e.electricity_peak_kwh || 0;
                     const n = e.electricity_normal_kwh || 0;
                     const o = e.electricity_offpeak_kwh || 0;
