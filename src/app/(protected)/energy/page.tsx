@@ -303,7 +303,7 @@ export default function EnergyDashboardPage() {
                                         </div>
 
                                         {/* CHART (RIGHT) */}
-                                        <div className="w-full lg:flex-1 min-h-[300px] lg:h-[350px]">
+                                        <div className="w-full lg:w-3/4 h-[320px] lg:h-[350px] shrink-0 lg:shrink">
                                             {energyData.length === 0 ? (
                                                 <div className="h-full flex items-center justify-center text-muted-foreground">Chưa có dữ liệu tháng này</div>
                                             ) : (
