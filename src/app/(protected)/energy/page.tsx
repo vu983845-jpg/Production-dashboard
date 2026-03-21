@@ -6,7 +6,7 @@ import { vi } from "date-fns/locale"
 import { CalendarIcon, ChevronLeft, ChevronRight, Zap, Loader2 } from "lucide-react"
 import {
     AreaChart, Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart,
-    ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine
+    ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine, PieChart, Pie
 } from "recharts"
 
 import { Button } from "@/components/ui/button"
@@ -110,7 +110,20 @@ export default function EnergyDashboardPage() {
                 const shellDeltasExtracted = computeDeltas(shelling, 1, startDateStr)
                 const shellMapped = shellDeltasExtracted.map(d => ({ ...d, energy_kwh: d.electricity_meter_reading }))
 
-                setEnergyData((energy || []).map(e => ({...e, fmtDate: format(new Date(e.work_date), "dd/MM")})))
+                setEnergyData((energy || []).map(e => {
+                    const p = e.electricity_peak_kwh || 0;
+                    const n = e.electricity_normal_kwh || 0;
+                    const o = e.electricity_offpeak_kwh || 0;
+                    const sum = p + n + o;
+                    return {
+                        ...e, 
+                        fmtDate: format(new Date(e.work_date), "dd/MM"),
+                        fallback_kwh: sum > 0 ? 0 : Number(e.electricity_kwh || 0),
+                        stacked_peak: p,
+                        stacked_normal: n,
+                        stacked_offpeak: o
+                    }
+                }))
                 setCompressorData(compDeltas)
                 setOtherElecData(othersDeltas)
                 setShellingData(shellMapped)
@@ -198,11 +211,63 @@ export default function EnergyDashboardPage() {
                                         <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => val.toLocaleString('en-US')} />
                                         <Tooltip content={<CustomTooltip />} />
                                         <Legend />
-                                        <Bar dataKey="electricity_kwh" name="Thực tế (Actual)" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                        <Line type="monotone" dataKey="electricity_target_kwh" name="Mục tiêu (Target)" stroke="#EF4444" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                                        <Bar dataKey="fallback_kwh" stackId="a" name="Tổng (Chưa phân chia)" fill="#9CA3AF" />
+                                        <Bar dataKey="stacked_offpeak" stackId="a" name="Thấp điểm" fill="#10B981" />
+                                        <Bar dataKey="stacked_normal" stackId="a" name="Bình thường" fill="#3B82F6" />
+                                        <Bar dataKey="stacked_peak" stackId="a" name="Cao điểm" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                                        <Line type="monotone" dataKey="electricity_target_kwh" name="Mục tiêu (Target)" stroke="#F59E0B" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             )}
+                        </CardContent>
+                    </Card>
+
+                    {/* MTD PIE CHART - FACTORY ENERGY COMPONENT */}
+                    <Card className="col-span-2 lg:col-span-2 shadow-sm">
+                        <CardHeader>
+                            <CardTitle>Tỷ Trọng Điện MTD (Peak/Normal/Offpeak)</CardTitle>
+                            <CardDescription>Cơ cấu lượng điện tiêu thụ trong tháng hiện tại</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[350px]">
+                            {(() => {
+                                const mtdPeak = energyData.reduce((acc, curr) => acc + (curr.stacked_peak || 0), 0);
+                                const mtdNormal = energyData.reduce((acc, curr) => acc + (curr.stacked_normal || 0), 0);
+                                const mtdOffpeak = energyData.reduce((acc, curr) => acc + (curr.stacked_offpeak || 0), 0);
+                                const total = mtdPeak + mtdNormal + mtdOffpeak;
+                                
+                                if (energyData.length === 0 || total === 0) {
+                                    return <div className="h-full flex items-center justify-center text-muted-foreground">Chưa có dữ liệu phân bổ giờ cao điểm tháng này</div>;
+                                }
+
+                                const pieData = [
+                                    { name: 'Thấp điểm', value: mtdOffpeak, fill: '#10B981' },
+                                    { name: 'Bình thường', value: mtdNormal, fill: '#3B82F6' },
+                                    { name: 'Cao điểm', value: mtdPeak, fill: '#EF4444' }
+                                ].filter(d => d.value > 0);
+
+                                return (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={pieData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={110}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(1)}%`}
+                                            >
+                                                {pieData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip formatter={(value: any) => `${Number(value || 0).toLocaleString('vi-VN')} kWh`} />
+                                            <Legend verticalAlign="bottom" height={36} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                );
+                            })()}
                         </CardContent>
                     </Card>
 

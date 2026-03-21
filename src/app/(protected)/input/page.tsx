@@ -157,7 +157,7 @@ export default function InputPage() {
     })
     const [fgwhData, setFgwhData] = useState({ actual_isp_ton: 0, actual_non_isp_ton: 0 })
     const [monthlyEnergyData, setMonthlyEnergyData] = useState<MonthlyEnergyRecord[]>([])
-    const [prevMonthLastMeter, setPrevMonthLastMeter] = useState<{ elec: number | null, water: number | null }>({ elec: null, water: null })
+    const [prevMonthLastMeter, setPrevMonthLastMeter] = useState<any>({ elec: null, water: null, peak: null, normal: null, offpeak: null })
     const [prevMeterReading, setPrevMeterReading] = useState<number | null>(null)
     const [prevDayActual, setPrevDayActual] = useState<number | null>(null)
     const [recentRecords, setRecentRecords] = useState<any[]>([])
@@ -442,7 +442,7 @@ export default function InputPage() {
             // Fetch the last day of the previous month for the initial subtraction
             const { data: pData } = await supabase
                 .from('daily_energy')
-                .select('electricity_meter_reading, water_meter_reading')
+                .select('electricity_meter_reading, water_meter_reading, meter_peak, meter_normal, meter_offpeak')
                 .eq('work_date', prevDateStr)
                 .single();
 
@@ -1826,8 +1826,8 @@ export default function InputPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {monthlyEnergyData.map((row, index) => {
-                                                const nextRowElec = index < monthlyEnergyData.length - 1 ? monthlyEnergyData[index + 1].electricity_meter_reading : undefined;
-                                                const nextRowWater = index < monthlyEnergyData.length - 1 ? monthlyEnergyData[index + 1].water_meter_reading : undefined;
+                                                const prevRowElec = index > 0 ? monthlyEnergyData[index - 1].electricity_meter_reading : prevMonthLastMeter?.elec;
+                                                const prevRowWater = index > 0 ? monthlyEnergyData[index - 1].water_meter_reading : prevMonthLastMeter?.water;
 
                                                 const handleMeterChange = (type: 'electric' | 'water', val: number | undefined) => {
                                                     const newData = [...monthlyEnergyData];
@@ -1865,7 +1865,7 @@ export default function InputPage() {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
                                                                     handleMeterChange('electric', val);
                                                                 }} />
-                                                            {nextRowElec != null && <div className="text-[9px] text-amber-600 text-center absolute bottom-0 left-0 right-0">Trừ từ sau: {nextRowElec}</div>}
+                                                            {prevRowElec != null && <div className="text-[9px] text-amber-600 text-center absolute bottom-0 left-0 right-0">Trừ từ trước: {prevRowElec}</div>}
                                                         </TableCell>
                                                         <TableCell className="border-r p-1 bg-amber-50/10 relative pb-4">
                                                             <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm font-semibold"
@@ -1874,7 +1874,7 @@ export default function InputPage() {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
                                                                     const newData = [...monthlyEnergyData];
                                                                     newData[index].meter_peak = val;
-                                                                    setMonthlyEnergyData(recalcEnergyData(newData));
+                                                                    setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                 }} />
                                                             {row.electricity_peak_kwh !== undefined && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0">{row.electricity_peak_kwh} kWh</div>}
                                                         </TableCell>
@@ -1885,7 +1885,7 @@ export default function InputPage() {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
                                                                     const newData = [...monthlyEnergyData];
                                                                     newData[index].meter_normal = val;
-                                                                    setMonthlyEnergyData(recalcEnergyData(newData));
+                                                                    setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                 }} />
                                                             {row.electricity_normal_kwh !== undefined && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0">{row.electricity_normal_kwh} kWh</div>}
                                                         </TableCell>
@@ -1896,13 +1896,13 @@ export default function InputPage() {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
                                                                     const newData = [...monthlyEnergyData];
                                                                     newData[index].meter_offpeak = val;
-                                                                    setMonthlyEnergyData(recalcEnergyData(newData));
+                                                                    setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                 }} />
                                                             {row.electricity_offpeak_kwh !== undefined && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0">{row.electricity_offpeak_kwh} kWh</div>}
                                                         </TableCell>
                                                         <TableCell className="border-r p-1">
-                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", nextRowElec != null ? "bg-amber-50" : "bg-transparent focus:ring-1 focus:ring-amber-400")}
-                                                                readOnly={nextRowElec != null}
+                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", prevRowElec != null ? "bg-amber-50" : "bg-transparent focus:ring-1 focus:ring-amber-400")}
+                                                                readOnly={prevRowElec != null}
                                                                 value={row.electricity_kwh || ''}
                                                                 onChange={(e) => {
                                                                     const newData = [...monthlyEnergyData];
@@ -1928,11 +1928,11 @@ export default function InputPage() {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
                                                                     handleMeterChange('water', val);
                                                                 }} />
-                                                            {nextRowWater != null && <div className="text-[9px] text-blue-600 text-center absolute bottom-0 left-0 right-0">Trừ từ sau: {nextRowWater}</div>}
+                                                            {prevRowWater != null && <div className="text-[9px] text-blue-600 text-center absolute bottom-0 left-0 right-0">Trừ từ trước: {prevRowWater}</div>}
                                                         </TableCell>
                                                         <TableCell className="border-r p-1">
-                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", nextRowWater != null ? "bg-blue-50" : "bg-transparent focus:ring-1 focus:ring-blue-400")}
-                                                                readOnly={nextRowWater != null}
+                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", prevRowWater != null ? "bg-blue-50" : "bg-transparent focus:ring-1 focus:ring-blue-400")}
+                                                                readOnly={prevRowWater != null}
                                                                 value={row.water_m3 || ''}
                                                                 onChange={(e) => {
                                                                     const newData = [...monthlyEnergyData];
@@ -2109,7 +2109,7 @@ export default function InputPage() {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
                                                                     handleMeterChange(val);
                                                                 }} />
-                                                            {nextRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Từ mùng {format(parseISO(shellingMonthlyEnergyData[index + 1].work_date), "d")}: {nextRowElec}</div>}
+                                                            {prevRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Từ mùng {format(parseISO(shellingMonthlyEnergyData[index + 1].work_date), "d")}: {prevRowElec}</div>}
                                                         </TableCell>
                                                         <TableCell className="border-r border-r-amber-100 p-1 text-right bg-amber-50 font-bold text-amber-800 align-middle">
                                                             {row.electricity_kwh.toLocaleString()}
