@@ -59,11 +59,19 @@ export async function GET(request: Request) {
             let saving = null
             let enpi_baseline = null
 
-            if (bl && rcn > 0) {
-                expected = Number(bl.slope) * rcn + Number(bl.intercept)
-                deviation_pct = expected > 0 ? ((actual - expected) / expected) * 100 : null
-                saving = expected - actual        // positive = saved, negative = lost
-                enpi_baseline = expected / rcn    // expected kWh per kg RCN
+            if (bl) {
+                // Determine days in the month of this entry to scale the monthly intercept down to a daily base-load
+                const entryDate = new Date(e.entry_date)
+                const daysInMonth = new Date(entryDate.getFullYear(), entryDate.getMonth() + 1, 0).getDate()
+                
+                const daily_intercept = Number(bl.intercept) / daysInMonth
+                expected = Number(bl.slope) * rcn + daily_intercept
+                
+                if (expected > 0) {
+                    deviation_pct = ((actual - expected) / expected) * 100
+                    saving = expected - actual        // positive = saved, negative = lost
+                    enpi_baseline = rcn > 0 ? expected / rcn : null
+                }
             }
 
             const enpi_actual = rcn > 0 ? actual / rcn : null
