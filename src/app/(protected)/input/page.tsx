@@ -82,8 +82,8 @@ const recalcEnergyData = (data: MonthlyEnergyRecord[], prevMonth: any) => {
         const n = today.electricity_normal_kwh || 0;
         const o = today.electricity_offpeak_kwh || 0;
         
-        if (p > 0 || n > 0 || o > 0 || today.meter_peak != null || today.meter_normal != null || today.meter_offpeak != null) {
-            today.electricity_kwh = Math.max(0, p + n + o);
+        if (today.meter_peak != null || today.meter_normal != null || today.meter_offpeak != null) {
+            today.electricity_kwh = Math.round((p + n + o) * 100) / 100;
         }
     }
     return data;
@@ -1816,13 +1816,12 @@ export default function InputPage() {
                                         <TableHeader className="bg-muted">
                                             <TableRow>
                                                 <TableHead rowSpan={2} className="border-r w-[80px] text-center">Ngày</TableHead>
-                                                <TableHead colSpan={6} className="border-r text-center text-amber-600 bg-amber-50/50">⚡ Điện năng (kWh)</TableHead>
+                                                <TableHead colSpan={5} className="border-r text-center text-amber-600 bg-amber-50/50">⚡ Điện năng (kWh)</TableHead>
                                                 <TableHead colSpan={3} className="border-r text-center text-blue-600 bg-blue-50/50">💧 Nước (m³)</TableHead>
                                                 <TableHead colSpan={2} className="text-center text-orange-600 bg-orange-50/50">🔥 Củi (Tấn)</TableHead>
                                             </TableRow>
                                             <TableRow>
                                                 {/* Dien */}
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[120px]">Chỉ số Tổng</TableHead>
                                                 <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số Cao</TableHead>
                                                 <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số B.Thường</TableHead>
                                                 <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số Thấp</TableHead>
@@ -1871,17 +1870,6 @@ export default function InputPage() {
                                                         <TableCell className="border-r font-medium text-center">{format(parseISO(row.work_date), "dd/MM")}</TableCell>
 
                                                         {/* Dien */}
-                                                        <TableCell className="border-r p-1 relative">
-                                                            <input type="number" step="1" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm"
-                                                                value={row.electricity_meter_reading !== undefined ? row.electricity_meter_reading : ''}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
-                                                                    const newData = [...monthlyEnergyData];
-newData[index].electricity_meter_reading = val;
-setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
-                                                                }} />
-                                                            {prevRowElec != null && <div className="text-[9px] text-amber-600 text-center absolute bottom-0 left-0 right-0">Trừ từ trước: {prevRowElec}</div>}
-                                                        </TableCell>
                                                         <TableCell className="border-r p-1 bg-amber-50/10 relative pb-4">
                                                             <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm font-semibold"
                                                                 value={row.meter_peak !== undefined ? row.meter_peak : ''}
@@ -1915,15 +1903,8 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                 }} />
                                                             {row.electricity_offpeak_kwh !== undefined && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0">{row.electricity_offpeak_kwh} kWh</div>}
                                                         </TableCell>
-                                                        <TableCell className="border-r p-1">
-                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", prevRowElec != null ? "bg-amber-50" : "bg-transparent focus:ring-1 focus:ring-amber-400")}
-                                                                readOnly={prevRowElec != null}
-                                                                value={row.electricity_kwh || ''}
-                                                                onChange={(e) => {
-                                                                    const newData = [...monthlyEnergyData];
-                                                                    newData[index].electricity_kwh = Number(e.target.value);
-                                                                    setMonthlyEnergyData(newData);
-                                                                }} />
+                                                        <TableCell className="border-r p-1 text-right font-semibold text-amber-800 bg-amber-50/40 text-sm">
+                                                            {row.electricity_kwh != null ? row.electricity_kwh.toLocaleString('vi-VN', {minimumFractionDigits: 0, maximumFractionDigits: 2}) : '-'}
                                                         </TableCell>
                                                         <TableCell className="border-r p-1 bg-amber-50/30">
                                                             <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm"
