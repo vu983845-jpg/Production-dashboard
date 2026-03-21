@@ -490,10 +490,10 @@ export default function DashboardPage() {
                         // Try to find previous day
                         const prevDateStr = format(subDays(new Date(curr.work_date), 1), "yyyy-MM-dd");
                         const prev = mapByDate[prevDateStr];
-                        if (prev) {
-                            const m1 = Math.max(0, (curr.meter1||0) - (prev.meter1||0));
-                            const m2 = Math.max(0, (curr.meter2||0) - (prev.meter2||0));
-                            const m3 = Math.max(0, (curr.meter3||0) - (prev.meter3||0));
+                        if (prev && prev.meter1 != null && prev.meter2 != null && prev.meter3 != null) {
+                            const m1 = Math.max(0, (curr.meter1||0) - prev.meter1) * 1000;
+                            const m2 = Math.max(0, (curr.meter2||0) - prev.meter2) * 1000;
+                            const m3 = Math.max(0, (curr.meter3||0) - prev.meter3) * 1000;
                             const dailyTotal = m1 + m2 + m3;
                             const normalizedDate = format(new Date(curr.work_date), 'yyyy-MM-dd');
                             dailyCompressorKwhMap[normalizedDate] = dailyTotal;
