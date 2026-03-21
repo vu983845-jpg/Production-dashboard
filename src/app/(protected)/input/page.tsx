@@ -18,6 +18,9 @@ export type MonthlyEnergyRecord = {
     electricity_peak_kwh?: number;
     electricity_normal_kwh?: number;
     electricity_offpeak_kwh?: number;
+    meter_peak?: number;
+    meter_normal?: number;
+    meter_offpeak?: number;
     electricity_target_kwh: number;
     water_m3: number;
     water_target_m3: number;
@@ -422,6 +425,9 @@ export default function InputPage() {
                     electricity_peak_kwh: existing?.electricity_peak_kwh !== null && existing?.electricity_peak_kwh !== undefined ? Number(existing?.electricity_peak_kwh) : undefined,
                     electricity_normal_kwh: existing?.electricity_normal_kwh !== null && existing?.electricity_normal_kwh !== undefined ? Number(existing?.electricity_normal_kwh) : undefined,
                     electricity_offpeak_kwh: existing?.electricity_offpeak_kwh !== null && existing?.electricity_offpeak_kwh !== undefined ? Number(existing?.electricity_offpeak_kwh) : undefined,
+                    meter_peak: existing?.meter_peak !== null && existing?.meter_peak !== undefined ? Number(existing?.meter_peak) : undefined,
+                    meter_normal: existing?.meter_normal !== null && existing?.meter_normal !== undefined ? Number(existing?.meter_normal) : undefined,
+                    meter_offpeak: existing?.meter_offpeak !== null && existing?.meter_offpeak !== undefined ? Number(existing?.meter_offpeak) : undefined,
                     electricity_target_kwh: Number(existing?.electricity_target_kwh || 0),
                     water_m3: Number(existing?.water_m3 || 0),
                     water_target_m3: Number(existing?.water_target_m3 || 0),
@@ -744,6 +750,9 @@ export default function InputPage() {
             electricity_peak_kwh: record.electricity_peak_kwh ?? null,
             electricity_normal_kwh: record.electricity_normal_kwh ?? null,
             electricity_offpeak_kwh: record.electricity_offpeak_kwh ?? null,
+            meter_peak: record.meter_peak ?? null,
+            meter_normal: record.meter_normal ?? null,
+            meter_offpeak: record.meter_offpeak ?? null,
             updated_at: new Date().toISOString()
         }))
 
@@ -1762,10 +1771,10 @@ export default function InputPage() {
                                             </TableRow>
                                             <TableRow>
                                                 {/* Dien */}
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[120px]">Chỉ số đ.ngày</TableHead>
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">Cao điểm</TableHead>
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">Bình thường</TableHead>
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">Thấp điểm</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[120px]">Chỉ số Tổng</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số Cao</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số B.Thường</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số Thấp</TableHead>
                                                 <TableHead className="text-center bg-amber-50/50 border-r w-[100px]">Tổng tiêu thụ</TableHead>
                                                 <TableHead className="text-center bg-amber-50/50 border-r w-[80px]">Target</TableHead>
                                                 {/* Nuoc */}
