@@ -993,7 +993,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[160px] md:h-[200px]' : 'h-[100px] md:h-[120px]'}`}>
+                    <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[180px] md:h-[220px]' : 'h-[110px] md:h-[130px]'}`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
                                 <XAxis 
@@ -1036,7 +1036,7 @@ export default function DashboardPage() {
                                             <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#ef4444" dot={true} strokeWidth={2} name={t('legend.emission')} />
                                         </>
                                     )}
-                                    {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />}
+                                    {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '2px' }} />}
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -1052,9 +1052,9 @@ export default function DashboardPage() {
             <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-emerald-50 pointer-events-none -z-10"></div>
             
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0 pb-4 mb-4 backdrop-blur-sm sticky top-0 z-40 bg-white/40 border-b border-white/60 rounded-b-2xl px-2">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 pb-2 md:pb-4 mb-2 md:mb-4 backdrop-blur-sm sticky top-0 z-40 bg-white/40 border-b border-white/60 rounded-b-2xl px-2">
                     <div>
-                        <h2 className="text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 drop-shadow-sm">{t('command_center')}</h2>
+                        <h2 className="text-xl md:text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 drop-shadow-sm">{t('command_center')}</h2>
                     </div>
                     <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
                         <TabsList>
@@ -1090,31 +1090,31 @@ export default function DashboardPage() {
                 </div>
 
                 {selectedDept === 'all' && (
-                    <div className="flex flex-col sm:flex-row gap-2 md:gap-4 mb-4 mt-2 bg-white/40 backdrop-blur-md border border-white/60 p-2 md:p-3 rounded-xl shadow-sm">
-                        <div className="flex-1 flex justify-between items-center px-2 md:px-4 border-b sm:border-b-0 sm:border-r border-slate-300/40 pb-2 sm:pb-0">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 mt-2 bg-white/40 backdrop-blur-md border border-white/60 p-2 md:p-3 rounded-xl shadow-sm">
+                        <div className="flex justify-between items-center p-1 md:px-4 border-r border-slate-200/50">
                             <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${kpiSummary.steamActual >= kpiSummary.steamTarget ? 'bg-emerald-500' : 'bg-amber-500'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">HẤP / STEAM</span>
+                                <span className="text-[8px] sm:text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">HẤP / STEAM</span>
                             </div>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-lg md:text-2xl font-black text-slate-900">{Number(kpiSummary.steamActual).toLocaleString(undefined, {maximumFractionDigits:1})}</span>
                                 <span className="text-[10px] md:text-xs text-muted-foreground">/ {Number(kpiSummary.steamTarget).toLocaleString(undefined, {maximumFractionDigits:1})} T</span>
                             </div>
                         </div>
-                        <div className="flex-1 flex justify-between items-center px-2 md:px-4 border-b sm:border-b-0 sm:border-r border-slate-300/40 py-2 sm:py-0">
+                        <div className="flex justify-between items-center p-1 md:px-4 border-r border-slate-200/50">
                             <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${kpiSummary.contActual >= kpiSummary.contTarget ? 'bg-blue-500' : 'bg-amber-500'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CONTAINER</span>
+                                <span className="text-[8px] sm:text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CONTAINER</span>
                             </div>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-lg md:text-2xl font-black text-slate-900">{Number(kpiSummary.contActual).toLocaleString(undefined, {maximumFractionDigits:1})}</span>
                                 <span className="text-[10px] md:text-xs text-muted-foreground">/ {Number(kpiSummary.contTarget).toLocaleString(undefined, {maximumFractionDigits:1})} C</span>
                             </div>
                         </div>
-                        <div className="flex-1 flex justify-between items-center px-2 md:px-4 pt-2 sm:pt-0">
+                        <div className="flex justify-between items-center p-1 md:px-4 col-span-2 sm:col-span-1">
                             <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 rounded-full ${kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'bg-rose-500' : 'bg-red-600'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CO₂e (SCOPE 1+2)</span>
+                                <span className="text-[8px] sm:text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CO₂e (SCOPE 1+2)</span>
                             </div>
                             <div className="flex items-baseline gap-1">
                                 <span className="text-lg md:text-2xl font-black text-slate-900">{kpiSummary.totalEmission >= 1000 ? (kpiSummary.totalEmission/1000).toFixed(1) + 'k' : kpiSummary.totalEmission.toFixed(1)}</span>
