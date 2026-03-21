@@ -38,6 +38,44 @@ export type ShellingMonthlyEnergyRecord = {
     electricity_target_kwh: number;
 }
 
+
+const recalcEnergyData = (data: MonthlyEnergyRecord[]) => {
+    for (let i = 0; i < data.length - 1; i++) {
+        const today = data[i];
+        const tomorrow = data[i + 1];
+
+        // Total
+        if (today.electricity_meter_reading != null && tomorrow.electricity_meter_reading != null) {
+            today.electricity_kwh = Math.max(0, tomorrow.electricity_meter_reading - today.electricity_meter_reading);
+        }
+
+        // Peak
+        if (today.meter_peak != null && tomorrow.meter_peak != null) {
+            today.electricity_peak_kwh = Math.max(0, tomorrow.meter_peak - today.meter_peak);
+        }
+
+        // Normal
+        if (today.meter_normal != null && tomorrow.meter_normal != null) {
+            today.electricity_normal_kwh = Math.max(0, tomorrow.meter_normal - today.meter_normal);
+        }
+
+        // Offpeak
+        if (today.meter_offpeak != null && tomorrow.meter_offpeak != null) {
+            today.electricity_offpeak_kwh = Math.max(0, tomorrow.meter_offpeak - today.meter_offpeak);
+        }
+
+        // Override total if any sub-meters are calculated
+        const p = today.electricity_peak_kwh || 0;
+        const n = today.electricity_normal_kwh || 0;
+        const o = today.electricity_offpeak_kwh || 0;
+        
+        if (p > 0 || n > 0 || o > 0 || today.meter_peak != null || today.meter_normal != null || today.meter_offpeak != null) {
+            today.electricity_kwh = Math.round((p + n + o) * 100) / 100;
+        }
+    }
+    return data;
+};
+
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
