@@ -13,6 +13,7 @@ import {
     Menu,
     ArrowLeft,
     Zap,
+    ShieldCheck,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -83,7 +84,13 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             title: "Năng lượng",
             href: "/energy",
             icon: Zap,
-            roles: ["admin", "dept_user", "viewer", "HSE", "plant_manager", "maint"],
+            roles: ["admin", "dept_user", "viewer", "HSE", "hse", "plant_manager", "maint"],
+        },
+        {
+            title: "ISO 50001",
+            href: "/iso50001",
+            icon: ShieldCheck,
+            roles: ["admin", "HSE", "hse"],
         },
     ]
 
