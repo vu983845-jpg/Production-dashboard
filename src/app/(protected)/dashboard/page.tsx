@@ -699,13 +699,13 @@ export default function DashboardPage() {
                                     <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
                                     <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
-                                    <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
+                                    <Bar dataKey="Actual" name={t('legend.actual')} radius={[2, 2, 0, 0]}>
                                         {history.map((entry: any, index: number) => {
                                             const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
-                                    <Line type="step" dataKey="Plan" name="Kế hoạch" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
+                                    <Line type="step" dataKey="Plan" name={t('legend.plan')} stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>
@@ -721,10 +721,10 @@ export default function DashboardPage() {
 
                 <CardHeader className={`${(isTotal || isFgwh) ? 'p-2 md:p-4' : 'p-1.5 md:p-2'} bg-gradient-to-b from-slate-50/80 to-transparent border-b border-slate-200/50 flex-shrink-0 relative z-10`}>
                     <div className="flex justify-between items-start mb-1.5 px-0.5">
-                        <span className={`flex items-center gap-1.5 uppercase font-black tracking-tight whitespace-nowrap ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-[11px] md:text-xs text-slate-800'}`}>
+                        <span className={`flex items-center gap-1 flex-wrap uppercase font-black tracking-tight ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-[10px] md:text-xs text-slate-800'}`}>
                             {!(isTotal || isFgwh) && <div className={`w-1.5 h-1.5 rounded-full ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
                             {name}
-                            {['CS', 'HAND'].includes(deptCode) && <span className="text-[9px] md:text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">ISP: {summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp?.toFixed(1) || 0}T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%) MTD</span>}
+                            {['CS', 'HAND'].includes(deptCode) && <span className="hidden sm:inline text-[9px] text-blue-600 font-bold ml-0.5 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">ISP: {summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp?.toFixed(1) || 0}T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%) MTD</span>}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
                         
@@ -737,7 +737,7 @@ export default function DashboardPage() {
 
                     <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((deptCode === 'PEEL_MC' && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
                         <div className="flex flex-col items-center justify-center px-1">
-                            <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>MTD / KH</span>
+                            <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>{t('stat.mtd_plan')}</span>
                             <div className="flex items-baseline gap-0.5 mt-0.5">
                                 <span className={`font-bold text-slate-800 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'}`}>{actualNum.toFixed(1)}</span>
                                 <span className={`text-slate-500 ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[8px] md:text-[9px]'}`}>/{planNum.toFixed(1)}</span>
@@ -753,7 +753,7 @@ export default function DashboardPage() {
 
                         {id !== 'virtual-container' && (
                             <div className="flex flex-col items-center justify-center px-1">
-                                <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>DOWNTIME</span>
+                                <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>{t('stat.downtime').toUpperCase()}</span>
                                 <div className={`font-bold mt-0.5 text-amber-600 flex items-center gap-0.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'}`}>
                                     {(isTotal || isFgwh) && <Clock className="h-3 w-3" />} {Number((summary.downtime / 60).toFixed(1))}h
                                 </div>
@@ -762,7 +762,7 @@ export default function DashboardPage() {
 
                         {(deptCode === 'PEEL_MC' && !isTotal) && (
                             <div className="flex flex-col items-center justify-center px-1">
-                                <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>Đ. NÉN KHÍ</span>
+                                <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>{t('stat.compressor')}</span>
                                 <div className={`font-bold mt-0.5 text-purple-600 flex items-center gap-0.5 text-[10px] md:text-xs`}>
                                     {(summary.totalCompressorKwhMtd || 0).toLocaleString('en-US', {maximumFractionDigits: 0})} <span className="text-[8px] font-normal text-slate-400">kWh</span>
                                 </div>
@@ -1014,26 +1014,26 @@ export default function DashboardPage() {
                                 />
                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
-                                        <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Cần làm/Ngày" connectNulls={false} />
+                                        <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name={t('legend.daily_needed')} connectNulls={false} />
                                     )}
                                     {(deptCode === "SHELL" || deptCode === "PEEL_MC") && (
                                         <>
                                             <YAxis yAxisId="intensity" orientation="right" hide />
-                                            <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name="kWh/T" />
+                                            <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name={t('legend.intensity')} />
                                         </>
                                     )}
-                                    <Bar dataKey="Actual" name="Thực tế" radius={[2, 2, 0, 0]}>
+                                    <Bar dataKey="Actual" name={t('legend.actual')} radius={[2, 2, 0, 0]}>
                                         {displayHistory.map((entry: any, index: number) => {
                                             const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
-                                    <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Kế hoạch" />
+                                    <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name={t('legend.plan')} />
 
                                     {deptCode === "ALL" && (
                                         <>
                                             <YAxis yAxisId="emission" orientation="right" hide />
-                                            <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#ef4444" dot={true} strokeWidth={2} name="Phát thải (T CO₂e)" />
+                                            <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#ef4444" dot={true} strokeWidth={2} name={t('legend.emission')} />
                                         </>
                                     )}
                                     {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />}
@@ -1117,7 +1117,7 @@ export default function DashboardPage() {
                                 <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CO₂e (SCOPE 1+2)</span>
                             </div>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-lg md:text-2xl font-black text-slate-900">{Number(kpiSummary.totalEmission).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                <span className="text-lg md:text-2xl font-black text-slate-900">{kpiSummary.totalEmission >= 1000 ? (kpiSummary.totalEmission/1000).toFixed(1) + 'k' : kpiSummary.totalEmission.toFixed(1)}</span>
                                 <span className="text-[10px] md:text-xs text-muted-foreground">/ {kpiSummary.totalEmissionTarget} T</span>
                             </div>
                         </div>
@@ -1210,7 +1210,7 @@ export default function DashboardPage() {
                                             <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#eab308" />
                                             <Tooltip contentStyle={{ fontSize: '11px' }} />
-                                            <Bar dataKey="ElectricityActual" name="Thực tế" fill="#eab308" radius={[2, 2, 0, 0]} barSize={12} />
+                                            <Bar dataKey="ElectricityActual" name={t('legend.actual')} fill="#eab308" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="ElectricityTarget" name="Mục tiêu" stroke="#ca8a04" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>
                                     </ResponsiveContainer>
@@ -1225,7 +1225,7 @@ export default function DashboardPage() {
                                             <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#3b82f6" />
                                             <Tooltip contentStyle={{ fontSize: '11px' }} />
-                                            <Bar dataKey="WaterActual" name="Thực tế" fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={12} />
+                                            <Bar dataKey="WaterActual" name={t('legend.actual')} fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="WaterTarget" name="Mục tiêu" stroke="#2563eb" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>
                                     </ResponsiveContainer>
@@ -1240,7 +1240,7 @@ export default function DashboardPage() {
                                             <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#f97316" />
                                             <Tooltip contentStyle={{ fontSize: '11px' }} />
-                                            <Bar dataKey="WoodActual" name="Thực tế" fill="#f97316" radius={[2, 2, 0, 0]} barSize={12} />
+                                            <Bar dataKey="WoodActual" name={t('legend.actual')} fill="#f97316" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>
                                     </ResponsiveContainer>

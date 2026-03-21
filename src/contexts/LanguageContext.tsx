@@ -34,12 +34,42 @@ const translations: Record<string, Record<Language, string>> = {
     "daily_needed": { vi: "Cần đạt / Ngày (T)", en: "Daily Target Needed" },
     "container": { vi: "Số Lượng Xuất (Container)", en: "Exported Containers" },
 
+    // Chart legends & labels
+    "legend.actual": { vi: "Thực tế", en: "Actual" },
+    "legend.plan": { vi: "Kế hoạch", en: "Plan" },
+    "legend.daily_needed": { vi: "Cần làm/Ngày", en: "Daily Needed" },
+    "legend.downtime": { vi: "Downtime (phút)", en: "Downtime (min)" },
+    "legend.isp_actual": { vi: "ISP Thực tế", en: "ISP Actual" },
+    "legend.isp_plan": { vi: "ISP Kế hoạch", en: "ISP Plan" },
+    "legend.non_isp": { vi: "Non-ISP", en: "Non-ISP" },
+    "legend.emission": { vi: "Phát thải (T CO₂e)", en: "Emissions (T CO₂e)" },
+    "legend.target": { vi: "Mục tiêu", en: "Target" },
+    "legend.intensity": { vi: "kWh/T", en: "kWh/T" },
+
+    // Card view toggles
+    "toggle.chart": { vi: "Biểu đồ", en: "Chart" },
+    "toggle.details": { vi: "Chi tiết", en: "Details" },
+    "toggle.lines": { vi: "Theo Line", en: "By Line" },
+    "toggle.isp": { vi: "ISP", en: "ISP" },
+
+    // Card stat labels
+    "stat.mtd_plan": { vi: "MTD / KH", en: "MTD / Plan" },
+    "stat.actual": { vi: "Thực hiện", en: "Actual" },
+    "stat.variance": { vi: "Chênh lệch", en: "Variance" },
+    "stat.downtime": { vi: "Downtime", en: "Downtime" },
+    "stat.compressor": { vi: "Đ. NÉN KHÍ", en: "AIR COMP." },
+    "stat.broken": { vi: "Tỷ lệ Bể (%)", en: "Broken (%)" },
+    "stat.unpeel": { vi: "Sót lụa (%)", en: "Unpeel (%)" },
+    "stat.yield": { vi: "Yield (%)", en: "Yield (%)" },
+    "stat.isp": { vi: "ISP (%)", en: "ISP (%)" },
+    "stat.electric": { vi: "Điện (kWh)", en: "Elec (kWh)" },
+
     // Regions
     "region_rcn": { vi: "KHO ĐIỀU THÔ (RCN)", en: "RCN WAREHOUSE" },
     "region_lca": { vi: "LCA", en: "LCA" },
     "region_hca": { vi: "HCA", en: "HCA" },
 
-    // Table 
+    // Table
     "master_data_table": { vi: "Bảng Dữ liệu Sản lượng Tổng hợp", en: "Master Production Data Table" },
     "col_dept": { vi: "Bộ phận / Ngày", en: "Dept / Date" },
     "col_plan": { vi: "Kế hoạch (T)", en: "Plan (T)" },
