@@ -1257,16 +1257,18 @@ export default function DashboardPage() {
                         <CardTitle className="text-xl font-bold text-slate-800">{t('master_data_table')}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <Table className="bg-transparent">
+                        <div className="overflow-x-auto w-full">
+                        <Table className="bg-transparent min-w-[500px]">
+
                             <TableHeader className="bg-slate-50/50">
                                 {selectedDept === 'all' ? (
                                     <TableRow>
                                         <TableHead>{t('col_dept')}</TableHead>
                                         <TableHead className="text-right">{t('col_plan')}</TableHead>
                                         <TableHead className="text-right">{t('col_actual')}</TableHead>
-                                        <TableHead className="text-right">{t('col_achv')}</TableHead>
-                                        <TableHead className="text-right">{t('col_variance')}</TableHead>
-                                        <TableHead className="text-right">{t('col_downtime')}</TableHead>
+                                        <TableHead className="text-right hidden sm:table-cell">{t('col_achv')}</TableHead>
+                                        <TableHead className="text-right hidden sm:table-cell">{t('col_variance')}</TableHead>
+                                        <TableHead className="text-right hidden md:table-cell">{t('col_downtime')}</TableHead>
                                     </TableRow>
                                 ) : (
                                     <TableRow>
@@ -1293,13 +1295,13 @@ export default function DashboardPage() {
                                         return (
                                             <TableRow key={d.name}>
                                                 <TableCell className="font-medium">{d.name}</TableCell>
-                                                <TableCell className="text-right">{d.Plan.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right text-primary font-bold">{d.Actual.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right">{pct}%</TableCell>
-                                                <TableCell className={`text-right ${Number(variance) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                <TableCell className="text-right">{d.Plan.toFixed(1)}</TableCell>
+                                                <TableCell className="text-right text-primary font-bold">{d.Actual.toFixed(1)}</TableCell>
+                                                <TableCell className="text-right hidden sm:table-cell">{pct}%</TableCell>
+                                                <TableCell className={`text-right hidden sm:table-cell ${Number(variance) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                                                     {Number(variance) > 0 ? '+' : ''}{variance}
                                                 </TableCell>
-                                                <TableCell className="text-right">{d.Down}</TableCell>
+                                                <TableCell className="text-right hidden md:table-cell">{d.Down}</TableCell>
                                             </TableRow>
                                         )
                                     })
@@ -1323,6 +1325,7 @@ export default function DashboardPage() {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
