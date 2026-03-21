@@ -52,8 +52,13 @@ export async function GET(request: Request) {
         // 3. Compute per-entry KPIs
         const enriched = (entries || []).map((e: any) => {
             const bl = baselineMap[e.seu_id]
+            const isCk = bl?.label?.includes('[CK]')
             const actual = Number(e.actual_energy) || 0
             const rcn = Number(e.rcn_hap_duoc_kg) || 0
+            const ck = Number(e.ck_obtained_mt) || 0
+            
+            const xVal = isCk ? ck : rcn
+            
             let expected = null
             let deviation_pct = null
             let saving = null
@@ -65,16 +70,16 @@ export async function GET(request: Request) {
                 const daysInMonth = new Date(entryDate.getFullYear(), entryDate.getMonth() + 1, 0).getDate()
                 
                 const daily_intercept = Number(bl.intercept) / daysInMonth
-                expected = Number(bl.slope) * rcn + daily_intercept
+                expected = Number(bl.slope) * xVal + daily_intercept
                 
                 if (expected > 0) {
                     deviation_pct = ((actual - expected) / expected) * 100
                     saving = expected - actual        // positive = saved, negative = lost
-                    enpi_baseline = rcn > 0 ? expected / rcn : null
+                    enpi_baseline = xVal > 0 ? expected / xVal : null
                 }
             }
 
-            const enpi_actual = rcn > 0 ? actual / rcn : null
+            const enpi_actual = xVal > 0 ? actual / xVal : null
 
             return {
                 ...e,

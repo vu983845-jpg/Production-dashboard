@@ -108,7 +108,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 seu_id: activeSeu,
-                label: baselineLabel,
+                label: baselineLabel.trim() + (xVar === 'ck' ? ' [CK]' : ' [RCN]'),
                 period_from: from ? from.slice(0, 7) + '-01' : from,
                 period_to: to ? to.slice(0, 7) + '-01' : to,
                 slope: regression.slope,

@@ -142,13 +142,17 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                                     // Calculate expected and deviation
                                     const seuSum = summaries.find(s => s.seu_id === row.seu_id)
                                     const bl = seuSum?.baseline
+                                    const isCk = bl?.label?.includes('[CK]')
                                     const rcn = row.rcn_hap_duoc_kg || 0
+                                    const ck = row.ck_obtained_mt || 0
                                     const actual = row.actual_energy || 0
+                                    
+                                    const xVal = isCk ? ck : rcn
                                     
                                     let expected = null
                                     let devPct = null
-                                    if (bl && rcn > 0) {
-                                        expected = Number(bl.slope) * rcn + Number(bl.intercept)
+                                    if (bl && xVal > 0) {
+                                        expected = Number(bl.slope) * xVal + Number(bl.intercept)
                                         if (expected > 0) {
                                             devPct = ((actual - expected) / expected) * 100
                                         }

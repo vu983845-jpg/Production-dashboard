@@ -14,20 +14,28 @@ async function syncMarch() {
 
     console.log(`Syncing ISO 50001 daily data from ${startDate} to ${endDate}...`);
 
-    // 1. Get STEAMING RCN
-    const { data: steDept } = await supabase.from('departments').select('id').eq('code', 'STEAM').single();
+    // 1. Get STEAMING RCN & PACKING CK
+    const { data: depts } = await supabase.from('departments').select('id, code').in('code', ['STEAM', 'PACK']);
+    const steDept = depts.find(d => d.code === 'STEAM');
+    const packDept = depts.find(d => d.code === 'PACK');
     
     const { data: actuals } = await supabase.from('daily_actual')
-        .select('work_date, actual_ton')
-        .eq('department_id', steDept.id)
+        .select('work_date, actual_ton, department_id')
+        .in('department_id', [steDept.id, packDept.id])
         .gte('work_date', startDate)
         .lte('work_date', endDate)
         .order('work_date');
 
     const rcnMap = {};
+    const ckMap = {};
     for (const a of (actuals || [])) {
-        if (!rcnMap[a.work_date]) rcnMap[a.work_date] = 0;
-        rcnMap[a.work_date] += (a.actual_ton || 0) * 1000;
+        if (a.department_id === steDept.id) {
+            if (!rcnMap[a.work_date]) rcnMap[a.work_date] = 0;
+            rcnMap[a.work_date] += (a.actual_ton || 0) * 1000;
+        } else if (a.department_id === packDept.id) {
+            if (!ckMap[a.work_date]) ckMap[a.work_date] = 0;
+            ckMap[a.work_date] += (a.actual_ton || 0); // CK is in MT
+        }
     }
 
     // 2. Get SEU 1 & SEU 2 (Electricity & Wood) -> daily_energy
@@ -119,12 +127,13 @@ async function syncMarch() {
     }
 
     // Set of all dates
-    const allDates = new Set([...Object.keys(rcnMap), ...Object.keys(energyMap), ...Object.keys(compMap), ...Object.keys(shellingKwhMap)]);
+    const allDates = new Set([...Object.keys(rcnMap), ...Object.keys(ckMap), ...Object.keys(energyMap), ...Object.keys(compMap), ...Object.keys(shellingKwhMap)]);
     
     const entriesToUpsert = [];
 
     for (const d of Array.from(allDates).sort()) {
         const rcn = rcnMap[d] || 0;
+        const ck = ckMap[d] || null;
         const e = energyMap[d];
         const c = compMap[d];
         const sh = shellingKwhMap[d];
@@ -136,6 +145,7 @@ async function syncMarch() {
                 seu_id: 1,
                 actual_energy: e.electricity_kwh,
                 rcn_hap_duoc_kg: rcn, // Used dynamically for all
+                ck_obtained_mt: ck,
                 notes: 'Auto-sync EVN'
             });
         }
@@ -147,6 +157,7 @@ async function syncMarch() {
                 seu_id: 2,
                 actual_energy: e.wood_kg * 1000,   // CONVERT TONS TO KG
                 rcn_hap_duoc_kg: rcn,
+                ck_obtained_mt: ck,
                 notes: 'Auto-sync Boiler'
             });
         }
@@ -158,6 +169,7 @@ async function syncMarch() {
                 seu_id: 3,
                 actual_energy: c,
                 rcn_hap_duoc_kg: rcn,
+                ck_obtained_mt: ck,
                 notes: 'Auto-sync Compressor'
             });
         }
@@ -169,6 +181,7 @@ async function syncMarch() {
                 seu_id: 4,
                 actual_energy: sh,
                 rcn_hap_duoc_kg: rcn,
+                ck_obtained_mt: ck,
                 notes: 'Auto-sync Shelling'
             });
         }
