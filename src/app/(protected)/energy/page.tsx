@@ -115,13 +115,24 @@ export default function EnergyDashboardPage() {
                     const n = e.electricity_normal_kwh || 0;
                     const o = e.electricity_offpeak_kwh || 0;
                     const sum = p + n + o;
+                    
+                    const cost_peak = p * 3398;
+                    const cost_normal = n * 1833;
+                    const cost_offpeak = o * 1190;
+                    const fallback_cost = sum > 0 ? 0 : Number(e.electricity_kwh || 0) * 1833;
+
                     return {
                         ...e, 
                         fmtDate: format(new Date(e.work_date), "dd/MM"),
                         fallback_kwh: sum > 0 ? 0 : Number(e.electricity_kwh || 0),
                         stacked_peak: p,
                         stacked_normal: n,
-                        stacked_offpeak: o
+                        stacked_offpeak: o,
+                        cost_peak,
+                        cost_normal,
+                        cost_offpeak,
+                        fallback_cost,
+                        total_cost_vnd: cost_peak + cost_normal + cost_offpeak + fallback_cost
                     }
                 }))
                 setCompressorData(compDeltas)
@@ -268,6 +279,46 @@ export default function EnergyDashboardPage() {
                                     </ResponsiveContainer>
                                 );
                             })()}
+                        </CardContent>
+                    </Card>
+
+                    {/* ELECTRICITY COST CHART */}
+                    <Card className="col-span-2 shadow-sm border-amber-200 bg-amber-50/10">
+                        <CardHeader>
+                            <CardTitle className="text-amber-700 flex items-center gap-2">
+                                <Zap className="h-5 w-5" />
+                                Chi Phí Điện Theo Ngày (VNĐ)
+                            </CardTitle>
+                            <CardDescription>
+                                Đơn giá: Bình thường: 1,833 đ | Cao điểm: 3,398 đ | Thấp điểm: 1,190 đ
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[350px]">
+                            {energyData.length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-muted-foreground">Chưa có dữ liệu tháng này</div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={energyData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                        <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                                        <YAxis 
+                                            tickLine={false} 
+                                            axisLine={false} 
+                                            tick={{ fontSize: 11 }} 
+                                            tickFormatter={(val) => new Intl.NumberFormat('vi-VN', { notation: "compact" }).format(val)} 
+                                            width={55}
+                                        />
+                                        <Tooltip 
+                                            formatter={(value: any, name: any) => [`${Number(value).toLocaleString('vi-VN')} đ`, name]}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey="fallback_cost" stackId="cost" name="Chi phí (Ước tính theo giá BT)" fill="#9CA3AF" />
+                                        <Bar dataKey="cost_offpeak" stackId="cost" name="Thấp điểm (1,190đ)" fill="#10B981" />
+                                        <Bar dataKey="cost_normal" stackId="cost" name="Bình thường (1,833đ)" fill="#3B82F6" />
+                                        <Bar dataKey="cost_peak" stackId="cost" name="Cao điểm (3,398đ)" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={60} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
                         </CardContent>
                     </Card>
 
