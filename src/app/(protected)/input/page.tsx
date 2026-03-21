@@ -1863,7 +1863,9 @@ export default function InputPage() {
                                                                 value={row.electricity_meter_reading !== undefined ? row.electricity_meter_reading : ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
-                                                                    handleMeterChange('electric', val);
+                                                                    const newData = [...monthlyEnergyData];
+newData[index].electricity_meter_reading = val;
+setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                 }} />
                                                             {prevRowElec != null && <div className="text-[9px] text-amber-600 text-center absolute bottom-0 left-0 right-0">Trừ từ trước: {prevRowElec}</div>}
                                                         </TableCell>
@@ -1926,7 +1928,9 @@ export default function InputPage() {
                                                                 value={row.water_meter_reading !== undefined ? row.water_meter_reading : ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
-                                                                    handleMeterChange('water', val);
+                                                                    const newData = [...monthlyEnergyData];
+newData[index].water_meter_reading = val;
+setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                 }} />
                                                             {prevRowWater != null && <div className="text-[9px] text-blue-600 text-center absolute bottom-0 left-0 right-0">Trừ từ trước: {prevRowWater}</div>}
                                                         </TableCell>
