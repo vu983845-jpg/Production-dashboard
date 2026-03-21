@@ -58,6 +58,64 @@ export function TabDashboard({ entries, summaries, currentMonth }: Props) {
                 </div>
             )}
 
+            {/* BẢNG TỔNG HỢP SEU */}
+            <Card className="shadow-sm border-blue-100">
+                <CardHeader className="bg-slate-50/50 border-b pb-3">
+                    <CardTitle className="text-sm">Bảng Tổng Hợp Kết Quả SEU (MTD)</CardTitle>
+                    <CardDescription className="text-xs">
+                        Kết quả thực tế, dự báo dựa vào hồi quy và % tiết kiệm của từng khu vực
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-100/50 text-xs uppercase text-slate-500 border-b">
+                                <tr>
+                                    <th className="px-4 py-3 font-semibold">Tên SEU</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Thực tế</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Dự báo (Baseline)</th>
+                                    <th className="px-4 py-3 font-semibold text-right">% Tiết kiệm / Vượt</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {summaries.map(s => {
+                                    const devPct = s.monthly_deviation_pct
+                                    const saving = devPct != null && devPct <= 0
+                                    const color = deviationColor(devPct)
+                                    const bg = deviationBg(devPct)
+
+                                    return (
+                                        <tr key={s.seu_id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-4 py-3 font-medium flex items-center gap-2">
+                                                {s.energy_type === 'electricity' ? <Zap className="h-4 w-4 text-blue-500" /> : <Flame className="h-4 w-4 text-orange-500" />}
+                                                {s.seu_name}
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-mono">
+                                                {fmtNum(s.total_actual)} <span className="text-xs text-muted-foreground">{s.unit}</span>
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-mono">
+                                                {s.has_baseline ? (
+                                                    <>{fmtNum(s.total_expected)} <span className="text-xs text-muted-foreground">{s.unit}</span></>
+                                                ) : <span className="text-xs text-muted-foreground italic">N/A</span>}
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                {devPct != null ? (
+                                                    <Badge variant="outline" className={`font-mono text-xs ${bg} ${color} border-transparent`}>
+                                                        {saving ? <TrendingDown className="h-3 w-3 mr-1 inline" /> : <TrendingUp className="h-3 w-3 mr-1 inline" />}
+                                                        {saving ? '' : '+'}{fmtNum(devPct)}%
+                                                    </Badge>
+                                                ) : <span className="text-xs text-muted-foreground italic">Chưa có baseline</span>}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+
+
             {/* Summary KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <KpiCard
