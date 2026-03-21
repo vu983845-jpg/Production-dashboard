@@ -39,29 +39,42 @@ export type ShellingMonthlyEnergyRecord = {
 }
 
 
-const recalcEnergyData = (data: MonthlyEnergyRecord[]) => {
-    for (let i = 0; i < data.length - 1; i++) {
+const recalcEnergyData = (data: MonthlyEnergyRecord[], prevMonth: any) => {
+    for (let i = 0; i < data.length; i++) {
         const today = data[i];
-        const tomorrow = data[i + 1];
+        const yesterday = i === 0 ? 
+            { 
+                electricity_meter_reading: prevMonth?.elec, 
+                water_meter_reading: prevMonth?.water,
+                meter_peak: prevMonth?.peak,
+                meter_normal: prevMonth?.normal,
+                meter_offpeak: prevMonth?.offpeak
+            } 
+            : data[i - 1];
 
         // Total
-        if (today.electricity_meter_reading != null && tomorrow.electricity_meter_reading != null) {
-            today.electricity_kwh = Math.max(0, tomorrow.electricity_meter_reading - today.electricity_meter_reading);
+        if (today.electricity_meter_reading != null && yesterday.electricity_meter_reading != null) {
+            today.electricity_kwh = Math.max(0, today.electricity_meter_reading - yesterday.electricity_meter_reading);
         }
 
         // Peak
-        if (today.meter_peak != null && tomorrow.meter_peak != null) {
-            today.electricity_peak_kwh = Math.max(0, tomorrow.meter_peak - today.meter_peak);
+        if (today.meter_peak != null && yesterday.meter_peak != null) {
+            today.electricity_peak_kwh = Math.max(0, today.meter_peak - yesterday.meter_peak);
         }
 
         // Normal
-        if (today.meter_normal != null && tomorrow.meter_normal != null) {
-            today.electricity_normal_kwh = Math.max(0, tomorrow.meter_normal - today.meter_normal);
+        if (today.meter_normal != null && yesterday.meter_normal != null) {
+            today.electricity_normal_kwh = Math.max(0, today.meter_normal - yesterday.meter_normal);
         }
 
         // Offpeak
-        if (today.meter_offpeak != null && tomorrow.meter_offpeak != null) {
-            today.electricity_offpeak_kwh = Math.max(0, tomorrow.meter_offpeak - today.meter_offpeak);
+        if (today.meter_offpeak != null && yesterday.meter_offpeak != null) {
+            today.electricity_offpeak_kwh = Math.max(0, today.meter_offpeak - yesterday.meter_offpeak);
+        }
+
+        // Water
+        if (today.water_meter_reading != null && yesterday.water_meter_reading != null) {
+            today.water_m3 = Math.max(0, today.water_meter_reading - yesterday.water_meter_reading);
         }
 
         // Override total if any sub-meters are calculated
@@ -70,7 +83,7 @@ const recalcEnergyData = (data: MonthlyEnergyRecord[]) => {
         const o = today.electricity_offpeak_kwh || 0;
         
         if (p > 0 || n > 0 || o > 0 || today.meter_peak != null || today.meter_normal != null || today.meter_offpeak != null) {
-            today.electricity_kwh = Math.round((p + n + o) * 100) / 100;
+            today.electricity_kwh = Math.max(0, p + n + o);
         }
     }
     return data;
@@ -2087,17 +2100,17 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                         </TableHeader>
                                         <TableBody>
                                             {shellingMonthlyEnergyData.map((row, index) => {
-                                                const nextRowElec = index < shellingMonthlyEnergyData.length - 1 ? shellingMonthlyEnergyData[index + 1].electricity_meter_reading : undefined;
+                                                const prevRowElec = index > 0 ? shellingMonthlyEnergyData[index - 1].electricity_meter_reading : prevMonthLastMeter?.elec;
                                                 const intensity = row.actual_ton > 0 ? (row.electricity_kwh / row.actual_ton).toFixed(2) : "0.00";
 
-                                                const handleMeterChange = (val: number | undefined) => {
+                                                                                                const handleMeterChange = (val: number | undefined) => {
                                                     const newData = [...shellingMonthlyEnergyData];
                                                     newData[index].electricity_meter_reading = val;
-                                                    for (let i = 0; i < newData.length - 1; i++) {
+                                                    for (let i = 0; i < newData.length; i++) {
                                                         const meterToday = newData[i].electricity_meter_reading;
-                                                        const meterTomorrow = newData[i + 1].electricity_meter_reading;
-                                                        if (meterToday != null && meterTomorrow != null) {
-                                                            newData[i].electricity_kwh = Math.max(0, meterTomorrow - meterToday);
+                                                        const meterYesterday = i === 0 ? prevMonthLastMeter?.elec : newData[i - 1]?.electricity_meter_reading;
+                                                        if (meterToday != null && meterYesterday != null) {
+                                                            newData[i].electricity_kwh = Math.max(0, meterToday - meterYesterday);
                                                         }
                                                     }
                                                     setShellingMonthlyEnergyData(newData);
@@ -2113,7 +2126,7 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
                                                                     handleMeterChange(val);
                                                                 }} />
-                                                            {prevRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Từ mùng {format(parseISO(shellingMonthlyEnergyData[index + 1].work_date), "d")}: {prevRowElec}</div>}
+                                                            {prevRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Trừ từ trước: {prevRowElec}</div>}
                                                         </TableCell>
                                                         <TableCell className="border-r border-r-amber-100 p-1 text-right bg-amber-50 font-bold text-amber-800 align-middle">
                                                             {row.electricity_kwh.toLocaleString()}
