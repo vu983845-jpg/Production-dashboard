@@ -271,7 +271,103 @@ export default function EnergyDashboardPage() {
                         </CardContent>
                     </Card>
 
-                    {/* AIR COMPRESSORS */}
+                    {/* DEPARTMENT BREAKDOWN STACKED BAR */}
+                    {(() => {
+                        // Build a date-keyed lookup from each source
+                        const compMap: Record<string, number> = {}
+                        compressorData.forEach((d: any) => {
+                            compMap[d.work_date] = Math.round((d.meter1 || 0) + (d.meter2 || 0) + (d.meter3 || 0))
+                        })
+                        const shellMap: Record<string, number> = {}
+                        shellingData.forEach((d: any) => {
+                            shellMap[d.work_date] = Math.round(d.energy_kwh || 0)
+                        })
+                        const otherMap: Record<string, any> = {}
+                        otherElecData.forEach((d: any) => {
+                            otherMap[d.work_date] = d
+                        })
+
+                        // Collect all unique dates across all sources (within current month)
+                        const allDates = Array.from(new Set([
+                            ...compressorData.map((d: any) => d.work_date),
+                            ...shellingData.map((d: any) => d.work_date),
+                            ...otherElecData.map((d: any) => d.work_date)
+                        ])).sort()
+
+                        if (allDates.length === 0) return null;
+
+                        const breakdownData = allDates.map(date => {
+                            const oth = otherMap[date] || {}
+                            return {
+                                fmtDate: format(new Date(date), 'dd/MM'),
+                                work_date: date,
+                                compressor: compMap[date] || 0,
+                                shelling:   shellMap[date] || 0,
+                                boiler:     Math.round(oth.boiler    || 0),
+                                office:     Math.round(oth.office    || 0),
+                                canteen:    Math.round(oth.canteen   || 0),
+                                db_ac_hca:  Math.round(oth.db_ac_hca || 0),
+                                eco2:       Math.round(oth.eco2      || 0),
+                                maint:      Math.round(oth.maintenance || 0),
+                            }
+                        })
+
+                        const SEGMENTS = [
+                            { key: 'compressor', name: 'Máy Nén Khí',  color: '#8B5CF6' },
+                            { key: 'shelling',   name: 'Shelling',     color: '#F97316' },
+                            { key: 'boiler',     name: 'Boiler',       color: '#EAB308' },
+                            { key: 'db_ac_hca',  name: 'DB AC HAVC',   color: '#3B82F6' },
+                            { key: 'eco2',       name: 'ECO2',         color: '#10B981' },
+                            { key: 'office',     name: 'Office',       color: '#64748B' },
+                            { key: 'canteen',    name: 'Canteen',      color: '#F43F5E' },
+                            { key: 'maint',      name: 'Đồng hồ Maint',color: '#06B6D4' },
+                        ]
+
+                        return (
+                            <Card className="col-span-2 shadow-sm">
+                                <CardHeader>
+                                    <CardTitle>Tỷ Trọng Điện Theo Khu Vực Phụ Trợ (kWh / Ngày)</CardTitle>
+                                    <CardDescription>Biểu đồ Stack — thấy ngay bộ phận nào tiêu nhiều nhất từng ngày</CardDescription>
+                                </CardHeader>
+                                <CardContent className="h-[380px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={breakdownData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                            <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                                            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={(v) => v.toLocaleString('en-US')} width={55} />
+                                            <Tooltip
+                                                content={({ active, payload, label }) => {
+                                                    if (!active || !payload) return null
+                                                    const total = payload.reduce((s: number, p: any) => s + (p.value || 0), 0)
+                                                    return (
+                                                        <div className="bg-background border rounded-lg shadow-lg p-3 text-xs">
+                                                            <p className="font-semibold mb-2">{label}</p>
+                                                            {[...payload].reverse().map((p: any, i: number) => (
+                                                                <div key={i} className="flex items-center justify-between gap-4">
+                                                                    <span style={{ color: p.fill }}>● {p.name}:</span>
+                                                                    <span className="font-mono">{Number(p.value).toLocaleString('vi-VN')} kWh ({total > 0 ? ((p.value/total)*100).toFixed(1) : 0}%)</span>
+                                                                </div>
+                                                            ))}
+                                                            <div className="border-t mt-2 pt-2 font-bold flex justify-between">
+                                                                <span>Tổng:</span>
+                                                                <span className="font-mono">{total.toLocaleString('vi-VN')} kWh</span>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                }}
+                                            />
+                                            <Legend wrapperStyle={{ fontSize: '11px' }} />
+                                            {SEGMENTS.map(s => (
+                                                <Bar key={s.key} dataKey={s.key} name={s.name} stackId="dept" fill={s.color} />
+                                            ))}
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </CardContent>
+                            </Card>
+                        )
+                    })()}
+
+
                     <Card className="col-span-2 shadow-sm">
                         <CardHeader>
                             <CardTitle>Hệ Thống Máy Nén Khí (Air Compressors)</CardTitle>
