@@ -258,13 +258,13 @@ export default function EnergyDashboardPage() {
                                 const mtdNormalKwh = energyData.reduce((acc, curr) => acc + (curr.stacked_normal || 0), 0);
                                 const mtdOffpeakKwh = energyData.reduce((acc, curr) => acc + (curr.stacked_offpeak || 0), 0);
                                 const fallbackKwh = energyData.reduce((acc, curr) => acc + (curr.fallback_kwh || 0), 0);
-                                const mtdTotalKwh = mtdPeakKwh + mtdNormalKwh + mtdOffpeakKwh + fallbackKwh;
+                                const mtdTotalKwh = mtdPeakKwh + mtdNormalKwh + mtdOffpeakKwh;
 
                                 const mtdPeakVnd = energyData.reduce((acc, curr) => acc + (curr.cost_peak || 0), 0);
                                 const mtdNormalVnd = energyData.reduce((acc, curr) => acc + (curr.cost_normal || 0), 0);
                                 const mtdOffpeakVnd = energyData.reduce((acc, curr) => acc + (curr.cost_offpeak || 0), 0);
                                 const fallbackVnd = energyData.reduce((acc, curr) => acc + (curr.fallback_cost || 0), 0);
-                                const mtdTotalVnd = mtdPeakVnd + mtdNormalVnd + mtdOffpeakVnd + fallbackVnd;
+                                const mtdTotalVnd = mtdPeakVnd + mtdNormalVnd + mtdOffpeakVnd;
 
                                 const isKwh = mainChartMode === 'kwh';
 
@@ -293,12 +293,6 @@ export default function EnergyDashboardPage() {
                                                     <span className="font-semibold text-emerald-600 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div>Thấp điểm</span>
                                                     <span className="font-mono">{isKwh ? mtdOffpeakKwh.toLocaleString('vi-VN') : mtdOffpeakVnd.toLocaleString('vi-VN')}</span>
                                                 </div>
-                                                {((isKwh && fallbackKwh > 0) || (!isKwh && fallbackVnd > 0)) && (
-                                                    <div className="flex justify-between p-2.5 border-t bg-gray-50">
-                                                        <span className="font-semibold text-gray-500 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-gray-400"></div>Khác</span>
-                                                        <span className="font-mono">{isKwh ? fallbackKwh.toLocaleString('vi-VN') : fallbackVnd.toLocaleString('vi-VN')}</span>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
 
@@ -315,7 +309,6 @@ export default function EnergyDashboardPage() {
                                                             <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => val.toLocaleString('en-US')} />
                                                             <Tooltip content={<CustomTooltip />} />
                                                             <Legend />
-                                                            <Bar dataKey="fallback_kwh" stackId="a" name="Tổng (Chưa phân chia)" fill="#9CA3AF" />
                                                             <Bar dataKey="stacked_offpeak" stackId="a" name="Thấp điểm" fill="#10B981" />
                                                             <Bar dataKey="stacked_normal" stackId="a" name="Bình thường" fill="#3B82F6" />
                                                             <Bar dataKey="stacked_peak" stackId="a" name="Cao điểm" fill="#EF4444" radius={[4, 4, 0, 0]} />
@@ -336,7 +329,6 @@ export default function EnergyDashboardPage() {
                                                                 formatter={(value: any, name: any) => [`${Number(value).toLocaleString('vi-VN')} đ`, name]}
                                                             />
                                                             <Legend />
-                                                            <Bar dataKey="fallback_cost" stackId="cost" name="Chi phí ước tính" fill="#9CA3AF" />
                                                             <Bar dataKey="cost_offpeak" stackId="cost" name="Thấp điểm (1,190đ)" fill="#10B981" />
                                                             <Bar dataKey="cost_normal" stackId="cost" name="Bình thường (1,833đ)" fill="#3B82F6" />
                                                             <Bar dataKey="cost_peak" stackId="cost" name="Cao điểm (3,398đ)" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={60} />
