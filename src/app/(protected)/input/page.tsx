@@ -15,6 +15,9 @@ import { ddsClient } from "@/lib/supabase/dds-client"
 export type MonthlyEnergyRecord = {
     work_date: string;
     electricity_kwh: number;
+    electricity_peak_kwh?: number;
+    electricity_normal_kwh?: number;
+    electricity_offpeak_kwh?: number;
     electricity_target_kwh: number;
     water_m3: number;
     water_target_m3: number;
@@ -416,6 +419,9 @@ export default function InputPage() {
                 return {
                     work_date: dayStr,
                     electricity_kwh: Number(existing?.electricity_kwh || 0),
+                    electricity_peak_kwh: existing?.electricity_peak_kwh !== null && existing?.electricity_peak_kwh !== undefined ? Number(existing?.electricity_peak_kwh) : undefined,
+                    electricity_normal_kwh: existing?.electricity_normal_kwh !== null && existing?.electricity_normal_kwh !== undefined ? Number(existing?.electricity_normal_kwh) : undefined,
+                    electricity_offpeak_kwh: existing?.electricity_offpeak_kwh !== null && existing?.electricity_offpeak_kwh !== undefined ? Number(existing?.electricity_offpeak_kwh) : undefined,
                     electricity_target_kwh: Number(existing?.electricity_target_kwh || 0),
                     water_m3: Number(existing?.water_m3 || 0),
                     water_target_m3: Number(existing?.water_target_m3 || 0),
@@ -735,6 +741,9 @@ export default function InputPage() {
         setIsSaving(true)
         const payloadToSave = monthlyEnergyData.map(record => ({
             ...record,
+            electricity_peak_kwh: record.electricity_peak_kwh ?? null,
+            electricity_normal_kwh: record.electricity_normal_kwh ?? null,
+            electricity_offpeak_kwh: record.electricity_offpeak_kwh ?? null,
             updated_at: new Date().toISOString()
         }))
 
@@ -1747,14 +1756,17 @@ export default function InputPage() {
                                         <TableHeader className="bg-muted">
                                             <TableRow>
                                                 <TableHead rowSpan={2} className="border-r w-[80px] text-center">Ngày</TableHead>
-                                                <TableHead colSpan={3} className="border-r text-center text-amber-600 bg-amber-50/50">⚡ Điện năng (kWh)</TableHead>
+                                                <TableHead colSpan={6} className="border-r text-center text-amber-600 bg-amber-50/50">⚡ Điện năng (kWh)</TableHead>
                                                 <TableHead colSpan={3} className="border-r text-center text-blue-600 bg-blue-50/50">💧 Nước (m³)</TableHead>
                                                 <TableHead colSpan={2} className="text-center text-orange-600 bg-orange-50/50">🔥 Củi (Tấn)</TableHead>
                                             </TableRow>
                                             <TableRow>
                                                 {/* Dien */}
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[120px]">Chỉ số đầu ngày</TableHead>
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[100px]">Tiêu thụ</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[120px]">Chỉ số đ.ngày</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">Cao điểm</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">Bình thường</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">Thấp điểm</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[100px]">Tổng tiêu thụ</TableHead>
                                                 <TableHead className="text-center bg-amber-50/50 border-r w-[80px]">Target</TableHead>
                                                 {/* Nuoc */}
                                                 <TableHead className="text-center bg-blue-50/50 border-r w-[120px]">Chỉ số đầu ngày</TableHead>
