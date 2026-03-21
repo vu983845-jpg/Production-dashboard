@@ -111,7 +111,7 @@ export function TabInput({ seus, currentMonth, onSaved }: Props) {
                             />
                         </div>
                         <div>
-                            <Label className="text-xs">Sản lượng RCN / Peeling (kg) *</Label>
+                            <Label className="text-xs">Sản lượng Đầu vào/Đầu ra (kg) *</Label>
                             <Input
                                 type="number"
                                 placeholder="e.g. 25000"

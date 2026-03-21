@@ -205,7 +205,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                 className="h-8 text-xs" />
                         </div>
                         <div>
-                            <Label className="text-xs">Sản lượng RCN/Peeling (kg)</Label>
+                            <Label className="text-xs">Sản lượng Đầu vào/Đầu ra (kg)</Label>
                             <Input type="number" placeholder="25000" value={editRow.rcn}
                                 onChange={e => setEditRow(r => ({ ...r, rcn: e.target.value }))}
                                 className="h-8 text-xs" />
@@ -301,7 +301,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                     className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
                                         xVar === 'rcn' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
                                     }`}>
-                                    Sản lượng RCN / Peeling (kg)
+                                    Sản lượng Đầu vào/Đầu ra (kg)
                                 </button>
                                 <button
                                     onClick={() => { setXVar('ck'); setRegression(null) }}

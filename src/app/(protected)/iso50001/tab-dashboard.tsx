@@ -225,13 +225,13 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
             <div className="grid grid-cols-2 gap-3">
                 <EnpiCard
                     title="EnPI — Điện"
-                    unit="kWh / kg RCN"
+                    unit="kWh / kg Sản lượng"
                     actual={elecSummary?.monthly_enpi_actual}
                     baseline={elecSummary?.monthly_enpi_baseline}
                 />
                 <EnpiCard
                     title="EnPI — Củi"
-                    unit="kg củi / kg RCN"
+                    unit="kg củi / kg Sản lượng"
                     actual={woodSummary?.monthly_enpi_actual}
                     baseline={woodSummary?.monthly_enpi_baseline}
                 />

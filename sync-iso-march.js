@@ -7,34 +7,47 @@ async function syncMarch() {
     const startDate = '2026-03-01';
     const endDate = '2026-03-31';
     
-    // For compressor, we need the day before startDate to calculate the first day's consumption (today - yesterday)
+    // For compressor calculating
     const prevDate = new Date(startDate);
     prevDate.setDate(prevDate.getDate() - 1);
     const prevDateStr = prevDate.toISOString().split('T')[0];
 
     console.log(`Syncing ISO 50001 daily data from ${startDate} to ${endDate}...`);
 
-    // 1. Get STEAMING RCN & PACKING CK
-    const { data: depts } = await supabase.from('departments').select('id, code').in('code', ['STEAM', 'PACK']);
+    // 1. Get Departments
+    const { data: depts } = await supabase.from('departments').select('id, code')
+        .in('code', ['STEAM', 'PACK', 'PEEL_MC', 'SHELL']);
     const steDept = depts.find(d => d.code === 'STEAM');
     const packDept = depts.find(d => d.code === 'PACK');
+    const peelDept = depts.find(d => d.code === 'PEEL_MC');
+    const shellDept = depts.find(d => d.code === 'SHELL');
     
+    // Get ALL Actuals for these 4 departments
     const { data: actuals } = await supabase.from('daily_actual')
         .select('work_date, actual_ton, department_id')
-        .in('department_id', [steDept.id, packDept.id])
+        .in('department_id', [steDept.id, packDept.id, peelDept.id, shellDept.id])
         .gte('work_date', startDate)
         .lte('work_date', endDate)
         .order('work_date');
 
-    const rcnMap = {};
-    const ckMap = {};
+    const steamMap = {};
+    const packMap = {};
+    const peelMap = {};
+    const shellMap = {};
+
     for (const a of (actuals || [])) {
         if (a.department_id === steDept.id) {
-            if (!rcnMap[a.work_date]) rcnMap[a.work_date] = 0;
-            rcnMap[a.work_date] += (a.actual_ton || 0) * 1000;
+            if (!steamMap[a.work_date]) steamMap[a.work_date] = 0;
+            steamMap[a.work_date] += (a.actual_ton || 0) * 1000;
         } else if (a.department_id === packDept.id) {
-            if (!ckMap[a.work_date]) ckMap[a.work_date] = 0;
-            ckMap[a.work_date] += (a.actual_ton || 0); // CK is in MT
+            if (!packMap[a.work_date]) packMap[a.work_date] = 0;
+            packMap[a.work_date] += (a.actual_ton || 0); // MT
+        } else if (a.department_id === peelDept.id) {
+            if (!peelMap[a.work_date]) peelMap[a.work_date] = 0;
+            peelMap[a.work_date] += (a.actual_ton || 0) * 1000; // KG
+        } else if (a.department_id === shellDept.id) {
+            if (!shellMap[a.work_date]) shellMap[a.work_date] = 0;
+            shellMap[a.work_date] += (a.actual_ton || 0) * 1000; // KG
         }
     }
 
@@ -51,7 +64,6 @@ async function syncMarch() {
     }
 
     // 3. Get SEU 3 (Peeling) -> daily_compressor
-    // kwh_today = (meter_today - meter_yesterday) * 1000
     const { data: compressor } = await supabase.from('daily_compressor')
         .select('work_date, meter1, meter2, meter3')
         .gte('work_date', prevDateStr) // start from yesterday
@@ -60,7 +72,6 @@ async function syncMarch() {
 
     const compMap = {};
     if (compressor && compressor.length > 0) {
-        // Build map of work_date -> object
         const cMap = {};
         for (const c of compressor) {
             cMap[c.work_date] = c;
@@ -71,7 +82,6 @@ async function syncMarch() {
             const today = sortedDates[i];
             const yesterday = sortedDates[i - 1];
 
-            // ensure yesterday is literally the previous calendar day
             const yDate = new Date(today);
             yDate.setDate(yDate.getDate() - 1);
             if (yDate.toISOString().split('T')[0] === yesterday) {
@@ -89,9 +99,6 @@ async function syncMarch() {
     }
 
     // 4. Get SEU 4 (Shelling) -> daily_kpi
-    const { data: shellDept } = await supabase.from('departments').select('id').eq('code', 'SHELL').single();
-    
-    // Fetch an extra day (April 1st)
     const nextDate = new Date(endDate);
     nextDate.setDate(nextDate.getDate() + 1);
     const nextDateStr = nextDate.toISOString().split('T')[0];
@@ -127,13 +134,19 @@ async function syncMarch() {
     }
 
     // Set of all dates
-    const allDates = new Set([...Object.keys(rcnMap), ...Object.keys(ckMap), ...Object.keys(energyMap), ...Object.keys(compMap), ...Object.keys(shellingKwhMap)]);
+    const allDates = new Set([
+        ...Object.keys(steamMap), ...Object.keys(packMap), ...Object.keys(peelMap), ...Object.keys(shellMap),
+        ...Object.keys(energyMap), ...Object.keys(compMap), ...Object.keys(shellingKwhMap)
+    ]);
     
     const entriesToUpsert = [];
 
     for (const d of Array.from(allDates).sort()) {
-        const rcn = rcnMap[d] || 0;
-        const ck = ckMap[d] || null;
+        const steamV = steamMap[d] || 0;
+        const packV = packMap[d] || null;
+        const peelV = peelMap[d] || 0;
+        const shellV = shellMap[d] || 0;
+
         const e = energyMap[d];
         const c = compMap[d];
         const sh = shellingKwhMap[d];
@@ -144,8 +157,8 @@ async function syncMarch() {
                 entry_date: d,
                 seu_id: 1,
                 actual_energy: e.electricity_kwh,
-                rcn_hap_duoc_kg: rcn, // Used dynamically for all
-                ck_obtained_mt: ck,
+                rcn_hap_duoc_kg: steamV, 
+                ck_obtained_mt: packV,
                 notes: 'Auto-sync EVN'
             });
         }
@@ -155,9 +168,9 @@ async function syncMarch() {
             entriesToUpsert.push({
                 entry_date: d,
                 seu_id: 2,
-                actual_energy: e.wood_kg * 1000,   // CONVERT TONS TO KG
-                rcn_hap_duoc_kg: rcn,
-                ck_obtained_mt: ck,
+                actual_energy: e.wood_kg * 1000, 
+                rcn_hap_duoc_kg: steamV, // Steam volume
+                ck_obtained_mt: packV,
                 notes: 'Auto-sync Boiler'
             });
         }
@@ -168,8 +181,8 @@ async function syncMarch() {
                 entry_date: d,
                 seu_id: 3,
                 actual_energy: c,
-                rcn_hap_duoc_kg: rcn,
-                ck_obtained_mt: ck,
+                rcn_hap_duoc_kg: peelV, // PEELING VOLUME
+                ck_obtained_mt: packV,
                 notes: 'Auto-sync Compressor'
             });
         }
@@ -180,8 +193,8 @@ async function syncMarch() {
                 entry_date: d,
                 seu_id: 4,
                 actual_energy: sh,
-                rcn_hap_duoc_kg: rcn,
-                ck_obtained_mt: ck,
+                rcn_hap_duoc_kg: shellV, // SHELLING VOLUME
+                ck_obtained_mt: packV,
                 notes: 'Auto-sync Shelling'
             });
         }
