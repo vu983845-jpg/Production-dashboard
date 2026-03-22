@@ -76,6 +76,27 @@ const translations: Record<string, Record<Language, string>> = {
     "report.shelling.energy.desc": { vi: "Theo dõi lượng điện năng tiêu thụ trên mỗi tấn sản phẩm hàng ngày.", en: "Tracking electricity usage against daily shelling production." },
     "report.shelling.energy.prod": { vi: "Sản lượng (T)", en: "Production (T)" },
     "report.shelling.energy.intens": { vi: "Định mức (kWh/T)", en: "Intensity (kWh/T)" },
+    
+    // Smart Insights
+    "insight.good.title": { vi: "Tốt", en: "Good" },
+    "insight.warning.title": { vi: "Chú ý", en: "Warning" },
+    "insight.danger.title": { vi: "Báo động", en: "Critical" },
+    "insight.info.title": { vi: "Phân tích", en: "Insight" },
+    
+    // Cross Line
+    "insight.crossLine.best": { vi: "Line có hiệu suất cao nhất là", en: "Best performing line is" },
+    "insight.crossLine.worst": { vi: "Line đang chạy thấp hơn 10% trung bình là", en: "Lines operating >10% below average:" },
+    "insight.crossLine.normal": { vi: "Hiệu suất các Line tương đối đồng đều quanh mức", en: "All lines are operating consistently around" },
+    
+    // Speed vs Broken
+    "insight.speed.danger": { vi: "Phát hiện ca chạy có tỷ lệ Bể vượt mức cảnh báo (>{0}%). Vui lòng kiểm tra cài đặt dao cắt của: {1}.", en: "Detected shifts with critical broken rate (>{0}%). Please inspect cutter settings for: {1}." },
+    "insight.speed.normal": { vi: "Chất lượng ổn định. Không có ca nào vượt ngưỡng bể {0}%.", en: "Quality is stable. No shifts exceeded the {0}% broken threshold." },
+    
+    // Size Broken
+    "insight.size.danger": { vi: "Cỡ hạt có tỷ lệ bể trung bình cao nhất là {0} ({1}%).", en: "The size with the highest average broken rate is {0} ({1}%)." },
+    "insight.lineDeep.danger": { vi: "Ca {0} bị bể nhiều nhất ({1}%), cao hơn hẳn mức trung bình máy.", en: "Shift {0} has the highest broken rate ({1}%), significantly above the line average." },
+    "insight.lineDeep.normal": { vi: "Tỷ lệ bể giữa các ca làm việc khá đồng đều.", en: "Broken rates across shifts are relatively consistent." },
+
 
     // Regions
     "region_rcn": { vi: "RCN WAREHOUSE", en: "RCN WAREHOUSE" },

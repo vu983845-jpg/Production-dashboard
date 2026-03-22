@@ -7,9 +7,29 @@ import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
 import { Download, Search, FileText, TrendingUp, TrendingDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Scatter } from "recharts"
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Scatter, Cell, ReferenceLine } from "recharts"
 import * as XLSX from "xlsx"
 import { useLanguage } from "@/contexts/LanguageContext"
+
+// ── Helper Components ────────────────────────────────────────────────────────
+const SmartInsight = ({ title, type, detail }: { title: string, type: 'good' | 'warning' | 'danger' | 'info', detail: string }) => {
+    const colors = {
+        good: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        warning: 'bg-amber-50 text-amber-800 border-amber-200',
+        danger: 'bg-rose-50 text-rose-800 border-rose-200',
+        info: 'bg-blue-50 text-blue-800 border-blue-200'
+    };
+    const icons = {
+        good: '✅', warning: '⚠️', danger: '🚨', info: '💡'
+    };
+    return (
+        <div className={`mt-3 p-3 text-xs md:text-sm rounded-lg border ${colors[type]}`}>
+            <span className="font-bold mr-1">{icons[type]} {title}:</span> 
+            <span className="font-medium text-slate-700">{detail}</span>
+        </div>
+    );
+};
+
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface DailyRecord {
@@ -563,6 +583,73 @@ export default function ReportPage() {
         return Array.from(map.values()).filter(d => Boolean(d.actual_ton));
     })();
 
+    // --- SMART INSIGHTS LOGIC ---
+    const THRESHOLD_BROKEN = 4.5;
+
+    const insightCrossLine = useMemo(() => {
+        if (selectedDept !== 'SHELL' || crossLinePerfChartData.length === 0) return null;
+        const lines = ["A", "B", "C", "D1", "D2"];
+        const avgs: Record<string, number> = {};
+        let sysSum = 0, sysCount = 0;
+        
+        lines.forEach(line => {
+            let sum = 0, count = 0;
+            crossLinePerfChartData.forEach(d => { 
+                if (d[line] > 0) { sum += d[line]; count++; sysSum += d[line]; sysCount++; } 
+            });
+            avgs[line] = count > 0 ? sum / count : 0;
+        });
+        
+        const avgOverall = sysCount > 0 ? sysSum / sysCount : 0;
+        if (avgOverall === 0) return null;
+
+        let bestLine = '', bestVal = 0;
+        const worstLines: string[] = [];
+        
+        Object.entries(avgs).forEach(([l, v]) => {
+            if (v > bestVal) { bestVal = v; bestLine = l; }
+            if (v > 0 && v < avgOverall * 0.9) worstLines.push(l);
+        });
+
+        if (worstLines.length > 0) return { type: 'danger' as const, title: t("insight.danger.title"), detail: `${t("insight.crossLine.worst")} ${worstLines.join(", ")}.` };
+        if (bestLine) return { type: 'good' as const, title: t("insight.good.title"), detail: `${t("insight.crossLine.best")} Line ${bestLine} (${bestVal.toFixed(2)} T/h).` };
+        return { type: 'info' as const, title: t("insight.info.title"), detail: `${t("insight.crossLine.normal")} ${avgOverall.toFixed(2)} T/h.` };
+    }, [crossLinePerfChartData, selectedDept, t]);
+
+    const insightSpeedQuality = useMemo(() => {
+        if (selectedDept !== 'SHELL' || speedQualityData.length === 0) return null;
+        const badPoints = speedQualityData.filter(d => d.broken > THRESHOLD_BROKEN);
+        if (badPoints.length > 0) {
+            const lines = Array.from(new Set(badPoints.map(d => `Line ${d.line}`))).slice(0, 3).join(", ");
+            return { type: 'danger' as const, title: t("insight.danger.title"), detail: t("insight.speed.danger").replace("{0}", THRESHOLD_BROKEN.toString()).replace("{1}", lines) };
+        }
+        return { type: 'good' as const, title: t("insight.good.title"), detail: t("insight.speed.normal").replace("{0}", THRESHOLD_BROKEN.toString()) };
+    }, [speedQualityData, selectedDept, t]);
+
+    const insightSizeBroken = useMemo(() => {
+        if (selectedDept !== 'SHELL' || sizeBrokenChartData.length === 0) return null;
+        let worst = sizeBrokenChartData[0];
+        sizeBrokenChartData.forEach(d => { if (d.Tỷ_Lệ_Bể > worst.Tỷ_Lệ_Bể) worst = d; });
+        if (worst.Tỷ_Lệ_Bể > THRESHOLD_BROKEN) return { type: 'danger' as const, title: t("insight.danger.title"), detail: t("insight.size.danger").replace("{0}", worst.name).replace("{1}", worst.Tỷ_Lệ_Bể.toFixed(2)) };
+        if (worst.Tỷ_Lệ_Bể > 3) return { type: 'warning' as const, title: t("insight.warning.title"), detail: t("insight.size.danger").replace("{0}", worst.name).replace("{1}", worst.Tỷ_Lệ_Bể.toFixed(2)) };
+        return null;
+    }, [sizeBrokenChartData, selectedDept, t]);
+
+    const insightLineBroken = useMemo(() => {
+        if (selectedDept !== 'SHELL' || brokenChartData.length === 0) return null;
+        let highest = { val: 0, shift: '' };
+        brokenChartData.forEach(d => {
+            if (d.Ca1 > highest.val) highest = { val: d.Ca1, shift: '1' };
+            if (d.Ca2 > highest.val) highest = { val: d.Ca2, shift: '2' };
+            if (d.Ca3 > highest.val) highest = { val: d.Ca3, shift: '3' };
+        });
+        if (highest.val > THRESHOLD_BROKEN) {
+            return { type: 'danger' as const, title: t("insight.danger.title"), detail: t("insight.lineDeep.danger").replace("{0}", highest.shift).replace("{1}", highest.val.toFixed(2)) };
+        }
+        return { type: 'good' as const, title: t("insight.good.title"), detail: t("insight.lineDeep.normal") };
+    }, [brokenChartData, selectedDept, t]);
+
+
     return (
         <div className="max-w-5xl mx-auto space-y-6">
             {/* Header */}
@@ -803,6 +890,7 @@ export default function ReportPage() {
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
+                                            {insightCrossLine && <SmartInsight {...insightCrossLine} />}
                                         </CardContent>
                                     </Card>
 
@@ -875,11 +963,16 @@ export default function ReportPage() {
                                                         <XAxis dataKey="speed" type="number" name={t("report.shelling.speedQuality.x").replace(" (T/h)", "")} domain={['auto', 'auto']} tick={{ fontSize: 10 }} label={{ value: t("report.shelling.speedQuality.x"), position: "insideBottomRight", offset: -5, fontSize: 10 }} />
                                                         <YAxis dataKey="broken" type="number" name={t("report.shelling.speedQuality.y").replace(" (%)", "")} tick={{ fontSize: 10 }} label={{ value: t("report.shelling.speedQuality.y"), angle: -90, position: "insideLeft", fontSize: 10 }} />
                                                         <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} formatter={(value: any, name: any) => [value, name === 'speed' ? 'T/h' : '%']} />
-                                                        <Scatter name={t("report.shelling.speedQuality.scatter")} dataKey="broken" fill="#3b82f6" fillOpacity={0.6} />
+                                                        <Scatter name={t("report.shelling.speedQuality.scatter")} dataKey="broken" fillOpacity={0.6}>
+                                                            {speedQualityData.map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={entry.broken > THRESHOLD_BROKEN ? '#e11d48' : '#3b82f6'} />
+                                                            ))}
+                                                        </Scatter>
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
                                             <p className="text-xs text-center text-slate-500 mt-2 font-medium">{t("report.shelling.speedQuality.desc")}</p>
+                                            {insightSpeedQuality && <SmartInsight {...insightSpeedQuality} />}
                                         </CardContent>
                                     </Card>
 
@@ -943,11 +1036,16 @@ export default function ReportPage() {
                                                             <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
                                                             <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                                                             <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: any, props: any) => [`${Number(v).toFixed(2)}%`, `Tỷ lệ Bể (Line: ${props.payload.Lines})`]} cursor={{fill: 'transparent'}} />
-                                                            <Bar dataKey="Tỷ_Lệ_Bể" name="Tỷ lệ Bể (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
+                                                            <Bar dataKey="Tỷ_Lệ_Bể" name="Tỷ lệ Bể (%)" barSize={30} radius={[4, 4, 0, 0]}>
+                                                                {sizeBrokenChartData.map((entry, index) => (
+                                                                    <Cell key={`cell-${index}`} fill={entry.Tỷ_Lệ_Bể > THRESHOLD_BROKEN ? '#b51739' : '#e11d48'} />
+                                                                ))}
+                                                            </Bar>
                                                         </ComposedChart>
                                                     </ResponsiveContainer>
                                                 </div>
                                             </div>
+                                            {insightSizeBroken && <SmartInsight {...insightSizeBroken} />}
                                         </CardContent>
                                     </Card>
 
@@ -1072,12 +1170,14 @@ export default function ReportPage() {
                                                         <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
                                                         <Tooltip contentStyle={{ fontSize: '11px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`]} />
                                                         <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <ReferenceLine y={THRESHOLD_BROKEN} stroke="red" strokeDasharray="3 3" opacity={0.5} label={{ position: 'insideTopLeft', value: `Alarm >${THRESHOLD_BROKEN}%`, fill: 'red', fontSize: 10 }} />
                                                         <Line type="monotone" dataKey="Ca1" name="Ca 1 (% Bể)" stroke="#f43f5e" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                                                         <Line type="monotone" dataKey="Ca2" name="Ca 2 (% Bể)" stroke="#fb923c" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                                                         <Line type="monotone" dataKey="Ca3" name="Ca 3 (% Bể)" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} connectNulls />
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
+                                            {insightLineBroken && <SmartInsight {...insightLineBroken} />}
                                         </CardContent>
                                     </Card>
                                 </div>
