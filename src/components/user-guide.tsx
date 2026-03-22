@@ -64,8 +64,23 @@ export function UserGuide() {
                         </ul>
                     </section>
 
+                    <section className="bg-gradient-to-br from-indigo-50 to-white p-4 rounded-xl border border-indigo-100 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-2"><span className="text-[10px] font-mono bg-indigo-100 text-indigo-700 px-2 py-1 rounded shadow-sm font-bold uppercase tracking-widest">Mới Nhất Mới Nhất!!</span></div>
+                        <h3 className="font-bold text-lg mb-3 text-indigo-900 flex items-center gap-2">✨ 5. Trạm Cập Nhật (Changelog)</h3>
+                        <div className="space-y-3">
+                            <div className="border-l-2 border-indigo-400 pl-3">
+                                <h4 className="font-bold text-indigo-800 text-sm flex items-center gap-2">🚀 Phiên bản <span className="text-xs font-mono bg-white px-1.5 py-0.5 rounded border border-indigo-200 shadow-sm">v1.1.0</span> <span className="text-xs font-normal text-slate-500 italic">22/03/2026</span></h4>
+                                <ul className="list-disc pl-5 mt-1.5 space-y-1.5 text-slate-700 text-[13px]">
+                                    <li><strong>Thay áo Doanh nghiệp:</strong> Nâng cấp toàn diện màu sắc sang theme <strong>Đỏ Intersnack (Alizarin Crimson)</strong> & phong cách kính mờ cực sang trọng.</li>
+                                    <li><strong>Logic Cột thông minh:</strong> Dashboard tự động nhận diện KPI: <strong>Đạt Kế Hoạch ⟶ Đổi màu Xanh Lá 🟢</strong>, Khuyết Kế Hoạch ⟶ Đi màu Đỏ 🔴.</li>
+                                    <li>Hệ thống <strong>Custom Tooltip</strong> hiệu ứng nổi bọt khí (glassmorphism) cho toàn bộ 15 phòng ban.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+
                     <div className="pt-4 mt-2 text-xs text-muted-foreground text-center">
-                        <p>Làm vì đam mê, hệ thống được chắp vá và build bằng tình thương mến thương v1.0. 🧡</p>
+                        <p>Làm vì đam mê, hệ thống được chắp vá và build bằng tình thương mến thương <strong className="font-mono text-primary">v1.1.0</strong>. 🧡</p>
                     </div>
                 </div>
             </DialogContent>

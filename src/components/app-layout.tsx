@@ -196,6 +196,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                     <UserGuide />
                     <div className="flex items-center gap-4">
+                        <span className="text-[10px] font-mono bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full font-bold shadow-sm tracking-wider">v1.1.0</span>
                         <img src="https://api.visitorbadge.io/api/visitors?path=vicc-la-dashboard&label=L%C6%B0%E1%BB%A3t%20truy%20c%E1%BA%ADp&countColor=%233b82f6" alt="Lượt truy cập" className="h-5 opacity-80 hover:opacity-100 transition-opacity" />
                         <span className="text-xs text-muted-foreground/60 italic font-medium">V.H</span>
                     </div>
