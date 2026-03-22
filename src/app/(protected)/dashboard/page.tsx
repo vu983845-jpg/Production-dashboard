@@ -24,6 +24,35 @@ import { ddsClient } from "@/lib/supabase/dds-client"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { GaugeChart } from "@/components/ui/gauge-chart"
 
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-xl shadow-xl p-3.5 text-xs z-50 ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-200">
+                <p className="font-bold text-slate-800 mb-2.5 border-b pb-1.5 uppercase tracking-wider">{label}</p>
+                <div className="space-y-1.5">
+                    {payload.map((entry: any, i: number) => {
+                        let color = entry.color || '#334155';
+                        if (entry.name && (entry.name.includes('Thực tế') || entry.name.includes('Actual'))) {
+                            color = entry.payload.Actual >= entry.payload.Plan ? '#10b981' : '#e63121';
+                        }
+                        return (
+                            <div key={i} className="flex justify-between items-center gap-6">
+                                <span className="text-slate-600 font-medium flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
+                                    {entry.name}
+                                </span>
+                                <span className="font-black text-slate-800">{Number(entry.value).toLocaleString('vi-VN', {maximumFractionDigits: 1})}</span>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+        )
+    }
+    return null;
+}
+
 export default function DashboardPage() {
     const supabase = createClient()
     const { t, language } = useLanguage()
@@ -696,12 +725,16 @@ export default function DashboardPage() {
                         <div className="flex-1">
                             <ResponsiveContainer width="100%" height={160}>
                                 <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
-                                    <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
-                                    <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                                    <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
                                     <Bar dataKey="Actual" name={t('legend.actual')} radius={[2, 2, 0, 0]}>
                                         {history.map((entry: any, index: number) => {
-                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
+                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "url(#actualRedGrad)" : "url(#actualGreenGrad)";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
@@ -761,16 +794,20 @@ export default function DashboardPage() {
                                 <ComposedChart data={displayHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="contActualGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/>
-                                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.6}/>
-                                        </linearGradient>
+    <stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/>
+    <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
+</linearGradient>
                                         <linearGradient id="contActualMissGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#fca5a5" stopOpacity={0.8}/>
-                                            <stop offset="100%" stopColor="#fecaca" stopOpacity={0.5}/>
-                                        </linearGradient>
+    <stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/>
+    <stop offset="100%" stopColor="#b91c1c" stopOpacity={0.6}/>
+</linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <XAxis 
+                                    <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis 
                                         dataKey="name" 
                                         tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} 
                                         tickLine={false} 
@@ -831,11 +868,11 @@ export default function DashboardPage() {
         }
 
         return (
-            <Card key={id} className={`bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full ring-1 ring-black/5 ${isTotal ? 'ring-primary/40 shadow-primary/10' : ''}`}>
+            <Card key={id} className={`bg-gradient-to-br from-white/90 to-slate-50/60 backdrop-blur-xl border border-slate-200/60 shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden flex flex-col justify-start h-full ring-1 ${isTotal ? 'ring-red-400/60 shadow-red-900/10' : 'ring-slate-100/50'}`}>
 
                 {/* Subtle gradient glow in background */}
-                <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
-                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#e63121]/5 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-slate-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
                 <CardHeader className={`${(isTotal || isFgwh) ? 'p-2 md:p-4' : 'p-1.5 md:p-2'} bg-gradient-to-b from-slate-50/80 to-transparent border-b border-slate-200/50 flex-shrink-0 relative z-10`}>
                     <div className="flex justify-between items-start mb-1.5 px-0.5">
@@ -1050,7 +1087,11 @@ export default function DashboardPage() {
                         <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 h-[100px] md:h-[120px]`}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
-                                    <XAxis 
+                                    <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis 
                                         dataKey="name" 
                                         tick={{ fontSize: 9, dy: 5, fill: '#64748b' }} 
                                         tickLine={false} 
@@ -1066,10 +1107,10 @@ export default function DashboardPage() {
                                         interval={0}
                                         tickMargin={4} 
                                     />
-                                    <Tooltip contentStyle={{ fontSize: '10px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                     <Bar dataKey="IspActual" name="ISP Thực tế (Tấn)" radius={[2, 2, 0, 0]}>
                                         {displayHistory.map((entry: any, index: number) => {
-                                            const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "#ef4444" : "#22c55e";
+                                            const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "url(#actualRedGrad)" : "url(#actualGreenGrad)";
                                             return <Cell key={`isp-cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
@@ -1091,7 +1132,11 @@ export default function DashboardPage() {
                                         <p className="text-[9px] text-muted-foreground text-right pr-1">Target: {co2TargetKgPerTon.toFixed(1)} kg CO₂e/T</p>
                                         <ResponsiveContainer width="100%" height="88%">
                                             <ComposedChart data={co2Data} margin={{ top: 2, right: 0, left: 0, bottom: 20 }}>
-                                                <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={25} minTickGap={10} tickMargin={5} />
+                                                <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={25} minTickGap={10} tickMargin={5} />
                                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                                                     formatter={(val: any, name?: string) => [
                                                         `${Number(val).toFixed(2)} kg CO₂e/T`,
@@ -1099,7 +1144,7 @@ export default function DashboardPage() {
                                                     ]} />
                                                 <Bar dataKey="CO2ePerTon" name="kg CO₂e/T" radius={[2, 2, 0, 0]}>
                                                     {co2Data.map((entry: any, index: number) => (
-                                                        <Cell key={`co2-${index}`} fill={entry.CO2ePerTon > co2TargetKgPerTon ? "#ef4444" : "#22c55e"} />
+                                                        <Cell key={`co2-${index}`} fill={entry.CO2ePerTon > co2TargetKgPerTon ? "url(#actualRedGrad)" : "url(#actualGreenGrad)"} />
                                                     ))}
                                                 </Bar>
                                                 <Line type="step" dataKey="Target" stroke="#f59e0b" strokeDasharray="4 2" dot={false} strokeWidth={1.5} name="Mục tiêu" />
@@ -1114,7 +1159,11 @@ export default function DashboardPage() {
                     <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[180px] md:h-[220px]' : 'h-[110px] md:h-[130px]'}`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
-                                <XAxis 
+                                <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis 
                                     dataKey="name" 
                                     tick={{ fontSize: 9, dy: 5, fill: '#64748b' }} 
                                     tickLine={false} 
@@ -1130,7 +1179,7 @@ export default function DashboardPage() {
                                     interval={0}
                                     tickMargin={4} 
                                 />
-                                <Tooltip contentStyle={{ fontSize: '10px', padding: '4px 6px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name={t('legend.daily_needed')} connectNulls={false} />
                                     )}
@@ -1142,7 +1191,7 @@ export default function DashboardPage() {
                                     )}
                                     <Bar dataKey="Actual" name={t('legend.actual')} radius={[2, 2, 0, 0]}>
                                         {displayHistory.map((entry: any, index: number) => {
-                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "#ef4444" : "#22c55e";
+                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "url(#actualRedGrad)" : "url(#actualGreenGrad)";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
@@ -1151,7 +1200,7 @@ export default function DashboardPage() {
                                     {deptCode === "ALL" && (
                                         <>
                                             <YAxis yAxisId="emission" orientation="right" hide />
-                                            <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#ef4444" dot={true} strokeWidth={2} name={t('legend.emission')} />
+                                            <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="url(#actualRedGrad)" dot={true} strokeWidth={2} name={t('legend.emission')} />
                                         </>
                                     )}
                                     {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '2px' }} />}
@@ -1301,11 +1350,15 @@ export default function DashboardPage() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={energyHistory} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                                        <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis dataKey="name" tick={{ fontSize: 12 }} />
                                         <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#eab308" />
                                         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" />
                                         <YAxis yAxisId="right2" orientation="right" tick={{ fontSize: 12 }} stroke="#f97316" width={80} />
-                                        <Tooltip contentStyle={{ fontSize: '12px' }} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                         <Legend wrapperStyle={{ bottom: -5, fontSize: '11px' }} />
                                         <Bar yAxisId="left" dataKey="ElectricityActual" name="Điện (kWh)" fill="#eab308" radius={[4, 4, 0, 0]} barSize={20} />
                                         <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Target Điện" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
@@ -1325,9 +1378,13 @@ export default function DashboardPage() {
                                     <ResponsiveContainer width="100%" height="100%">
                                         <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                            <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#eab308" />
-                                            <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                             <Bar dataKey="ElectricityActual" name={t('legend.actual')} fill="#eab308" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="ElectricityTarget" name="Mục tiêu" stroke="#ca8a04" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>
@@ -1340,9 +1397,13 @@ export default function DashboardPage() {
                                     <ResponsiveContainer width="100%" height="100%">
                                         <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                            <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#3b82f6" />
-                                            <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                             <Bar dataKey="WaterActual" name={t('legend.actual')} fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="WaterTarget" name="Mục tiêu" stroke="#2563eb" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>
@@ -1355,9 +1416,13 @@ export default function DashboardPage() {
                                     <ResponsiveContainer width="100%" height="100%">
                                         <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                            <defs>
+<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+</defs>
+<XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#f97316" />
-                                            <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                             <Bar dataKey="WoodActual" name={t('legend.actual')} fill="#f97316" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>

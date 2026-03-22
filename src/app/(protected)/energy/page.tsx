@@ -201,13 +201,13 @@ export default function EnergyDashboardPage() {
     return (
         <div className="flex-1 space-y-4 md:space-y-8 max-w-7xl mx-auto w-full pb-10 relative z-0">
             {/* Premium Ambient Background */}
-            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50 to-emerald-50/50 pointer-events-none -z-10"></div>
+            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-50/30 via-white to-slate-50/60 pointer-events-none -z-10"></div>
             
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-sm bg-white/40 p-4 rounded-2xl border border-white/60 shadow-sm sticky top-2 z-40">
                 <div>
-                    <h2 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600">
-                        <div className="p-2 bg-blue-100 rounded-xl shadow-inner ring-1 ring-blue-500/20">
-                            <Zap className="h-6 w-6 md:h-8 md:w-8 text-blue-600 drop-shadow-sm" />
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-[#e63121]">
+                        <div className="p-2 bg-red-50 rounded-xl shadow-inner ring-1 ring-red-200/50">
+                            <Zap className="h-6 w-6 md:h-8 md:w-8 text-[#e63121] drop-shadow-sm" />
                         </div>
                         Chỉ Huy Năng Lượng
                     </h2>
@@ -222,7 +222,7 @@ export default function EnergyDashboardPage() {
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <div className="flex items-center justify-center min-w-[150px] font-bold text-sm text-slate-800">
-                        <CalendarIcon className="mr-2 h-4 w-4 text-blue-500" />
+                        <CalendarIcon className="mr-2 h-4 w-4 text-[#e63121]" />
                         {format(currentMonth, "MMMM - yyyy", { locale: vi })}
                     </div>
                     <Button variant="ghost" size="icon" onClick={goToNextMonth} className="h-9 w-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors" disabled={currentMonth >= startOfMonth(new Date())}>
@@ -233,19 +233,19 @@ export default function EnergyDashboardPage() {
 
             {isLoading ? (
                 <div className="flex flex-col justify-center items-center h-[500px] gap-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+                    <Loader2 className="h-10 w-10 animate-spin text-[#e63121]" />
                     <p className="text-muted-foreground font-medium animate-pulse">Đang tải dữ liệu năng lượng...</p>
                 </div>
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
                     
                     {/* COMBINED ENERGY & COST CHART */}
-                    <Card className="col-span-2 shadow-xl shadow-blue-900/5 hover:shadow-2xl transition-all duration-500 border-white/60 bg-white/70 backdrop-blur-xl overflow-hidden relative group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                    <Card className="col-span-2 shadow-xl shadow-red-900/5 hover:shadow-2xl transition-all duration-500 border-white/60 bg-white/70 backdrop-blur-xl overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-red-100/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                         <CardHeader className="pb-4 border-b border-slate-200/50 bg-white/40 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <CardTitle className="text-xl font-bold flex flex-row items-center gap-2 text-slate-800">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+                                    <div className="w-2.5 h-2.5 rounded-full bg-[#e63121]"></div>
                                     Điện Năng Toàn Nhà Máy (Main Energy)
                                 </CardTitle>
                                 <CardDescription className="text-slate-500 font-medium mt-1 ml-4 text-xs">Tiêu thụ Điện / Chi phí thực tế (MTD)</CardDescription>
@@ -253,7 +253,7 @@ export default function EnergyDashboardPage() {
                             <div className="flex items-center bg-slate-100/80 p-1 rounded-xl shadow-inner border border-slate-200/50">
                                 <button 
                                     onClick={() => setMainChartMode('kwh')}
-                                    className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${mainChartMode === 'kwh' ? 'bg-white shadow-md text-blue-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}>
+                                    className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${mainChartMode === 'kwh' ? 'bg-white shadow-md text-[#e63121] scale-105' : 'text-slate-500 hover:text-slate-700'}`}>
                                     Sản lượng (kWh)
                                 </button>
                                 <button 
@@ -283,10 +283,10 @@ export default function EnergyDashboardPage() {
                                     <div className="flex flex-col lg:flex-row gap-8">
                                         {/* SUMMARY METRICS (LEFT) */}
                                         <div className="w-full lg:w-1/4 flex flex-col gap-4 shrink-0">
-                                            <div className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group/card ${isKwh ? 'bg-gradient-to-br from-blue-50 to-indigo-50/30 border-blue-200/60' : 'bg-gradient-to-br from-amber-50 to-orange-50/30 border-amber-200/60'}`}>
-                                                <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-40 group-hover/card:opacity-70 transition-opacity ${isKwh ? 'bg-blue-400' : 'bg-amber-400'}`}></div>
+                                            <div className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group/card ${isKwh ? 'bg-gradient-to-br from-red-50 to-rose-50/30 border-red-200/60' : 'bg-gradient-to-br from-amber-50 to-orange-50/30 border-amber-200/60'}`}>
+                                                <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-40 group-hover/card:opacity-70 transition-opacity ${isKwh ? 'bg-[#e63121]' : 'bg-amber-400'}`}></div>
                                                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 relative z-10">TỔNG MTD THEO {isKwh ? 'KWH' : 'VNĐ'}</p>
-                                                <p className={`text-4xl lg:text-5xl font-black tracking-tight relative z-10 flex items-baseline gap-1 ${isKwh ? 'text-blue-700' : 'text-amber-600'}`}>
+                                                <p className={`text-4xl lg:text-5xl font-black tracking-tight relative z-10 flex items-baseline gap-1 ${isKwh ? 'text-[#e63121]' : 'text-amber-600'}`}>
                                                     {isKwh ? mtdTotalKwh.toLocaleString('vi-VN') : mtdTotalVnd.toLocaleString('vi-VN')}
                                                     <span className="text-lg font-bold text-slate-400 opacity-60 ml-2">{isKwh ? 'kWh' : 'VNĐ'}</span>
                                                 </p>
@@ -375,7 +375,7 @@ export default function EnergyDashboardPage() {
                             <CardDescription className="font-medium text-xs mt-1">Tỷ trọng tiêu thụ theo khung giờ (Peak/Normal/Offpeak)</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[380px] pt-8 relative">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-50/50 to-transparent pointer-events-none"></div>
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-50/30 to-transparent pointer-events-none"></div>
                             {(() => {
                                 const mtdPeak = energyData.reduce((acc, curr) => acc + (curr.stacked_peak || 0), 0);
                                 const mtdNormal = energyData.reduce((acc, curr) => acc + (curr.stacked_normal || 0), 0);
@@ -488,7 +488,7 @@ export default function EnergyDashboardPage() {
                     })()}
 
 
-                    <Card className="col-span-2 shadow-xl shadow-purple-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-2xl transition-shadow duration-500">
+                    <Card className="col-span-2 shadow-xl shadow-slate-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-2xl transition-shadow duration-500">
                         <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
                             <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-3">
                                 <div className="w-3.5 h-3.5 rounded-full bg-purple-500 shadow-sm shadow-purple-200"></div>
@@ -531,15 +531,15 @@ export default function EnergyDashboardPage() {
                     </Card>
 
                     {/* SHELLING ENERGY */}
-                    <Card className="col-span-2 lg:col-span-2 shadow-xl shadow-emerald-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-2xl transition-shadow duration-500">
+                    <Card className="col-span-2 lg:col-span-2 shadow-xl shadow-slate-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-2xl transition-shadow duration-500">
                         <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
                             <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-3">
-                                <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></div>
+                                <div className="w-3.5 h-3.5 rounded-full bg-slate-600 shadow-sm"></div>
                                 Điện Khu Vực Shelling
                             </CardTitle>
                             <CardDescription className="font-medium text-xs mt-1 ml-6">Chỉ số tiêu thụ điện hệ thống cắt tách (kWh/ngày)</CardDescription>
                         </CardHeader>
-                        <CardContent className="h-[380px] pt-8 bg-gradient-to-t from-emerald-50/20 to-transparent">
+                        <CardContent className="h-[380px] pt-8 bg-gradient-to-t from-slate-50/20 to-transparent">
                             {shellingData.length === 0 ? (
                                 <div className="h-full flex items-center justify-center text-slate-400 font-medium">Chưa có dữ liệu tháng này</div>
                             ) : (
@@ -565,7 +565,7 @@ export default function EnergyDashboardPage() {
 
                     {/* OTHER ELECTRICITY GRID */}
                     <Card className="col-span-2 shadow-xl shadow-slate-900/5 bg-white/70 backdrop-blur-xl border-slate-200/50 border overflow-hidden">
-                        <CardHeader className="bg-slate-50/80 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
+                        <CardHeader className="bg-white/80 border-b border-slate-200/50 rounded-t-xl px-6 py-5 backdrop-blur-md">
                             <CardTitle className="text-lg font-bold text-slate-800">Điện Phụ Trợ Vùng (Meter Phụ)</CardTitle>
                             <CardDescription className="text-slate-500 font-medium mt-1">Theo dõi chi tiết 8 thiết bị/vùng phụ trợ (kWh/ngày)</CardDescription>
                         </CardHeader>
