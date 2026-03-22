@@ -155,8 +155,15 @@ export default function EnergyDashboardPage() {
                 const validEnergy = processedEnergy.filter(e => e.work_date >= startDateStr && e.work_date <= endDateStr);
 
                 setEnergyData(validEnergy.map(e => {
-                    const p = e.electricity_peak_kwh || 0;
-                    const n = e.electricity_normal_kwh || 0;
+                    // EVN tariff: NO Peak hours on Sunday (day = 0)
+                    // Peak hours only exist Mon-Sat: 9:30-11:30 and 17:00-20:00
+                    const isSunday = new Date(e.work_date).getDay() === 0;
+
+                    const rawPeak = e.electricity_peak_kwh || 0;
+                    // On Sundays, peak meter should be 0. If meter recorded something anyway,
+                    // move it to Normal to preserve total consumption accuracy.
+                    const p = isSunday ? 0 : rawPeak;
+                    const n = (e.electricity_normal_kwh || 0) + (isSunday ? rawPeak : 0);
                     const o = e.electricity_offpeak_kwh || 0;
                     const sum = p + n + o;
                     
