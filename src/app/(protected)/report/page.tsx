@@ -765,302 +765,324 @@ export default function ReportPage() {
                         </Card>
                     )}
 
-                    {/* Shelling Optimized Insights */}
+                    {/* Shelling Analytics Overview */}
                     {selectedDept === "SHELL" && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 mb-2">
-                            {/* Cross-Line Performance */}
-                            <Card className="col-span-1 lg:col-span-2 shadow-sm border-emerald-100">
-                                <CardHeader className="pb-2 bg-emerald-50/30 border-b border-emerald-50">
-                                    <div className="flex flex-col gap-1">
-                                        <CardTitle className="text-sm font-bold text-emerald-800 flex items-center gap-2">
-                                            <TrendingUp className="h-4 w-4" />
-                                            {t("report.shelling.crossLine.title")}
-                                        </CardTitle>
-                                        <CardDescription className="text-xs text-emerald-600 font-medium">
-                                            {t("report.shelling.crossLine.desc")}
-                                        </CardDescription>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pt-4">
-                                    <div className="h-72 w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={crossLinePerfChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                <YAxis tick={{ fontSize: 10 }} />
-                                                <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                <Line type="monotone" dataKey="A" name="Line A" stroke="#2563eb" strokeWidth={2} dot={{ r: 2 }} />
-                                                <Line type="monotone" dataKey="B" name="Line B" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
-                                                <Line type="monotone" dataKey="C" name="Line C" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
-                                                <Line type="monotone" dataKey="D1" name="Line D1" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
-                                                <Line type="monotone" dataKey="D2" name="Line D2" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                        <div className="space-y-8 mt-6 mb-4">
+                            
+                            {/* SECTION 1: OVERALL FACTORY PERFORMANCE */}
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">1. Hiệu suất Tổng thể (Overall Performance)</h3>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                    {/* Cross-Line Performance */}
+                                    <Card className="col-span-1 lg:col-span-3 shadow-sm border-emerald-100">
+                                        <CardHeader className="pb-2 bg-emerald-50/30 border-b border-emerald-50">
+                                            <div className="flex flex-col gap-1">
+                                                <CardTitle className="text-sm font-bold text-emerald-800 flex items-center gap-2">
+                                                    <TrendingUp className="h-4 w-4" />
+                                                    {t("report.shelling.crossLine.title")}
+                                                </CardTitle>
+                                                <CardDescription className="text-xs text-emerald-600 font-medium">
+                                                    {t("report.shelling.crossLine.desc")}
+                                                </CardDescription>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="pt-4">
+                                            <div className="h-72 w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={crossLinePerfChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                        <YAxis tick={{ fontSize: 10 }} />
+                                                        <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <Line type="monotone" dataKey="A" name="Line A" stroke="#2563eb" strokeWidth={2} dot={{ r: 2 }} />
+                                                        <Line type="monotone" dataKey="B" name="Line B" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
+                                                        <Line type="monotone" dataKey="C" name="Line C" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
+                                                        <Line type="monotone" dataKey="D1" name="Line D1" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
+                                                        <Line type="monotone" dataKey="D2" name="Line D2" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
-                            {/* Speed vs Quality Correlation */}
-                            <Card className="shadow-sm border-blue-100">
-                                <CardHeader className="pb-2 bg-blue-50/30 border-b border-blue-50">
-                                    <CardTitle className="text-sm font-bold text-blue-800">{t("report.shelling.speedQuality.title")}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-4">
-                                    <div className="h-64 w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={speedQualityData} margin={{ top: 5, right: 30, left: -20, bottom: 20 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                                <XAxis dataKey="speed" type="number" name={t("report.shelling.speedQuality.x").replace(" (T/h)", "")} domain={['auto', 'auto']} tick={{ fontSize: 10 }} label={{ value: t("report.shelling.speedQuality.x"), position: "insideBottomRight", offset: -5, fontSize: 10 }} />
-                                                <YAxis dataKey="broken" type="number" name={t("report.shelling.speedQuality.y").replace(" (%)", "")} tick={{ fontSize: 10 }} label={{ value: t("report.shelling.speedQuality.y"), angle: -90, position: "insideLeft", fontSize: 10 }} />
-                                                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} formatter={(value: any, name: any) => [value, name === 'speed' ? 'T/h' : '%']} />
-                                                <Scatter name={t("report.shelling.speedQuality.scatter")} dataKey="broken" fill="#3b82f6" fillOpacity={0.6} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <p className="text-xs text-center text-slate-500 mt-2 font-medium">{t("report.shelling.speedQuality.desc")}</p>
-                                </CardContent>
-                            </Card>
+                                    {/* Chart 4: Leader Comparison */}
+                                    <Card className="col-span-1 lg:col-span-3 shadow-sm border-violet-100">
+                                        <CardHeader className="pb-0 bg-violet-50/30 border-b border-violet-50">
+                                            <CardTitle className="text-sm font-bold text-violet-700">Overall Leader Comparison (Month)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="pt-4">
+                                            <div className="h-72 w-full mt-4">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={leaderCompareData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 'bold' }} />
+                                                        <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
+                                                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                                                        <Tooltip contentStyle={{ fontSize: '13px' }} cursor={{fill: 'transparent'}} />
+                                                        <Legend wrapperStyle={{ fontSize: '12px', bottom: -5 }} />
+                                                        <Bar yAxisId="left" dataKey="Sản_Lượng" name="Total Production (Tons)" fill="#3b82f6" barSize={40} radius={[4, 4, 0, 0]} />
+                                                        <Bar yAxisId="left" dataKey="Downtime" name="Total Downtime (Mins)" fill="#f43f5e" barSize={40} radius={[4, 4, 0, 0]} />
+                                                        <Line yAxisId="right" type="monotone" dataKey="Hiệu_Suất_T_h" name="Efficiency (Tons/Hour)" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} />
+                                                        <Line yAxisId="right" type="monotone" dataKey="Năng_Suất_TNg" name="Productivity (Tons/Person)" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 5 }} />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
-                            {/* Energy Intensity */}
-                            <Card className="shadow-sm border-amber-100">
-                                <CardHeader className="pb-2 bg-amber-50/30 border-b border-amber-50">
-                                    <CardTitle className="text-sm font-bold text-amber-800">{t("report.shelling.energy.title")}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-4">
-                                    <div className="h-64 w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={shellingEnergyChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-                                                <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                <Bar yAxisId="left" dataKey="actual_ton" name={t("report.shelling.energy.prod")} fill="#fcd34d" radius={[4,4,0,0]} maxBarSize={40} />
-                                                <Line yAxisId="right" type="monotone" dataKey="intensity" name={t("report.shelling.energy.intens")} stroke="#d97706" strokeWidth={2} dot={{ r: 3 }} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <p className="text-xs text-center text-slate-500 mt-2 font-medium">{t("report.shelling.energy.desc")}</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    )}
+                                    {/* Chart 2: Downtime */}
+                                    <Card className="col-span-1 lg:col-span-3">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-sm font-bold">Downtime Analysis (Mins)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="h-64 w-full mt-2">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={downChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                        <YAxis tick={{ fontSize: 10 }} />
+                                                        <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <Bar dataKey="A" stackId="a" fill="#3b82f6" name="Line A" />
+                                                        <Bar dataKey="B" stackId="a" fill="#10b981" name="Line B" />
+                                                        <Bar dataKey="C" stackId="a" fill="#f59e0b" name="Line C" />
+                                                        <Bar dataKey="D1" stackId="a" fill="#ef4444" name="Line D1" />
+                                                        <Bar dataKey="D2" stackId="a" fill="#8b5cf6" name="Line D2" />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
 
-                    {/* Shelling Analytics Charts */}
-                    {selectedDept === "SHELL" && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                            {/* Chart 1: Performance */}
-                            <Card>
-                                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-xs font-bold">Efficiency T/h (Line {selectedShellLine})</CardTitle>
-                                    <select 
-                                        value={selectedShellLine} 
-                                        onChange={e => setSelectedShellLine(e.target.value)}
-                                        className="h-7 text-xs rounded-md border border-input bg-background px-2 focus:outline-none"
-                                    >
-                                        {["A", "B", "C", "D1", "D2"].map(l => <option key={l} value={l}>Line {l}</option>)}
-                                    </select>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-64 w-full mt-2">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={perfChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                <YAxis tick={{ fontSize: 10 }} />
-                                                <Tooltip contentStyle={{ fontSize: '11px' }} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/h)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }} />
-                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/h)" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
-                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/h)" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            {/* SECTION 2: ADVANCED CORRELATIONS (QUALITY & ENERGY) */}
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">2. Phân tích Chuyên sâu (Advanced Correlations)</h3>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Speed vs Quality Correlation */}
+                                    <Card className="shadow-sm border-blue-100">
+                                        <CardHeader className="pb-2 bg-blue-50/30 border-b border-blue-50">
+                                            <CardTitle className="text-sm font-bold text-blue-800">{t("report.shelling.speedQuality.title")}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="pt-4">
+                                            <div className="h-64 w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={speedQualityData} margin={{ top: 5, right: 30, left: -20, bottom: 20 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                                        <XAxis dataKey="speed" type="number" name={t("report.shelling.speedQuality.x").replace(" (T/h)", "")} domain={['auto', 'auto']} tick={{ fontSize: 10 }} label={{ value: t("report.shelling.speedQuality.x"), position: "insideBottomRight", offset: -5, fontSize: 10 }} />
+                                                        <YAxis dataKey="broken" type="number" name={t("report.shelling.speedQuality.y").replace(" (%)", "")} tick={{ fontSize: 10 }} label={{ value: t("report.shelling.speedQuality.y"), angle: -90, position: "insideLeft", fontSize: 10 }} />
+                                                        <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} formatter={(value: any, name: any) => [value, name === 'speed' ? 'T/h' : '%']} />
+                                                        <Scatter name={t("report.shelling.speedQuality.scatter")} dataKey="broken" fill="#3b82f6" fillOpacity={0.6} />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                            <p className="text-xs text-center text-slate-500 mt-2 font-medium">{t("report.shelling.speedQuality.desc")}</p>
+                                        </CardContent>
+                                    </Card>
 
-                            {/* Chart 3: Manpower */}
-                            <Card>
-                                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-xs font-bold text-amber-700">Manpower Productivity (Line {selectedShellLine})</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-64 w-full mt-2">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={manpowerChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                <YAxis tick={{ fontSize: 10 }} />
-                                                <Tooltip contentStyle={{ fontSize: '11px' }} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/Ng)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
-                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/Ng)" stroke="#f97316" strokeWidth={2} dot={{ r: 2 }} />
-                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/Ng)" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                    {/* Energy Intensity */}
+                                    <Card className="shadow-sm border-amber-100">
+                                        <CardHeader className="pb-2 bg-amber-50/30 border-b border-amber-50">
+                                            <CardTitle className="text-sm font-bold text-amber-800">{t("report.shelling.energy.title")}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="pt-4">
+                                            <div className="h-64 w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={shellingEnergyChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                        <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
+                                                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                                                        <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <Bar yAxisId="left" dataKey="actual_ton" name={t("report.shelling.energy.prod")} fill="#fcd34d" radius={[4,4,0,0]} maxBarSize={40} />
+                                                        <Line yAxisId="right" type="monotone" dataKey="intensity" name={t("report.shelling.energy.intens")} stroke="#d97706" strokeWidth={2} dot={{ r: 3 }} />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                            <p className="text-xs text-center text-slate-500 mt-2 font-medium">{t("report.shelling.energy.desc")}</p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                                <div className="mt-4 grid grid-cols-1 gap-4">
+                                    {/* Chart 6: Size Performance */}
+                                    <Card className="col-span-1 shadow-sm">
+                                        <CardHeader className="pb-0">
+                                            <div className="flex flex-col gap-1">
+                                                <CardTitle className="text-sm font-bold text-teal-700">Performance & Broken Rate Analysis by Size</CardTitle>
+                                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                    💡 <span className="font-semibold text-slate-700">Mẹo Xem:</span> Di chuột (hover) vào hình cột để xem danh sách các Máy (Line) đang chạy Size hạt đó. Hoặc cuộn xuống bảng <span className="font-semibold">Chi tiết từng ca Shelling</span> cuối trang để xem cụ thể.
+                                                </p>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                                {/* Size Performance */}
+                                                <div className="h-64 w-full">
+                                                    <p className="text-xs font-semibold text-center text-teal-800 mb-2">Hiệu suất (Tấn/Giờ) theo Size</p>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <ComposedChart data={sizePerfChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                            <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
+                                                            <YAxis tick={{ fontSize: 10 }} />
+                                                            <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: any, props: any) => [`${Number(v).toFixed(2)} T/h`, `Hiệu suất (Line: ${props.payload.Lines})`]} cursor={{fill: 'transparent'}} />
+                                                            <Bar dataKey="Hiệu_Suất_T_h" name="Hiệu suất (T/h)" fill="#0d9488" barSize={30} radius={[4, 4, 0, 0]} />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                </div>
 
-                            {/* Chart 5: % Broken per shift */}
-                            <Card>
-                                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-xs font-bold text-red-700">💔 % Broken per shift (Line {selectedShellLine})</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-64 w-full mt-2">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={brokenChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
-                                                <Tooltip contentStyle={{ fontSize: '11px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`]} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (% Bể)" stroke="#f43f5e" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (% Bể)" stroke="#fb923c" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (% Bể)" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                                {/* Size Broken Pct */}
+                                                <div className="h-64 w-full">
+                                                    <p className="text-xs font-semibold text-center text-rose-800 mb-2">Tỷ lệ Bể TB (%) theo Size</p>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <ComposedChart data={sizeBrokenChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                            <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
+                                                            <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                                                            <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: any, props: any) => [`${Number(v).toFixed(2)}%`, `Tỷ lệ Bể (Line: ${props.payload.Lines})`]} cursor={{fill: 'transparent'}} />
+                                                            <Bar dataKey="Tỷ_Lệ_Bể" name="Tỷ lệ Bể (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
-                            {/* Chart 2: Downtime */}
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-xs font-bold">Downtime Analysis (Mins)</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-64 w-full mt-2">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={downChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                <YAxis tick={{ fontSize: 10 }} />
-                                                <Tooltip contentStyle={{ fontSize: '11px' }} />
-                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                <Bar dataKey="A" stackId="a" fill="#3b82f6" name="Line A" />
-                                                <Bar dataKey="B" stackId="a" fill="#10b981" name="Line B" />
-                                                <Bar dataKey="C" stackId="a" fill="#f59e0b" name="Line C" />
-                                                <Bar dataKey="D1" stackId="a" fill="#ef4444" name="Line D1" />
-                                                <Bar dataKey="D2" stackId="a" fill="#8b5cf6" name="Line D2" />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                    {/* Chart 7 & 8: Line-Size Analysis */}
+                                    {(lineSizePerfChartData.length > 0 || lineSizeBrokenChartData.length > 0) && (
+                                    <Card className="col-span-1 shadow-sm">
+                                        <CardHeader className="pb-0">
+                                            <CardTitle className="text-sm font-bold text-slate-700">By Line & Size Details</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                                {/* Line-Size Performance */}
+                                                <div className="h-72 w-full">
+                                                    <p className="text-xs font-semibold text-center text-teal-800 mb-2">Efficiency (T/h) by Line & Size</p>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <ComposedChart data={lineSizePerfChartData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                            <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} angle={-30} textAnchor="end" />
+                                                            <YAxis tick={{ fontSize: 10 }} />
+                                                            <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)} T/h`, `Hiệu suất`]} cursor={{fill: 'transparent'}} />
+                                                            <Bar dataKey="Hiệu_Suất_T_h" name="Efficiency (T/h)" fill="#0d9488" barSize={30} radius={[4, 4, 0, 0]} />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                </div>
 
-                            {/* Chart 4: Leader Comparison */}
-                            <Card className="col-span-1 lg:col-span-3">
-                                <CardHeader className="pb-0">
-                                    <CardTitle className="text-sm font-bold text-violet-700">Overall Leader Comparison (Month)</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-72 w-full mt-4">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={leaderCompareData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 'bold' }} />
-                                                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-                                                <Tooltip contentStyle={{ fontSize: '13px' }} cursor={{fill: 'transparent'}} />
-                                                <Legend wrapperStyle={{ fontSize: '12px', bottom: -5 }} />
-                                                
-                                                <Bar yAxisId="left" dataKey="Sản_Lượng" name="Total Production (Tons)" fill="#3b82f6" barSize={40} radius={[4, 4, 0, 0]} />
-                                                <Bar yAxisId="left" dataKey="Downtime" name="Total Downtime (Mins)" fill="#f43f5e" barSize={40} radius={[4, 4, 0, 0]} />
-                                                
-                                                <Line yAxisId="right" type="monotone" dataKey="Hiệu_Suất_T_h" name="Efficiency (Tons/Hour)" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} />
-                                                <Line yAxisId="right" type="monotone" dataKey="Năng_Suất_TNg" name="Productivity (Tons/Person)" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 5 }} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                                {/* Line-Size Broken Pct */}
+                                                <div className="h-72 w-full">
+                                                    <p className="text-xs font-semibold text-center text-rose-800 mb-2">Broken Rate (%) by Line & Size</p>
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <ComposedChart data={lineSizeBrokenChartData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                            <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} angle={-30} textAnchor="end" />
+                                                            <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                                                            <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`, `Tỷ lệ Bể`]} cursor={{fill: 'transparent'}} />
+                                                            <Bar dataKey="Tỷ_Lệ_Bể" name="Broken Rate (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                    )}
+                                </div>
+                            </div>
 
-                            {/* Chart 6: Size Performance */}
-                            <Card className="col-span-1 lg:col-span-3 lg:col-start-1">
-                                <CardHeader className="pb-0">
-                                    <div className="flex flex-col gap-1">
-                                        <CardTitle className="text-sm font-bold text-teal-700">Performance & Broken Rate Analysis by Size</CardTitle>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                                            💡 <span className="font-semibold text-slate-700">Mẹo Xem:</span> Di chuột (hover) vào hình cột để xem danh sách các Máy (Line) đang chạy Size hạt đó. Hoặc cuộn xuống bảng <span className="font-semibold">Chi tiết từng ca Shelling</span> cuối trang để xem cụ thể.
-                                        </p>
+                            {/* SECTION 3: LINE DEEP-DIVE */}
+                            <div className="pt-6 mt-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 rounded-xl shadow-sm border p-4 bg-slate-50/50">
+                                    <div>
+                                        <h3 className="text-base font-bold text-slate-800">3. Phân tích chi tiết Thiết bị (Line Deep-dive)</h3>
+                                        <p className="text-xs text-muted-foreground mt-1">Select a specific line to view its shift-by-shift performance metrics.</p>
                                     </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                        {/* Size Performance */}
-                                        <div className="h-64 w-full">
-                                            <p className="text-xs font-semibold text-center text-teal-800 mb-2">Hiệu suất (Tấn/Giờ) theo Size</p>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={sizePerfChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
-                                                    <YAxis tick={{ fontSize: 10 }} />
-                                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: any, props: any) => [`${Number(v).toFixed(2)} T/h`, `Hiệu suất (Line: ${props.payload.Lines})`]} cursor={{fill: 'transparent'}} />
-                                                    <Bar dataKey="Hiệu_Suất_T_h" name="Hiệu suất (T/h)" fill="#0d9488" barSize={30} radius={[4, 4, 0, 0]} />
-                                                </ComposedChart>
-                                            </ResponsiveContainer>
-                                        </div>
-
-                                        {/* Size Broken Pct */}
-                                        <div className="h-64 w-full">
-                                            <p className="text-xs font-semibold text-center text-rose-800 mb-2">Tỷ lệ Bể TB (%) theo Size</p>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={sizeBrokenChartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
-                                                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: any, props: any) => [`${Number(v).toFixed(2)}%`, `Tỷ lệ Bể (Line: ${props.payload.Lines})`]} cursor={{fill: 'transparent'}} />
-                                                    <Bar dataKey="Tỷ_Lệ_Bể" name="Tỷ lệ Bể (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
-                                                </ComposedChart>
-                                            </ResponsiveContainer>
-                                        </div>
+                                    <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
+                                        <span className="text-sm font-semibold text-slate-700">Chọn Line:</span>
+                                        <select 
+                                            value={selectedShellLine} 
+                                            onChange={e => setSelectedShellLine(e.target.value)}
+                                            className="h-8 text-sm font-bold text-primary rounded-md border-none bg-transparent px-2 focus:outline-none cursor-pointer"
+                                        >
+                                            {["A", "B", "C", "D1", "D2"].map(l => <option key={l} value={l}>Line {l}</option>)}
+                                        </select>
                                     </div>
-                                </CardContent>
-                            </Card>
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                    {/* Chart 1: Performance */}
+                                    <Card>
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-bold">Efficiency T/h (Line {selectedShellLine})</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="h-64 w-full mt-2">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={perfChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                        <YAxis tick={{ fontSize: 10 }} />
+                                                        <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/h)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }} />
+                                                        <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/h)" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
+                                                        <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/h)" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
-                            {/* Chart 7 & 8: Line-Size Analysis */}
-                            {(lineSizePerfChartData.length > 0 || lineSizeBrokenChartData.length > 0) && (
-                            <Card className="col-span-1 lg:col-span-3 lg:col-start-1">
-                                <CardHeader className="pb-0">
-                                    <CardTitle className="text-sm font-bold text-slate-700">By Line & Size Details</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                        {/* Line-Size Performance */}
-                                        <div className="h-72 w-full">
-                                            <p className="text-xs font-semibold text-center text-teal-800 mb-2">Efficiency (T/h) by Line & Size</p>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={lineSizePerfChartData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} angle={-30} textAnchor="end" />
-                                                    <YAxis tick={{ fontSize: 10 }} />
-                                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)} T/h`, `Hiệu suất`]} cursor={{fill: 'transparent'}} />
-                                                    <Bar dataKey="Hiệu_Suất_T_h" name="Efficiency (T/h)" fill="#0d9488" barSize={30} radius={[4, 4, 0, 0]} />
-                                                </ComposedChart>
-                                            </ResponsiveContainer>
-                                        </div>
+                                    {/* Chart 3: Manpower */}
+                                    <Card>
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-bold text-amber-700">Manpower Productivity (Line {selectedShellLine})</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="h-64 w-full mt-2">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={manpowerChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                        <YAxis tick={{ fontSize: 10 }} />
+                                                        <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/Ng)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
+                                                        <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/Ng)" stroke="#f97316" strokeWidth={2} dot={{ r: 2 }} />
+                                                        <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/Ng)" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
-                                        {/* Line-Size Broken Pct */}
-                                        <div className="h-72 w-full">
-                                            <p className="text-xs font-semibold text-center text-rose-800 mb-2">Broken Rate (%) by Line & Size</p>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <ComposedChart data={lineSizeBrokenChartData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                    <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} angle={-30} textAnchor="end" />
-                                                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                                                    <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`, `Tỷ lệ Bể`]} cursor={{fill: 'transparent'}} />
-                                                    <Bar dataKey="Tỷ_Lệ_Bể" name="Broken Rate (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
-                                                </ComposedChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            )}
+                                    {/* Chart 5: % Broken per shift */}
+                                    <Card>
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-xs font-bold text-red-700">💔 % Broken per shift (Line {selectedShellLine})</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="h-64 w-full mt-2">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={brokenChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                        <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
+                                                        <Tooltip contentStyle={{ fontSize: '11px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`]} />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <Line type="monotone" dataKey="Ca1" name="Ca 1 (% Bể)" stroke="#f43f5e" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                        <Line type="monotone" dataKey="Ca2" name="Ca 2 (% Bể)" stroke="#fb923c" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                        <Line type="monotone" dataKey="Ca3" name="Ca 3 (% Bể)" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
+
                         </div>
                     )}
 
