@@ -132,7 +132,29 @@ export async function GET(request: Request) {
             monthly_enpi_baseline: s.total_rcn > 0 ? s.total_expected / s.total_rcn : null,
         }))
 
-        return NextResponse.json({ entries: enriched, summaries, historicalData })
+        // Enrich historical
+        const enrichedHistorical = (historicalData || []).map((h: any) => {
+            const bl = baselineMap[h.seu_id]
+            const isCk = bl?.label?.includes('[CK]')
+            const actual = Number(h.actual_energy) || 0
+            const rcn = Number(h.rcn_hap_duoc_kg) || 0
+            const ck = Number(h.ck_obtained_mt) || 0
+            
+            const xVal = isCk ? ck : rcn
+            
+            let expected = h.expected_energy || null
+            if (bl && !expected) {
+                expected = Number(bl.slope) * xVal + Number(bl.intercept)
+            }
+            
+            return {
+                ...h,
+                total_energy: actual,
+                expected_energy: expected
+            }
+        })
+
+        return NextResponse.json({ entries: enriched, summaries, historicalData: enrichedHistorical })
 
     } catch (err: any) {
         console.error('ISO 50001 dashboard error:', err)

@@ -7,7 +7,7 @@ import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
 import { Download, Search, FileText, TrendingUp, TrendingDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Scatter } from "recharts"
 import * as XLSX from "xlsx"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -89,6 +89,7 @@ export default function ReportPage() {
     const [selectedLeader, setSelectedLeader] = useState("Tất cả")
     const [hasData, setHasData] = useState(false)
     const [compressorMonthly, setCompressorMonthly] = useState<{work_date: string; total_kwh: number}[]>([])
+    const [shellingEnergyMonthly, setShellingEnergyMonthly] = useState<{work_date: string; kwh: number}[]>([])
 
     // Load departments from DB (same as dashboard)
     useEffect(() => {
@@ -182,8 +183,25 @@ export default function ReportPage() {
                 .order("work_date", { ascending: true })
                 .order("line_code", { ascending: true })
             setShellingLines(ld ?? [])
+
+            // Fetch Shelling Energy
+            const { data: deptInfo } = await supabase.from("departments").select("id").eq("code", "SHELL").single();
+            if (deptInfo) {
+                const { data: energyData } = await supabase
+                    .from("daily_kpi")
+                    .select("work_date, electricity_meter_reading")
+                    .eq("department_id", deptInfo.id)
+                    .gte("work_date", start)
+                    .lte("work_date", end)
+                    .order("work_date", { ascending: true });
+                setShellingEnergyMonthly((energyData ?? []).map((r: any) => ({
+                    work_date: r.work_date,
+                    kwh: Number(r.electricity_meter_reading || 0)
+                })));
+            }
         } else {
             setShellingLines([])
+            setShellingEnergyMonthly([])
         }
 
         // Fetch compressor data for PEEL_MC and CS
@@ -490,6 +508,59 @@ export default function ReportPage() {
 
     const achievePct = summary && summary.totalPlan > 0 ? (summary.totalActual / summary.totalPlan * 100) : null
 
+    // --- NEW OPTIMIZED SHELLING CHARTS DATA ---
+    const crossLinePerfChartData = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        const map = new Map<string, any>();
+        filteredShellingLines.forEach(r => {
+            const dateStr = format(parseISO(r.work_date), 'dd/MM');
+            if (!map.has(dateStr)) map.set(dateStr, { name: dateStr });
+            const curr = map.get(dateStr);
+            if (!curr[`totalTon_${r.line_code}`]) { curr[`totalTon_${r.line_code}`] = 0; curr[`totalRunHours_${r.line_code}`] = 0; }
+            curr[`totalTon_${r.line_code}`] += Number(r.actual_ton || 0);
+            curr[`totalRunHours_${r.line_code}`] += Number(r.run_hours || 0);
+        });
+        return Array.from(map.values()).map(curr => {
+            const row: any = { name: curr.name };
+            ['A', 'B', 'C', 'D1', 'D2'].forEach(line => {
+                const tons = curr[`totalTon_${line}`] || 0;
+                const hrs = curr[`totalRunHours_${line}`] || 0;
+                row[line] = hrs > 0 ? Number((tons/hrs).toFixed(2)) : null;
+            });
+            return row;
+        });
+    })();
+
+    const speedQualityData = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        return filteredShellingLines
+            .filter(r => Number(r.run_hours) > 0 && Number(r.broken_pct) > 0)
+            .map(r => ({
+                speed: Number((Number(r.actual_ton) / Number(r.run_hours)).toFixed(2)),
+                broken: Number(r.broken_pct),
+                line: r.line_code || 'Unknown',
+                size: r.size || 'Unknown',
+                name: `${r.line_code} - ${format(parseISO(r.work_date), 'dd/MM')} ${r.shift_name}`
+            }));
+    })();
+
+    const shellingEnergyChartData = (() => {
+        if (selectedDept !== 'SHELL' || !shellingEnergyMonthly.length || !records.length) return [];
+        const map = new Map<string, any>();
+        records.forEach(r => {
+            const dStr = format(parseISO(r.work_date), 'dd/MM');
+            map.set(r.work_date, { name: dStr, actual_ton: r.actual_ton, kwh: 0, intensity: 0 });
+        });
+        shellingEnergyMonthly.forEach(r => {
+            if (map.has(r.work_date)) {
+                const row = map.get(r.work_date);
+                row.kwh = r.kwh;
+                row.intensity = row.actual_ton > 0 ? Number((r.kwh / row.actual_ton).toFixed(1)) : 0;
+            }
+        });
+        return Array.from(map.values()).filter(d => Boolean(d.actual_ton));
+    })();
+
     return (
         <div className="max-w-5xl mx-auto space-y-6">
             {/* Header */}
@@ -497,7 +568,7 @@ export default function ReportPage() {
                 <FileText className="h-7 w-7 text-primary" />
                 <div>
                     <h1 className="text-2xl font-black">Production Report</h1>
-                    <p className="text-sm text-muted-foreground">Chọn tháng và bộ phận (Department) để tải báo cáo sản xuất</p>
+                    <p className="text-sm text-muted-foreground">Select month and department to load production report</p>
                 </div>
             </div>
 
@@ -507,17 +578,17 @@ export default function ReportPage() {
                     <div className="flex flex-wrap items-end gap-4">
                         {/* Month picker */}
                         <div className="flex flex-col gap-1">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase">Tháng</label>
+                            <label className="text-xs font-semibold text-muted-foreground uppercase">Month</label>
                             <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
                                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                                 {Array.from({length:12},(_,i)=>i+1).map(m =>
-                                    <option key={m} value={m}>Tháng {m}</option>
+                                    <option key={m} value={m}>Month {m}</option>
                                 )}
                             </select>
                         </div>
                         {/* Year picker */}
                         <div className="flex flex-col gap-1">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase">Năm</label>
+                            <label className="text-xs font-semibold text-muted-foreground uppercase">Year</label>
                             <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))}
                                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                                 {[currentYear-1, currentYear, currentYear+1].map(y =>
@@ -527,7 +598,7 @@ export default function ReportPage() {
                         </div>
                         {/* Department picker */}
                         <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase">Bộ phận</label>
+                            <label className="text-xs font-semibold text-muted-foreground uppercase">Department</label>
                             <select value={selectedDept} onChange={e => setSelectedDept(e.target.value)}
                                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                                 {departments.map(d => <option key={d.code} value={d.code}>{d.name_vi || d.name_en}</option>)}
@@ -535,12 +606,12 @@ export default function ReportPage() {
                         </div>
                         <Button onClick={fetchReport} disabled={loading} className="gap-2">
                             <Search className="h-4 w-4" />
-                            {loading ? "Đang tải..." : "Xem báo cáo"}
+                            {loading ? "Loading..." : "View Report"}
                         </Button>
                         {hasData && (
                             <Button variant="outline" onClick={exportExcel} disabled={!dept} className="gap-2 text-green-700 border-green-600 hover:bg-green-50">
                                 <Download className="h-4 w-4" />
-                                Xuất Excel
+                                Export Excel
                             </Button>
                         )}
                     </div>
@@ -553,38 +624,38 @@ export default function ReportPage() {
                     {/* Title */}
                     <div className="flex items-center justify-between">
                         <h2 className="text-lg font-bold">
-                            {dept.name_vi || dept.name_en} — Tháng {String(selectedMonth).padStart(2,"0")}/{selectedYear}
+                            {dept.name_vi || dept.name_en} — Month {String(selectedMonth).padStart(2,"0")}/{selectedYear}
                         </h2>
-                        <span className="text-sm text-muted-foreground">{summary.daysWithData} ngày có sản lượng</span>
+                        <span className="text-sm text-muted-foreground">{summary.daysWithData} days with data</span>
                     </div>
 
                     {/* KPI Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <KPICard label="Sản lượng Thực tế" value={`${summary.totalActual.toFixed(1)} T`}
+                        <KPICard label="Actual Production" value={`${summary.totalActual.toFixed(1)} T`}
                             sub={`KH: ${summary.totalPlan.toFixed(1)} T`} />
                         <KPICard
                             label="MTD Achievement"
                             value={achievePct !== null ? `${achievePct.toFixed(1)}%` : "—"}
                             color={achievePct !== null ? (achievePct >= 100 ? "text-green-600" : "text-red-600") : undefined}
-                            sub={achievePct !== null ? (achievePct >= 100 ? "✅ Đạt kế hoạch" : "⚠️ Chưa đạt") : undefined}
+                            sub={achievePct !== null ? (achievePct >= 100 ? "✅ Target Met" : "⚠️ Target Not Met") : undefined}
                         />
                         <KPICard
                             label="Variance"
                             value={`${summary.totalActual - summary.totalPlan >= 0 ? "+" : ""}${(summary.totalActual - summary.totalPlan).toFixed(1)} T`}
                             color={summary.totalActual >= summary.totalPlan ? "text-green-600" : "text-red-600"}
                         />
-                        <KPICard label="Tổng Downtime" value={`${summary.totalDowntime} phút`}
-                            sub={`~${(summary.totalDowntime/60).toFixed(1)} giờ`} />
+                        <KPICard label="Total Downtime" value={`${summary.totalDowntime} mins`}
+                            sub={`~${(summary.totalDowntime/60).toFixed(1)} hrs`} />
                     </div>
 
                     {/* Quality KPIs */}
                     {(summary.avgBroken > 0 || summary.avgUnpeel > 0) && (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                             {summary.avgBroken > 0 && (
-                                <KPICard label="Tỷ lệ bể TB" value={`${summary.avgBroken.toFixed(2)}%`} color="text-red-600" />
+                                <KPICard label="Avg Broken %" value={`${summary.avgBroken.toFixed(2)}%`} color="text-red-600" />
                             )}
                             {summary.avgUnpeel > 0 && (
-                                <KPICard label="Tỷ lệ chưa lột TB" value={`${summary.avgUnpeel.toFixed(2)}%`} color="text-amber-600" />
+                                <KPICard label="Avg Unpeel %" value={`${summary.avgUnpeel.toFixed(2)}%`} color="text-amber-600" />
                             )}
                         </div>
                     )}
@@ -595,13 +666,13 @@ export default function ReportPage() {
                             <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-slate-50/50">
                                 <CardTitle className="text-sm font-bold text-slate-800">Shelling Lines — Tổng tháng</CardTitle>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Bộ lọc Tổ Trưởng:</span>
+                                    <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Shift Leader:</span>
                                     <select 
                                         value={selectedLeader} 
                                         onChange={e => setSelectedLeader(e.target.value)}
                                         className="h-8 text-xs rounded border border-slate-300 bg-white px-2 focus:outline-none focus:border-primary font-medium shadow-sm transition-colors"
                                     >
-                                        <option value="Tất cả">Tất cả</option>
+                                        <option value="Tất cả">All</option>
                                         <option value="Mrs.Tâm">Mrs. Tâm</option>
                                         <option value="Ms.Linh">Ms. Linh</option>
                                         <option value="Mr.Trí">Mr. Trí</option>
@@ -614,12 +685,12 @@ export default function ReportPage() {
                                         <thead>
                                             <tr className="border-b bg-muted/40">
                                                 <th className="text-left p-2 font-semibold">Line</th>
-                                                <th className="text-right p-2 font-semibold">Sản lượng (T)</th>
-                                                <th className="text-right p-2 font-semibold">Giờ chạy (h)</th>
-                                                <th className="text-right p-2 font-semibold">Hiệu suất (T/h)</th>
-                                                <th className="text-right p-2 font-semibold">Nhân sự (Ng)</th>
-                                                <th className="text-right p-2 font-semibold">Năng suất (T/Ng)</th>
-                                                <th className="text-right p-2 font-semibold">% tổng SL</th>
+                                                <th className="text-right p-2 font-semibold">Production (T)</th>
+                                                <th className="text-right p-2 font-semibold">Run Hours (h)</th>
+                                                <th className="text-right p-2 font-semibold">Efficiency (T/h)</th>
+                                                <th className="text-right p-2 font-semibold">Manpower (P)</th>
+                                                <th className="text-right p-2 font-semibold">Productivity (T/P)</th>
+                                                <th className="text-right p-2 font-semibold">% Total SL</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -647,14 +718,26 @@ export default function ReportPage() {
                                                     const sEff = sHours > 0 ? sTons/sHours : 0
                                                     const sMpEff = sManpower > 0 ? sTons/sManpower : 0
                                                     const sPctTot = summary.totalActual > 0 ? (sTons/summary.totalActual*100) : 0
+                                                    
+                                                    const effDiff = eff > 0 ? ((sEff - eff) / eff) * 100 : 0;
+                                                    const sEffColor = effDiff <= -10 ? "text-red-700 bg-red-100 px-1 rounded font-bold inline-block shadow-sm" : "text-emerald-700 font-medium";
+                                                    const mpEffDiff = mpEff > 0 ? ((sMpEff - mpEff) / mpEff) * 100 : 0;
+                                                    const sMpEffColor = mpEffDiff <= -10 ? "text-red-700 bg-red-100 px-1 rounded font-bold inline-block shadow-sm" : "text-blue-600 font-medium";
+                                                    
                                                     return (
                                                         <tr key={`${line}-${shift}`} className="border-b hover:bg-muted/20 text-sm">
-                                                            <td className="p-2 pl-6 font-medium text-muted-foreground">↳ {shift}</td>
+                                                            <td className="p-2 pl-6 font-medium text-muted-foreground">↳ Shift {shift.split(' ')[1]}</td>
                                                             <td className="p-2 text-right font-medium">{sTons.toFixed(2)}</td>
                                                             <td className="p-2 text-right text-muted-foreground">{sHours.toFixed(1)}</td>
-                                                            <td className="p-2 text-right font-medium text-emerald-700">{sEff > 0 ? sEff.toFixed(3) : "—"}</td>
+                                                            <td className="p-2 text-right">
+                                                                <span className={sEffColor}>{sEff > 0 ? sEff.toFixed(3) : "—"}</span>
+                                                                {effDiff <= -10 && <span className="text-[10px] text-red-500 ml-1 font-bold">({effDiff.toFixed(0)}%)</span>}
+                                                            </td>
                                                             <td className="p-2 text-right text-amber-600">{sManpower}</td>
-                                                            <td className="p-2 text-right font-medium text-blue-600">{sMpEff > 0 ? sMpEff.toFixed(3) : "—"}</td>
+                                                            <td className="p-2 text-right">
+                                                                <span className={sMpEffColor}>{sMpEff > 0 ? sMpEff.toFixed(3) : "—"}</span>
+                                                                {mpEffDiff <= -10 && <span className="text-[10px] text-red-500 ml-1 font-bold">({mpEffDiff.toFixed(0)}%)</span>}
+                                                            </td>
                                                             <td className="p-2 text-right text-muted-foreground">{sPctTot.toFixed(1)}%</td>
                                                         </tr>
                                                     )
@@ -662,7 +745,7 @@ export default function ReportPage() {
                                                 
                                                 return [
                                                     <tr key={line} className="border-b bg-muted/10">
-                                                        <td className={`p-2 font-black ${colors[line]}`}>{line} (Tổng)</td>
+                                                        <td className={`p-2 font-black ${colors[line]}`}>{line} (Total)</td>
                                                         <td className="p-2 text-right font-bold">{tons.toFixed(2)}</td>
                                                         <td className="p-2 text-right font-semibold text-slate-600">{hours.toFixed(1)}</td>
                                                         <td className="p-2 text-right font-bold text-emerald-700">{eff > 0 ? eff.toFixed(3) : "—"}</td>
@@ -680,13 +763,91 @@ export default function ReportPage() {
                         </Card>
                     )}
 
+                    {/* Shelling Optimized Insights */}
+                    {selectedDept === "SHELL" && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 mb-2">
+                            {/* Cross-Line Performance */}
+                            <Card className="col-span-1 lg:col-span-2 shadow-sm border-emerald-100">
+                                <CardHeader className="pb-2 bg-emerald-50/30 border-b border-emerald-50">
+                                    <CardTitle className="text-sm font-bold text-emerald-800 flex items-center gap-2">
+                                        <TrendingUp className="h-4 w-4" />
+                                        Cross-Line Efficiency Comparison (T/h)
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-4">
+                                    <div className="h-72 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={crossLinePerfChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <YAxis tick={{ fontSize: 10 }} />
+                                                <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                <Line type="monotone" dataKey="A" name="Line A" stroke="#2563eb" strokeWidth={2} dot={{ r: 2 }} />
+                                                <Line type="monotone" dataKey="B" name="Line B" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
+                                                <Line type="monotone" dataKey="C" name="Line C" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
+                                                <Line type="monotone" dataKey="D1" name="Line D1" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
+                                                <Line type="monotone" dataKey="D2" name="Line D2" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Speed vs Quality Correlation */}
+                            <Card className="shadow-sm border-blue-100">
+                                <CardHeader className="pb-2 bg-blue-50/30 border-b border-blue-50">
+                                    <CardTitle className="text-sm font-bold text-blue-800">Speed vs Quality Correlation</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-4">
+                                    <div className="h-64 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={speedQualityData} margin={{ top: 5, right: 30, left: -20, bottom: 20 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                                <XAxis dataKey="speed" type="number" name="Speed" domain={['auto', 'auto']} tick={{ fontSize: 10 }} label={{ value: "Speed (T/h)", position: "insideBottomRight", offset: -5, fontSize: 10 }} />
+                                                <YAxis dataKey="broken" type="number" name="Broken %" tick={{ fontSize: 10 }} label={{ value: "Broken %", angle: -90, position: "insideLeft", fontSize: 10 }} />
+                                                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} formatter={(value: any, name: any) => [value, name === 'speed' ? 'T/h' : '%']} />
+                                                <Scatter name="Shifts" dataKey="broken" fill="#3b82f6" fillOpacity={0.6} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <p className="text-xs text-center text-slate-500 mt-2 font-medium">Evaluating if higher speed correlates to higher broken kernels.</p>
+                                </CardContent>
+                            </Card>
+
+                            {/* Energy Intensity */}
+                            <Card className="shadow-sm border-amber-100">
+                                <CardHeader className="pb-2 bg-amber-50/30 border-b border-amber-50">
+                                    <CardTitle className="text-sm font-bold text-amber-800">Energy Intensity (kWh/Ton)</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-4">
+                                    <div className="h-64 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={shellingEnergyChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
+                                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                                                <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
+                                                <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                <Bar yAxisId="left" dataKey="actual_ton" name="Production (T)" fill="#fcd34d" radius={[4,4,0,0]} maxBarSize={40} />
+                                                <Line yAxisId="right" type="monotone" dataKey="intensity" name="Intensity (kWh/T)" stroke="#d97706" strokeWidth={2} dot={{ r: 3 }} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <p className="text-xs text-center text-slate-500 mt-2 font-medium">Tracking electricity usage against daily shelling production.</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+
                     {/* Shelling Analytics Charts */}
                     {selectedDept === "SHELL" && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             {/* Chart 1: Performance */}
                             <Card>
                                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-xs font-bold">Hiệu suất T/h (Line {selectedShellLine})</CardTitle>
+                                    <CardTitle className="text-xs font-bold">Efficiency T/h (Line {selectedShellLine})</CardTitle>
                                     <select 
                                         value={selectedShellLine} 
                                         onChange={e => setSelectedShellLine(e.target.value)}
@@ -716,7 +877,7 @@ export default function ReportPage() {
                             {/* Chart 3: Manpower */}
                             <Card>
                                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-xs font-bold text-amber-700">NS Nhân sự Tấn/Ng (Line {selectedShellLine})</CardTitle>
+                                    <CardTitle className="text-xs font-bold text-amber-700">Manpower Productivity (Line {selectedShellLine})</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-64 w-full mt-2">
@@ -739,7 +900,7 @@ export default function ReportPage() {
                             {/* Chart 5: % Broken per shift */}
                             <Card>
                                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                    <CardTitle className="text-xs font-bold text-red-700">💔 % Bể theo từng ca (Line {selectedShellLine})</CardTitle>
+                                    <CardTitle className="text-xs font-bold text-red-700">💔 % Broken per shift (Line {selectedShellLine})</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-64 w-full mt-2">
@@ -762,7 +923,7 @@ export default function ReportPage() {
                             {/* Chart 2: Downtime */}
                             <Card>
                                 <CardHeader className="pb-2">
-                                    <CardTitle className="text-xs font-bold">Phân tích Dừng Máy (Phút)</CardTitle>
+                                    <CardTitle className="text-xs font-bold">Downtime Analysis (Mins)</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-64 w-full mt-2">
@@ -787,7 +948,7 @@ export default function ReportPage() {
                             {/* Chart 4: Leader Comparison */}
                             <Card className="col-span-1 lg:col-span-3">
                                 <CardHeader className="pb-0">
-                                    <CardTitle className="text-sm font-bold text-violet-700">So sánh Tổng quan Tổ Trưởng (Tháng)</CardTitle>
+                                    <CardTitle className="text-sm font-bold text-violet-700">Overall Leader Comparison (Month)</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-72 w-full mt-4">
@@ -800,11 +961,11 @@ export default function ReportPage() {
                                                 <Tooltip contentStyle={{ fontSize: '13px' }} cursor={{fill: 'transparent'}} />
                                                 <Legend wrapperStyle={{ fontSize: '12px', bottom: -5 }} />
                                                 
-                                                <Bar yAxisId="left" dataKey="Sản_Lượng" name="Tổng Sản lượng (Tấn)" fill="#3b82f6" barSize={40} radius={[4, 4, 0, 0]} />
-                                                <Bar yAxisId="left" dataKey="Downtime" name="Tổng Dừng máy (Phút)" fill="#f43f5e" barSize={40} radius={[4, 4, 0, 0]} />
+                                                <Bar yAxisId="left" dataKey="Sản_Lượng" name="Total Production (Tons)" fill="#3b82f6" barSize={40} radius={[4, 4, 0, 0]} />
+                                                <Bar yAxisId="left" dataKey="Downtime" name="Total Downtime (Mins)" fill="#f43f5e" barSize={40} radius={[4, 4, 0, 0]} />
                                                 
-                                                <Line yAxisId="right" type="monotone" dataKey="Hiệu_Suất_T_h" name="Hiệu suất (Tấn/Giờ)" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} />
-                                                <Line yAxisId="right" type="monotone" dataKey="Năng_Suất_TNg" name="Năng suất (Tấn/Người)" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 5 }} />
+                                                <Line yAxisId="right" type="monotone" dataKey="Hiệu_Suất_T_h" name="Efficiency (Tons/Hour)" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} />
+                                                <Line yAxisId="right" type="monotone" dataKey="Năng_Suất_TNg" name="Productivity (Tons/Person)" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 5 }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -815,7 +976,7 @@ export default function ReportPage() {
                             <Card className="col-span-1 lg:col-span-3 lg:col-start-1">
                                 <CardHeader className="pb-0">
                                     <div className="flex flex-col gap-1">
-                                        <CardTitle className="text-sm font-bold text-teal-700">Phân tích Hiệu suất & Tỷ lệ Bể theo Kích cỡ (Size)</CardTitle>
+                                        <CardTitle className="text-sm font-bold text-teal-700">Performance & Broken Rate Analysis by Size</CardTitle>
                                         <p className="text-[11px] text-muted-foreground mt-0.5">
                                             💡 <span className="font-semibold text-slate-700">Mẹo Xem:</span> Di chuột (hover) vào hình cột để xem danh sách các Máy (Line) đang chạy Size hạt đó. Hoặc cuộn xuống bảng <span className="font-semibold">Chi tiết từng ca Shelling</span> cuối trang để xem cụ thể.
                                         </p>
@@ -858,34 +1019,34 @@ export default function ReportPage() {
                             {(lineSizePerfChartData.length > 0 || lineSizeBrokenChartData.length > 0) && (
                             <Card className="col-span-1 lg:col-span-3 lg:col-start-1">
                                 <CardHeader className="pb-0">
-                                    <CardTitle className="text-sm font-bold text-slate-700">Chi tiết theo từng máy (Line) & Kích cỡ (Size)</CardTitle>
+                                    <CardTitle className="text-sm font-bold text-slate-700">By Line & Size Details</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                                         {/* Line-Size Performance */}
                                         <div className="h-72 w-full">
-                                            <p className="text-xs font-semibold text-center text-teal-800 mb-2">Hiệu suất (T/h) theo Line & Size</p>
+                                            <p className="text-xs font-semibold text-center text-teal-800 mb-2">Efficiency (T/h) by Line & Size</p>
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <ComposedChart data={lineSizePerfChartData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                     <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} angle={-30} textAnchor="end" />
                                                     <YAxis tick={{ fontSize: 10 }} />
                                                     <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)} T/h`, `Hiệu suất`]} cursor={{fill: 'transparent'}} />
-                                                    <Bar dataKey="Hiệu_Suất_T_h" name="Hiệu suất (T/h)" fill="#0d9488" barSize={30} radius={[4, 4, 0, 0]} />
+                                                    <Bar dataKey="Hiệu_Suất_T_h" name="Efficiency (T/h)" fill="#0d9488" barSize={30} radius={[4, 4, 0, 0]} />
                                                 </ComposedChart>
                                             </ResponsiveContainer>
                                         </div>
 
                                         {/* Line-Size Broken Pct */}
                                         <div className="h-72 w-full">
-                                            <p className="text-xs font-semibold text-center text-rose-800 mb-2">Tỷ lệ Bể (%) theo Line & Size</p>
+                                            <p className="text-xs font-semibold text-center text-rose-800 mb-2">Broken Rate (%) by Line & Size</p>
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <ComposedChart data={lineSizeBrokenChartData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                     <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} angle={-30} textAnchor="end" />
                                                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                                                     <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`, `Tỷ lệ Bể`]} cursor={{fill: 'transparent'}} />
-                                                    <Bar dataKey="Tỷ_Lệ_Bể" name="Tỷ lệ Bể (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
+                                                    <Bar dataKey="Tỷ_Lệ_Bể" name="Broken Rate (%)" fill="#e11d48" barSize={30} radius={[4, 4, 0, 0]} />
                                                 </ComposedChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -912,7 +1073,7 @@ export default function ReportPage() {
                         return (
                             <Card>
                                 <CardHeader className="pb-0">
-                                    <CardTitle className="text-sm font-bold text-purple-700">🌬️ Điện Máy Nén Khí vs Sản lượng</CardTitle>
+                                    <CardTitle className="text-sm font-bold text-purple-700">🌬️ Compressor Energy vs Production</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-72 w-full mt-4">
@@ -924,16 +1085,16 @@ export default function ReportPage() {
                                                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} label={{ value: 'kWh', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10 } }} />
                                                 <Tooltip contentStyle={{ fontSize: '12px' }} formatter={(v: any, name: string | undefined) => {
                                                     if (name === 'kWh Máy Nén') return [`${Number(v).toLocaleString()} kWh`, name]
-                                                    if (name === 'Sản lượng') return [`${Number(v).toFixed(3)} Tấn`, name]
+                                                    if (name === 'Sản lượng') return [`${Number(v).toFixed(3)} Tons`, 'Production']
                                                     return [v, name]
                                                 }} />
                                                 <Legend />
-                                                <Bar yAxisId="left" dataKey="SanLuong" name="Sản lượng" fill="#0d9488" barSize={20} radius={[3,3,0,0]} />
+                                                <Bar yAxisId="left" dataKey="SanLuong" name="Production" fill="#0d9488" barSize={20} radius={[3,3,0,0]} />
                                                 <Line yAxisId="right" type="monotone" dataKey="kwhMayNen" name="kWh Máy Nén" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3 }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-2 text-center">Hover vào biểu đồ để xem kWh/Tấn của từng ngày</p>
+                                    <p className="text-xs text-muted-foreground mt-2 text-center">Hover for daily kWh/Ton</p>
                                 </CardContent>
                             </Card>
                         )
@@ -943,7 +1104,7 @@ export default function ReportPage() {
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold flex items-center justify-between">
-                                <span>Chi tiết từng ngày</span>
+                                <span>Daily Details</span>
                                 <span className="text-xs font-normal text-muted-foreground">{records.length} ngày</span>
                             </CardTitle>
                         </CardHeader>
@@ -952,14 +1113,14 @@ export default function ReportPage() {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b bg-muted/50">
-                                            <th className="text-left p-3 font-semibold whitespace-nowrap">Ngày</th>
-                                            <th className="text-right p-3 font-semibold">Thực tế (T)</th>
-                                            <th className="text-right p-3 font-semibold">KH (T)</th>
-                                            <th className="text-right p-3 font-semibold">Đạt %</th>
+                                            <th className="text-left p-3 font-semibold whitespace-nowrap">Date</th>
+                                            <th className="text-right p-3 font-semibold">Actual (T)</th>
+                                            <th className="text-right p-3 font-semibold">Plan (T)</th>
+                                            <th className="text-right p-3 font-semibold">Achieved %</th>
                                             <th className="text-right p-3 font-semibold">Downtime</th>
-                                            {records.some(r => r.avg_broken_pct > 0) && <th className="text-right p-3 font-semibold">Bể %</th>}
-                                            {records.some(r => r.avg_unpeel_pct > 0) && <th className="text-right p-3 font-semibold">Chưa lột %</th>}
-                                            <th className="text-left p-3 font-semibold">Ghi chú</th>
+                                            {records.some(r => r.avg_broken_pct > 0) && <th className="text-right p-3 font-semibold">Broken %</th>}
+                                            {records.some(r => r.avg_unpeel_pct > 0) && <th className="text-right p-3 font-semibold">Unpeel %</th>}
+                                            <th className="text-left p-3 font-semibold">Note</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -990,7 +1151,7 @@ export default function ReportPage() {
                                     </tbody>
                                     <tfoot>
                                         <tr className="border-t-2 bg-muted/30 font-bold">
-                                            <td className="p-3">Tổng / TB</td>
+                                            <td className="p-3">Total / Avg</td>
                                             <td className="p-3 text-right text-primary">{summary.totalActual.toFixed(2)}</td>
                                             <td className="p-3 text-right text-muted-foreground">{summary.totalPlan.toFixed(2)}</td>
                                             <td className={`p-3 text-right ${achievePct !== null && achievePct >= 100 ? "text-green-600" : "text-red-600"}`}>
@@ -1012,7 +1173,7 @@ export default function ReportPage() {
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-bold flex items-center justify-between">
-                                    <span>Chi tiết từng ca Shelling</span>
+                                    <span>Shelling Shift Details</span>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
@@ -1020,15 +1181,15 @@ export default function ReportPage() {
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b bg-muted/50">
-                                                <th className="text-left p-3 font-semibold whitespace-nowrap">Ngày</th>
+                                                <th className="text-left p-3 font-semibold whitespace-nowrap">Date</th>
                                                 <th className="text-center p-3 font-semibold">Line</th>
-                                                <th className="text-center p-3 font-semibold">Ca</th>
-                                                <th className="text-right p-3 font-semibold">Sản lượng (T)</th>
-                                                <th className="text-right p-3 font-semibold">Giờ chạy (h)</th>
-                                                <th className="text-right p-3 font-semibold px-6">Dừng máy (phút)</th>
+                                                <th className="text-center p-3 font-semibold">Shift</th>
+                                                <th className="text-right p-3 font-semibold">Production (T)</th>
+                                                <th className="text-right p-3 font-semibold">Run Hours (h)</th>
+                                                <th className="text-right p-3 font-semibold px-6">Downtime (mins)</th>
                                                 <th className="text-center p-3 font-semibold text-purple-600">Size</th>
-                                                <th className="text-right p-3 font-semibold text-red-600">% Bể</th>
-                                                <th className="text-left p-3 font-semibold">Ghi chú</th>
+                                                <th className="text-right p-3 font-semibold text-red-600">% Broken</th>
+                                                <th className="text-left p-3 font-semibold">Note</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1048,7 +1209,7 @@ export default function ReportPage() {
                                         </tbody>
                                         <tfoot>
                                             <tr className="border-t-2 bg-muted/30 font-bold text-right text-xs">
-                                                <td colSpan={3} className="p-2">Tổng Tháng:</td>
+                                                <td colSpan={3} className="p-2">Monthly Total:</td>
                                                 <td className="p-2 text-primary">{shellingLines.reduce((s, r)=>s+Number(r.actual_ton),0).toFixed(2)}</td>
                                                 <td className="p-2 text-muted-foreground">{shellingLines.reduce((s, r)=>s+Number(r.run_hours),0).toFixed(1)}</td>
                                                 <td className="p-2 text-amber-600 px-6">{shellingLines.reduce((s, r)=>s+Number(r.downtime_min||0),0)}p</td>
@@ -1073,7 +1234,7 @@ export default function ReportPage() {
             {!hasData && !loading && (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
                     <FileText className="h-12 w-12 opacity-30" />
-                    <p className="text-sm">Chọn tháng và bộ phận rồi bấm <strong>Xem báo cáo</strong></p>
+                    <p className="text-sm">Select month and department then click <strong>View Report</strong></p>
                 </div>
             )}
         </div>

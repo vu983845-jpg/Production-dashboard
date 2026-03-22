@@ -4,14 +4,16 @@ import { format, parseISO } from "date-fns"
 import { Zap, Flame, TrendingDown, TrendingUp, Info } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { SeuSummary, fmtNum, deviationColor, deviationBg } from "./types"
+import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ResponsiveContainer } from "recharts"
+import { SeuSummary, MonthlyHistorical, fmtNum, deviationColor, deviationBg } from "./types"
 
 interface Props {
     summaries: SeuSummary[]
+    historical: MonthlyHistorical[]
     currentMonth: Date
 }
 
-export function TabSeu({ summaries, currentMonth }: Props) {
+export function TabSeu({ summaries, historical, currentMonth }: Props) {
     if (summaries.length === 0) {
         return (
             <div className="text-center text-muted-foreground py-12 text-sm">
@@ -22,20 +24,42 @@ export function TabSeu({ summaries, currentMonth }: Props) {
 
     return (
         <div className="space-y-4">
-            {summaries.map(s => (
-                <SeuCard key={s.seu_id} summary={s} />
-            ))}
+            {summaries.map(s => {
+                const seuHistory = historical.filter(h => h.seu_id === s.seu_id)
+                return <SeuCard key={s.seu_id} summary={s} historical={seuHistory} currentMonth={currentMonth} />
+            })}
         </div>
     )
 }
 
-function SeuCard({ summary: s }: { summary: SeuSummary }) {
+function SeuCard({ summary: s, historical, currentMonth }: { summary: SeuSummary, historical: MonthlyHistorical[], currentMonth: Date }) {
     const isElec = s.energy_type === 'electricity'
     const Icon = isElec ? Zap : Flame
     const iconColor = isElec ? 'text-blue-600' : 'text-orange-600'
     const devColor = deviationColor(s.monthly_deviation_pct)
     const devBg = deviationBg(s.monthly_deviation_pct)
     const saving = s.monthly_deviation_pct != null && s.monthly_deviation_pct <= 0
+
+    // YTD Calculations
+    const currentYearStr = format(currentMonth, 'yyyy')
+    const ytdData = historical.filter(h => h.month_year.startsWith(currentYearStr))
+    let ytdActual = 0
+    let ytdExpected = 0
+    ytdData.forEach(h => {
+        ytdActual += h.total_energy || 0
+        ytdExpected += h.expected_energy || 0
+    })
+    const ytdSaving = ytdExpected > 0 ? ytdExpected - ytdActual : 0
+    const ytdDeviation = ytdExpected > 0 ? ((ytdActual - ytdExpected) / ytdExpected) * 100 : null
+    const ytdIsSaving = ytdDeviation != null && ytdDeviation <= 0
+
+    // Chart Data (Past 12 months)
+    const sortedHist = [...historical].sort((a, b) => a.month_year.localeCompare(b.month_year)).slice(-12)
+    const chartData = sortedHist.map(h => ({
+        name: h.month_year,
+        Thực_tế: h.total_energy,
+        Dự_báo: h.expected_energy,
+    }))
 
     return (
         <Card className="shadow-sm">
@@ -70,7 +94,7 @@ function SeuCard({ summary: s }: { summary: SeuSummary }) {
                 )}
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                     {/* Actual */}
                     <StatBox
                         label="Thực tế (MTD)"
@@ -81,16 +105,16 @@ function SeuCard({ summary: s }: { summary: SeuSummary }) {
                     {/* Expected */}
                     {s.has_baseline && (
                         <StatBox
-                            label="Dự báo (baseline)"
+                            label="Dự báo (MTD)"
                             value={fmtNum(s.total_expected)}
                             unit={s.unit}
                             className="border-slate-100 bg-slate-50/40"
                         />
                     )}
-                    {/* Saving */}
+                    {/* MTD Saving */}
                     {s.has_baseline && (
                         <StatBox
-                            label={s.total_saving >= 0 ? 'Tiết kiệm' : 'Lãng phí'}
+                            label={s.total_saving >= 0 ? 'MTD Tiết kiệm' : 'MTD Lãng phí'}
                             value={fmtNum(Math.abs(s.total_saving))}
                             unit={s.unit}
                             className={s.total_saving >= 0
@@ -98,9 +122,17 @@ function SeuCard({ summary: s }: { summary: SeuSummary }) {
                                 : 'border-red-100 bg-red-50/40'}
                         />
                     )}
+                    {/* YTD Saving */}
+                    {s.has_baseline && (
+                        <div className={`rounded-xl border p-3 ${ytdIsSaving ? 'border-emerald-100 bg-emerald-50/40' : 'border-red-100 bg-red-50/40'}`}>
+                            <p className="text-xs text-muted-foreground mb-1">YTD {ytdSaving >= 0 ? 'Tiết kiệm' : 'Lãng phí'}</p>
+                            <p className="text-lg font-black text-foreground">{fmtNum(Math.abs(ytdSaving))}</p>
+                            <p className="text-xs text-muted-foreground">{ytdDeviation != null ? `${ytdSaving >= 0 ? '' : '+'}${ytdDeviation.toFixed(1)}% so với baseline` : 'N/A'}</p>
+                        </div>
+                    )}
                     {/* EnPI */}
                     <div className="rounded-xl border bg-purple-50/40 border-purple-100 p-3">
-                        <p className="text-xs text-muted-foreground mb-1">EnPI thực tế</p>
+                        <p className="text-xs text-muted-foreground mb-1">EnPI (MTD)</p>
                         <p className="text-lg font-black text-purple-700">
                             {fmtNum(s.monthly_enpi_actual, 4)}
                         </p>
@@ -114,9 +146,31 @@ function SeuCard({ summary: s }: { summary: SeuSummary }) {
                 </div>
 
                 {/* Days summary */}
-                <p className="text-xs text-muted-foreground mt-3">
-                    Dữ liệu từ <strong>{s.days}</strong> ngày | Tổng sản lượng: <strong>{fmtNum(s.total_rcn, 0)} kg</strong>
+                <p className="text-xs text-muted-foreground mt-3 mb-4">
+                    Dữ liệu từ <strong>{s.days}</strong> ngày | Tổng sản lượng (MTD): <strong>{fmtNum(s.total_rcn, 0)} kg</strong>
                 </p>
+
+                {/* Historical Chart */}
+                {chartData.length > 0 && (
+                    <div className="mt-4 pt-5 border-t border-slate-100">
+                        <p className="text-sm font-bold text-slate-700 mb-4">Biểu đồ Lịch sử {s.has_baseline ? 'Chênh lệch Baseline' : 'Tiêu thụ'} (12 Tháng)</p>
+                        <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                                    <YAxis tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(v) => typeof v === 'number' ? new Intl.NumberFormat('en-US', { notation: 'compact' }).format(v) : v} tickLine={false} axisLine={false} />
+                                    <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
+                                    <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                    <Bar dataKey="Thực_tế" name="Thực tế" fill={isElec ? '#3b82f6' : '#f97316'} radius={[4, 4, 0, 0]} maxBarSize={45} />
+                                    {s.has_baseline && (
+                                        <Line type="monotone" dataKey="Dự_báo" name="Cơ sở (Baseline)" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                                    )}
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
     )

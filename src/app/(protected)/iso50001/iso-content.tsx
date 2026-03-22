@@ -107,12 +107,12 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
             <Tabs defaultValue="dashboard" className="space-y-4">
                 <TabsList className="grid grid-cols-4 w-full h-9">
                     <TabsTrigger value="dashboard" className="text-xs">📊 Dashboard</TabsTrigger>
-                    <TabsTrigger value="seu" className="text-xs">⚡ Theo dõi SEU</TabsTrigger>
+                    <TabsTrigger value="seu" className="text-xs">⚡ SEU Tracking</TabsTrigger>
                     {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
-                        <TabsTrigger value="input" className="text-xs">✏️ Nhập liệu</TabsTrigger>
+                        <TabsTrigger value="input" className="text-xs">✏️ Data Input</TabsTrigger>
                     )}
                     {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
-                        <TabsTrigger value="baseline" className="text-xs">📐 Baseline</TabsTrigger>
+                        <TabsTrigger value="baseline" className="text-xs">📐 Baseline Model</TabsTrigger>
                     )}
                 </TabsList>
 
@@ -132,7 +132,7 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                         </div>
                     ) : (
-                        <TabSeu summaries={summaries} currentMonth={currentMonth} />
+                        <TabSeu summaries={summaries} currentMonth={currentMonth} historical={dashboardHistorical} />
                     )}
                 </TabsContent>
 

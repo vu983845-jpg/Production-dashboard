@@ -17,6 +17,8 @@ export interface MonthlyHistorical {
     ck_obtained_mt?: number
     notes?: string
     seu?: SeuMaster
+    total_energy?: number
+    expected_energy?: number | null
 }
 
 export interface BaselineModel {

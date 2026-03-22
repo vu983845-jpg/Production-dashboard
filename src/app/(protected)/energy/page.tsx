@@ -204,7 +204,7 @@ export default function EnergyDashboardPage() {
                                     <span className="font-semibold text-slate-700">{entry.name}</span>
                                 </span>
                                 <span className="font-mono font-black text-slate-800">
-                                    {Number(entry.value).toLocaleString('vi-VN')} {entry.name.includes('đ') || entry.name.includes('VNĐ') ? 'đ' : (entry.name.includes('%') ? '%' : 'kWh')}
+                                    {Number(entry.value).toLocaleString('en-US')} {entry.name.includes('đ') || entry.name.includes('VNĐ') ? 'VND' : (entry.name.includes('%') ? '%' : 'kWh')}
                                 </span>
                             </div>
                         ))}
@@ -226,10 +226,10 @@ export default function EnergyDashboardPage() {
                         <div className="p-2 bg-red-50 rounded-xl shadow-inner ring-1 ring-red-200/50">
                             <Zap className="h-6 w-6 md:h-8 md:w-8 text-[#e63121] drop-shadow-sm" />
                         </div>
-                        Energy Hub
+                        Energy
                     </h2>
                     <p className="text-muted-foreground text-xs md:text-sm mt-1.5 font-medium ml-1">
-                        Giám sát và trung tâm điều khiển điện năng toàn nhà máy
+                        Factory-wide energy monitoring and control center
                     </p>
                 </div>
                 
@@ -240,7 +240,7 @@ export default function EnergyDashboardPage() {
                     </Button>
                     <div className="flex items-center justify-center min-w-[150px] font-bold text-sm text-slate-800">
                         <CalendarIcon className="mr-2 h-4 w-4 text-[#e63121]" />
-                        {format(currentMonth, "MMMM - yyyy", { locale: vi })}
+                        {format(currentMonth, "MMMM - yyyy")}
                     </div>
                     <Button variant="ghost" size="icon" onClick={goToNextMonth} className="h-9 w-9 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors" disabled={currentMonth >= startOfMonth(new Date())}>
                         <ChevronRight className="h-4 w-4" />
@@ -262,7 +262,7 @@ export default function EnergyDashboardPage() {
                     {isLoading ? (
                         <div className="flex flex-col justify-center items-center h-[500px] gap-4">
                             <Loader2 className="h-10 w-10 animate-spin text-[#e63121]" />
-                            <p className="text-muted-foreground font-medium animate-pulse">Đang tải dữ liệu năng lượng...</p>
+                            <p className="text-muted-foreground font-medium animate-pulse">Loading energy data...</p>
                         </div>
                     ) : (
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
@@ -274,20 +274,20 @@ export default function EnergyDashboardPage() {
                             <div>
                                 <CardTitle className="text-xl font-bold flex flex-row items-center gap-2 text-slate-800">
                                     <div className="w-2.5 h-2.5 rounded-full bg-[#e63121]"></div>
-                                    Điện Năng Toàn Nhà Máy (Main Energy)
+                                    Factory-wide Energy (Main Energy)
                                 </CardTitle>
-                                <CardDescription className="text-slate-500 font-medium mt-1 ml-4 text-xs">Tiêu thụ Điện / Chi phí thực tế (MTD)</CardDescription>
+                                <CardDescription className="text-slate-500 font-medium mt-1 ml-4 text-xs">Electricity Consumption / Actual Cost (MTD)</CardDescription>
                             </div>
                             <div className="flex items-center bg-slate-100/80 p-1 rounded-xl shadow-inner border border-slate-200/50">
                                 <button 
                                     onClick={() => setMainChartMode('kwh')}
                                     className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${mainChartMode === 'kwh' ? 'bg-white shadow-md text-[#e63121] scale-105' : 'text-slate-500 hover:text-slate-700'}`}>
-                                    Sản lượng (kWh)
+                                    Consumption (kWh)
                                 </button>
                                 <button 
                                     onClick={() => setMainChartMode('vnd')}
                                     className={`px-5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${mainChartMode === 'vnd' ? 'bg-white shadow-md text-amber-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}>
-                                    Chi phí (VNĐ)
+                                    Cost (VND)
                                 </button>
                             </div>
                         </CardHeader>
@@ -313,25 +313,25 @@ export default function EnergyDashboardPage() {
                                         <div className="w-full lg:w-1/4 flex flex-col gap-4 shrink-0">
                                             <div className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group/card ${isKwh ? 'bg-gradient-to-br from-red-50 to-rose-50/30 border-red-200/60' : 'bg-gradient-to-br from-amber-50 to-orange-50/30 border-amber-200/60'}`}>
                                                 <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-40 group-hover/card:opacity-70 transition-opacity ${isKwh ? 'bg-[#e63121]' : 'bg-amber-400'}`}></div>
-                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 relative z-10">TỔNG MTD THEO {isKwh ? 'KWH' : 'VNĐ'}</p>
+                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 relative z-10">TOTAL MTD ({isKwh ? 'KWH' : 'VND'})</p>
                                                 <p className={`text-4xl lg:text-5xl font-black tracking-tight relative z-10 flex items-baseline gap-1 ${isKwh ? 'text-[#e63121]' : 'text-amber-600'}`}>
-                                                    {isKwh ? mtdTotalKwh.toLocaleString('vi-VN') : mtdTotalVnd.toLocaleString('vi-VN')}
-                                                    <span className="text-lg font-bold text-slate-400 opacity-60 ml-2">{isKwh ? 'kWh' : 'VNĐ'}</span>
+                                                    {isKwh ? mtdTotalKwh.toLocaleString('en-US') : mtdTotalVnd.toLocaleString('en-US')}
+                                                    <span className="text-lg font-bold text-slate-400 opacity-60 ml-2">{isKwh ? 'kWh' : 'VND'}</span>
                                                 </p>
                                             </div>
                                             
                                             <div className="rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-md overflow-hidden text-sm shadow-sm ring-1 ring-black/5 divide-y divide-slate-100">
                                                 <div className="flex justify-between p-4 hover:bg-rose-50/50 transition-colors">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-200"></div>Cao điểm</span>
-                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdPeakKwh.toLocaleString('vi-VN') : mtdPeakVnd.toLocaleString('vi-VN')}</span>
+                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-200"></div>Peak</span>
+                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdPeakKwh.toLocaleString('en-US') : mtdPeakVnd.toLocaleString('en-US')}</span>
                                                 </div>
                                                 <div className="flex justify-between p-4 hover:bg-blue-50/50 transition-colors">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-200"></div>Bình thường</span>
-                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdNormalKwh.toLocaleString('vi-VN') : mtdNormalVnd.toLocaleString('vi-VN')}</span>
+                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-200"></div>Normal</span>
+                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdNormalKwh.toLocaleString('en-US') : mtdNormalVnd.toLocaleString('en-US')}</span>
                                                 </div>
                                                 <div className="flex justify-between p-4 hover:bg-emerald-50/50 transition-colors">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></div>Thấp điểm</span>
-                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdOffpeakKwh.toLocaleString('vi-VN') : mtdOffpeakVnd.toLocaleString('vi-VN')}</span>
+                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></div>Off-peak</span>
+                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdOffpeakKwh.toLocaleString('en-US') : mtdOffpeakVnd.toLocaleString('en-US')}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -339,7 +339,7 @@ export default function EnergyDashboardPage() {
                                         {/* CHART (RIGHT) */}
                                         <div className="w-full lg:w-3/4 h-[350px] lg:h-[400px] shrink-0 lg:shrink bg-white/40 rounded-2xl p-4 md:p-6 border border-slate-100 shadow-inner">
                                             {energyData.length === 0 ? (
-                                                <div className="h-full flex items-center justify-center text-slate-400 font-medium">Chưa có dữ liệu tháng này</div>
+                                                <div className="h-full flex items-center justify-center text-slate-400 font-medium">No data for this month</div>
                                             ) : (
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     {isKwh ? (
@@ -363,10 +363,10 @@ export default function EnergyDashboardPage() {
                                                             <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} tickFormatter={(val) => val.toLocaleString('en-US')} dx={-10} />
                                                             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                                             <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 600, color: '#334155' }} iconType="circle" />
-                                                            <Bar dataKey="stacked_offpeak" stackId="a" name="Thấp điểm" fill="url(#colorOffpeak)" maxBarSize={45} />
-                                                            <Bar dataKey="stacked_normal" stackId="a" name="Bình thường" fill="url(#colorNormal)" maxBarSize={45} />
-                                                            <Bar dataKey="stacked_peak" stackId="a" name="Cao điểm" fill="url(#colorPeak)" radius={[6, 6, 0, 0]} maxBarSize={45} />
-                                                            <Line type="monotone" dataKey="electricity_target_kwh" name="Mục tiêu (Target)" stroke="#F59E0B" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 6, strokeWidth: 0, fill: '#F59E0B' }} />
+                                                            <Bar dataKey="stacked_offpeak" name="Off-peak" fill="url(#colorOffpeak)" maxBarSize={45} />
+                                                            <Bar dataKey="stacked_normal" name="Normal" fill="url(#colorNormal)" maxBarSize={45} />
+                                                            <Bar dataKey="stacked_peak" name="Peak" fill="url(#colorPeak)" radius={[6, 6, 0, 0]} maxBarSize={45} />
+                                                            <Line type="monotone" dataKey="electricity_target_kwh" name="Target" stroke="#F59E0B" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 6, strokeWidth: 0, fill: '#F59E0B' }} />
                                                         </ComposedChart>
                                                     ) : (
                                                         <BarChart data={energyData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
@@ -382,9 +382,9 @@ export default function EnergyDashboardPage() {
                                                             />
                                                             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                                             <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 600, color: '#334155' }} iconType="circle" />
-                                                            <Bar dataKey="cost_offpeak" stackId="cost" name="Thấp (1,190đ)" fill="#10B981" maxBarSize={45} />
-                                                            <Bar dataKey="cost_normal" stackId="cost" name="Bình thường (1,833đ)" fill="#3B82F6" maxBarSize={45} />
-                                                            <Bar dataKey="cost_peak" stackId="cost" name="Cao (3,398đ)" fill="#EF4444" radius={[6, 6, 0, 0]} maxBarSize={45} />
+                                                            <Bar dataKey="cost_offpeak" stackId="cost" name="Off-peak (1,190 VND)" fill="#10B981" maxBarSize={45} />
+                                                            <Bar dataKey="cost_normal" stackId="cost" name="Normal (1,833 VND)" fill="#3B82F6" maxBarSize={45} />
+                                                            <Bar dataKey="cost_peak" stackId="cost" name="Peak (3,398 VND)" fill="#EF4444" radius={[6, 6, 0, 0]} maxBarSize={45} />
                                                         </BarChart>
                                                     )}
                                                 </ResponsiveContainer>
@@ -399,8 +399,8 @@ export default function EnergyDashboardPage() {
                     {/* MTD PIE CHART */}
                     <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-blue-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
                         <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
-                            <CardTitle className="text-lg font-bold text-slate-800">Cơ Cấu Khung Giờ MTD {mainChartMode === 'kwh' ? '(kWh)' : '(VNĐ)'}</CardTitle>
-                            <CardDescription className="font-medium text-xs mt-1">Tỷ trọng tiêu thụ theo khung giờ (Peak/Normal/Offpeak)</CardDescription>
+                            <CardTitle className="text-lg font-bold text-slate-800">Time-of-Use Structure MTD {mainChartMode === 'kwh' ? '(kWh)' : '(VND)'}</CardTitle>
+                            <CardDescription className="font-medium text-xs mt-1">Consumption share by time slots (Peak/Normal/Off-peak)</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[380px] pt-8 relative">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-50/30 to-transparent pointer-events-none"></div>
@@ -412,13 +412,13 @@ export default function EnergyDashboardPage() {
                                 const total = mtdPeak + mtdNormal + mtdOffpeak;
                                 
                                 if (energyData.length === 0 || total === 0) {
-                                    return <div className="h-full flex items-center justify-center text-slate-400 font-medium">Chưa có dữ liệu phân bổ giờ cao điểm tháng này</div>;
+                                    return <div className="h-full flex items-center justify-center text-slate-400 font-medium">No peak-hour allocation data for this month</div>;
                                 }
 
                                 const pieData = [
-                                    { name: isKwh ? 'Thấp điểm' : 'Thấp điểm (VNĐ)', value: mtdOffpeak, fill: '#10B981', shortName: 'Thấp điểm' },
-                                    { name: isKwh ? 'Bình thường' : 'Bình thường (VNĐ)', value: mtdNormal, fill: '#3B82F6', shortName: 'Bình thường' },
-                                    { name: isKwh ? 'Cao điểm' : 'Cao điểm (VNĐ)', value: mtdPeak, fill: '#EF4444', shortName: 'Cao điểm' }
+                                    { name: isKwh ? 'Off-peak' : 'Off-peak (VND)', value: mtdOffpeak, fill: '#10B981', shortName: 'Off-peak' },
+                                    { name: isKwh ? 'Normal' : 'Normal (VND)', value: mtdNormal, fill: '#3B82F6', shortName: 'Normal' },
+                                    { name: isKwh ? 'Peak' : 'Peak (VND)', value: mtdPeak, fill: '#EF4444', shortName: 'Peak' }
                                 ].filter(d => d.value > 0);
 
                                 return (
@@ -482,21 +482,21 @@ export default function EnergyDashboardPage() {
                         })
 
                         const SEGMENTS = [
-                            { key: 'compressor', name: 'Máy Nén Khí',  color: '#8B5CF6' },
+                            { key: 'compressor', name: 'Air Compressor',  color: '#8B5CF6' },
                             { key: 'shelling',   name: 'Shelling',     color: '#F97316' },
                             { key: 'boiler',     name: 'Boiler',       color: '#EAB308' },
                             { key: 'db_ac_hca',  name: 'DB AC HCA',    color: '#3B82F6' },
                             { key: 'eco2',       name: 'ECO2',         color: '#10B981' },
                             { key: 'office',     name: 'Office',       color: '#64748B' },
                             { key: 'canteen',    name: 'Canteen',      color: '#F43F5E' },
-                            { key: 'maint',      name: 'Đồng hồ Maint',color: '#06B6D4' },
+                            { key: 'maint',      name: 'Maint. Meter', color: '#06B6D4' },
                         ]
 
                         return (
                             <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-blue-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
                                 <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
-                                    <CardTitle className="text-lg font-bold text-slate-800">Tỷ Trọng Khu Vực Phụ Trợ</CardTitle>
-                                    <CardDescription className="font-medium text-xs mt-1">Biến động tỷ trọng tiêu thụ điện hàng ngày</CardDescription>
+                                    <CardTitle className="text-lg font-bold text-slate-800">Auxiliary Area Distribution</CardTitle>
+                                    <CardDescription className="font-medium text-xs mt-1">Daily auxiliary energy consumption distribution</CardDescription>
                                 </CardHeader>
                                 <CardContent className="h-[380px] pt-8">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -527,7 +527,7 @@ export default function EnergyDashboardPage() {
                         </CardHeader>
                         <CardContent className="h-[400px] pt-8 bg-gradient-to-t from-purple-50/20 to-transparent">
                             {compressorData.length === 0 ? (
-                                <div className="h-full flex items-center justify-center text-slate-400 font-medium">Chưa có dữ liệu tháng này</div>
+                                <div className="h-full flex items-center justify-center text-slate-400 font-medium">No data for this month</div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={compressorData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
@@ -550,9 +550,9 @@ export default function EnergyDashboardPage() {
                                         <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} tickFormatter={(val) => val.toLocaleString('en-US')} dx={-10} />
                                         <Tooltip content={<CustomTooltip />} />
                                         <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 600, color: '#334155' }} iconType="circle" />
-                                        <Area type="monotone" dataKey="meter1" name="MNK Số 1" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorMnk1)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0, fill: '#8B5CF6' }} />
-                                        <Area type="monotone" dataKey="meter2" name="MNK 2,4" stroke="#EC4899" fillOpacity={1} fill="url(#colorMnk2)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0, fill: '#EC4899' }} />
-                                        <Area type="monotone" dataKey="meter3" name="MNK 3,5,6" stroke="#14B8A6" fillOpacity={1} fill="url(#colorMnk3)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0, fill: '#14B8A6' }} />
+                                        <Area type="monotone" dataKey="meter1" name="Compressor #1" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorMnk1)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0, fill: '#8B5CF6' }} />
+                                        <Area type="monotone" dataKey="meter2" name="Compressor #2,4" stroke="#EC4899" fillOpacity={1} fill="url(#colorMnk2)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0, fill: '#EC4899' }} />
+                                        <Area type="monotone" dataKey="meter3" name="Compressor #3,5,6" stroke="#14B8A6" fillOpacity={1} fill="url(#colorMnk3)" strokeWidth={3} activeDot={{ r: 6, strokeWidth: 0, fill: '#14B8A6' }} />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             )}
@@ -585,7 +585,7 @@ export default function EnergyDashboardPage() {
                                         <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} tickFormatter={(val) => val.toLocaleString('en-US')} dx={-10} />
                                         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(241, 245, 249, 0.4)' }} />
                                         <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 600, color: '#334155' }} iconType="circle" />
-                                        <Bar dataKey="energy_kwh" name="Điện Shelling (kWh)" fill="url(#colorShelling)" radius={[6, 6, 0, 0]} maxBarSize={60} />
+                                        <Bar dataKey="energy_kwh" name="Shelling Energy (kWh)" fill="url(#colorShelling)" radius={[6, 6, 0, 0]} maxBarSize={60} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             )}
@@ -595,12 +595,12 @@ export default function EnergyDashboardPage() {
                     {/* OTHER ELECTRICITY GRID */}
                     <Card className="col-span-2 shadow-xl shadow-slate-900/5 bg-white/70 backdrop-blur-xl border-slate-200/50 border overflow-hidden">
                         <CardHeader className="bg-white/80 border-b border-slate-200/50 rounded-t-xl px-6 py-5 backdrop-blur-md">
-                            <CardTitle className="text-lg font-bold text-slate-800">Điện Phụ Trợ Vùng (Meter Phụ)</CardTitle>
-                            <CardDescription className="text-slate-500 font-medium mt-1">Theo dõi chi tiết 8 thiết bị/vùng phụ trợ (kWh/ngày)</CardDescription>
+                            <CardTitle className="text-lg font-bold text-slate-800">Auxiliary Electricity (Sub-meters)</CardTitle>
+                            <CardDescription className="text-slate-500 font-medium mt-1">Detailed monitoring of 8 auxiliary devices/areas (kWh/day)</CardDescription>
                         </CardHeader>
                         <CardContent className="pt-6 bg-slate-50/30">
                             {otherElecData.length === 0 ? (
-                                <div className="h-64 flex items-center justify-center text-slate-400 font-medium">Chưa có dữ liệu tháng này</div>
+                                <div className="h-64 flex items-center justify-center text-slate-400 font-medium">No data for this month</div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {[
@@ -611,7 +611,7 @@ export default function EnergyDashboardPage() {
                                         { key: 'eco2', name: 'ECO2', color: '#10B981' },
                                         { key: 'canteen', name: 'Canteen', color: '#F43F5E' },
                                         { key: 'transformer', name: 'Transformer', color: '#64748B' },
-                                        { key: 'maintenance', name: 'Maint (Bảo trì)', color: '#06B6D4' }
+                                        { key: 'maintenance', name: 'Maintenance', color: '#06B6D4' }
                                     ].map(meter => (
                                         <div key={meter.key} className="border border-slate-200/80 rounded-2xl p-4 bg-white shadow-sm hover:shadow-lg transition-all duration-300 h-[240px] flex flex-col group relative overflow-hidden">
                                             <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: meter.color }}></div>

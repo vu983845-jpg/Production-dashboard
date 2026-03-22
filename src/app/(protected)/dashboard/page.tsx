@@ -706,7 +706,7 @@ export default function DashboardPage() {
                     <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0">
                         <CardTitle className="text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 text-slate-800">
                             <span className="flex items-center gap-2 whitespace-nowrap">
-                                FGWH - Kho Thành Phẩm
+                                FGWH - Finished Goods
                                 <FileSymlink className="h-4 w-4 text-primary" />
                             </span>
                             <div className="flex flex-row flex-wrap items-center gap-4 mt-2 md:mt-0">
@@ -772,7 +772,7 @@ export default function DashboardPage() {
 
                         <div className="grid grid-cols-2 gap-4 mt-2 bg-white/70 rounded-2xl p-3 border border-red-50 shadow-sm backdrop-blur-sm">
                             <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br from-red-50/80 to-white/50 border border-red-100/60 shadow-inner group">
-                                <span className="text-[10px] md:text-xs uppercase text-[#e63121] font-bold tracking-widest mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity">MTD / Kế Hoạch</span>
+                                <span className="text-[10px] md:text-xs uppercase text-[#e63121] font-bold tracking-widest mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity">MTD / Plan</span>
                                 <div className="flex items-baseline gap-1">
                                     <span className="font-black text-red-700 text-xl md:text-2xl drop-shadow-sm">{actualNum.toFixed(1)}</span>
                                     <span className="text-slate-500 text-sm md:text-base font-semibold">/{planNum.toFixed(1)} <span className="text-[10px] uppercase font-normal ml-0.5">Cont</span></span>
@@ -780,9 +780,9 @@ export default function DashboardPage() {
                             </div>
 
                             <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br from-emerald-50/80 to-teal-50/50 border border-emerald-100/60 shadow-inner group">
-                                <span className="text-[10px] md:text-xs uppercase text-emerald-700 font-bold tracking-widest mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity">Cần Đạt / Ngày</span>
+                                <span className="text-[10px] md:text-xs uppercase text-emerald-700 font-bold tracking-widest mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity">Daily Target</span>
                                 <div className={`font-black text-xl md:text-2xl drop-shadow-sm ${isReached ? 'text-emerald-500' : 'text-emerald-600'}`}>
-                                    {isReached ? 'Đã Đạt 🎉' : `${dailyNeeded} Cont`}
+                                    {isReached ? 'Reached 🎉' : `${dailyNeeded} Cont`}
                                 </div>
                             </div>
                         </div>
@@ -848,7 +848,7 @@ export default function DashboardPage() {
                                     <Legend wrapperStyle={{ paddingTop: '15px', fontSize: '12px', fontWeight: 600, color: '#334155' }} iconType="circle" />
                                     
                                     {!isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
-                                        <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="4 4" dot={false} strokeWidth={2.5} name="Target / Ngày" connectNulls={false} />
+                                        <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="4 4" dot={false} strokeWidth={2.5} name="Target / Day" connectNulls={false} />
                                     )}
                                     
                                     <Bar dataKey="Actual" name="Thực tế (Cont)" radius={[6, 6, 0, 0]} maxBarSize={45}>
@@ -900,7 +900,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="flex flex-col items-center justify-center px-1">
-                            <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>CẦN ĐẠT / NGÀY</span>
+                            <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>DAILY TARGET</span>
                             <div className={`font-bold mt-0.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'} ${isReached ? 'text-emerald-600' : 'text-primary'}`}>
                                 {isReached ? 'Đạt' : `${dailyNeeded} ${unit}`}
                             </div>
@@ -933,16 +933,16 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-1 my-1 justify-center bg-slate-100/50 rounded-md p-0.5">
                             <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'chart'}))}
                                 className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${(!deptViewModes[id] || deptViewModes[id] === 'chart') ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
-                                Biểu đồ
+                                Chart
                             </button>
                             <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'details'}))}
                                 className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'details' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
-                                Chi tiết
+                                Details
                             </button>
                             {deptCode === 'SHELL' && (
                                 <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'lines'}))}
                                     className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'lines' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
-                                    Theo Line
+                                    By Line
                                 </button>
                             )}
                             {['CS', 'HAND'].includes(deptCode) && (
@@ -1306,7 +1306,7 @@ export default function DashboardPage() {
                         {departments.filter(d => d.code !== 'FGWH').map(d => renderMiniDashboard(d.id, d.name_en))}
                         
                         {/* FGWH Finished Goods Warehouse Card */}
-                        {renderMiniDashboard("fgwh", "FGWH - Kho Thành Phẩm", true)}
+                        {renderMiniDashboard("fgwh", "FGWH - Finished Goods", true)}
                     </div>
                 </TabsContent>
 
@@ -1374,7 +1374,7 @@ export default function DashboardPage() {
                             <div className="md:hidden flex flex-col gap-10 py-4">
                                 {/* Electricity Chart */}
                                 <div className="h-48 w-full">
-                                    <p className="text-xs font-bold text-amber-600 mb-2 uppercase tracking-tight">Biểu đồ Điện (kWh)</p>
+                                    <p className="text-xs font-bold text-amber-600 mb-2 uppercase tracking-tight">Electricity Chart (kWh)</p>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -1393,7 +1393,7 @@ export default function DashboardPage() {
 
                                 {/* Water Chart */}
                                 <div className="h-48 w-full">
-                                    <p className="text-xs font-bold text-blue-600 mb-2 uppercase tracking-tight">Biểu đồ Nước (m³)</p>
+                                    <p className="text-xs font-bold text-blue-600 mb-2 uppercase tracking-tight">Water Chart (m³)</p>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -1412,7 +1412,7 @@ export default function DashboardPage() {
 
                                 {/* Wood Chart */}
                                 <div className="h-48 w-full">
-                                    <p className="text-xs font-bold text-orange-600 mb-2 uppercase tracking-tight">Biểu đồ Củi (Tấn)</p>
+                                    <p className="text-xs font-bold text-orange-600 mb-2 uppercase tracking-tight">Wood Chart (Tons)</p>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />

@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+list_ppe_tables_v2.js
+test_supabase_native.js
+.agents/mcp.json
+list_ppe_tables.js
+test_db_conn.js
