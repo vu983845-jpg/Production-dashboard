@@ -74,7 +74,10 @@ const recalcEnergyData = (data: MonthlyEnergyRecord[], prevMonth: any) => {
 
         // Water
         if (today.water_meter_reading != null && yesterday.water_meter_reading != null) {
-            today.water_m3 = Math.max(0, today.water_meter_reading - yesterday.water_meter_reading);
+            if (i > 0) {
+                const prev = yesterday as MonthlyEnergyRecord;
+                prev.water_m3 = Math.max(0, today.water_meter_reading - yesterday.water_meter_reading);
+            }
         }
 
         // Override total if any sub-meters are calculated
@@ -1844,6 +1847,8 @@ export default function InputPage() {
                                             {monthlyEnergyData.map((row, index) => {
                                                 const prevRowElec = index > 0 ? monthlyEnergyData[index - 1].electricity_meter_reading : prevMonthLastMeter?.elec;
                                                 const prevRowWater = index > 0 ? monthlyEnergyData[index - 1].water_meter_reading : prevMonthLastMeter?.water;
+                                                const nextRowWater = index < monthlyEnergyData.length - 1 ? monthlyEnergyData[index + 1].water_meter_reading : undefined;
+                                                const isWaterCalculated = row.water_meter_reading != null && nextRowWater != null;
 
                                                 const handleMeterChange = (type: 'electric' | 'water', val: number | undefined) => {
                                                     const newData = [...monthlyEnergyData];
@@ -1930,11 +1935,11 @@ export default function InputPage() {
 newData[index].water_meter_reading = val;
 setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                 }} />
-                                                            {prevRowWater != null && <div className="text-[9px] text-blue-600 text-center absolute bottom-0 left-0 right-0">Trừ từ trước: {prevRowWater}</div>}
+                                                            {/* Removed misleading tooltip because water is calculated from the next day */}
                                                         </TableCell>
                                                         <TableCell className="border-r p-1">
-                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", prevRowWater != null ? "bg-blue-50" : "bg-transparent focus:ring-1 focus:ring-blue-400")}
-                                                                readOnly={prevRowWater != null}
+                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", isWaterCalculated ? "bg-blue-50" : "bg-transparent focus:ring-1 focus:ring-blue-400")}
+                                                                readOnly={isWaterCalculated}
                                                                 value={row.water_m3 || ''}
                                                                 onChange={(e) => {
                                                                     const newData = [...monthlyEnergyData];
