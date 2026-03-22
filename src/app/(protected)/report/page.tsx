@@ -496,8 +496,8 @@ export default function ReportPage() {
             <div className="flex items-center gap-3">
                 <FileText className="h-7 w-7 text-primary" />
                 <div>
-                    <h1 className="text-2xl font-black">Báo cáo</h1>
-                    <p className="text-sm text-muted-foreground">Chọn tháng và bộ phận để xem và xuất báo cáo</p>
+                    <h1 className="text-2xl font-black">Production Report</h1>
+                    <p className="text-sm text-muted-foreground">Chọn tháng và bộ phận (Department) để tải báo cáo sản xuất</p>
                 </div>
             </div>
 

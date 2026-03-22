@@ -69,7 +69,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             roles: ["admin", "dept_user"],
         },
         {
-            title: "Report Center",
+            title: "Production Report",
             href: "/report",
             icon: FileText,
             roles: ["admin", "dept_user", "viewer"],
