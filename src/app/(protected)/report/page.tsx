@@ -6,9 +6,10 @@ import { ddsClient } from "@/lib/supabase/dds-client"
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
 import { Download, Search, FileText, TrendingUp, TrendingDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Scatter } from "recharts"
 import * as XLSX from "xlsx"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface DailyRecord {
@@ -73,6 +74,7 @@ function KPICard({ label, value, sub, color }: { label: string; value: string; s
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function ReportPage() {
     const supabase = createClient()
+    const { t } = useLanguage()
 
     const currentYear = new Date().getFullYear()
     const currentMonth = new Date().getMonth() + 1
@@ -769,10 +771,15 @@ export default function ReportPage() {
                             {/* Cross-Line Performance */}
                             <Card className="col-span-1 lg:col-span-2 shadow-sm border-emerald-100">
                                 <CardHeader className="pb-2 bg-emerald-50/30 border-b border-emerald-50">
-                                    <CardTitle className="text-sm font-bold text-emerald-800 flex items-center gap-2">
-                                        <TrendingUp className="h-4 w-4" />
-                                        Cross-Line Efficiency Comparison (T/h)
-                                    </CardTitle>
+                                    <div className="flex flex-col gap-1">
+                                        <CardTitle className="text-sm font-bold text-emerald-800 flex items-center gap-2">
+                                            <TrendingUp className="h-4 w-4" />
+                                            {t("report.shelling.crossLine.title")}
+                                        </CardTitle>
+                                        <CardDescription className="text-xs text-emerald-600 font-medium">
+                                            {t("report.shelling.crossLine.desc")}
+                                        </CardDescription>
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="pt-4">
                                     <div className="h-72 w-full">
@@ -797,28 +804,28 @@ export default function ReportPage() {
                             {/* Speed vs Quality Correlation */}
                             <Card className="shadow-sm border-blue-100">
                                 <CardHeader className="pb-2 bg-blue-50/30 border-b border-blue-50">
-                                    <CardTitle className="text-sm font-bold text-blue-800">Speed vs Quality Correlation</CardTitle>
+                                    <CardTitle className="text-sm font-bold text-blue-800">{t("report.shelling.speedQuality.title")}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-4">
                                     <div className="h-64 w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <ComposedChart data={speedQualityData} margin={{ top: 5, right: 30, left: -20, bottom: 20 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                                <XAxis dataKey="speed" type="number" name="Speed" domain={['auto', 'auto']} tick={{ fontSize: 10 }} label={{ value: "Speed (T/h)", position: "insideBottomRight", offset: -5, fontSize: 10 }} />
-                                                <YAxis dataKey="broken" type="number" name="Broken %" tick={{ fontSize: 10 }} label={{ value: "Broken %", angle: -90, position: "insideLeft", fontSize: 10 }} />
+                                                <XAxis dataKey="speed" type="number" name={t("report.shelling.speedQuality.x").replace(" (T/h)", "")} domain={['auto', 'auto']} tick={{ fontSize: 10 }} label={{ value: t("report.shelling.speedQuality.x"), position: "insideBottomRight", offset: -5, fontSize: 10 }} />
+                                                <YAxis dataKey="broken" type="number" name={t("report.shelling.speedQuality.y").replace(" (%)", "")} tick={{ fontSize: 10 }} label={{ value: t("report.shelling.speedQuality.y"), angle: -90, position: "insideLeft", fontSize: 10 }} />
                                                 <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} formatter={(value: any, name: any) => [value, name === 'speed' ? 'T/h' : '%']} />
-                                                <Scatter name="Shifts" dataKey="broken" fill="#3b82f6" fillOpacity={0.6} />
+                                                <Scatter name={t("report.shelling.speedQuality.scatter")} dataKey="broken" fill="#3b82f6" fillOpacity={0.6} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <p className="text-xs text-center text-slate-500 mt-2 font-medium">Evaluating if higher speed correlates to higher broken kernels.</p>
+                                    <p className="text-xs text-center text-slate-500 mt-2 font-medium">{t("report.shelling.speedQuality.desc")}</p>
                                 </CardContent>
                             </Card>
 
                             {/* Energy Intensity */}
                             <Card className="shadow-sm border-amber-100">
                                 <CardHeader className="pb-2 bg-amber-50/30 border-b border-amber-50">
-                                    <CardTitle className="text-sm font-bold text-amber-800">Energy Intensity (kWh/Ton)</CardTitle>
+                                    <CardTitle className="text-sm font-bold text-amber-800">{t("report.shelling.energy.title")}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-4">
                                     <div className="h-64 w-full">
@@ -830,12 +837,12 @@ export default function ReportPage() {
                                                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                                                 <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
                                                 <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                <Bar yAxisId="left" dataKey="actual_ton" name="Production (T)" fill="#fcd34d" radius={[4,4,0,0]} maxBarSize={40} />
-                                                <Line yAxisId="right" type="monotone" dataKey="intensity" name="Intensity (kWh/T)" stroke="#d97706" strokeWidth={2} dot={{ r: 3 }} />
+                                                <Bar yAxisId="left" dataKey="actual_ton" name={t("report.shelling.energy.prod")} fill="#fcd34d" radius={[4,4,0,0]} maxBarSize={40} />
+                                                <Line yAxisId="right" type="monotone" dataKey="intensity" name={t("report.shelling.energy.intens")} stroke="#d97706" strokeWidth={2} dot={{ r: 3 }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <p className="text-xs text-center text-slate-500 mt-2 font-medium">Tracking electricity usage against daily shelling production.</p>
+                                    <p className="text-xs text-center text-slate-500 mt-2 font-medium">{t("report.shelling.energy.desc")}</p>
                                 </CardContent>
                             </Card>
                         </div>

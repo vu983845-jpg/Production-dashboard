@@ -63,6 +63,19 @@ const translations: Record<string, Record<Language, string>> = {
     "stat.yield": { vi: "Yield (%)", en: "Yield (%)" },
     "stat.isp": { vi: "ISP (%)", en: "ISP (%)" },
     "stat.electric": { vi: "Elec (kWh)", en: "Elec (kWh)" },
+    // Report - Shelling Analytics
+    "report.shelling.insights": { vi: "Phân tích Nâng cao", en: "Optimized Insights" },
+    "report.shelling.crossLine.title": { vi: "So sánh Hiệu suất chéo các Line (T/h)", en: "Cross-Line Efficiency Comparison (T/h)" },
+    "report.shelling.crossLine.desc": { vi: "Phân tích so sánh hiệu suất hoạt động giữa tất cả các máy.", en: "Comparative analysis of operating efficiency across all lines." },
+    "report.shelling.speedQuality.title": { vi: "Tương quan Tốc độ & Chất lượng", en: "Speed vs Quality Correlation" },
+    "report.shelling.speedQuality.desc": { vi: "Đánh giá sự ảnh hưởng giữa tốc độ chạy máy và tỷ lệ bể xuất hiện.", en: "Evaluating if higher speed correlates to higher broken kernels." },
+    "report.shelling.speedQuality.x": { vi: "Tốc độ (T/h)", en: "Speed (T/h)" },
+    "report.shelling.speedQuality.y": { vi: "Tỷ lệ bể (%)", en: "Broken %" },
+    "report.shelling.speedQuality.scatter": { vi: "Các ca sản xuất", en: "Shifts" },
+    "report.shelling.energy.title": { vi: "Định mức điện năng (kWh/Tấn)", en: "Energy Intensity (kWh/Ton)" },
+    "report.shelling.energy.desc": { vi: "Theo dõi lượng điện năng tiêu thụ trên mỗi tấn sản phẩm hàng ngày.", en: "Tracking electricity usage against daily shelling production." },
+    "report.shelling.energy.prod": { vi: "Sản lượng (T)", en: "Production (T)" },
+    "report.shelling.energy.intens": { vi: "Định mức (kWh/T)", en: "Intensity (kWh/T)" },
 
     // Regions
     "region_rcn": { vi: "RCN WAREHOUSE", en: "RCN WAREHOUSE" },
