@@ -75,7 +75,7 @@ function KPICard({ label, value, sub, color }: { label: string; value: string; s
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function ReportPage() {
     const supabase = createClient()
-    const { t } = useLanguage()
+    const { language, t } = useLanguage()
 
     const currentYear = new Date().getFullYear()
     const currentMonth = new Date().getMonth() + 1
@@ -809,7 +809,6 @@ export default function ReportPage() {
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
-                                            {insightCrossLine && <SmartInsight {...insightCrossLine} />}
                                         </CardContent>
                                     </Card>
 
@@ -983,7 +982,6 @@ export default function ReportPage() {
                                                     </ResponsiveContainer>
                                                 </div>
                                             </div>
-                                            {insightSizeBroken && <SmartInsight {...insightSizeBroken} />}
                                         </CardContent>
                                     </Card>
 
