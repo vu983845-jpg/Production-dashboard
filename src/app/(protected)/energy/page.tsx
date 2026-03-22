@@ -392,9 +392,9 @@ export default function EnergyDashboardPage() {
                                                             <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} tickFormatter={(val) => val.toLocaleString('en-US')} dx={-10} />
                                                             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                                                             <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 600, color: '#334155' }} iconType="circle" />
-                                                            <Bar dataKey="stacked_offpeak" name="Off-peak" fill="url(#colorOffpeak)" maxBarSize={45} />
-                                                            <Bar dataKey="stacked_normal" name="Normal" fill="url(#colorNormal)" maxBarSize={45} />
-                                                            <Bar dataKey="stacked_peak" name="Peak" fill="url(#colorPeak)" radius={[6, 6, 0, 0]} maxBarSize={45} />
+                                                            <Bar dataKey="stacked_offpeak" name="Off-peak" fill="url(#colorOffpeak)" stackId="energy" maxBarSize={45} />
+                                                            <Bar dataKey="stacked_normal" name="Normal" fill="url(#colorNormal)" stackId="energy" maxBarSize={45} />
+                                                            <Bar dataKey="stacked_peak" name="Peak" fill="url(#colorPeak)" stackId="energy" radius={[6, 6, 0, 0]} maxBarSize={45} />
                                                             <Line type="monotone" dataKey="electricity_target_kwh" name="Target" stroke="#F59E0B" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 6, strokeWidth: 0, fill: '#F59E0B' }} />
                                                         </ComposedChart>
                                                     ) : (
