@@ -831,7 +831,7 @@ export default function DashboardPage() {
         }
 
         return (
-            <Card key={id} className={`bg-white/70 backdrop-blur-xl
+            <Card key={id} className={`bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full ring-1 ring-black/5 ${isTotal ? 'ring-primary/40 shadow-primary/10' : ''}`}>
 
                 {/* Subtle gradient glow in background */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
