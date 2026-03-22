@@ -399,15 +399,16 @@ export default function EnergyDashboardPage() {
                     {/* MTD PIE CHART */}
                     <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-blue-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
                         <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
-                            <CardTitle className="text-lg font-bold text-slate-800">Cơ Cấu Khung Giờ MTD</CardTitle>
+                            <CardTitle className="text-lg font-bold text-slate-800">Cơ Cấu Khung Giờ MTD {mainChartMode === 'kwh' ? '(kWh)' : '(VNĐ)'}</CardTitle>
                             <CardDescription className="font-medium text-xs mt-1">Tỷ trọng tiêu thụ theo khung giờ (Peak/Normal/Offpeak)</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[380px] pt-8 relative">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-50/30 to-transparent pointer-events-none"></div>
                             {(() => {
-                                const mtdPeak = energyData.reduce((acc, curr) => acc + (curr.stacked_peak || 0), 0);
-                                const mtdNormal = energyData.reduce((acc, curr) => acc + (curr.stacked_normal || 0), 0);
-                                const mtdOffpeak = energyData.reduce((acc, curr) => acc + (curr.stacked_offpeak || 0), 0);
+                                const isKwh = mainChartMode === 'kwh';
+                                const mtdPeak = energyData.reduce((acc, curr) => acc + (isKwh ? (curr.stacked_peak || 0) : (curr.cost_peak || 0)), 0);
+                                const mtdNormal = energyData.reduce((acc, curr) => acc + (isKwh ? (curr.stacked_normal || 0) : (curr.cost_normal || 0)), 0);
+                                const mtdOffpeak = energyData.reduce((acc, curr) => acc + (isKwh ? (curr.stacked_offpeak || 0) : (curr.cost_offpeak || 0)), 0);
                                 const total = mtdPeak + mtdNormal + mtdOffpeak;
                                 
                                 if (energyData.length === 0 || total === 0) {
@@ -415,9 +416,9 @@ export default function EnergyDashboardPage() {
                                 }
 
                                 const pieData = [
-                                    { name: 'Thấp điểm', value: mtdOffpeak, fill: '#10B981' },
-                                    { name: 'Bình thường', value: mtdNormal, fill: '#3B82F6' },
-                                    { name: 'Cao điểm', value: mtdPeak, fill: '#EF4444' }
+                                    { name: isKwh ? 'Thấp điểm' : 'Thấp điểm (VNĐ)', value: mtdOffpeak, fill: '#10B981', shortName: 'Thấp điểm' },
+                                    { name: isKwh ? 'Bình thường' : 'Bình thường (VNĐ)', value: mtdNormal, fill: '#3B82F6', shortName: 'Bình thường' },
+                                    { name: isKwh ? 'Cao điểm' : 'Cao điểm (VNĐ)', value: mtdPeak, fill: '#EF4444', shortName: 'Cao điểm' }
                                 ].filter(d => d.value > 0);
 
                                 return (
@@ -432,7 +433,7 @@ export default function EnergyDashboardPage() {
                                                 paddingAngle={4}
                                                 dataKey="value"
                                                 stroke="none"
-                                                label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(1)}%)`}
+                                                label={({ payload, percent }) => `${payload.shortName} (${((percent || 0) * 100).toFixed(1)}%)`}
                                                 labelLine={{ stroke: '#94A3B8', strokeWidth: 1.5 }}
                                             >
                                                 {pieData.map((entry, index) => (
