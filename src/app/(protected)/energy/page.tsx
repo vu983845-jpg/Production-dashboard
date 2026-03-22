@@ -11,7 +11,10 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ShieldCheck } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { ISO50001Content } from "../iso50001/iso-content"
 
 
 export default function EnergyDashboardPage() {
@@ -28,6 +31,20 @@ export default function EnergyDashboardPage() {
 
     const goToPreviousMonth = () => setCurrentMonth(prev => subMonths(prev, 1))
     const goToNextMonth = () => setCurrentMonth(prev => addMonths(prev, 1))
+
+    const [userRole, setUserRole] = useState("viewer")
+    const [userEmail, setUserEmail] = useState("")
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({data}) => {
+           if (data?.user) {
+               setUserEmail(data.user.email || "")
+               supabase.from('profiles').select('role').eq('id', data.user.id).single().then(r => {
+                   if (r.data?.role) setUserRole(r.data.role)
+               })
+           }
+        })
+    }, [supabase])
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -209,10 +226,10 @@ export default function EnergyDashboardPage() {
                         <div className="p-2 bg-red-50 rounded-xl shadow-inner ring-1 ring-red-200/50">
                             <Zap className="h-6 w-6 md:h-8 md:w-8 text-[#e63121] drop-shadow-sm" />
                         </div>
-                        Chỉ Huy Năng Lượng
+                        Energy Hub
                     </h2>
                     <p className="text-muted-foreground text-xs md:text-sm mt-1.5 font-medium ml-1">
-                        Giám sát tiêu thụ điện năng toàn bộ nhà máy theo thời gian thực
+                        Giám sát và trung tâm điều khiển điện năng toàn nhà máy
                     </p>
                 </div>
                 
@@ -231,13 +248,24 @@ export default function EnergyDashboardPage() {
                 </div>
             </div>
 
-            {isLoading ? (
-                <div className="flex flex-col justify-center items-center h-[500px] gap-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-[#e63121]" />
-                    <p className="text-muted-foreground font-medium animate-pulse">Đang tải dữ liệu năng lượng...</p>
-                </div>
-            ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <Tabs defaultValue="energy_dashboard" className="space-y-4">
+                <TabsList className="bg-white/60 backdrop-blur-md border border-slate-200/60 shadow-sm rounded-xl p-1 w-full justify-start h-auto flex flex-wrap gap-1">
+                    <TabsTrigger value="energy_dashboard" className="data-[state=active]:bg-[#e63121] data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
+                        <Zap className="h-4 w-4 mr-2" /> Energy Dashboard
+                    </TabsTrigger>
+                    <TabsTrigger value="iso50001" className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
+                        <ShieldCheck className="h-4 w-4 mr-2" /> ISO 50001 EnMS
+                    </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="energy_dashboard" className="m-0 space-y-4">
+                    {isLoading ? (
+                        <div className="flex flex-col justify-center items-center h-[500px] gap-4">
+                            <Loader2 className="h-10 w-10 animate-spin text-[#e63121]" />
+                            <p className="text-muted-foreground font-medium animate-pulse">Đang tải dữ liệu năng lượng...</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
                     
                     {/* COMBINED ENERGY & COST CHART */}
                     <Card className="col-span-2 shadow-xl shadow-red-900/5 hover:shadow-2xl transition-all duration-500 border-white/60 bg-white/70 backdrop-blur-xl overflow-hidden relative group">
@@ -617,6 +645,11 @@ export default function EnergyDashboardPage() {
 
                 </div>
             )}
+                </TabsContent>
+                <TabsContent value="iso50001" className="m-0 mt-4">
+                    <ISO50001Content userRole={userRole} userEmail={userEmail} />
+                </TabsContent>
+            </Tabs>
         </div>
     )
 }

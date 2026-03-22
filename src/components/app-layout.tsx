@@ -69,7 +69,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             roles: ["admin", "dept_user"],
         },
         {
-            title: "Báo cáo",
+            title: "Report Center",
             href: "/report",
             icon: FileText,
             roles: ["admin", "dept_user", "viewer"],
@@ -81,17 +81,11 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             roles: ["admin"],
         },
         {
-            title: "Năng lượng",
+            title: "Energy Hub",
             href: "/energy",
             icon: Zap,
             roles: ["admin", "dept_user", "viewer", "HSE", "hse", "plant_manager", "maint"],
-        },
-        {
-            title: "ISO 50001",
-            href: "/iso50001",
-            icon: ShieldCheck,
-            roles: ["admin", "HSE", "hse"],
-        },
+        }
     ]
 
     return (

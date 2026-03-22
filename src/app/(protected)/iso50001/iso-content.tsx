@@ -13,7 +13,12 @@ import { TabInput } from "./tab-input"
 import { TabBaseline } from "./tab-baseline"
 import { SeuMaster, MonthlyHistorical, BaselineModel, DailyEntry, SeuSummary } from "./types"
 
-export default function ISO50001Page() {
+interface ISOProps {
+    userRole: string;
+    userEmail: string;
+}
+
+export function ISO50001Content({ userRole, userEmail }: ISOProps) {
     const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()))
     const [isLoading, setIsLoading] = useState(true)
     const [blLoading, setBlLoading] = useState(true)
@@ -69,16 +74,16 @@ export default function ISO50001Page() {
     useEffect(() => { fetchBaseline() }, [fetchBaseline])
 
     return (
-        <div className="flex-1 space-y-4 md:space-y-5 max-w-5xl mx-auto w-full pb-10">
+        <div className="flex-1 space-y-4 md:space-y-5 w-full">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                     <h2 className="text-xl font-bold tracking-tight flex items-center gap-2 text-primary">
                         <ShieldCheck className="h-5 w-5" />
-                        ISO 50001 — Hệ thống Quản lý Năng lượng
+                        Energy Management System (ISO 50001)
                     </h2>
                     <p className="text-muted-foreground text-xs mt-0.5">
-                        Chỉ HSE &amp; Admin • Điện + Củi • EnMS theo chuẩn ISO 50001
+                        Performance monitoring and energy baseline tracking.
                     </p>
                 </div>
 
@@ -103,8 +108,12 @@ export default function ISO50001Page() {
                 <TabsList className="grid grid-cols-4 w-full h-9">
                     <TabsTrigger value="dashboard" className="text-xs">📊 Dashboard</TabsTrigger>
                     <TabsTrigger value="seu" className="text-xs">⚡ Theo dõi SEU</TabsTrigger>
-                    <TabsTrigger value="input" className="text-xs">✏️ Nhập liệu</TabsTrigger>
-                    <TabsTrigger value="baseline" className="text-xs">📐 Baseline</TabsTrigger>
+                    {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
+                        <TabsTrigger value="input" className="text-xs">✏️ Nhập liệu</TabsTrigger>
+                    )}
+                    {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
+                        <TabsTrigger value="baseline" className="text-xs">📐 Baseline</TabsTrigger>
+                    )}
                 </TabsList>
 
                 <TabsContent value="dashboard">
@@ -127,19 +136,23 @@ export default function ISO50001Page() {
                     )}
                 </TabsContent>
 
-                <TabsContent value="input">
-                    <TabInput seus={seus} currentMonth={currentMonth} onSaved={handleRefresh} />
-                </TabsContent>
+                {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
+                    <TabsContent value="input">
+                        <TabInput seus={seus} currentMonth={currentMonth} onSaved={handleRefresh} />
+                    </TabsContent>
+                )}
 
-                <TabsContent value="baseline">
-                    {blLoading ? (
-                        <div className="flex justify-center items-center h-48">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        </div>
-                    ) : (
-                        <TabBaseline seus={seus} historical={historical} baselines={baselines} onRefresh={handleRefresh} />
-                    )}
-                </TabsContent>
+                {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
+                    <TabsContent value="baseline">
+                        {blLoading ? (
+                            <div className="flex justify-center items-center h-48">
+                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            </div>
+                        ) : (
+                            <TabBaseline seus={seus} historical={historical} baselines={baselines} onRefresh={handleRefresh} />
+                        )}
+                    </TabsContent>
+                )}
             </Tabs>
         </div>
     )
