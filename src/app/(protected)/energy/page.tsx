@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, subDays, differenceInDays } from "date-fns"
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, subDays, addDays, differenceInDays } from "date-fns"
 import { vi } from "date-fns/locale"
 import { CalendarIcon, ChevronLeft, ChevronRight, Zap, Loader2 } from "lucide-react"
 import {
     AreaChart, Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart,
-    ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine, PieChart, Pie
+    ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine, PieChart, Pie, Treemap
 } from "recharts"
 
 import { Button } from "@/components/ui/button"
@@ -52,32 +52,32 @@ export default function EnergyDashboardPage() {
             const startDateStr = format(startOfMonth(currentMonth), "yyyy-MM-dd")
             const endDateStr = format(endOfMonth(currentMonth), "yyyy-MM-dd")
             
-            // Fetch starting 1 day earlier to compute daily consumption (deltas)
-            const fetchStartStr = format(subDays(startOfMonth(currentMonth), 1), "yyyy-MM-dd")
+            // Lấy thêm 1 ngày của tháng sau để tính tiêu thụ cho ngày cuối tháng (reading hôm sau - hôm nay)
+            const nextDayStr = format(addDays(endOfMonth(currentMonth), 1), "yyyy-MM-dd")
 
             try {
                 // 1. Fetch Main Energy (Factory Total) - already in daily consumption
                 const { data: energy } = await supabase
                     .from("daily_energy")
                     .select("*")
-                    .gte("work_date", fetchStartStr) // Changed to fetch 1 day earlier to compute deltas
-                    .lte("work_date", endDateStr)
+                    .gte("work_date", startDateStr)
+                    .lte("work_date", nextDayStr)
                     .order("work_date", { ascending: true })
 
                 // 2. Fetch Compressors (MNK) - Raw Meter Index
                 const { data: compressorsRaw } = await supabase
                     .from("daily_compressor")
                     .select("*")
-                    .gte("work_date", fetchStartStr)
-                    .lte("work_date", endDateStr)
+                    .gte("work_date", startDateStr)
+                    .lte("work_date", nextDayStr)
                     .order("work_date", { ascending: true })
 
                 // 3. Fetch Other Electricity (8 meters) - Raw Meter Index
                 const { data: othersRaw } = await supabase
                     .from("daily_electricity_others")
                     .select("*")
-                    .gte("work_date", fetchStartStr)
-                    .lte("work_date", endDateStr)
+                    .gte("work_date", startDateStr)
+                    .lte("work_date", nextDayStr)
                     .order("work_date", { ascending: true })
 
                 // 4. Fetch Shelling KPIs (Shelling Energy) - Need to fetch Dept ID first
@@ -88,14 +88,14 @@ export default function EnergyDashboardPage() {
                         .from("daily_kpi")
                         .select("work_date, electricity_meter_reading")
                         .eq("department_id", shellDept.id)
-                        .gte("work_date", fetchStartStr)
-                        .lte("work_date", endDateStr)
+                        .gte("work_date", startDateStr)
+                        .lte("work_date", nextDayStr)
                         .order("work_date", { ascending: true })
                     shelling = shellingRaw || []
                 }
 
                 // Compute Deltas
-                const computeDeltas = (rawData: any[], multiplier = 1, startDate: string) => {
+                const computeDeltas = (rawData: any[], multiplier = 1, startDate: string, endDateStr: string) => {
                     if (!rawData || rawData.length === 0) return []
                     let result = []
                     for (let i = 1; i < rawData.length; i++) {
@@ -103,7 +103,7 @@ export default function EnergyDashboardPage() {
                         const curr = rawData[i]
                         const diffDays = differenceInDays(new Date(curr.work_date), new Date(prev.work_date)) || 1
                         
-                        let mapped: any = { work_date: curr.work_date, fmtDate: format(new Date(curr.work_date), "dd/MM") }
+                        let mapped: any = { work_date: prev.work_date, fmtDate: format(new Date(prev.work_date), "dd/MM") }
                         
                         Object.keys(curr).forEach(k => {
                             if (k !== 'work_date' && k !== 'id' && k !== 'created_at' && k !== 'updated_at' && typeof curr[k] === 'number') {
@@ -114,18 +114,18 @@ export default function EnergyDashboardPage() {
                                 }
                             }
                         })
-                        if (curr.work_date >= startDate) {
+                        if (prev.work_date >= startDate && prev.work_date <= endDateStr) {
                             result.push(mapped)
                         }
                     }
                     return result
                 }
 
-                const compDeltas = computeDeltas(compressorsRaw || [], 1000, startDateStr) // MNK index is MWh, graph in kWh
-                const othersDeltas = computeDeltas(othersRaw || [], 1, startDateStr)       // Others index is exactly kWh
+                const compDeltas = computeDeltas(compressorsRaw || [], 1000, startDateStr, endDateStr) // MNK index is MWh, graph in kWh
+                const othersDeltas = computeDeltas(othersRaw || [], 1, startDateStr, endDateStr)       // Others index is exactly kWh
                 
                 // Shelling delta
-                const shellDeltasExtracted = computeDeltas(shelling, 1, startDateStr)
+                const shellDeltasExtracted = computeDeltas(shelling, 1, startDateStr, endDateStr)
                 const shellMapped = shellDeltasExtracted.map(d => ({ ...d, energy_kwh: d.electricity_meter_reading }))
 
                 // Pre-process energy to compute kWh from meter readings if missing
@@ -135,22 +135,22 @@ export default function EnergyDashboardPage() {
                     const prev = processedEnergy[i - 1];
                     const diffDays = differenceInDays(new Date(curr.work_date), new Date(prev.work_date)) || 1;
                     
-                    if (!curr.electricity_peak_kwh && curr.meter_peak && prev.meter_peak) {
-                        curr.electricity_peak_kwh = Math.max(0, (curr.meter_peak - prev.meter_peak) / diffDays);
+                    if (!prev.electricity_peak_kwh && curr.meter_peak && prev.meter_peak) {
+                        prev.electricity_peak_kwh = Math.max(0, (curr.meter_peak - prev.meter_peak) / diffDays);
                     }
-                    if (!curr.electricity_normal_kwh && curr.meter_normal && prev.meter_normal) {
-                        curr.electricity_normal_kwh = Math.max(0, (curr.meter_normal - prev.meter_normal) / diffDays);
+                    if (!prev.electricity_normal_kwh && curr.meter_normal && prev.meter_normal) {
+                        prev.electricity_normal_kwh = Math.max(0, (curr.meter_normal - prev.meter_normal) / diffDays);
                     }
-                    if (!curr.electricity_offpeak_kwh && curr.meter_offpeak && prev.meter_offpeak) {
-                        curr.electricity_offpeak_kwh = Math.max(0, (curr.meter_offpeak - prev.meter_offpeak) / diffDays);
+                    if (!prev.electricity_offpeak_kwh && curr.meter_offpeak && prev.meter_offpeak) {
+                        prev.electricity_offpeak_kwh = Math.max(0, (curr.meter_offpeak - prev.meter_offpeak) / diffDays);
                     }
-                    if (!curr.electricity_kwh && curr.electricity_meter_reading && prev.electricity_meter_reading) {
-                        curr.electricity_kwh = Math.max(0, (curr.electricity_meter_reading - prev.electricity_meter_reading) / diffDays);
+                    if (!prev.electricity_kwh && curr.electricity_meter_reading && prev.electricity_meter_reading) {
+                        prev.electricity_kwh = Math.max(0, (curr.electricity_meter_reading - prev.electricity_meter_reading) / diffDays);
                     }
                 }
 
-                // Make sure to filter out the previous month's overlapping days
-                const validEnergy = processedEnergy.filter(e => e.work_date >= startDateStr);
+                // Make sure to filter out the out of bounds
+                const validEnergy = processedEnergy.filter(e => e.work_date >= startDateStr && e.work_date <= endDateStr);
 
                 setEnergyData(validEnergy.map(e => {
                     const p = e.electricity_peak_kwh || 0;
@@ -215,6 +215,22 @@ export default function EnergyDashboardPage() {
         return null
     }
 
+    const CustomTreemapContent = (props: any) => {
+        const { x, y, width, height, name, value, fill } = props;
+        if (width < 40 || height < 40) return null;
+        return (
+            <g>
+                <rect x={x} y={y} width={width} height={height} fill={fill} stroke="#ffffff" strokeWidth={3} rx={8} ry={8} style={{ filter: "drop-shadow(0px 4px 6px rgba(0,0,0,0.1))", cursor: "pointer" }} className="hover:opacity-90 transition-opacity" />
+                <text x={x + 12} y={y + 24} fill="#ffffff" fontSize={14} fontWeight={800} style={{ textShadow: "0px 2px 4px rgba(0,0,0,0.6)" }}>
+                    {name}
+                </text>
+                <text x={x + 12} y={y + 42} fill="#ffffff" fontSize={13} fontWeight={600} style={{ textShadow: "0px 1px 3px rgba(0,0,0,0.6)" }}>
+                    {Number(value).toLocaleString('en-US')} kWh
+                </text>
+            </g>
+        );
+    }
+
     return (
         <div className="flex-1 space-y-4 md:space-y-8 max-w-7xl mx-auto w-full pb-10 relative z-0">
             {/* Premium Ambient Background */}
@@ -259,13 +275,22 @@ export default function EnergyDashboardPage() {
                 </TabsList>
 
                 <TabsContent value="energy_dashboard" className="m-0 space-y-4">
-                    {isLoading ? (
+                    {isLoading && energyData.length > 0 && (
+                        <div className="absolute inset-0 z-50 flex items-start justify-center pt-8 bg-white/10 backdrop-blur-[1px] rounded-xl pointer-events-none">
+                            <div className="flex items-center gap-3 bg-white/90 px-4 py-2 rounded-full shadow-lg border border-red-100">
+                                <Loader2 className="h-5 w-5 animate-spin text-[#e63121]" />
+                                <span className="text-sm font-semibold text-slate-700 animate-pulse">Đang tải dữ liệu...</span>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {energyData.length === 0 && isLoading ? (
                         <div className="flex flex-col justify-center items-center h-[500px] gap-4">
                             <Loader2 className="h-10 w-10 animate-spin text-[#e63121]" />
                             <p className="text-muted-foreground font-medium animate-pulse">Loading energy data...</p>
                         </div>
                     ) : (
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+                        <div className={`grid gap-6 md:grid-cols-2 lg:grid-cols-2 transition-all duration-300 relative ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                     
                     {/* COMBINED ENERGY & COST CHART */}
                     <Card className="col-span-2 shadow-xl shadow-red-900/5 hover:shadow-2xl transition-all duration-500 border-white/60 bg-white/70 backdrop-blur-xl overflow-hidden relative group">
@@ -492,24 +517,28 @@ export default function EnergyDashboardPage() {
                             { key: 'maint',      name: 'Maint. Meter', color: '#06B6D4' },
                         ]
 
+                        const treemapData = SEGMENTS.map(s => {
+                            const total = breakdownData.reduce((sum, d) => sum + ((d as any)[s.key] as number || 0), 0);
+                            return { name: s.name, size: total > 0 ? total : 0, fill: s.color, fillOpacity: 0.9 };
+                        }).filter(d => d.size > 0).sort((a, b) => b.size - a.size);
+
                         return (
                             <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-blue-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
                                 <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
-                                    <CardTitle className="text-lg font-bold text-slate-800">Auxiliary Area Distribution</CardTitle>
-                                    <CardDescription className="font-medium text-xs mt-1">Daily auxiliary energy consumption distribution</CardDescription>
+                                    <CardTitle className="text-lg font-bold text-slate-800">Auxiliary Area Distribution (MTD)</CardTitle>
+                                    <CardDescription className="font-medium text-xs mt-1">Monthly energy footprint by auxiliary departments</CardDescription>
                                 </CardHeader>
-                                <CardContent className="h-[380px] pt-8">
+                                <CardContent className="h-[380px] p-4">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={breakdownData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                            <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} dy={10} />
-                                            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} tickFormatter={(v) => v.toLocaleString('en-US')} width={55} />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(241, 245, 249, 0.4)' }} />
-                                            <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 600 }} iconType="circle" />
-                                            {SEGMENTS.map(s => (
-                                                <Bar key={s.key} dataKey={s.key} name={s.name} stackId="dept" fill={s.color} />
-                                            ))}
-                                        </BarChart>
+                                        <Treemap
+                                            data={treemapData}
+                                            dataKey="size"
+                                            stroke="#fff"
+                                            aspectRatio={4 / 3}
+                                            content={<CustomTreemapContent />}
+                                        >
+                                            <Tooltip formatter={(value: number | string | undefined) => [`${Number(value || 0).toLocaleString('en-US')} kWh`, 'Consumption']} />
+                                        </Treemap>
                                     </ResponsiveContainer>
                                 </CardContent>
                             </Card>

@@ -6,6 +6,7 @@ import { ddsClient } from "@/lib/supabase/dds-client"
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
 import { Download, Search, FileText, TrendingUp, TrendingDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Scatter, Cell, ReferenceLine } from "recharts"
 import * as XLSX from "xlsx"
@@ -109,7 +110,7 @@ export default function ReportPage() {
 
     const fetchReport = useCallback(async () => {
         setLoading(true)
-        setHasData(false)
+        // Bỏ setHasData(false) ở đây để giữ Data cũ trên màn hình -> Không bị chớp UI
         const start = format(startOfMonth(new Date(selectedYear, selectedMonth - 1, 1)), "yyyy-MM-dd")
         const end   = format(endOfMonth(new Date(selectedYear, selectedMonth - 1, 1)), "yyyy-MM-dd")
 
@@ -568,7 +569,12 @@ export default function ReportPage() {
     const THRESHOLD_BROKEN = 4.5;
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6">
+        <motion.div 
+            initial={{ opacity: 0, scale: 0.98, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="max-w-5xl mx-auto space-y-6"
+        >
             {/* Header */}
             <div className="flex items-center gap-3">
                 <FileText className="h-7 w-7 text-primary" />
@@ -1316,6 +1322,6 @@ export default function ReportPage() {
                     <p className="text-sm">Select month and department then click <strong>View Report</strong></p>
                 </div>
             )}
-        </div>
+        </motion.div>
     )
 }

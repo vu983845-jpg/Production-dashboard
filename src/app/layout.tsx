@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from "@/components/ui/sonner"
 import { LanguageProvider } from "@/contexts/LanguageContext"
+import { QueryProvider } from "@/components/providers/query-provider"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -19,10 +21,14 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className={inter.className}>
-        <LanguageProvider>
-          {children}
-          <Toaster position="top-right" richColors />
-        </LanguageProvider>
+        <QueryProvider>
+          <NuqsAdapter>
+            <LanguageProvider>
+              {children}
+              <Toaster position="top-right" richColors />
+            </LanguageProvider>
+          </NuqsAdapter>
+        </QueryProvider>
       </body>
     </html>
   )
