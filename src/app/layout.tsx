@@ -7,7 +7,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext"
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Hệ thống Quản lý Sản lượng Nhà máy',
+  title: 'Dashboard VICC LA',
   description: 'KPI, Yield, Plan vs Actual Dashboard',
 }
 

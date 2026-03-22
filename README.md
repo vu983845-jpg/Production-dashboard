@@ -1,4 +1,4 @@
-# Hệ thống Quản lý Sản lượng Nhà máy (Factory KPI Dashboard)
+# Dashboard VICC LA
 
 Đây là dự án quản lý định mức sản lượng, báo cáo theo thực tế (Actual vs Plan), Yield, tồn WIP và Downtime dành cho nhà máy. Hệ thống được xây dựng bằng **Next.js (App Router)** và **Supabase** (Postgres + Auth + Row Level Security).
 

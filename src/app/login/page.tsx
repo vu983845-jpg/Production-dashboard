@@ -84,7 +84,7 @@ export default function LoginPage() {
                         <IntersnackLogo className="h-16 w-16" />
                     </div>
                     <CardTitle className="text-2xl font-bold">Đăng nhập</CardTitle>
-                    <CardDescription>Hệ thống quản lý sản lượng nhà máy</CardDescription>
+                    <CardDescription>Dashboard VICC LA</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleLogin} className="space-y-4">
