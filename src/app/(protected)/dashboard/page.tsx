@@ -716,38 +716,38 @@ export default function DashboardPage() {
 
         if (id === 'virtual-container') {
             return (
-                <Card key={id} className={`bg-gradient-to-br from-indigo-50/90 to-blue-50/60 backdrop-blur-xl border border-blue-200/60 shadow-lg shadow-indigo-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden flex flex-col justify-start h-full ring-1 ring-blue-100/50`}>
+                <Card key={id} className={`bg-gradient-to-br from-red-50/90 to-white/60 backdrop-blur-xl border border-red-200/60 shadow-lg shadow-red-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden flex flex-col justify-start h-full ring-1 ring-red-100/50`}>
                     {/* Glowing ambient background highlights */}
-                    <div className="absolute -top-32 -right-32 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl pointer-events-none"></div>
-                    <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl pointer-events-none"></div>
+                    <div className="absolute -top-32 -right-32 w-64 h-64 bg-red-400/20 rounded-full blur-3xl pointer-events-none"></div>
+                    <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-rose-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                    <CardHeader className="p-4 md:p-5 bg-white/50 border-b border-indigo-100/60 flex-shrink-0 relative z-10 backdrop-blur-md">
+                    <CardHeader className="p-4 md:p-5 bg-white/60 border-b border-red-100/60 flex-shrink-0 relative z-10 backdrop-blur-md">
                         <div className="flex justify-between items-start mb-3 px-1">
-                            <span className="flex items-center gap-3 uppercase font-black tracking-tight text-lg md:text-xl text-indigo-800 drop-shadow-sm">
-                                <div className="p-2 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-xl shadow-inner border border-white/80">
-                                    <FileSymlink className="h-5 w-5 text-indigo-600 drop-shadow-sm" />
+                            <span className="flex items-center gap-3 uppercase font-black tracking-tight text-lg md:text-xl text-red-800 drop-shadow-sm">
+                                <div className="p-2 bg-gradient-to-br from-red-100 to-rose-50 rounded-xl shadow-inner border border-white/80">
+                                    <FileSymlink className="h-5 w-5 text-[#e63121] drop-shadow-sm" />
                                 </div>
                                 CONTAINER
                             </span>
                             
                             <div className="flex items-center drop-shadow-sm">
-                                <span className={`font-black flex items-baseline gap-1 ${summary.achivementPct >= 100 ? 'text-emerald-500' : summary.achivementPct >= 80 ? 'text-amber-500' : 'text-rose-500'} text-2xl md:text-3xl`}>
+                                <span className={`font-black flex items-baseline gap-1 ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-rose-600'} text-2xl md:text-3xl`}>
                                     {summary.achivementPct.toFixed(0)}% <span className="font-bold uppercase text-slate-500 opacity-80 text-xs md:text-sm">MTD</span>
                                 </span>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mt-2 bg-white/70 rounded-2xl p-3 border border-indigo-50 shadow-sm backdrop-blur-sm">
-                            <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br from-indigo-50/80 to-blue-50/50 border border-indigo-100/60 shadow-inner group">
-                                <span className="text-[10px] md:text-xs uppercase text-indigo-600 font-bold tracking-widest mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity">MTD / Kế Hoạch</span>
+                        <div className="grid grid-cols-2 gap-4 mt-2 bg-white/70 rounded-2xl p-3 border border-red-50 shadow-sm backdrop-blur-sm">
+                            <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br from-red-50/80 to-white/50 border border-red-100/60 shadow-inner group">
+                                <span className="text-[10px] md:text-xs uppercase text-[#e63121] font-bold tracking-widest mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity">MTD / Kế Hoạch</span>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="font-black text-indigo-700 text-xl md:text-2xl drop-shadow-sm">{actualNum.toFixed(1)}</span>
+                                    <span className="font-black text-red-700 text-xl md:text-2xl drop-shadow-sm">{actualNum.toFixed(1)}</span>
                                     <span className="text-slate-500 text-sm md:text-base font-semibold">/{planNum.toFixed(1)} <span className="text-[10px] uppercase font-normal ml-0.5">Cont</span></span>
                                 </div>
                             </div>
 
                             <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br from-emerald-50/80 to-teal-50/50 border border-emerald-100/60 shadow-inner group">
-                                <span className="text-[10px] md:text-xs uppercase text-emerald-600 font-bold tracking-widest mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity">Cần Đạt / Ngày</span>
+                                <span className="text-[10px] md:text-xs uppercase text-emerald-700 font-bold tracking-widest mb-1.5 opacity-80 group-hover:opacity-100 transition-opacity">Cần Đạt / Ngày</span>
                                 <div className={`font-black text-xl md:text-2xl drop-shadow-sm ${isReached ? 'text-emerald-500' : 'text-emerald-600'}`}>
                                     {isReached ? 'Đã Đạt 🎉' : `${dailyNeeded} Cont`}
                                 </div>
@@ -756,17 +756,17 @@ export default function DashboardPage() {
                     </CardHeader>
                     
                     <CardContent className="flex-1 flex flex-col justify-start p-4 pt-5 md:p-6 md:pt-6 relative z-10">
-                        <div className="w-full bg-white/60 rounded-2xl h-[200px] md:h-[240px] p-4 border border-indigo-50 shadow-inner">
+                        <div className="w-full bg-white/70 rounded-2xl h-[200px] md:h-[240px] p-4 border border-red-50 shadow-inner">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="contActualGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.9}/>
-                                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0.6}/>
+                                            <stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/>
+                                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.6}/>
                                         </linearGradient>
                                         <linearGradient id="contActualMissGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.9}/>
-                                            <stop offset="100%" stopColor="#fb7185" stopOpacity={0.6}/>
+                                            <stop offset="0%" stopColor="#fca5a5" stopOpacity={0.8}/>
+                                            <stop offset="100%" stopColor="#fecaca" stopOpacity={0.5}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -795,7 +795,7 @@ export default function DashboardPage() {
                                                             {payload.map((entry: any, i: number) => (
                                                                 <div key={i} className="flex justify-between items-center gap-6">
                                                                     <span className="text-slate-600 font-medium flex items-center gap-2">
-                                                                        <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color || '#4f46e5' }}></div>
+                                                                        <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.name === 'Thực tế (Cont)' ? '#e63121' : (entry.color || '#334155') }}></div>
                                                                         {entry.name}
                                                                     </span>
                                                                     <span className="font-black text-slate-800">{Number(entry.value).toFixed(1)} Cont</span>
@@ -821,7 +821,7 @@ export default function DashboardPage() {
                                         })}
                                     </Bar>
                                     
-                                    <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Kế hoạch (Cont)" />
+                                    <Line type="step" dataKey="Plan" stroke="#334155" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Kế hoạch (Cont)" />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>
