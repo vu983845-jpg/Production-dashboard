@@ -11,25 +11,6 @@ import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 import * as XLSX from "xlsx"
 import { useLanguage } from "@/contexts/LanguageContext"
 
-// ── Helper Components ────────────────────────────────────────────────────────
-const SmartInsight = ({ title, type, detail }: { title: string, type: 'good' | 'warning' | 'danger' | 'info', detail: string }) => {
-    const colors = {
-        good: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-        warning: 'bg-amber-50 text-amber-800 border-amber-200',
-        danger: 'bg-rose-50 text-rose-800 border-rose-200',
-        info: 'bg-blue-50 text-blue-800 border-blue-200'
-    };
-    const icons = {
-        good: '✅', warning: '⚠️', danger: '🚨', info: '💡'
-    };
-    return (
-        <div className={`mt-3 p-3 text-xs md:text-sm rounded-lg border ${colors[type]}`}>
-            <span className="font-bold mr-1">{icons[type]} {title}:</span> 
-            <span className="font-medium text-slate-700">{detail}</span>
-        </div>
-    );
-};
-
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface DailyRecord {
@@ -583,72 +564,8 @@ export default function ReportPage() {
         return Array.from(map.values()).filter(d => Boolean(d.actual_ton));
     })();
 
-    // --- SMART INSIGHTS LOGIC ---
+    // Threshold constant for visual alarm line on broken chart
     const THRESHOLD_BROKEN = 4.5;
-
-    const insightCrossLine = useMemo(() => {
-        if (selectedDept !== 'SHELL' || crossLinePerfChartData.length === 0) return null;
-        const lines = ["A", "B", "C", "D1", "D2"];
-        const avgs: Record<string, number> = {};
-        let sysSum = 0, sysCount = 0;
-        
-        lines.forEach(line => {
-            let sum = 0, count = 0;
-            crossLinePerfChartData.forEach(d => { 
-                if (d[line] > 0) { sum += d[line]; count++; sysSum += d[line]; sysCount++; } 
-            });
-            avgs[line] = count > 0 ? sum / count : 0;
-        });
-        
-        const avgOverall = sysCount > 0 ? sysSum / sysCount : 0;
-        if (avgOverall === 0) return null;
-
-        let bestLine = '', bestVal = 0;
-        const worstLines: string[] = [];
-        
-        Object.entries(avgs).forEach(([l, v]) => {
-            if (v > bestVal) { bestVal = v; bestLine = l; }
-            if (v > 0 && v < avgOverall * 0.9) worstLines.push(l);
-        });
-
-        if (worstLines.length > 0) return { type: 'danger' as const, title: t("insight.danger.title"), detail: `${t("insight.crossLine.worst")} ${worstLines.join(", ")}.` };
-        if (bestLine) return { type: 'good' as const, title: t("insight.good.title"), detail: `${t("insight.crossLine.best")} Line ${bestLine} (${bestVal.toFixed(2)} T/h).` };
-        return { type: 'info' as const, title: t("insight.info.title"), detail: `${t("insight.crossLine.normal")} ${avgOverall.toFixed(2)} T/h.` };
-    }, [crossLinePerfChartData, selectedDept, t]);
-
-    const insightSpeedQuality = useMemo(() => {
-        if (selectedDept !== 'SHELL' || speedQualityData.length === 0) return null;
-        const badPoints = speedQualityData.filter(d => d.broken > THRESHOLD_BROKEN);
-        if (badPoints.length > 0) {
-            const lines = Array.from(new Set(badPoints.map(d => `Line ${d.line}`))).slice(0, 3).join(", ");
-            return { type: 'danger' as const, title: t("insight.danger.title"), detail: t("insight.speed.danger").replace("{0}", THRESHOLD_BROKEN.toString()).replace("{1}", lines) };
-        }
-        return { type: 'good' as const, title: t("insight.good.title"), detail: t("insight.speed.normal").replace("{0}", THRESHOLD_BROKEN.toString()) };
-    }, [speedQualityData, selectedDept, t]);
-
-    const insightSizeBroken = useMemo(() => {
-        if (selectedDept !== 'SHELL' || sizeBrokenChartData.length === 0) return null;
-        let worst = sizeBrokenChartData[0];
-        sizeBrokenChartData.forEach(d => { if (d.Tỷ_Lệ_Bể > worst.Tỷ_Lệ_Bể) worst = d; });
-        if (worst.Tỷ_Lệ_Bể > THRESHOLD_BROKEN) return { type: 'danger' as const, title: t("insight.danger.title"), detail: t("insight.size.danger").replace("{0}", worst.name).replace("{1}", worst.Tỷ_Lệ_Bể.toFixed(2)) };
-        if (worst.Tỷ_Lệ_Bể > 3) return { type: 'warning' as const, title: t("insight.warning.title"), detail: t("insight.size.danger").replace("{0}", worst.name).replace("{1}", worst.Tỷ_Lệ_Bể.toFixed(2)) };
-        return null;
-    }, [sizeBrokenChartData, selectedDept, t]);
-
-    const insightLineBroken = useMemo(() => {
-        if (selectedDept !== 'SHELL' || brokenChartData.length === 0) return null;
-        let highest = { val: 0, shift: '' };
-        brokenChartData.forEach(d => {
-            if (d.Ca1 > highest.val) highest = { val: d.Ca1, shift: '1' };
-            if (d.Ca2 > highest.val) highest = { val: d.Ca2, shift: '2' };
-            if (d.Ca3 > highest.val) highest = { val: d.Ca3, shift: '3' };
-        });
-        if (highest.val > THRESHOLD_BROKEN) {
-            return { type: 'danger' as const, title: t("insight.danger.title"), detail: t("insight.lineDeep.danger").replace("{0}", highest.shift).replace("{1}", highest.val.toFixed(2)) };
-        }
-        return { type: 'good' as const, title: t("insight.good.title"), detail: t("insight.lineDeep.normal") };
-    }, [brokenChartData, selectedDept, t]);
-
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">
@@ -868,8 +785,10 @@ export default function ReportPage() {
                                                     <TrendingUp className="h-4 w-4" />
                                                     {t("report.shelling.crossLine.title")}
                                                 </CardTitle>
-                                                <CardDescription className="text-xs text-emerald-600 font-medium">
-                                                    {t("report.shelling.crossLine.desc")}
+                                                <CardDescription className="text-xs text-emerald-700 leading-relaxed">
+                                                    {language === 'vi'
+                                                        ? 'Biểu đồ theo dõi hiệu suất tốc độ (Tấn/Giờ) của từng máy shelling (A, B, C, D1, D2) theo ngày trong tháng. Dùng để so sánh các máy với nhau: máy nào đang chạy nhanh, máy nào chậm, và xu hướng thay đổi hiệu suất theo thời gian. Nếu một đường tụt đột ngột, cần kiểm tra lý do (dao cụ, nguyên liệu, v.v.)'
+                                                        : 'Tracks the hourly throughput (Tons/Hour) of each shelling line (A, B, C, D1, D2) day by day. Use this to compare lines against each other and spot trends — a sudden drop in a line may indicate a tooling issue, raw material problem, or maintenance event.'}
                                                 </CardDescription>
                                             </div>
                                         </CardHeader>
@@ -896,8 +815,13 @@ export default function ReportPage() {
 
                                     {/* Chart 4: Leader Comparison */}
                                     <Card className="col-span-1 lg:col-span-3 shadow-sm border-violet-100">
-                                        <CardHeader className="pb-0 bg-violet-50/30 border-b border-violet-50">
+                                        <CardHeader className="pb-2 bg-violet-50/30 border-b border-violet-50">
                                             <CardTitle className="text-sm font-bold text-violet-700">Overall Leader Comparison (Month)</CardTitle>
+                                            <CardDescription className="text-xs text-violet-600 leading-relaxed">
+                                                {language === 'vi'
+                                                    ? 'So sánh kết quả tổng hợp theo từng Trưởng ca trong tháng: cột Xanh là Sản lượng (T), cột Đỏ là tổng Downtime (Phút). Đường Xanh lá là Hiệu suất T/h, đường Tím là Năng suất T/Người. Dùng để đánh giá hiệu quả quản lý ca của từng Leader, đặc biệt thấy được ai có downtime cao hoặc năng suất thấp.'
+                                                    : 'Aggregated monthly comparison by shift leader. Blue bars = total production (tons), Red bars = total downtime (mins). Green line = efficiency (T/h), Purple line = productivity per person (T/person). Ideal: high production, low downtime, high efficiency lines.'}
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent className="pt-4">
                                             <div className="h-72 w-full mt-4">
@@ -921,8 +845,13 @@ export default function ReportPage() {
 
                                     {/* Chart 2: Downtime */}
                                     <Card className="col-span-1 lg:col-span-3">
-                                        <CardHeader className="pb-2">
+                                        <CardHeader className="pb-2 border-b">
                                             <CardTitle className="text-sm font-bold">Downtime Analysis (Mins)</CardTitle>
+                                            <CardDescription className="text-xs leading-relaxed text-slate-600">
+                                                {language === 'vi'
+                                                    ? 'Biểu đồ cột tích lũy (stacked) tổng thời gian dừng máy (phút) mỗi ngày, chia theo từng máy. Ngày nào cột cao là ngày có tổng downtime lớn. Màu của mỗi lớp cột cho biết máy nào chịu trách nhiệm nhiều nhất cho sự cố hôm đó. Phối hợp với chart Hiệu suất để xác định nguyên nhân năng suất giảm.'
+                                                    : 'Stacked bars show daily downtime (minutes) broken down by each shelling line. Tall bars = high total downtime that day. Each color layer identifies which line caused the most stoppage. Cross-reference with the efficiency chart to pinpoint root causes of productivity drops.'}
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="h-64 w-full mt-2">
@@ -954,6 +883,11 @@ export default function ReportPage() {
                                     <Card className="shadow-sm border-blue-100">
                                         <CardHeader className="pb-2 bg-blue-50/30 border-b border-blue-50">
                                             <CardTitle className="text-sm font-bold text-blue-800">{t("report.shelling.speedQuality.title")}</CardTitle>
+                                            <CardDescription className="text-xs text-blue-700 leading-relaxed">
+                                                {language === 'vi'
+                                                    ? 'Mỗi chấm = một ca sản xuất (trục X: tốc độ T/h, trục Y: tỷ lệ bể %). Nếu các chấm có xu hướng đi lên theo X → tốc độ cao làm bể nhiều. Chấm màu đỏ = ca vượt ngưỡng bể 4.5%, cần kiểm tra lại cài đặt máy. Nên duy trì điểm hoạt động ở vùng tốc độ cao nhưng bể thấp.'
+                                                    : 'Each dot = one production shift (X-axis: speed in T/h, Y-axis: broken %). An upward trend as X increases means higher speed causes more broken kernels. Red dots = shifts exceeding the 4.5% broken alarm threshold. Aim to keep operating points in the high-speed, low-broken zone.'}
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent className="pt-4">
                                             <div className="h-64 w-full">
@@ -972,7 +906,6 @@ export default function ReportPage() {
                                                 </ResponsiveContainer>
                                             </div>
                                             <p className="text-xs text-center text-slate-500 mt-2 font-medium">{t("report.shelling.speedQuality.desc")}</p>
-                                            {insightSpeedQuality && <SmartInsight {...insightSpeedQuality} />}
                                         </CardContent>
                                     </Card>
 
@@ -980,6 +913,11 @@ export default function ReportPage() {
                                     <Card className="shadow-sm border-amber-100">
                                         <CardHeader className="pb-2 bg-amber-50/30 border-b border-amber-50">
                                             <CardTitle className="text-sm font-bold text-amber-800">{t("report.shelling.energy.title")}</CardTitle>
+                                            <CardDescription className="text-xs text-amber-700 leading-relaxed">
+                                                {language === 'vi'
+                                                    ? 'Cột vàng = sản lượng ngày (Tấn, trục trái). Đường cam = định mức kWh tiêu thụ trên mỗi tấn sản phẩm (trục phải). Định mức thấp = tốt (ít điện cho mỗi tấn). Nên để ý ngày nào đường cam tăng đột biến trong khi sản lượng thấp — có thể máy chạy không tải hoặc kém hiệu quả năng lượng.'
+                                                    : 'Yellow bars = daily production (Tons, left axis). Orange line = energy intensity in kWh per ton processed (right axis). Lower intensity = better efficiency. Flag days when intensity spikes while production drops — this may indicate idle running or energy-wasting conditions.'}
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent className="pt-4">
                                             <div className="h-64 w-full">
@@ -1112,8 +1050,13 @@ export default function ReportPage() {
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     {/* Chart 1: Performance */}
                                     <Card>
-                                        <CardHeader className="pb-2">
+                                        <CardHeader className="pb-2 border-b">
                                             <CardTitle className="text-xs font-bold">Efficiency T/h (Line {selectedShellLine})</CardTitle>
+                                            <CardDescription className="text-[11px] leading-relaxed text-slate-600">
+                                                {language === 'vi'
+                                                    ? `Hiệu suất tốc độ chạy (T/h) của Line ${selectedShellLine} theo ngày, chia theo 3 ca. Ca nào cao đều và ổn định là ca làm việc tốt. Nếu một ca liên tục thấp hơn ca khác nhiều ngày liền → cần review lại người vận hành hoặc nguyên liệu ca đó.`
+                                                    : `Daily throughput speed (T/h) for Line ${selectedShellLine} broken down by shift. A consistently high, stable line = well-run shift. If one shift persistently lags others across multiple days, review operator settings or incoming raw material for that shift.`}
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="h-64 w-full mt-2">
@@ -1135,8 +1078,13 @@ export default function ReportPage() {
 
                                     {/* Chart 3: Manpower */}
                                     <Card>
-                                        <CardHeader className="pb-2">
+                                        <CardHeader className="pb-2 border-b">
                                             <CardTitle className="text-xs font-bold text-amber-700">Manpower Productivity (Line {selectedShellLine})</CardTitle>
+                                            <CardDescription className="text-[11px] leading-relaxed text-slate-600">
+                                                {language === 'vi'
+                                                    ? `Năng suất lao động (Tấn/Người/Ca) của Line ${selectedShellLine}. Trục Y cao = ít người mà vẫn ra nhiều hàng. Nếu một ca có T/Ng thấp bất thường trong khi T/h bình thường → ca đó có thể bố trí nhân lực dư thừa hoặc ghi nhân công chưa chính xác.`
+                                                    : `Labor productivity (Tons per person per shift) for Line ${selectedShellLine}. Higher = more output per person. If a shift shows low T/person while T/h is normal, there may be excess headcount recorded or a data entry error for manpower.`}
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="h-64 w-full mt-2">
@@ -1158,8 +1106,13 @@ export default function ReportPage() {
 
                                     {/* Chart 5: % Broken per shift */}
                                     <Card>
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-xs font-bold text-red-700">💔 % Broken per shift (Line {selectedShellLine})</CardTitle>
+                                        <CardHeader className="pb-2 border-b">
+                                            <CardTitle className="text-xs font-bold text-red-700">💔 % Broken per Shift (Line {selectedShellLine})</CardTitle>
+                                            <CardDescription className="text-[11px] leading-relaxed text-slate-600">
+                                                {language === 'vi'
+                                                    ? `Tỷ lệ bể (%) từng ca của Line ${selectedShellLine}. Đường đứt gạch đỏ là ngưỡng cảnh báo 4.5% — nếu đường ca chạm hoặc vượt qua đó cần xem xét lại cài đặt dao và mức độ ẩm nguyên liệu. So sánh 3 ca: nếu Ca X luôn bể nhiều hơn Ca Y dù cùng máy → nguyên nhân có thể do người vận hành hoặc nguyên liệu đầu vào của ca đó.`
+                                                    : `Broken kernel rate (%) per shift for Line ${selectedShellLine}. The red dashed line is the 4.5% alarm threshold. Spikes above it warrant investigation of blade settings and raw material moisture. Compare shifts: if Shift X consistently breaks more than Shift Y on the same machine, root-cause may be operator technique or incoming nut batch quality.`}
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="h-64 w-full mt-2">
@@ -1177,7 +1130,6 @@ export default function ReportPage() {
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
-                                            {insightLineBroken && <SmartInsight {...insightLineBroken} />}
                                         </CardContent>
                                     </Card>
                                 </div>
