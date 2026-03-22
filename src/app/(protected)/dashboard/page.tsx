@@ -711,11 +711,11 @@ export default function DashboardPage() {
                             </span>
                             <div className="flex flex-row flex-wrap items-center gap-4 mt-2 md:mt-0">
                                 <div className="flex flex-col items-end">
-                                    <span className="text-[10px] text-muted-foreground uppercase mb-0.5">ISP (Thực tế / KH)</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase mb-0.5">{language === 'vi' ? 'ISP (Thực tế / KH)' : 'ISP (Actual / Plan)'}</span>
                                     <span className="text-lg md:text-xl font-black text-blue-700">{summary.totalActualIsp?.toFixed(1) ?? 0} <span className="text-xs md:text-sm font-normal text-muted-foreground">/ {summary.totalPlanIsp?.toFixed(1) ?? 0} T</span></span>
                                 </div>
                                 <div className="flex flex-col items-end border-l pl-4 border-gray-200 ml-2">
-                                    <span className="text-[10px] text-muted-foreground uppercase mb-0.5">Non-ISP (Thực tế / KH)</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase mb-0.5">{language === 'vi' ? 'Non-ISP (Thực tế / KH)' : 'Non-ISP (Actual / Plan)'}</span>
                                     <span className="text-lg md:text-xl font-black text-slate-700">{summary.totalActualNonIsp?.toFixed(1) ?? 0} <span className="text-xs md:text-sm font-normal text-muted-foreground">/ {summary.totalPlanNonIsp?.toFixed(1) ?? 0} T</span></span>
                                 </div>
                             </div>
@@ -730,7 +730,7 @@ export default function DashboardPage() {
 <linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
 </defs>
 <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
                                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
                                     <Bar dataKey="Actual" name={t('legend.actual')} radius={[2, 2, 0, 0]}>
                                         {history.map((entry: any, index: number) => {
@@ -788,8 +788,8 @@ export default function DashboardPage() {
                         </div>
                     </CardHeader>
                     
-                    <CardContent className="flex-1 flex flex-col justify-start p-4 pt-5 md:p-6 md:pt-6 relative z-10">
-                        <div className="w-full bg-white/70 rounded-2xl h-[200px] md:h-[240px] p-4 border border-red-50 shadow-inner">
+                    <CardContent className="flex-1 flex flex-col justify-start p-2 pt-3 md:p-4 md:pt-4 relative z-10">
+                        <div className="w-full bg-white/70 rounded-2xl h-[260px] md:h-[300px] p-2 border border-red-50 shadow-inner">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <defs>
@@ -822,6 +822,7 @@ export default function DashboardPage() {
                                     <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} dx={-10} />
                                     
                                     <Tooltip 
+                                        trigger="hover"
                                         cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }}
                                         content={({ active, payload, label }: any) => {
                                             if (active && payload && payload.length) {
@@ -832,7 +833,7 @@ export default function DashboardPage() {
                                                             {payload.map((entry: any, i: number) => (
                                                                 <div key={i} className="flex justify-between items-center gap-6">
                                                                     <span className="text-slate-600 font-medium flex items-center gap-2">
-                                                                        <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.name === 'Thực tế (Cont)' ? '#e63121' : (entry.color || '#334155') }}></div>
+                                                                        <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: (entry.name === 'Thực tế (Cont)' || entry.name === 'Actual (Cont)') ? '#e63121' : (entry.color || '#334155') }}></div>
                                                                         {entry.name}
                                                                     </span>
                                                                     <span className="font-black text-slate-800">{Number(entry.value).toFixed(1)} Cont</span>
@@ -851,14 +852,14 @@ export default function DashboardPage() {
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="4 4" dot={false} strokeWidth={2.5} name="Target / Day" connectNulls={false} />
                                     )}
                                     
-                                    <Bar dataKey="Actual" name="Thực tế (Cont)" radius={[6, 6, 0, 0]} maxBarSize={45}>
+                                    <Bar dataKey="Actual" name={language === 'vi' ? "Thực tế (Cont)" : "Actual (Cont)"} radius={[6, 6, 0, 0]} maxBarSize={45}>
                                         {displayHistory.map((entry: any, index: number) => {
                                             const isMiss = entry.Plan > 0 && entry.Actual < entry.Plan;
                                             return <Cell key={`cell-${index}`} fill={isMiss ? "url(#contActualMissGradient)" : "url(#contActualGradient)"} />;
                                         })}
                                     </Bar>
                                     
-                                    <Line type="step" dataKey="Plan" stroke="#334155" strokeDasharray="3 3" dot={false} strokeWidth={2} name="Kế hoạch (Cont)" />
+                                    <Line type="step" dataKey="Plan" stroke="#334155" strokeDasharray="3 3" dot={false} strokeWidth={2} name={language === 'vi' ? "Kế hoạch (Cont)" : "Plan (Cont)"} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>
@@ -960,7 +961,7 @@ export default function DashboardPage() {
                             <span className="text-[10px] text-muted-foreground">Xem:</span>
                             <button onClick={() => setShowCo2Intensity(false)}
                                 className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${!showCo2Intensity ? 'bg-primary text-white border-primary font-semibold' : 'border-gray-300 text-muted-foreground hover:border-primary'}`}>
-                                Sản lượng
+                                {language === 'vi' ? 'Sản lượng' : 'Production'}
                             </button>
                             <button onClick={() => setShowCo2Intensity(true)}
                                 className={`text-[10px] px-2 py-0.5 rounded-full border transition-all flex items-center gap-1 ${showCo2Intensity ? 'bg-emerald-600 text-white border-emerald-600 font-semibold' : 'border-gray-300 text-muted-foreground hover:border-emerald-500'}`}>
@@ -974,25 +975,25 @@ export default function DashboardPage() {
                         <div className="flex-1 w-full mt-auto bg-slate-50/80 rounded-md border border-slate-100 p-2 grid grid-cols-2 gap-2 content-center items-center">
                             {["PEEL_MC", "SHELL"].includes(deptCode) && (
                                 <div>
-                                    <p className="text-[9px] text-muted-foreground mb-0.5">Tỷ lệ Bể (%)</p>
+                                    <p className="text-[9px] text-muted-foreground mb-0.5">{language === 'vi' ? 'Tỷ lệ Bể (%)' : 'Broken (%)'}</p>
                                     <div className="font-bold text-red-600 text-[11px]">{summary.brokenPct.toFixed(1)}%</div>
                                 </div>
                             )}
                             {deptCode === "SHELL" && (
                                 <>
                                     <div>
-                                        <p className="text-[9px] text-muted-foreground mb-0.5">Điện (kWh)</p>
+                                        <p className="text-[9px] text-muted-foreground mb-0.5">{language === 'vi' ? 'Điện (kWh)' : 'Elec (kWh)'}</p>
                                         <div className="font-bold text-amber-600 text-[11px]">{summary.totalElectricityConsumption?.toLocaleString()} / {summary.totalTargetElectricityKwh?.toLocaleString()}</div>
                                     </div>
                                     <div>
-                                        <p className="text-[9px] text-muted-foreground mb-0.5">kWh / Tấn</p>
+                                        <p className="text-[9px] text-muted-foreground mb-0.5">{language === 'vi' ? 'kWh / Tấn' : 'kWh / Ton'}</p>
                                         <div className="font-bold text-amber-700 text-[11px]">{summary.totalActual > 0 ? (summary.totalElectricityConsumption / summary.totalActual).toFixed(2) : "0.00"}</div>
                                     </div>
                                 </>
                             )}
                             {["PEEL_MC"].includes(deptCode) && (
                                 <div>
-                                    <p className="text-[9px] text-muted-foreground mb-0.5">Sót lụa (%)</p>
+                                    <p className="text-[9px] text-muted-foreground mb-0.5">{language === 'vi' ? 'Sót lụa (%)' : 'Unpeeled (%)'}</p>
                                     <div className="font-bold text-orange-600 text-[11px]">{summary.unpeelPct.toFixed(1)}%</div>
                                 </div>
                             )}
@@ -1020,11 +1021,11 @@ export default function DashboardPage() {
                             <div className="flex items-center gap-1 mb-1">
                                 <button onClick={() => setShellingSubView('production')}
                                     className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'production' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
-                                    📊 Sản lượng MTD
+                                    {language === 'vi' ? '📊 Sản lượng MTD' : '📊 Production MTD'}
                                 </button>
                                 <button onClick={() => setShellingSubView('capacity')}
                                     className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'capacity' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
-                                    ⚡ Công suất
+                                    {language === 'vi' ? '⚡ Công suất' : '⚡ Capacity'}
                                 </button>
                             </div>
 
@@ -1107,7 +1108,7 @@ export default function DashboardPage() {
                                         interval={0}
                                         tickMargin={4} 
                                     />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
                                     <Bar dataKey="IspActual" name="ISP Thực tế (Tấn)" radius={[2, 2, 0, 0]}>
                                         {displayHistory.map((entry: any, index: number) => {
                                             const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "url(#actualRedGrad)" : "url(#actualGreenGrad)";
@@ -1137,7 +1138,7 @@ export default function DashboardPage() {
 <linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
 </defs>
 <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={25} minTickGap={10} tickMargin={5} />
-                                                <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                                <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} trigger="hover"
                                                     formatter={(val: any, name?: string) => [
                                                         `${Number(val).toFixed(2)} kg CO₂e/T`,
                                                         name === 'CO2ePerTon' ? 'Thực tế' : 'Mục tiêu'
@@ -1179,7 +1180,7 @@ export default function DashboardPage() {
                                     interval={0}
                                     tickMargin={4} 
                                 />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name={t('legend.daily_needed')} connectNulls={false} />
                                     )}
@@ -1358,7 +1359,7 @@ export default function DashboardPage() {
                                         <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#eab308" />
                                         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" />
                                         <YAxis yAxisId="right2" orientation="right" tick={{ fontSize: 12 }} stroke="#f97316" width={80} />
-                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
                                         <Legend wrapperStyle={{ bottom: -5, fontSize: '11px' }} />
                                         <Bar yAxisId="left" dataKey="ElectricityActual" name="Điện (kWh)" fill="#eab308" radius={[4, 4, 0, 0]} barSize={20} />
                                         <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Target Điện" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
@@ -1384,7 +1385,7 @@ export default function DashboardPage() {
 </defs>
 <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#eab308" />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
                                             <Bar dataKey="ElectricityActual" name={t('legend.actual')} fill="#eab308" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="ElectricityTarget" name="Mục tiêu" stroke="#ca8a04" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>
@@ -1403,7 +1404,7 @@ export default function DashboardPage() {
 </defs>
 <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#3b82f6" />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
                                             <Bar dataKey="WaterActual" name={t('legend.actual')} fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="WaterTarget" name="Mục tiêu" stroke="#2563eb" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>
@@ -1422,7 +1423,7 @@ export default function DashboardPage() {
 </defs>
 <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                                             <YAxis tick={{ fontSize: 9 }} stroke="#f97316" />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
                                             <Bar dataKey="WoodActual" name={t('legend.actual')} fill="#f97316" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={2} />
                                         </ComposedChart>

@@ -579,8 +579,8 @@ export default function ReportPage() {
             <div className="flex items-center gap-3">
                 <FileText className="h-7 w-7 text-primary" />
                 <div>
-                    <h1 className="text-2xl font-black">Production Report</h1>
-                    <p className="text-sm text-muted-foreground">Select month and department to load production report</p>
+                    <h1 className="text-2xl font-black">{language === 'vi' ? 'Báo cáo Sản Xuất' : 'Production Report'}</h1>
+                    <p className="text-sm text-muted-foreground">{language === 'vi' ? 'Chọn tháng và bộ phận để xem báo cáo' : 'Select month and department to load production report'}</p>
                 </div>
             </div>
 
@@ -613,7 +613,7 @@ export default function ReportPage() {
                             <label className="text-xs font-semibold text-muted-foreground uppercase">Department</label>
                             <select value={selectedDept} onChange={e => setSelectedDept(e.target.value)}
                                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                                {departments.map(d => <option key={d.code} value={d.code}>{d.name_vi || d.name_en}</option>)}
+                                {departments.map(d => <option key={d.code} value={d.code}>{language === 'vi' ? (d.name_vi || d.name_en) : (d.name_en || d.name_vi)}</option>)}
                             </select>
                         </div>
                         <Button onClick={fetchReport} disabled={loading} className="gap-2">
@@ -676,7 +676,7 @@ export default function ReportPage() {
                     {selectedDept === "SHELL" && (
                         <Card>
                             <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-slate-50/50">
-                                <CardTitle className="text-sm font-bold text-slate-800">Shelling Lines — Tổng tháng</CardTitle>
+                                <CardTitle className="text-sm font-bold text-slate-800">Shelling Lines — {language === 'vi' ? 'Tổng tháng' : 'Monthly Total'}</CardTitle>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Shift Leader:</span>
                                     <select 
@@ -781,7 +781,7 @@ export default function ReportPage() {
                             
                             {/* SECTION 1: OVERALL FACTORY PERFORMANCE */}
                             <div>
-                                <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">1. Hiệu suất Tổng thể (Overall Performance)</h3>
+                                <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">1. {language === 'vi' ? 'Hiệu suất Tổng thể' : 'Overall Performance'}</h3>
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     {/* Cross-Line Performance */}
                                     <Card className="col-span-1 lg:col-span-3 shadow-sm border-emerald-100">
@@ -821,7 +821,7 @@ export default function ReportPage() {
                                     {/* Chart 4: Leader Comparison */}
                                     <Card className="col-span-1 lg:col-span-3 shadow-sm border-violet-100">
                                         <CardHeader className="pb-2 bg-violet-50/30 border-b border-violet-50">
-                                            <CardTitle className="text-sm font-bold text-violet-700">Overall Leader Comparison (Month)</CardTitle>
+                                            <CardTitle className="text-sm font-bold text-violet-700">{language === 'vi' ? 'So sánh Ca trưởng (Tháng)' : 'Overall Leader Comparison (Month)'}</CardTitle>
                                             <CardDescription className="text-xs text-violet-600 leading-relaxed">
                                                 {language === 'vi'
                                                     ? 'So sánh kết quả tổng hợp theo từng Trưởng ca trong tháng: cột Xanh là Sản lượng (T), cột Đỏ là tổng Downtime (Phút). Đường Xanh lá là Hiệu suất T/h, đường Tím là Năng suất T/Người. Dùng để đánh giá hiệu quả quản lý ca của từng Leader, đặc biệt thấy được ai có downtime cao hoặc năng suất thấp.'
@@ -851,7 +851,7 @@ export default function ReportPage() {
                                     {/* Chart 2: Downtime */}
                                     <Card className="col-span-1 lg:col-span-3">
                                         <CardHeader className="pb-2 border-b">
-                                            <CardTitle className="text-sm font-bold">Downtime Analysis (Mins)</CardTitle>
+                                            <CardTitle className="text-sm font-bold">{language === 'vi' ? 'Phân tích Giờ dừng máy (Phút)' : 'Downtime Analysis (Mins)'}</CardTitle>
                                             <CardDescription className="text-xs leading-relaxed text-slate-600">
                                                 {language === 'vi'
                                                     ? 'Biểu đồ cột tích lũy (stacked) tổng thời gian dừng máy (phút) mỗi ngày, chia theo từng máy. Ngày nào cột cao là ngày có tổng downtime lớn. Màu của mỗi lớp cột cho biết máy nào chịu trách nhiệm nhiều nhất cho sự cố hôm đó. Phối hợp với chart Hiệu suất để xác định nguyên nhân năng suất giảm.'
@@ -948,7 +948,7 @@ export default function ReportPage() {
                                     <Card className="col-span-1 shadow-sm">
                                         <CardHeader className="pb-0">
                                             <div className="flex flex-col gap-1">
-                                                <CardTitle className="text-sm font-bold text-teal-700">Performance & Broken Rate Analysis by Size</CardTitle>
+                                                <CardTitle className="text-sm font-bold text-teal-700">{language === 'vi' ? 'Phân tích Năng suất & tỉ lệ vỡ theo Kích cỡ' : 'Performance & Broken Rate Analysis by Size'}</CardTitle>
                                                 <p className="text-[11px] text-muted-foreground mt-0.5">
                                                     💡 <span className="font-semibold text-slate-700">Mẹo Xem:</span> Di chuột (hover) vào hình cột để xem danh sách các Máy (Line) đang chạy Size hạt đó. Hoặc cuộn xuống bảng <span className="font-semibold">Chi tiết từng ca Shelling</span> cuối trang để xem cụ thể.
                                                 </p>
@@ -995,7 +995,7 @@ export default function ReportPage() {
                                     {(lineSizePerfChartData.length > 0 || lineSizeBrokenChartData.length > 0) && (
                                     <Card className="col-span-1 shadow-sm">
                                         <CardHeader className="pb-0">
-                                            <CardTitle className="text-sm font-bold text-slate-700">By Line & Size Details</CardTitle>
+                                            <CardTitle className="text-sm font-bold text-slate-700">{language === 'vi' ? 'Chi tiết Theo Chuyền & Kích cỡ' : 'By Line & Size Details'}</CardTitle>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
@@ -1055,7 +1055,7 @@ export default function ReportPage() {
                                     {/* Chart 1: Performance */}
                                     <Card>
                                         <CardHeader className="pb-2 border-b">
-                                            <CardTitle className="text-xs font-bold">Efficiency T/h (Line {selectedShellLine})</CardTitle>
+                                            <CardTitle className="text-xs font-bold">{language === 'vi' ? 'Hiệu suất T/h' : 'Efficiency T/h'} (Line {selectedShellLine})</CardTitle>
                                             <CardDescription className="text-[11px] leading-relaxed text-slate-600">
                                                 {language === 'vi'
                                                     ? `Hiệu suất tốc độ chạy (T/h) của Line ${selectedShellLine} theo ngày, chia theo 3 ca. Ca nào cao đều và ổn định là ca làm việc tốt. Nếu một ca liên tục thấp hơn ca khác nhiều ngày liền → cần review lại người vận hành hoặc nguyên liệu ca đó.`
@@ -1083,7 +1083,7 @@ export default function ReportPage() {
                                     {/* Chart 3: Manpower */}
                                     <Card>
                                         <CardHeader className="pb-2 border-b">
-                                            <CardTitle className="text-xs font-bold text-amber-700">Manpower Productivity (Line {selectedShellLine})</CardTitle>
+                                            <CardTitle className="text-xs font-bold text-amber-700">{language === 'vi' ? 'Năng suất Lao động' : 'Manpower Productivity'} (Line {selectedShellLine})</CardTitle>
                                             <CardDescription className="text-[11px] leading-relaxed text-slate-600">
                                                 {language === 'vi'
                                                     ? `Năng suất lao động (Tấn/Người/Ca) của Line ${selectedShellLine}. Trục Y cao = ít người mà vẫn ra nhiều hàng. Nếu một ca có T/Ng thấp bất thường trong khi T/h bình thường → ca đó có thể bố trí nhân lực dư thừa hoặc ghi nhân công chưa chính xác.`
@@ -1111,7 +1111,7 @@ export default function ReportPage() {
                                     {/* Chart 5: % Broken per shift */}
                                     <Card>
                                         <CardHeader className="pb-2 border-b">
-                                            <CardTitle className="text-xs font-bold text-red-700">💔 % Broken per Shift (Line {selectedShellLine})</CardTitle>
+                                            <CardTitle className="text-xs font-bold text-red-700">💔 {language === 'vi' ? '% Vỡ Đặc trưng theo Ca' : '% Broken per Shift'} (Line {selectedShellLine})</CardTitle>
                                             <CardDescription className="text-[11px] leading-relaxed text-slate-600">
                                                 {language === 'vi'
                                                     ? `Tỷ lệ bể (%) từng ca của Line ${selectedShellLine}. Đường đứt gạch đỏ là ngưỡng cảnh báo 4.5% — nếu đường ca chạm hoặc vượt qua đó cần xem xét lại cài đặt dao và mức độ ẩm nguyên liệu. So sánh 3 ca: nếu Ca X luôn bể nhiều hơn Ca Y dù cùng máy → nguyên nhân có thể do người vận hành hoặc nguyên liệu đầu vào của ca đó.`
@@ -1158,7 +1158,7 @@ export default function ReportPage() {
                         return (
                             <Card>
                                 <CardHeader className="pb-0">
-                                    <CardTitle className="text-sm font-bold text-purple-700">🌬️ Compressor Energy vs Production</CardTitle>
+                                    <CardTitle className="text-sm font-bold text-purple-700">🌬️ {language === 'vi' ? 'Năng lượng MNK vs Sản lượng' : 'Compressor Energy vs Production'}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-72 w-full mt-4">
