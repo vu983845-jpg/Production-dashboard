@@ -2,6 +2,7 @@ import { google } from '@ai-sdk/google';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { ddsClient } from '@/lib/supabase/dds-client';
 import { format } from 'date-fns';
 
 export const maxDuration = 30;
@@ -20,6 +21,7 @@ IMPORTANT INSTRUCTIONS:
 - If the user doesn't specify a date, assume they want data for "today" or the latest available data.
 - If the user asks for a whole month (e.g. "tháng 3"), use the first day (e.g. 2026-03-01) and last day (2026-03-31) of that month as the date range.
 - The factory departments include STEAM (Steaming), SHELL (Shelling), BORMA, PEEL_MC (Peeling Machine), CS (Color Sorter), HAND (Hand Peeling), and PACK (Packing).
+- When asked "why" a machine stopped or details about downtime incidents, use the get_downtime_issues tool to list the specific reasons.
 - When you receive data from the tools, analyze it briefly (e.g. sum up the 'actual_ton', compare to 'plan_ton') and give a helpful and natural response in the same language the user asked in (usually Vietnamese or English).
 - Do not make up any data. If the tool returns empty or null, inform the user that data is not yet inputted for that period.
 - Today's date is: ${format(new Date(), 'yyyy-MM-dd')}`;
@@ -31,7 +33,7 @@ IMPORTANT INSTRUCTIONS:
       maxToolRoundtrips: 5, // Allows the model to call multiple tools automatically
       tools: {
         get_daily_factory_kpi: tool({
-          description: 'Get the total overall factory key performance indicators (KPIs) like total actual production (tons), total plan, total ISP (Finished Goods), and total downtime. Provide a date range. For a single day, use the same date for start and end.',
+          description: 'Get the total overall factory key performance indicators (KPIs) like total actual production (tons), total plan, total ISP (Finished Goods), and total downtime. Provide a date range.',
           parameters: z.object({
             start_date: z.string().describe('The start date to query in YYYY-MM-DD format.'),
             end_date: z.string().describe('The end date to query in YYYY-MM-DD format.'),
@@ -48,7 +50,7 @@ IMPORTANT INSTRUCTIONS:
           },
         }),
         get_department_kpi: tool({
-          description: 'Get the KPI metrics for a specific department (like STEAM, SHELL, PACK). Provide a date range. For a single day, use the same date for start and end.',
+          description: 'Get the KPI metrics for a specific department (like STEAM, SHELL, PACK). Provide a date range.',
           parameters: z.object({
             dept_code: z.string().describe('The department code, must be one of: STEAM, SHELL, BORMA, PEEL_MC, CS, HAND, PACK.'),
             start_date: z.string().describe('The start date to query in YYYY-MM-DD format.'),
@@ -82,7 +84,48 @@ IMPORTANT INSTRUCTIONS:
             if (error || !data || data.length === 0) return { status: 'no_data', message: `No energy history found between ${start_date} and ${end_date}` };
             return data;
           },
-        })
+        }),
+        get_shelling_lines_detail: tool({
+          description: 'Get detailed machine-level performance for the Shelling department (Lines A, B, C, D1, D2) over a given date range. This includes run hours, manpower, broken percentage, and actual production.',
+          parameters: z.object({
+            start_date: z.string().describe('The start date to query in YYYY-MM-DD format.'),
+            end_date: z.string().describe('The end date to query in YYYY-MM-DD format.'),
+          }),
+          execute: async ({ start_date, end_date }) => {
+            const { data, error } = await supabase
+              .from('shelling_line_daily')
+              .select('work_date, line_code, shift_name, actual_ton, run_hours, downtime_min, manpower, broken_pct, size')
+              .gte('work_date', start_date)
+              .lte('work_date', end_date)
+              .order('work_date').order('line_code');
+            if (error || !data || data.length === 0) return { status: 'no_data', message: `No shelling line data found between ${start_date} and ${end_date}` };
+            return data;
+          },
+        }),
+        get_downtime_issues: tool({
+          description: 'Get explicit reasons and detailed incident descriptions for factory stops/downtime from the DDS tracker over a date range. Explains WHY a machine stopped.',
+          parameters: z.object({
+            start_date: z.string().describe('The start date to query in YYYY-MM-DD format.'),
+            end_date: z.string().describe('The end date to query in YYYY-MM-DD format.'),
+          }),
+          execute: async ({ start_date, end_date }) => {
+            const { data, error } = await ddsClient
+              .from('issues')
+              .select('*')
+              .eq('is_downtime', true)
+              .gte('start_time', `${start_date}T00:00:00Z`)
+              .lte('start_time', `${end_date}T23:59:59Z`);
+            if (error || !data || data.length === 0) return { status: 'no_data', message: `No downtime issues recorded between ${start_date} and ${end_date}` };
+            // Return only a subset of crucial columns to avoid token bloat
+            return data.map((issue: any) => ({
+              department: issue.department,
+              start_time: issue.start_time,
+              duration_mins: issue.duration_mins,
+              title: issue.title || issue.issue_description || issue.name || 'No description provided',
+              status: issue.status
+            }));
+          },
+        }),
       }
     });
 
