@@ -852,14 +852,14 @@ export default function DashboardPage() {
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="4 4" dot={false} strokeWidth={2.5} name="Target / Day" connectNulls={false} />
                                     )}
                                     
-                                    <Bar dataKey="Actual" name={language === 'vi' ? "Thực tế (Cont)" : "Actual (Cont)"} radius={[6, 6, 0, 0]} maxBarSize={45}>
+                                    <Bar dataKey="Actual" name={language === 'vi' ? "Thực tế (Cont)" : "Actual (Cont)"} radius={[6, 6, 0, 0]} maxBarSize={45} fill="#10b981" legendType="circle">
                                         {displayHistory.map((entry: any, index: number) => {
                                             const isMiss = entry.Plan > 0 && entry.Actual < entry.Plan;
                                             return <Cell key={`cell-${index}`} fill={isMiss ? "url(#contActualMissGradient)" : "url(#contActualGradient)"} />;
                                         })}
                                     </Bar>
                                     
-                                    <Line type="step" dataKey="Plan" stroke="#334155" strokeDasharray="3 3" dot={false} strokeWidth={2} name={language === 'vi' ? "Kế hoạch (Cont)" : "Plan (Cont)"} />
+                                    <Line type="step" dataKey="Plan" stroke="#6366f1" strokeDasharray="3 3" dot={false} strokeWidth={2} name={language === 'vi' ? "Kế hoạch (Cont)" : "Plan (Cont)"} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>

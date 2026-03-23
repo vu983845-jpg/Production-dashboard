@@ -16,7 +16,7 @@ interface Props {
     onSaved: () => void
 }
 
-const EMPTY_ROW = { entry_date: '', actual_energy: '', rcn_hap_duoc_kg: '', notes: '' }
+const EMPTY_ROW = { entry_date: '', actual_energy: {} as Record<number, string>, rcn_hap_duoc_kg: {} as Record<number, string>, notes: '' }
 
 export function TabInput({ seus, currentMonth, onSaved }: Props) {
     const [form, setForm] = useState({ ...EMPTY_ROW })
@@ -45,8 +45,10 @@ export function TabInput({ seus, currentMonth, onSaved }: Props) {
     useState(() => { fetchRecent() })
 
     const handleSave = async (seuId: number) => {
-        if (!form.entry_date || !form.actual_energy || !form.rcn_hap_duoc_kg) {
-            setError('Vui lòng điền đầy đủ ngày, năng lượng và RCN hấp được.')
+        const targetEnergy = form.actual_energy[seuId]
+        const targetRcn = form.rcn_hap_duoc_kg[seuId]
+        if (!form.entry_date || !targetEnergy || !targetRcn) {
+            setError('Vui lòng điền đầy đủ ngày, năng lượng và Sản lượng cho trạm này.')
             return
         }
         setSaving(true)
@@ -59,15 +61,19 @@ export function TabInput({ seus, currentMonth, onSaved }: Props) {
                 body: JSON.stringify({
                     entry_date: form.entry_date,
                     seu_id: seuId,
-                    actual_energy: Number(form.actual_energy),
-                    rcn_hap_duoc_kg: Number(form.rcn_hap_duoc_kg),
+                    actual_energy: Number(targetEnergy),
+                    rcn_hap_duoc_kg: Number(targetRcn),
                     notes: form.notes,
                 }),
             })
             const json = await res.json()
             if (!res.ok) throw new Error(json.error)
             setSuccess(true)
-            setForm({ ...EMPTY_ROW })
+            setForm(prev => ({ 
+                ...prev, 
+                actual_energy: { ...prev.actual_energy, [seuId]: '' },
+                rcn_hap_duoc_kg: { ...prev.rcn_hap_duoc_kg, [seuId]: '' }
+            }))
             fetchRecent()
             onSaved()
             setTimeout(() => setSuccess(false), 3000)
@@ -98,7 +104,7 @@ export function TabInput({ seus, currentMonth, onSaved }: Props) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Common Fields */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <Label className="text-xs">Ngày *</Label>
                             <Input
@@ -111,26 +117,14 @@ export function TabInput({ seus, currentMonth, onSaved }: Props) {
                             />
                         </div>
                         <div>
-                            <Label className="text-xs">Sản lượng Đầu vào/Đầu ra (kg) *</Label>
+                            <Label className="text-xs">Ghi chú (áp dụng chung)</Label>
                             <Input
-                                type="number"
-                                placeholder="e.g. 25000"
-                                value={form.rcn_hap_duoc_kg}
-                                onChange={e => setForm(f => ({ ...f, rcn_hap_duoc_kg: e.target.value }))}
+                                placeholder="Ghi chú..."
+                                value={form.notes}
+                                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                                 className="h-9 text-sm"
                             />
                         </div>
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                        <Label className="text-xs">Ghi chú (tuỳ chọn)</Label>
-                        <Input
-                            placeholder="Ghi chú..."
-                            value={form.notes}
-                            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                            className="h-9 text-sm"
-                        />
                     </div>
 
                     {/* Error / Success */}
@@ -155,8 +149,23 @@ export function TabInput({ seus, currentMonth, onSaved }: Props) {
                                         <Label className="text-xs">Tiêu thụ ({s.unit}) *</Label>
                                         <Input
                                             type="number" placeholder={`e.g. ${isElec ? '12500' : '8000'}`}
-                                            value={form.actual_energy}
-                                            onChange={e => setForm(f => ({ ...f, actual_energy: e.target.value }))}
+                                            value={form.actual_energy[s.seu_id] || ''}
+                                            onChange={e => setForm(f => ({ 
+                                                ...f, 
+                                                actual_energy: { ...f.actual_energy, [s.seu_id]: e.target.value }
+                                            }))}
+                                            className="h-9 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs">Sản lượng (kg) *</Label>
+                                        <Input
+                                            type="number" placeholder="e.g. 25000"
+                                            value={form.rcn_hap_duoc_kg[s.seu_id] || ''}
+                                            onChange={e => setForm(f => ({ 
+                                                ...f, 
+                                                rcn_hap_duoc_kg: { ...f.rcn_hap_duoc_kg, [s.seu_id]: e.target.value }
+                                            }))}
                                             className="h-9 text-sm"
                                         />
                                     </div>

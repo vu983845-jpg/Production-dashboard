@@ -407,6 +407,40 @@ export default function InputPage() {
     }, [selectedDept, date, formActual, formKpi, departments])
 
     // Fetch History
+    // Auto-save energy data when it changes (debounced)
+    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const isFirstEnergyLoad = useRef(true)
+
+    useEffect(() => {
+        // Skip on initial load (data just fetched from DB)
+        if (isFirstEnergyLoad.current) {
+            isFirstEnergyLoad.current = false
+            return
+        }
+        if (monthlyEnergyData.length === 0) return
+        if (role !== 'admin' && role !== 'HSE') return
+
+        // Debounce: wait 1.5s after last change before saving
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+        autoSaveTimerRef.current = setTimeout(async () => {
+            const payloadToSave = monthlyEnergyData.map(record => ({
+                ...record,
+                electricity_peak_kwh: record.electricity_peak_kwh ?? null,
+                electricity_normal_kwh: record.electricity_normal_kwh ?? null,
+                electricity_offpeak_kwh: record.electricity_offpeak_kwh ?? null,
+                meter_peak: record.meter_peak ?? null,
+                meter_normal: record.meter_normal ?? null,
+                meter_offpeak: record.meter_offpeak ?? null,
+                updated_at: new Date().toISOString()
+            }))
+            await supabase.from('daily_energy').upsert(payloadToSave, { onConflict: 'work_date' })
+        }, 1500)
+
+        return () => {
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+        }
+    }, [monthlyEnergyData])
+
     async function fetchHistory(deptId: string) {
         if (!deptId) return
 
@@ -442,6 +476,7 @@ export default function InputPage() {
     useEffect(() => {
         async function fetchEnergy() {
             if (!date || (role !== 'admin' && role !== 'HSE' && role !== 'maint')) return;
+            isFirstEnergyLoad.current = true // Mark next state update as a DB load (prevent auto-save)
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
             const prevDateObj = subDays(startOfMonth(date), 1);
