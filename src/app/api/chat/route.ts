@@ -27,7 +27,7 @@ IMPORTANT INSTRUCTIONS:
 - Today's date is: ${format(new Date(), 'yyyy-MM-dd')}`;
 
     const result = await streamText({
-      model: google('gemini-2.5-flash'),
+      model: google('gemini-1.5-flash'),
       system: systemPrompt,
       messages,
       maxToolRoundtrips: 5, // Allows the model to call multiple tools automatically
@@ -46,7 +46,7 @@ IMPORTANT INSTRUCTIONS:
               .lte('work_date', end_date)
               .order('work_date');
             if (error || !data || data.length === 0) return { status: 'no_data', message: `No total factory KPI found between ${start_date} and ${end_date}` };
-            return data;
+            return { results: data };
           },
         }),
         get_department_kpi: tool({
@@ -65,7 +65,7 @@ IMPORTANT INSTRUCTIONS:
               .lte('work_date', end_date)
               .order('work_date');
             if (error || !data || data.length === 0) return { status: 'no_data', message: `No KPI found for department ${dept_code} between ${start_date} and ${end_date}` };
-            return data;
+            return { results: data };
           },
         }),
         get_energy_consumption: tool({
@@ -82,7 +82,7 @@ IMPORTANT INSTRUCTIONS:
               .lte('work_date', end_date)
               .order('work_date');
             if (error || !data || data.length === 0) return { status: 'no_data', message: `No energy history found between ${start_date} and ${end_date}` };
-            return data;
+            return { results: data };
           },
         }),
         get_shelling_lines_detail: tool({
@@ -99,7 +99,7 @@ IMPORTANT INSTRUCTIONS:
               .lte('work_date', end_date)
               .order('work_date').order('line_code');
             if (error || !data || data.length === 0) return { status: 'no_data', message: `No shelling line data found between ${start_date} and ${end_date}` };
-            return data;
+            return { results: data };
           },
         }),
         get_downtime_issues: tool({
@@ -117,13 +117,15 @@ IMPORTANT INSTRUCTIONS:
               .lte('start_time', `${end_date}T23:59:59Z`);
             if (error || !data || data.length === 0) return { status: 'no_data', message: `No downtime issues recorded between ${start_date} and ${end_date}` };
             // Return only a subset of crucial columns to avoid token bloat
-            return data.map((issue: any) => ({
-              department: issue.department,
-              start_time: issue.start_time,
-              duration_mins: issue.duration_mins,
-              title: issue.title || issue.issue_description || issue.name || 'No description provided',
-              status: issue.status
-            }));
+            return {
+              results: data.map((issue: any) => ({
+                department: issue.department,
+                start_time: issue.start_time,
+                duration_mins: issue.duration_mins,
+                title: issue.title || issue.issue_description || issue.name || 'No description provided',
+                status: issue.status
+              }))
+            };
           },
         }),
       }
