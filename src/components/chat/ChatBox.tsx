@@ -1,20 +1,20 @@
 "use client";
 
-import { useChat } from 'ai/react';
 import { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Minimize2, Maximize2, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
+type Message = { id: string; role: 'user' | 'assistant'; content: string };
+
 export function ChatBox() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/chat',
-  });
 
   useEffect(() => {
     if (messagesEndRef.current && !isMinimized && isOpen) {
@@ -34,6 +34,29 @@ export function ChatBox() {
   const handleToggleMinimize = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsMinimized(!isMinimized);
+  };
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input.trim() };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput('');
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: data.content }]);
+    } catch {
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Lỗi kết nối, vui lòng thử lại.' }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -166,24 +189,19 @@ export function ChatBox() {
                 {/* Input Area */}
                 <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.2)]">
                   <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (input.trim() && !isLoading) handleSubmit(e);
-                    }} 
+                    onSubmit={sendMessage}
                     className="flex flex-col gap-2 relative"
                   >
                     <textarea
                       value={input}
-                      onChange={handleInputChange}
+                      onChange={(e) => setInput(e.target.value)}
                       placeholder="Ask Gemini..."
                       className="w-full max-h-32 min-h-[44px] pl-3 pr-12 py-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-zinc-800 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none overflow-y-auto text-[13px] scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700"
                       rows={1}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
-                          if (input.trim() && !isLoading) {
-                            handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
-                          }
+                          sendMessage(e as unknown as React.FormEvent<HTMLFormElement>);
                         }
                       }}
                     />
