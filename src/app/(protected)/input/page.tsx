@@ -118,6 +118,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -1851,6 +1852,46 @@ export default function InputPage() {
                                         <Save className="mr-2 h-4 w-4" />
                                         {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Tháng'}
                                     </Button>
+                                </div>
+
+                                {/* Quick Wood Distribution */}
+                                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                    <div className="flex flex-wrap items-end gap-3">
+                                        <div className="flex-1 min-w-[180px]">
+                                            <Label className="text-sm font-bold text-orange-700 mb-1 block">🔥 Tổng Củi Tháng (kg)</Label>
+                                            <p className="text-[11px] text-orange-500 mb-1">Nhập tổng kg → hệ thống chia đều cho các ngày đến hôm nay</p>
+                                            <Input
+                                                type="number"
+                                                step="1"
+                                                placeholder="VD: 50000"
+                                                className="border-orange-300 focus-visible:ring-orange-400"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        const total = Number((e.target as HTMLInputElement).value);
+                                                        if (!total || total <= 0) return;
+                                                        const today = new Date();
+                                                        const todayStr = format(today, "yyyy-MM-dd");
+                                                        const newData = [...monthlyEnergyData];
+                                                        const daysUpToToday = newData.filter(d => d.work_date <= todayStr);
+                                                        const count = daysUpToToday.length;
+                                                        if (count === 0) return;
+                                                        const perDay = Math.floor(total / count);
+                                                        const remainder = total - perDay * count;
+                                                        newData.forEach((d) => {
+                                                            if (d.work_date <= todayStr) {
+                                                                const idx = daysUpToToday.indexOf(d);
+                                                                d.wood_kg = perDay + (idx < remainder ? 1 : 0);
+                                                            }
+                                                        });
+                                                        setMonthlyEnergyData(newData);
+                                                        toast.success(`Đã chia ${total.toLocaleString()} kg cho ${count} ngày (≈ ${perDay.toLocaleString()} kg/ngày)`);
+                                                    }
+                                                }}
+                                            />
+                                            <p className="text-[10px] text-orange-400 mt-1">Nhập số rồi nhấn Enter ↵</p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="overflow-x-auto">
