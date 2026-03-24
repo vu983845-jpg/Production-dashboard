@@ -1,72 +1,87 @@
-import { GoogleGenerativeAI, type FunctionDeclaration, SchemaType } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { createClient } from '@/lib/supabase/server';
 import { ddsClient } from '@/lib/supabase/dds-client';
 import { format } from 'date-fns';
 
 export const maxDuration = 30;
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const tools: FunctionDeclaration[] = [
+const tools: Groq.Chat.ChatCompletionTool[] = [
   {
-    name: 'get_daily_factory_kpi',
-    description: 'Get total factory KPIs (tons actual/plan, ISP, downtime) for a date range.',
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        start_date: { type: SchemaType.STRING, description: 'Start date YYYY-MM-DD' },
-        end_date: { type: SchemaType.STRING, description: 'End date YYYY-MM-DD' },
+    type: 'function',
+    function: {
+      name: 'get_daily_factory_kpi',
+      description: 'Get total factory KPIs (tons actual/plan, ISP, downtime) for a date range.',
+      parameters: {
+        type: 'object',
+        properties: {
+          start_date: { type: 'string', description: 'Start date YYYY-MM-DD' },
+          end_date: { type: 'string', description: 'End date YYYY-MM-DD' },
+        },
+        required: ['start_date', 'end_date'],
       },
-      required: ['start_date', 'end_date'],
     },
   },
   {
-    name: 'get_department_kpi',
-    description: 'Get KPI for a specific department (STEAM, SHELL, BORMA, PEEL_MC, CS, HAND, PACK) for a date range.',
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        dept_code: { type: SchemaType.STRING, description: 'One of: STEAM, SHELL, BORMA, PEEL_MC, CS, HAND, PACK.' },
-        start_date: { type: SchemaType.STRING, description: 'Start date YYYY-MM-DD' },
-        end_date: { type: SchemaType.STRING, description: 'End date YYYY-MM-DD' },
+    type: 'function',
+    function: {
+      name: 'get_department_kpi',
+      description: 'Get KPI for a specific department (STEAM, SHELL, BORMA, PEEL_MC, CS, HAND, PACK) for a date range.',
+      parameters: {
+        type: 'object',
+        properties: {
+          dept_code: { type: 'string', description: 'One of: STEAM, SHELL, BORMA, PEEL_MC, CS, HAND, PACK.' },
+          start_date: { type: 'string', description: 'Start date YYYY-MM-DD' },
+          end_date: { type: 'string', description: 'End date YYYY-MM-DD' },
+        },
+        required: ['dept_code', 'start_date', 'end_date'],
       },
-      required: ['dept_code', 'start_date', 'end_date'],
     },
   },
   {
-    name: 'get_energy_consumption',
-    description: 'Get factory energy (electricity kWh, water m3, wood kg) and targets for a date range.',
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        start_date: { type: SchemaType.STRING, description: 'Start date YYYY-MM-DD' },
-        end_date: { type: SchemaType.STRING, description: 'End date YYYY-MM-DD' },
+    type: 'function',
+    function: {
+      name: 'get_energy_consumption',
+      description: 'Get factory energy (electricity kWh, water m3, wood kg) and targets for a date range.',
+      parameters: {
+        type: 'object',
+        properties: {
+          start_date: { type: 'string', description: 'Start date YYYY-MM-DD' },
+          end_date: { type: 'string', description: 'End date YYYY-MM-DD' },
+        },
+        required: ['start_date', 'end_date'],
       },
-      required: ['start_date', 'end_date'],
     },
   },
   {
-    name: 'get_shelling_lines_detail',
-    description: 'Get per-machine shelling data (Lines A,B,C,D1,D2): tons, run hours, manpower, broken% for a date range.',
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        start_date: { type: SchemaType.STRING, description: 'Start date YYYY-MM-DD' },
-        end_date: { type: SchemaType.STRING, description: 'End date YYYY-MM-DD' },
+    type: 'function',
+    function: {
+      name: 'get_shelling_lines_detail',
+      description: 'Get per-machine shelling data (Lines A,B,C,D1,D2): tons, run hours, manpower, broken% for a date range.',
+      parameters: {
+        type: 'object',
+        properties: {
+          start_date: { type: 'string', description: 'Start date YYYY-MM-DD' },
+          end_date: { type: 'string', description: 'End date YYYY-MM-DD' },
+        },
+        required: ['start_date', 'end_date'],
       },
-      required: ['start_date', 'end_date'],
     },
   },
   {
-    name: 'get_downtime_issues',
-    description: 'Get downtime incident descriptions/reasons from the DDS tracker. Use to explain WHY machines stopped.',
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        start_date: { type: SchemaType.STRING, description: 'Start date YYYY-MM-DD' },
-        end_date: { type: SchemaType.STRING, description: 'End date YYYY-MM-DD' },
+    type: 'function',
+    function: {
+      name: 'get_downtime_issues',
+      description: 'Get downtime incident descriptions/reasons from the DDS tracker. Use to explain WHY machines stopped.',
+      parameters: {
+        type: 'object',
+        properties: {
+          start_date: { type: 'string', description: 'Start date YYYY-MM-DD' },
+          end_date: { type: 'string', description: 'End date YYYY-MM-DD' },
+        },
+        required: ['start_date', 'end_date'],
       },
-      required: ['start_date', 'end_date'],
     },
   },
 ];
@@ -78,7 +93,7 @@ async function executeTool(name: string, args: Record<string, string>, supabase:
     const { data } = await supabase.from('v_dashboard_total_daily')
       .select('work_date, total_plan_ton, total_actual_ton, total_plan_isp_ton, total_actual_isp_ton, total_downtime_min')
       .gte('work_date', start_date).lte('work_date', end_date).order('work_date');
-    return data?.length ? { results: data } : { status: 'no_data', message: 'No factory KPI found for this period.' };
+    return data?.length ? { results: data } : { status: 'no_data', message: 'No factory KPI found.' };
   }
 
   if (name === 'get_department_kpi') {
@@ -99,7 +114,7 @@ async function executeTool(name: string, args: Record<string, string>, supabase:
     const { data } = await supabase.from('shelling_line_daily')
       .select('work_date, line_code, shift_name, actual_ton, run_hours, downtime_min, manpower, broken_pct')
       .gte('work_date', start_date).lte('work_date', end_date).order('work_date').order('line_code');
-    return data?.length ? { results: data } : { status: 'no_data', message: 'No shelling line data found.' };
+    return data?.length ? { results: data } : { status: 'no_data', message: 'No shelling line data.' };
   }
 
   if (name === 'get_downtime_issues') {
@@ -125,73 +140,81 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const supabase = await createClient();
 
-    const systemInstruction = `You are a helpful AI assistant for a Cashew factory dashboard.
+    const systemPrompt = `You are a helpful AI assistant for a Cashew factory production dashboard.
 You have tools to fetch real data from the factory database.
 RULES:
-- Always use tools when users ask about production (tons), KPIs, electricity, water, downtime, or shelling line performance.
+- Always call a tool when the user asks about production (tons), KPIs, electricity, water, downtime, or shelling line performance.
 - If no date is given, use today: ${format(new Date(), 'yyyy-MM-dd')}.
-- For a whole month (e.g. "tháng 3"), use first day (e.g. 2026-03-01) to last day (2026-03-31).
+- For a whole month (e.g. "tháng 3 2026"), use first day (2026-03-01) to last day (2026-03-31).
 - Departments: STEAM, SHELL, BORMA, PEEL_MC, CS, HAND, PACK.
-- Analyze data and reply in the same language as the user (Vietnamese or English).
-- If no data found, say so clearly. Never invent data.`;
+- Analyze data you receive from tools and summarize key insights.
+- Reply in the SAME language as the user (Vietnamese or English).
+- Never invent data. If the tool returns no_data, tell the user clearly.`;
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction,
-      tools: [{ functionDeclarations: tools }],
-    });
+    const groqMessages: Groq.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map((m: { role: string; content: string }) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
+    ];
 
-    // Convert messages to Gemini format
-    const history = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
-      role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.content }],
-    }));
-
-    const lastMessage = messages[messages.length - 1];
-    const chat = model.startChat({ history });
-
-    let result = await chat.sendMessage(lastMessage.content);
-    let response = result.response;
-
-    // Handle tool calls (up to 5 rounds)
+    // Agentic loop — call tools up to 5 rounds
     for (let round = 0; round < 5; round++) {
-      const functionCalls = response.functionCalls();
-      if (!functionCalls || functionCalls.length === 0) break;
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: groqMessages,
+        tools,
+        tool_choice: 'auto',
+        temperature: 0.3,
+        max_tokens: 2048,
+      });
 
-      const functionResults = await Promise.all(
-        functionCalls.map(async (call) => {
-          const toolResult = await executeTool(call.name, call.args as Record<string, string>, supabase);
-          return {
-            functionResponse: {
-              name: call.name,
-              response: toolResult,
-            }
-          };
-        })
-      );
+      const choice = completion.choices[0];
+      const message = choice.message;
 
-      result = await chat.sendMessage(functionResults);
-      response = result.response;
+      // No more tool calls → done
+      if (!message.tool_calls || message.tool_calls.length === 0) {
+        return new Response(
+          JSON.stringify({ role: 'assistant', content: message.content || '' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Push assistant message with tool calls
+      groqMessages.push(message);
+
+      // Execute each tool call and push results
+      for (const call of message.tool_calls) {
+        const args = JSON.parse(call.function.arguments);
+        const result = await executeTool(call.function.name, args, supabase);
+        groqMessages.push({
+          role: 'tool',
+          tool_call_id: call.id,
+          content: JSON.stringify(result),
+        });
+      }
     }
 
-    const text = response.text();
+    // Fallback if somehow we didn't get a response 
+    return new Response(
+      JSON.stringify({ role: 'assistant', content: 'Xin lỗi, tôi không thể xử lý yêu cầu này. Vui lòng thử lại.' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
 
-    return new Response(JSON.stringify({ role: 'assistant', content: text }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
   } catch (error: unknown) {
     const e = error as Error;
-    if (e?.message?.includes('429') || e?.message?.includes('quota')) {
-      return new Response(JSON.stringify({ role: 'assistant', content: 'Cập nhật quá nhanh, vui lòng chờ 1 phút rồi thử lại.' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const msg = e?.message ?? '';
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('rate_limit')) {
+      return new Response(
+        JSON.stringify({ role: 'assistant', content: 'Đang bận, vui lòng chờ 1 phút rồi thử lại.' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-    console.error('Chat API Error:', e.message);
-    return new Response(JSON.stringify({ role: 'assistant', content: `Lỗi hệ thống: ${e.message}` }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Chat API Error:', msg);
+    return new Response(
+      JSON.stringify({ role: 'assistant', content: `Lỗi hệ thống: ${msg.slice(0, 100)}` }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
