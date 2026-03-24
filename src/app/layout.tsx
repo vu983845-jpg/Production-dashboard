@@ -26,7 +26,6 @@ export default function RootLayout({
           <NuqsAdapter>
             <LanguageProvider>
               {children}
-              <ChatBox />
               <Toaster position="top-right" richColors />
             </LanguageProvider>
           </NuqsAdapter>
