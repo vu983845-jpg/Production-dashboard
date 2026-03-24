@@ -144,7 +144,7 @@ export async function POST(req: Request) {
 You have tools to fetch real data from the factory database.
 RULES:
 - Always call a tool when the user asks about production (tons), KPIs, electricity, water, downtime, or shelling line performance.
-- If no date is given, use today: ${format(new Date(), 'yyyy-MM-dd')}.
+- If no date is given, default to the current month: from ${format(new Date(), 'yyyy-MM-01')} to ${format(new Date(), 'yyyy-MM-dd')}.
 - For a whole month (e.g. "tháng 3 2026"), use first day (2026-03-01) to last day (2026-03-31).
 - Departments: STEAM, SHELL, BORMA, PEEL_MC, CS, HAND, PACK.
 - Analyze data you receive from tools and summarize key insights.
