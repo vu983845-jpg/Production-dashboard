@@ -10,27 +10,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { IntersnackLogo } from "@/components/intersnack-logo";
 import { ArrowLeft } from "lucide-react";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
-const TURNSTILE_SITE_KEY = "0x4AAAAAACvSpDkYeXwvJCrC2Mi4rLw6Kws";
-
-declare global {
-    interface Window {
-        turnstile: {
-            render: (container: string | HTMLElement, options: object) => string;
-            reset: (widgetId: string) => void;
-            remove: (widgetId: string) => void;
-        };
-        onTurnstileLoad: () => void;
-    }
-}
+const HCAPTCHA_SITE_KEY = "9830204c-9c10-41fc-98fc-ba4a9aa2e2c8";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [captchaToken, setCaptchaToken] = useState("");
-    const widgetRef = useRef<string | null>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const captchaRef = useRef<HCaptcha>(null);
 
     const router = useRouter();
     const supabase = createClient();
@@ -45,41 +34,6 @@ export default function LoginPage() {
         return () => subscription.unsubscribe();
     }, [router, supabase]);
 
-    function renderWidget() {
-        if (!containerRef.current || !window.turnstile || widgetRef.current) return;
-        widgetRef.current = window.turnstile.render(containerRef.current, {
-            sitekey: TURNSTILE_SITE_KEY,
-            callback: (token: string) => setCaptchaToken(token),
-            "expired-callback": () => setCaptchaToken(""),
-            "error-callback": () => setCaptchaToken(""),
-            theme: "light",
-        });
-    }
-
-    // Load Cloudflare Turnstile script manually
-    useEffect(() => {
-        const scriptId = "cf-turnstile-script";
-        if (document.getElementById(scriptId)) {
-            // Script already loaded
-            setTimeout(renderWidget, 300);
-            return;
-        }
-        window.onTurnstileLoad = renderWidget;
-        const script = document.createElement("script");
-        script.id = scriptId;
-        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit";
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-
-        return () => {
-            if (widgetRef.current && window.turnstile) {
-                try { window.turnstile.remove(widgetRef.current); } catch {}
-                widgetRef.current = null;
-            }
-        };
-    }, []);
-
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -93,10 +47,8 @@ export default function LoginPage() {
         if (error) {
             toast.error(error.message);
             setLoading(false);
-            if (widgetRef.current && window.turnstile) {
-                window.turnstile.reset(widgetRef.current);
-                setCaptchaToken("");
-            }
+            captchaRef.current?.resetCaptcha();
+            setCaptchaToken("");
             return;
         }
 
@@ -147,9 +99,18 @@ export default function LoginPage() {
                                 required
                             />
                         </div>
-                        <div ref={containerRef} className="flex justify-center my-2" />
+
+                        <div className="flex justify-center">
+                            <HCaptcha
+                                ref={captchaRef}
+                                sitekey={HCAPTCHA_SITE_KEY}
+                                onVerify={(token) => setCaptchaToken(token)}
+                                onExpire={() => setCaptchaToken("")}
+                            />
+                        </div>
+
                         <Button type="submit" className="w-full" disabled={loading || !captchaToken}>
-                            {loading ? "Đang đăng nhập..." : !captchaToken ? "Đang tải xác thực..." : "Đăng nhập"}
+                            {loading ? "Đang đăng nhập..." : !captchaToken ? "Vui lòng xác thực bên trên" : "Đăng nhập"}
                         </Button>
                         <div className="text-center mt-4 text-sm text-muted-foreground w-full">
                             Bạn chưa có tài khoản?{" "}
