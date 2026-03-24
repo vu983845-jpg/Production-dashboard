@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,35 +10,75 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { IntersnackLogo } from "@/components/intersnack-logo";
 import { ArrowLeft } from "lucide-react";
-import { Turnstile } from '@marsidev/react-turnstile';
 
+const TURNSTILE_SITE_KEY = "0x4AAAAAACvSpDkYeXwvJCrC2Mi4rLw6Kws";
+
+declare global {
+    interface Window {
+        turnstile: {
+            render: (container: string | HTMLElement, options: object) => string;
+            reset: (widgetId: string) => void;
+            remove: (widgetId: string) => void;
+        };
+        onTurnstileLoad: () => void;
+    }
+}
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [captchaToken, setCaptchaToken] = useState("");
+    const widgetRef = useRef<string | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const router = useRouter();
     const supabase = createClient();
 
     useEffect(() => {
-        // Automatically check for a valid session on mount (catches #access_token on URL)
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                router.push('/dashboard');
-            }
+            if (session) router.push('/dashboard');
         });
-
-        // Listen for standard auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' || session) {
-                router.push('/dashboard');
-            }
+            if (event === 'SIGNED_IN' || session) router.push('/dashboard');
         });
-
         return () => subscription.unsubscribe();
     }, [router, supabase]);
+
+    function renderWidget() {
+        if (!containerRef.current || !window.turnstile || widgetRef.current) return;
+        widgetRef.current = window.turnstile.render(containerRef.current, {
+            sitekey: TURNSTILE_SITE_KEY,
+            callback: (token: string) => setCaptchaToken(token),
+            "expired-callback": () => setCaptchaToken(""),
+            "error-callback": () => setCaptchaToken(""),
+            theme: "light",
+        });
+    }
+
+    // Load Cloudflare Turnstile script manually
+    useEffect(() => {
+        const scriptId = "cf-turnstile-script";
+        if (document.getElementById(scriptId)) {
+            // Script already loaded
+            setTimeout(renderWidget, 300);
+            return;
+        }
+        window.onTurnstileLoad = renderWidget;
+        const script = document.createElement("script");
+        script.id = scriptId;
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit";
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+
+        return () => {
+            if (widgetRef.current && window.turnstile) {
+                try { window.turnstile.remove(widgetRef.current); } catch {}
+                widgetRef.current = null;
+            }
+        };
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -53,24 +93,17 @@ export default function LoginPage() {
         if (error) {
             toast.error(error.message);
             setLoading(false);
+            if (widgetRef.current && window.turnstile) {
+                window.turnstile.reset(widgetRef.current);
+                setCaptchaToken("");
+            }
             return;
         }
 
         if (data.user) {
-            // Fetch role
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("role")
-                .eq("id", data.user.id)
-                .single();
-
             toast.success("Đăng nhập thành công!");
             router.refresh();
-            if (profile?.role === "admin") {
-                router.push("/dashboard");
-            } else {
-                router.push("/dashboard");
-            }
+            router.push("/dashboard");
         }
     };
 
@@ -114,13 +147,7 @@ export default function LoginPage() {
                                 required
                             />
                         </div>
-
-                        <div className="flex justify-center my-2">
-                            <Turnstile
-                                siteKey="0x4AAAAAACvSpDkYeXwvJCrC2Mi4rLw6Kws"
-                                onSuccess={(token) => setCaptchaToken(token)}
-                            />
-                        </div>
+                        <div ref={containerRef} className="flex justify-center my-2" />
                         <Button type="submit" className="w-full" disabled={loading || !captchaToken}>
                             {loading ? "Đang đăng nhập..." : !captchaToken ? "Đang tải xác thực..." : "Đăng nhập"}
                         </Button>
