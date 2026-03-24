@@ -176,7 +176,11 @@ RULES:
       // No more tool calls → done
       if (!message.tool_calls || message.tool_calls.length === 0) {
         return new Response(
-          JSON.stringify({ role: 'assistant', content: message.content || '' }),
+          JSON.stringify({
+            role: 'assistant',
+            content: message.content || '',
+            usage: completion.usage,
+          }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
       }

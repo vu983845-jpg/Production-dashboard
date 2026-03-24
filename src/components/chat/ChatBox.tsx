@@ -14,6 +14,7 @@ export function ChatBox() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [usage, setUsage] = useState<{ prompt_tokens: number; completion_tokens: number; total_tokens: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export function ChatBox() {
       });
       const data = await res.json();
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: data.content }]);
+      if (data.usage) setUsage(data.usage);
     } catch {
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Lỗi kết nối, vui lòng thử lại.' }]);
     } finally {
@@ -110,10 +112,15 @@ export function ChatBox() {
                   <Bot className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">Gemini AI Assistant</h3>
+                  <h3 className="font-semibold text-sm">Groq AI Assistant</h3>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> 
-                    <span className="text-[10px] text-zinc-500 font-medium">Online</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span className="text-[10px] text-zinc-500 font-medium">Llama 3.3 70B</span>
+                    {usage && (
+                      <span className="text-[10px] text-blue-500 font-medium ml-1">
+                        · {usage.total_tokens.toLocaleString()} tokens
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -146,10 +153,11 @@ export function ChatBox() {
                       <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-zinc-900 flex items-center justify-center">
                         <Bot className="w-7 h-7 text-blue-400 dark:text-zinc-500 shadow-sm" />
                       </div>
-                      <h4 className="font-medium text-zinc-700 dark:text-zinc-300">Welcome to AI Support</h4>
+                      <h4 className="font-medium text-zinc-700 dark:text-zinc-300">Groq AI Assistant</h4>
                       <p className="text-center px-6 text-xs leading-relaxed max-w-[280px]">
-                        I am your Gemini-powered assistant. Ask me anything about this dashboard, charts, or factory metrics.
+                        Hỏi tôi về KPI, sản lượng, điện nước, sự cố máy móc... Tôi sẽ tra cứu dữ liệu nhà máy cho bạn!
                       </p>
+                      <p className="text-[10px] text-zinc-400">Powered by Llama 3.3 70B · 14,400 req/ngày</p>
                     </div>
                   ) : (
                     messages.map((m) => (
@@ -168,7 +176,7 @@ export function ChatBox() {
                               : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-bl-sm"
                           )}
                         >
-                          {m.role === 'assistant' && <div className="font-bold text-[10px] text-zinc-400 mb-1 uppercase tracking-wider">Gemini</div>}
+                          {m.role === 'assistant' && <div className="font-bold text-[10px] text-zinc-400 mb-1 uppercase tracking-wider">Groq</div>}
                           <div className="whitespace-pre-wrap">{m.content}</div>
                         </div>
                       </div>
