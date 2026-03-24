@@ -120,8 +120,8 @@ export default function LoginPage() {
                                 onSuccess={(token) => setCaptchaToken(token)}
                             />
                         </div>
-                        <Button type="submit" className="w-full" disabled={loading || !captchaToken}>
-                            {loading ? "Đang đăng nhập..." : (!captchaToken ? "Đang tải hệ thống bảo mật..." : "Đang nhập")}
+                        <Button type="submit" className="w-full" disabled={loading}>
+                            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                         </Button>
                         <div className="text-center mt-4 text-sm text-muted-foreground w-full">
                             Bạn chưa có tài khoản?{" "}
