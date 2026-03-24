@@ -10,11 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { IntersnackLogo } from "@/components/intersnack-logo";
 import { ArrowLeft } from "lucide-react";
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState("");
     const router = useRouter();
     const supabase = createClient();
 
@@ -43,6 +45,9 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
+            options: {
+                captchaToken,
+            }
         });
 
         if (error) {
@@ -107,6 +112,12 @@ export default function LoginPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
+                            />
+                        </div>
+                        <div className="flex justify-center mt-2 mb-2">
+                            <Turnstile 
+                                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
+                                onSuccess={(token) => setCaptchaToken(token)}
                             />
                         </div>
                         <Button type="submit" className="w-full" disabled={loading}>
