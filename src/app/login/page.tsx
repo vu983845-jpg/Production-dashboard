@@ -116,7 +116,7 @@ export default function LoginPage() {
                         </div>
                         <div className="flex justify-center mt-2 mb-2">
                             <Turnstile 
-                                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
+                                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAACvSpDkYeXwvJCrC2Mi4rLw6Kws'} 
                                 onSuccess={(token) => setCaptchaToken(token)}
                             />
                         </div>
