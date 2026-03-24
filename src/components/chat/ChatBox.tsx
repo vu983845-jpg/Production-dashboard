@@ -15,7 +15,27 @@ export function ChatBox() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [usage, setUsage] = useState<{ prompt_tokens: number; completion_tokens: number; total_tokens: number } | null>(null);
+  const [dailyRequests, setDailyRequests] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load daily request counter from localStorage (reset at midnight)
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const saved = JSON.parse(localStorage.getItem('groq_usage') || '{"date":"","count":0}');
+    if (saved.date === today) {
+      setDailyRequests(saved.count);
+    } else {
+      localStorage.setItem('groq_usage', JSON.stringify({ date: today, count: 0 }));
+      setDailyRequests(0);
+    }
+  }, []);
+
+  const incrementDailyRequests = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const newCount = dailyRequests + 1;
+    setDailyRequests(newCount);
+    localStorage.setItem('groq_usage', JSON.stringify({ date: today, count: newCount }));
+  };
 
   useEffect(() => {
     if (messagesEndRef.current && !isMinimized && isOpen) {
@@ -54,6 +74,7 @@ export function ChatBox() {
       const data = await res.json();
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: data.content }]);
       if (data.usage) setUsage(data.usage);
+      incrementDailyRequests();
     } catch {
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Lỗi kết nối, vui lòng thử lại.' }]);
     } finally {
@@ -111,16 +132,29 @@ export function ChatBox() {
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
                   <Bot className="w-5 h-5" />
                 </div>
-                <div>
+                  <div>
                   <h3 className="font-semibold text-sm">Groq AI Assistant</h3>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
                     <span className="text-[10px] text-zinc-500 font-medium">Llama 3.3 70B</span>
-                    {usage && (
-                      <span className="text-[10px] text-blue-500 font-medium ml-1">
-                        · {usage.total_tokens.toLocaleString()} tokens
-                      </span>
-                    )}
+                  </div>
+                  {/* Daily usage progress */}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="flex-1 h-1 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden w-20">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          (dailyRequests / 14400) > 0.8 ? 'bg-red-500' :
+                          (dailyRequests / 14400) > 0.5 ? 'bg-yellow-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${Math.min((dailyRequests / 14400) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <span className={`text-[10px] font-medium ${
+                      (dailyRequests / 14400) > 0.8 ? 'text-red-500' :
+                      (dailyRequests / 14400) > 0.5 ? 'text-yellow-500' : 'text-blue-500'
+                    }`}>
+                      {((dailyRequests / 14400) * 100).toFixed(1)}% ({dailyRequests.toLocaleString()}/14,400)
+                    </span>
                   </div>
                 </div>
               </div>
