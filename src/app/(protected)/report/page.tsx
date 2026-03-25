@@ -189,16 +189,16 @@ export default function ReportPage() {
                 .order("work_date", { ascending: true })
                 .order("line_code", { ascending: true })
             
-            // Robust normalization of shift leader names
+            // Robust normalization of shift leader names (Mr. Trí, Mrs. Tâm, Ms. Linh)
             const cleanedLD = (ld ?? []).map((r: any) => {
                 let name = r.shift_leader || "";
                 if (name) {
                     name = name.trim()
-                        .replace(/\.(?!\s|$)/g, '. ') // Ensure space after period if not at end
-                        .replace(/\s+/g, ' ')         // Collapse multiple spaces
-                        .replace(/^mr\./i, 'Mr.')     // Standardize prefixes
-                        .replace(/^mrs\./i, 'Mrs.')
-                        .replace(/^ms\./i, 'Ms.');
+                        .replace(/^mr\.?\s*/i, 'Mr. ')
+                        .replace(/^mrs\.?\s*/i, 'Mrs. ')
+                        .replace(/^ms\.?\s*/i, 'Ms. ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
                 }
                 return { ...r, shift_leader: name };
             });
