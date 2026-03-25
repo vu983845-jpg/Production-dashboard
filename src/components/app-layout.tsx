@@ -122,7 +122,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                 <div className="md:hidden flex items-center gap-3">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+                            <Button variant="ghost" size="icon" className="shrink-0 md:hidden text-white hover:bg-white/10 hover:text-white border border-white/20">
                                 <Menu className="h-5 w-5" />
                                 <span className="sr-only">Toggle navigation menu</span>
                             </Button>
