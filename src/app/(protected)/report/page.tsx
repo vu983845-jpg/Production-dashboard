@@ -484,18 +484,19 @@ export default function ReportPage() {
     const leaderDeepDiveData = useMemo(() => {
         if (selectedDept !== 'SHELL' || !shellingLines.length || !selectedDeepDiveLeader) return { perf: [], mp: [], broken: [] };
         
-        const leaderRows = shellingLines.filter(r => r.shift_leader === selectedDeepDiveLeader);
+        const isAll = selectedDeepDiveLeader === "Tất cả";
+        const leaderRows = isAll ? shellingLines : shellingLines.filter(r => r.shift_leader === selectedDeepDiveLeader);
+        
         const perfMap = new Map<string, any>();
         const mpMap = new Map<string, any>();
         const brokenMap = new Map<string, any>();
         
-        const lines = ["A", "B", "C", "D1", "D2"];
-
         leaderRows.forEach(r => {
             const dateStr = format(parseISO(r.work_date), 'dd/MM');
-            if (!perfMap.has(dateStr)) perfMap.set(dateStr, { name: dateStr });
-            if (!mpMap.has(dateStr)) mpMap.set(dateStr, { name: dateStr });
-            if (!brokenMap.has(dateStr)) brokenMap.set(dateStr, { name: dateStr });
+            
+            if (!perfMap.has(dateStr)) perfMap.set(dateStr, { name: dateStr, _sums: {}, _counts: {} });
+            if (!mpMap.has(dateStr)) mpMap.set(dateStr, { name: dateStr, _sums: {}, _counts: {} });
+            if (!brokenMap.has(dateStr)) brokenMap.set(dateStr, { name: dateStr, _sums: {}, _counts: {} });
 
             const pCurr = perfMap.get(dateStr);
             const mCurr = mpMap.get(dateStr);
@@ -505,9 +506,21 @@ export default function ReportPage() {
             const mpEff = Number(r.manpower) > 0 ? Number(r.actual_ton) / Number(r.manpower) : null;
             const brk = Number(r.broken_pct) > 0 ? Number(r.broken_pct) : null;
 
-            if (eff !== null) pCurr[r.line_code] = Number(eff.toFixed(3));
-            if (mpEff !== null) mCurr[r.line_code] = Number(mpEff.toFixed(3));
-            if (brk !== null) bCurr[r.line_code] = Number(brk.toFixed(2));
+            if (eff !== null) {
+                pCurr._sums[r.line_code] = (pCurr._sums[r.line_code] || 0) + eff;
+                pCurr._counts[r.line_code] = (pCurr._counts[r.line_code] || 0) + 1;
+                pCurr[r.line_code] = Number((pCurr._sums[r.line_code] / pCurr._counts[r.line_code]).toFixed(3));
+            }
+            if (mpEff !== null) {
+                mCurr._sums[r.line_code] = (mCurr._sums[r.line_code] || 0) + mpEff;
+                mCurr._counts[r.line_code] = (mCurr._counts[r.line_code] || 0) + 1;
+                mCurr[r.line_code] = Number((mCurr._sums[r.line_code] / mCurr._counts[r.line_code]).toFixed(3));
+            }
+            if (brk !== null) {
+                bCurr._sums[r.line_code] = (bCurr._sums[r.line_code] || 0) + brk;
+                bCurr._counts[r.line_code] = (bCurr._counts[r.line_code] || 0) + 1;
+                bCurr[r.line_code] = Number((bCurr._sums[r.line_code] / bCurr._counts[r.line_code]).toFixed(2));
+            }
         });
 
         return {
