@@ -1329,22 +1329,62 @@ export default function DashboardPage() {
                                 </div>
                             </FadeIn>
                             <FadeIn className="col-span-2 sm:col-span-1">
-                                <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
-                                    <div className="flex flex-col gap-1.5">
-                                        <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">CO₂e (Scope 1+2)</span>
-                                        <BadgePulse
-                                            label={kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'Trong mục tiêu' : 'Vượt mục tiêu'}
-                                            color={kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'green' : 'red'}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-1">
-                                            <AnimatedNumber value={kpiSummary.totalEmission >= 1000 ? kpiSummary.totalEmission/1000 : kpiSummary.totalEmission} />
-                                            {kpiSummary.totalEmission >= 1000 && 'k'}
-                                        </span>
-                                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">/ {kpiSummary.totalEmissionTarget} T</span>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    const co2Pct = kpiSummary.totalEmissionTarget > 0
+                                        ? (kpiSummary.totalEmission / kpiSummary.totalEmissionTarget) * 100
+                                        : 0
+                                    const isGood = co2Pct <= 100
+                                    const barColor = isGood ? '#10b981' : '#e63121'
+                                    return (
+                                        <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
+                                            <div className="flex justify-between items-start">
+                                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">CO₂e (Scope 1+2)</span>
+                                                <BadgePulse
+                                                    label={isGood ? 'Trong mục tiêu' : 'Vượt mục tiêu'}
+                                                    color={isGood ? 'green' : 'red'}
+                                                />
+                                            </div>
+                                            {/* Big percentage */}
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-2xl md:text-3xl font-black tracking-tighter" style={{ color: barColor }}>
+                                                    {co2Pct.toFixed(1)}%
+                                                </span>
+                                                <span className="text-[10px] text-slate-400 font-medium">/ 100% target</span>
+                                            </div>
+                                            {/* Animated progress bar */}
+                                            <div className="w-full">
+                                                <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-[1200ms] ease-out"
+                                                        style={{
+                                                            width: `${Math.min(co2Pct, 100)}%`,
+                                                            background: isGood
+                                                                ? 'linear-gradient(90deg, #10b981, #34d399)'
+                                                                : 'linear-gradient(90deg, #e63121, #f87171)',
+                                                        }}
+                                                    />
+                                                    {/* Shimmer effect */}
+                                                    <div
+                                                        className="absolute inset-0 rounded-full"
+                                                        style={{
+                                                            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+                                                            animation: 'shimmer 2s infinite',
+                                                            backgroundSize: '200% 100%',
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="flex justify-between mt-1">
+                                                    <span className="text-[9px] text-slate-400">
+                                                        {kpiSummary.totalEmission.toFixed(1)} T CO₂e
+                                                    </span>
+                                                    <span className="text-[9px] text-slate-400">
+                                                        Target: {kpiSummary.totalEmissionTarget} T
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
                             </FadeIn>
                         </div>
                     </FadeInStagger>
