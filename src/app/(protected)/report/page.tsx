@@ -94,6 +94,7 @@ export default function ReportPage() {
     const [deepDiveMode, setDeepDiveMode] = useState<'line' | 'leader'>('line')
     const [selectedDeepDiveLeader, setSelectedDeepDiveLeader] = useState("")
     const [hasData, setHasData] = useState(false)
+    const [showShiftDetails, setShowShiftDetails] = useState(false)
     const [compressorMonthly, setCompressorMonthly] = useState<{work_date: string; total_kwh: number}[]>([])
     const [shellingEnergyMonthly, setShellingEnergyMonthly] = useState<{work_date: string; kwh: number}[]>([])
 
@@ -1501,10 +1502,25 @@ export default function ReportPage() {
 
                     {/* Shelling Daily Detail Table */}
                     {selectedDept === "SHELL" && shellingLines.length > 0 && (
-                        <Card>
-                            <CardHeader className="pb-2">
+                        <Card className="overflow-hidden">
+                            <CardHeader className="pb-3 border-b bg-muted/20">
                                 <CardTitle className="text-sm font-bold flex items-center justify-between">
-                                    <span>Shelling Shift Details</span>
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                        <span>Shelling Shift Details</span>
+                                    </div>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-7 text-xs gap-1.5"
+                                        onClick={() => setShowShiftDetails(!showShiftDetails)}
+                                    >
+                                        {showShiftDetails ? (
+                                            <>Ẩn chi tiết <TrendingDown className="h-3 w-3" /></>
+                                        ) : (
+                                            <>Hiện chi tiết <TrendingUp className="h-3 w-3" /></>
+                                        )}
+                                    </Button>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
@@ -1523,36 +1539,40 @@ export default function ReportPage() {
                                                 <th className="text-left p-3 font-semibold">Note</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            {shellingLines.map(r => (
-                                                <tr key={`${r.work_date}-${r.line_code}-${r.shift_name}`} className="border-b hover:bg-muted/20 text-sm">
-                                                    <td className="p-3 font-medium whitespace-nowrap">{fmtDate(r.work_date)}</td>
-                                                    <td className="p-3 text-center font-bold text-slate-700">{r.line_code}</td>
-                                                    <td className="p-3 text-center text-muted-foreground">{r.shift_name || 'Ca 1'}</td>
-                                                    <td className="p-3 text-right font-bold text-primary">{Number(r.actual_ton) > 0 ? Number(r.actual_ton).toFixed(2) : "—"}</td>
-                                                    <td className="p-3 text-right font-medium text-muted-foreground">{Number(r.run_hours) > 0 ? Number(r.run_hours).toFixed(1) : "—"}</td>
-                                                    <td className="p-3 text-right font-medium text-amber-600 px-6">{Number(r.downtime_min) > 0 ? `${r.downtime_min}p` : "—"}</td>
-                                                    <td className="p-3 text-center font-bold text-purple-700">{r.size || "—"}</td>
-                                                    <td className="p-3 text-right font-medium text-red-600">{Number(r.broken_pct) > 0 ? `${Number(r.broken_pct)}%` : "—"}</td>
-                                                    <td className="p-3 text-left text-muted-foreground text-xs max-w-[200px] truncate" title={r.note || ""}>{r.note || "—"}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot>
-                                            <tr className="border-t-2 bg-muted/30 font-bold text-right text-xs">
-                                                <td colSpan={3} className="p-2">Monthly Total:</td>
-                                                <td className="p-2 text-primary">{shellingLines.reduce((s, r)=>s+Number(r.actual_ton),0).toFixed(2)}</td>
-                                                <td className="p-2 text-muted-foreground">{shellingLines.reduce((s, r)=>s+Number(r.run_hours),0).toFixed(1)}</td>
-                                                <td className="p-2 text-amber-600 px-6">{shellingLines.reduce((s, r)=>s+Number(r.downtime_min||0),0)}p</td>
-                                                <td></td>
-                                                <td className="p-2 text-red-600">
-                                                    {(shellingLines.filter(r => Number(r.broken_pct)>0).length > 0) ? 
-                                                        (shellingLines.reduce((s, r)=>s+Number(r.broken_pct||0),0) / shellingLines.filter(r => Number(r.broken_pct)>0).length).toFixed(2) + '%' 
-                                                        : "—"}
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                        </tfoot>
+                                        {showShiftDetails && (
+                                            <>
+                                                <tbody>
+                                                    {shellingLines.map(r => (
+                                                        <tr key={`${r.work_date}-${r.line_code}-${r.shift_name}`} className="border-b hover:bg-muted/20 text-sm">
+                                                            <td className="p-3 font-medium whitespace-nowrap">{fmtDate(r.work_date)}</td>
+                                                            <td className="p-3 text-center font-bold text-slate-700">{r.line_code}</td>
+                                                            <td className="p-3 text-center text-muted-foreground">{r.shift_name || 'Ca 1'}</td>
+                                                            <td className="p-3 text-right font-bold text-primary">{Number(r.actual_ton) > 0 ? Number(r.actual_ton).toFixed(2) : "—"}</td>
+                                                            <td className="p-3 text-right font-medium text-muted-foreground">{Number(r.run_hours) > 0 ? Number(r.run_hours).toFixed(1) : "—"}</td>
+                                                            <td className="p-3 text-right font-medium text-amber-600 px-6">{Number(r.downtime_min) > 0 ? `${r.downtime_min}p` : "—"}</td>
+                                                            <td className="p-3 text-center font-bold text-purple-700">{r.size || "—"}</td>
+                                                            <td className="p-3 text-right font-medium text-red-600">{Number(r.broken_pct) > 0 ? `${Number(r.broken_pct)}%` : "—"}</td>
+                                                            <td className="p-3 text-left text-muted-foreground text-xs max-w-[200px] truncate" title={r.note || ""}>{r.note || "—"}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr className="border-t-2 bg-muted/30 font-bold text-right text-xs">
+                                                        <td colSpan={3} className="p-2">Monthly Total:</td>
+                                                        <td className="p-2 text-primary">{shellingLines.reduce((s, r)=>s+Number(r.actual_ton),0).toFixed(2)}</td>
+                                                        <td className="p-2 text-muted-foreground">{shellingLines.reduce((s, r)=>s+Number(r.run_hours),0).toFixed(1)}</td>
+                                                        <td className="p-2 text-amber-600 px-6">{shellingLines.reduce((s, r)=>s+Number(r.downtime_min||0),0)}p</td>
+                                                        <td></td>
+                                                        <td className="p-2 text-red-600">
+                                                            {(shellingLines.filter(r => Number(r.broken_pct)>0).length > 0) ? 
+                                                                (shellingLines.reduce((s, r)=>s+Number(r.broken_pct||0),0) / shellingLines.filter(r => Number(r.broken_pct)>0).length).toFixed(2) + '%' 
+                                                                : "—"}
+                                                        </td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </>
+                                        )}
                                     </table>
                                 </div>
                             </CardContent>
