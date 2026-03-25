@@ -91,6 +91,8 @@ export default function ReportPage() {
     const [shellingLines, setShellingLines] = useState<ShellingLineRecord[]>([])
     const [selectedShellLine, setSelectedShellLine] = useState("A")
     const [selectedLeader, setSelectedLeader] = useState("Tất cả")
+    const [deepDiveMode, setDeepDiveMode] = useState<'line' | 'leader'>('line')
+    const [selectedDeepDiveLeader, setSelectedDeepDiveLeader] = useState("")
     const [hasData, setHasData] = useState(false)
     const [compressorMonthly, setCompressorMonthly] = useState<{work_date: string; total_kwh: number}[]>([])
     const [shellingEnergyMonthly, setShellingEnergyMonthly] = useState<{work_date: string; kwh: number}[]>([])
@@ -350,6 +352,17 @@ export default function ReportPage() {
         return shellingLines.filter(r => r.shift_leader === selectedLeader);
     }, [shellingLines, selectedLeader]);
 
+    const uniqueLeaders = useMemo(() => {
+        const set = new Set(shellingLines.map(r => r.shift_leader).filter(Boolean));
+        return Array.from(set).sort() as string[];
+    }, [shellingLines]);
+
+    useEffect(() => {
+        if (uniqueLeaders.length > 0 && !selectedDeepDiveLeader) {
+            setSelectedDeepDiveLeader(uniqueLeaders[0]);
+        }
+    }, [uniqueLeaders, selectedDeepDiveLeader]);
+
     const perfChartData = (() => {
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
         const lines = filteredShellingLines.filter(r => r.line_code === selectedShellLine);
@@ -409,6 +422,43 @@ export default function ReportPage() {
         });
         return Array.from(map.values());
     })();
+
+    // --- LEADER DEEP-DIVE DATA ---
+    const leaderDeepDiveData = useMemo(() => {
+        if (selectedDept !== 'SHELL' || !shellingLines.length || !selectedDeepDiveLeader) return { perf: [], mp: [], broken: [] };
+        
+        const leaderRows = shellingLines.filter(r => r.shift_leader === selectedDeepDiveLeader);
+        const perfMap = new Map<string, any>();
+        const mpMap = new Map<string, any>();
+        const brokenMap = new Map<string, any>();
+        
+        const lines = ["A", "B", "C", "D1", "D2"];
+
+        leaderRows.forEach(r => {
+            const dateStr = format(parseISO(r.work_date), 'dd/MM');
+            if (!perfMap.has(dateStr)) perfMap.set(dateStr, { name: dateStr });
+            if (!mpMap.has(dateStr)) mpMap.set(dateStr, { name: dateStr });
+            if (!brokenMap.has(dateStr)) brokenMap.set(dateStr, { name: dateStr });
+
+            const pCurr = perfMap.get(dateStr);
+            const mCurr = mpMap.get(dateStr);
+            const bCurr = brokenMap.get(dateStr);
+
+            const eff = Number(r.run_hours) > 0 ? Number(r.actual_ton) / Number(r.run_hours) : null;
+            const mpEff = Number(r.manpower) > 0 ? Number(r.actual_ton) / Number(r.manpower) : null;
+            const brk = Number(r.broken_pct) > 0 ? Number(r.broken_pct) : null;
+
+            if (eff !== null) pCurr[r.line_code] = Number(eff.toFixed(3));
+            if (mpEff !== null) mCurr[r.line_code] = Number(mpEff.toFixed(3));
+            if (brk !== null) bCurr[r.line_code] = Number(brk.toFixed(2));
+        });
+
+        return {
+            perf: Array.from(perfMap.values()),
+            mp: Array.from(mpMap.values()),
+            broken: Array.from(brokenMap.values())
+        };
+    }, [selectedDept, shellingLines, selectedDeepDiveLeader]);
 
     const leaderCompareData = (() => {
         if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
@@ -674,7 +724,8 @@ export default function ReportPage() {
 
                     {/* Shelling Lines Summary */}
                     {selectedDept === "SHELL" && (
-                        <Card>
+                        <div className="space-y-6">
+                            <Card>
                             <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-slate-50/50">
                                 <CardTitle className="text-sm font-bold text-slate-800">Shelling Lines — {language === 'vi' ? 'Tổng tháng' : 'Monthly Total'}</CardTitle>
                                 <div className="flex items-center gap-2">
@@ -773,12 +824,9 @@ export default function ReportPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                    )}
 
-                    {/* Shelling Analytics Overview */}
-                    {selectedDept === "SHELL" && (
-                        <div className="space-y-8 mt-6 mb-4">
-                            
+                        {/* Shelling Analytics Overview */}
+                        <div>
                             {/* SECTION 1: OVERALL FACTORY PERFORMANCE */}
                             <div>
                                 <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">1. {language === 'vi' ? 'Hiệu suất Tổng thể' : 'Overall Performance'}</h3>
@@ -1030,50 +1078,114 @@ export default function ReportPage() {
                                         </CardContent>
                                     </Card>
                                     )}
-                                </div>
-                            </div>
 
-                            {/* SECTION 3: LINE DEEP-DIVE */}
+                            {/* SECTION 3: DEEP-DIVE ANALYSIS */}
                             <div className="pt-6 mt-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 rounded-xl shadow-sm border p-4 bg-slate-50/50">
-                                    <div>
-                                        <h3 className="text-base font-bold text-slate-800">3. Phân tích chi tiết Thiết bị (Line Deep-dive)</h3>
-                                        <p className="text-xs text-muted-foreground mt-1">Select a specific line to view its shift-by-shift performance metrics.</p>
+                                <div className="flex flex-col gap-4 mb-4 rounded-xl shadow-sm border p-4 bg-slate-50/50">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-base font-bold text-slate-800">
+                                                3. {deepDiveMode === 'line' 
+                                                    ? (language === 'vi' ? 'Phân tích chi tiết Thiết bị (Line Deep-dive)' : 'Equipment Detailed Analysis (Line Deep-dive)')
+                                                    : (language === 'vi' ? 'Phân tích theo Tổ trưởng (Leader Deep-dive)' : 'Leader Detailed Analysis (Leader Deep-dive)')
+                                                }
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {deepDiveMode === 'line'
+                                                    ? (language === 'vi' ? 'Chọn một chuyền cụ thể để xem hiệu suất theo từng ca.' : 'Select a specific line to view its shift-by-shift performance metrics.')
+                                                    : (language === 'vi' ? 'Chọn một tổ trưởng để xem hiệu suất trên tất cả các chuyền.' : 'Select a shift leader to view their performance across all lines.')
+                                                }
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm self-start sm:self-center">
+                                            <Button 
+                                                variant={deepDiveMode === 'line' ? 'default' : 'ghost'} 
+                                                size="sm" 
+                                                className="h-8 text-xs px-3"
+                                                onClick={() => setDeepDiveMode('line')}
+                                            >
+                                                {language === 'vi' ? 'Theo Chuyền' : 'By Line'}
+                                            </Button>
+                                            <Button 
+                                                variant={deepDiveMode === 'leader' ? 'default' : 'ghost'} 
+                                                size="sm" 
+                                                className="h-8 text-xs px-3"
+                                                onClick={() => setDeepDiveMode('leader')}
+                                            >
+                                                {language === 'vi' ? 'Theo Tổ trưởng' : 'By Leader'}
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
-                                        <span className="text-sm font-semibold text-slate-700">Chọn Line:</span>
-                                        <select 
-                                            value={selectedShellLine} 
-                                            onChange={e => setSelectedShellLine(e.target.value)}
-                                            className="h-8 text-sm font-bold text-primary rounded-md border-none bg-transparent px-2 focus:outline-none cursor-pointer"
-                                        >
-                                            {["A", "B", "C", "D1", "D2"].map(l => <option key={l} value={l}>Line {l}</option>)}
-                                        </select>
+
+                                    <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm self-start">
+                                        <span className="text-sm font-semibold text-slate-700">
+                                            {deepDiveMode === 'line' ? (language === 'vi' ? 'Chọn Line:' : 'Select Line:') : (language === 'vi' ? 'Chọn Tổ trưởng:' : 'Select Leader:')}
+                                        </span>
+                                        {deepDiveMode === 'line' ? (
+                                            <select 
+                                                value={selectedShellLine} 
+                                                onChange={e => setSelectedShellLine(e.target.value)}
+                                                className="h-8 text-sm font-bold text-primary rounded-md border-none bg-transparent px-2 focus:outline-none cursor-pointer"
+                                            >
+                                                {["A", "B", "C", "D1", "D2"].map(l => <option key={l} value={l}>Line {l}</option>)}
+                                            </select>
+                                        ) : (
+                                            <select 
+                                                value={selectedDeepDiveLeader} 
+                                                onChange={e => setSelectedDeepDiveLeader(e.target.value)}
+                                                className="h-8 text-sm font-bold text-primary rounded-md border-none bg-transparent px-2 focus:outline-none cursor-pointer"
+                                            >
+                                                {uniqueLeaders.map(l => <option key={l} value={l}>{l}</option>)}
+                                            </select>
+                                        )}
                                     </div>
                                 </div>
+
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     {/* Chart 1: Performance */}
                                     <Card>
                                         <CardHeader className="pb-2 border-b">
-                                            <CardTitle className="text-xs font-bold">{language === 'vi' ? 'Hiệu suất T/h' : 'Efficiency T/h'} (Line {selectedShellLine})</CardTitle>
+                                            <CardTitle className="text-xs font-bold">
+                                                {language === 'vi' ? 'Hiệu suất T/h' : 'Efficiency T/h'} 
+                                                {deepDiveMode === 'line' ? ` (Line ${selectedShellLine})` : ` (${selectedDeepDiveLeader})`}
+                                            </CardTitle>
                                             <CardDescription className="text-[11px] leading-relaxed text-slate-600">
-                                                {language === 'vi'
-                                                    ? `Hiệu suất tốc độ chạy (T/h) của Line ${selectedShellLine} theo ngày, chia theo 3 ca. Ca nào cao đều và ổn định là ca làm việc tốt. Nếu một ca liên tục thấp hơn ca khác nhiều ngày liền → cần review lại người vận hành hoặc nguyên liệu ca đó.`
-                                                    : `Daily throughput speed (T/h) for Line ${selectedShellLine} broken down by shift. A consistently high, stable line = well-run shift. If one shift persistently lags others across multiple days, review operator settings or incoming raw material for that shift.`}
+                                                {deepDiveMode === 'line'
+                                                    ? (language === 'vi'
+                                                        ? `Hiệu suất tốc độ chạy (T/h) của Line ${selectedShellLine} theo ngày, chia theo 3 ca.`
+                                                        : `Daily throughput speed (T/h) for Line ${selectedShellLine} broken down by shift.`)
+                                                    : (language === 'vi'
+                                                        ? `Hiệu suất tốc độ chạy (T/h) của Tổ trưởng ${selectedDeepDiveLeader} trên các chuyền họ quản lý.`
+                                                        : `Daily throughput speed (T/h) of ${selectedDeepDiveLeader} across managed lines.`)}
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="h-64 w-full mt-2">
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <ComposedChart data={perfChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                    <ComposedChart 
+                                                        data={deepDiveMode === 'line' ? perfChartData : leaderDeepDiveData.perf} 
+                                                        margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                                                    >
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                         <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                                                         <YAxis tick={{ fontSize: 10 }} />
                                                         <Tooltip contentStyle={{ fontSize: '11px' }} />
                                                         <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                        <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/h)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }} />
-                                                        <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/h)" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
-                                                        <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/h)" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
+                                                        {deepDiveMode === 'line' ? (
+                                                            <>
+                                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/h)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }} />
+                                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/h)" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
+                                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/h)" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} />
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Line type="monotone" dataKey="A" name="Line A" stroke="#2563eb" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="B" name="Line B" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="C" name="Line C" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="D1" name="Line D1" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="D2" name="Line D2" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                            </>
+                                                        )}
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
@@ -1083,25 +1195,47 @@ export default function ReportPage() {
                                     {/* Chart 3: Manpower */}
                                     <Card>
                                         <CardHeader className="pb-2 border-b">
-                                            <CardTitle className="text-xs font-bold text-amber-700">{language === 'vi' ? 'Năng suất Lao động' : 'Manpower Productivity'} (Line {selectedShellLine})</CardTitle>
+                                            <CardTitle className="text-xs font-bold text-amber-700">
+                                                {language === 'vi' ? 'Năng suất Lao động' : 'Manpower Productivity'} 
+                                                {deepDiveMode === 'line' ? ` (Line ${selectedShellLine})` : ` (${selectedDeepDiveLeader})`}
+                                            </CardTitle>
                                             <CardDescription className="text-[11px] leading-relaxed text-slate-600">
-                                                {language === 'vi'
-                                                    ? `Năng suất lao động (Tấn/Người/Ca) của Line ${selectedShellLine}. Trục Y cao = ít người mà vẫn ra nhiều hàng. Nếu một ca có T/Ng thấp bất thường trong khi T/h bình thường → ca đó có thể bố trí nhân lực dư thừa hoặc ghi nhân công chưa chính xác.`
-                                                    : `Labor productivity (Tons per person per shift) for Line ${selectedShellLine}. Higher = more output per person. If a shift shows low T/person while T/h is normal, there may be excess headcount recorded or a data entry error for manpower.`}
+                                                {deepDiveMode === 'line'
+                                                    ? (language === 'vi'
+                                                        ? `Năng suất lao động (Tấn/Người/Ca) của Line ${selectedShellLine}.`
+                                                        : `Labor productivity (Tons per person per shift) for Line ${selectedShellLine}.`)
+                                                    : (language === 'vi'
+                                                        ? `Năng suất lao động (Tấn/Người/Ca) của Tổ trưởng ${selectedDeepDiveLeader} trên các chuyền.`
+                                                        : `Labor productivity of ${selectedDeepDiveLeader} across managed lines.`)}
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="h-64 w-full mt-2">
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <ComposedChart data={manpowerChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                    <ComposedChart 
+                                                        data={deepDiveMode === 'line' ? manpowerChartData : leaderDeepDiveData.mp} 
+                                                        margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                                                    >
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                         <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                                                         <YAxis tick={{ fontSize: 10 }} />
                                                         <Tooltip contentStyle={{ fontSize: '11px' }} />
                                                         <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                        <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/Ng)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
-                                                        <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/Ng)" stroke="#f97316" strokeWidth={2} dot={{ r: 2 }} />
-                                                        <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/Ng)" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
+                                                        {deepDiveMode === 'line' ? (
+                                                            <>
+                                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (T/Ng)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} />
+                                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (T/Ng)" stroke="#f97316" strokeWidth={2} dot={{ r: 2 }} />
+                                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (T/Ng)" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} />
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Line type="monotone" dataKey="A" name="Line A" stroke="#2563eb" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="B" name="Line B" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="C" name="Line C" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="D1" name="Line D1" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="D2" name="Line D2" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                            </>
+                                                        )}
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
@@ -1111,26 +1245,48 @@ export default function ReportPage() {
                                     {/* Chart 5: % Broken per shift */}
                                     <Card>
                                         <CardHeader className="pb-2 border-b">
-                                            <CardTitle className="text-xs font-bold text-red-700">💔 {language === 'vi' ? '% Vỡ Đặc trưng theo Ca' : '% Broken per Shift'} (Line {selectedShellLine})</CardTitle>
+                                            <CardTitle className="text-xs font-bold text-red-700">
+                                                💔 {language === 'vi' ? '% Vỡ Đặc trưng' : '% Broken Trend'} 
+                                                {deepDiveMode === 'line' ? ` (Line ${selectedShellLine})` : ` (${selectedDeepDiveLeader})`}
+                                            </CardTitle>
                                             <CardDescription className="text-[11px] leading-relaxed text-slate-600">
-                                                {language === 'vi'
-                                                    ? `Tỷ lệ bể (%) từng ca của Line ${selectedShellLine}. Đường đứt gạch đỏ là ngưỡng cảnh báo 4.5% — nếu đường ca chạm hoặc vượt qua đó cần xem xét lại cài đặt dao và mức độ ẩm nguyên liệu. So sánh 3 ca: nếu Ca X luôn bể nhiều hơn Ca Y dù cùng máy → nguyên nhân có thể do người vận hành hoặc nguyên liệu đầu vào của ca đó.`
-                                                    : `Broken kernel rate (%) per shift for Line ${selectedShellLine}. The red dashed line is the 4.5% alarm threshold. Spikes above it warrant investigation of blade settings and raw material moisture. Compare shifts: if Shift X consistently breaks more than Shift Y on the same machine, root-cause may be operator technique or incoming nut batch quality.`}
+                                                {deepDiveMode === 'line'
+                                                    ? (language === 'vi'
+                                                        ? `Tỷ lệ bể (%) từng ca của Line ${selectedShellLine}.`
+                                                        : `Broken kernel rate (%) per shift for Line ${selectedShellLine}.`)
+                                                    : (language === 'vi'
+                                                        ? `Tỷ lệ bể (%) của Tổ trưởng ${selectedDeepDiveLeader} trên các chuyền.`
+                                                        : `Broken kernel rate of ${selectedDeepDiveLeader} across managed lines.`)}
                                             </CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="h-64 w-full mt-2">
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <ComposedChart data={brokenChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                    <ComposedChart 
+                                                        data={deepDiveMode === 'line' ? brokenChartData : leaderDeepDiveData.broken} 
+                                                        margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                                                    >
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                         <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                                                         <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
                                                         <Tooltip contentStyle={{ fontSize: '11px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`]} />
                                                         <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
                                                         <ReferenceLine y={THRESHOLD_BROKEN} stroke="red" strokeDasharray="3 3" opacity={0.5} label={{ position: 'insideTopLeft', value: `Alarm >${THRESHOLD_BROKEN}%`, fill: 'red', fontSize: 10 }} />
-                                                        <Line type="monotone" dataKey="Ca1" name="Ca 1 (% Bể)" stroke="#f43f5e" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                                                        <Line type="monotone" dataKey="Ca2" name="Ca 2 (% Bể)" stroke="#fb923c" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                                                        <Line type="monotone" dataKey="Ca3" name="Ca 3 (% Bể)" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                        {deepDiveMode === 'line' ? (
+                                                            <>
+                                                                <Line type="monotone" dataKey="Ca1" name="Ca 1 (% Bể)" stroke="#f43f5e" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                                <Line type="monotone" dataKey="Ca2" name="Ca 2 (% Bể)" stroke="#fb923c" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                                <Line type="monotone" dataKey="Ca3" name="Ca 3 (% Bể)" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Line type="monotone" dataKey="A" name="Line A" stroke="#2563eb" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="B" name="Line B" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="C" name="Line C" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="D1" name="Line D1" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                                <Line type="monotone" dataKey="D2" name="Line D2" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                            </>
+                                                        )}
                                                     </ComposedChart>
                                                 </ResponsiveContainer>
                                             </div>
@@ -1138,9 +1294,9 @@ export default function ReportPage() {
                                     </Card>
                                 </div>
                             </div>
-
                         </div>
-                    )}
+                    </div>
+                )}
 
                     {/* Compressor kWh vs Production Chart */}
                     {['PEEL_MC', 'CS'].includes(selectedDept) && compressorMonthly.length > 0 && (() => {
