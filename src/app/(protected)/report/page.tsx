@@ -1114,6 +1114,12 @@ export default function ReportPage() {
                                     <Card className="col-span-1 shadow-sm">
                                         <CardHeader className="pb-0">
                                             <CardTitle className="text-sm font-bold text-slate-700">{language === 'vi' ? 'Chi tiết Theo Chuyền & Kích cỡ' : 'By Line & Size Details'}</CardTitle>
+                                            <CardDescription className="text-[11px] leading-relaxed text-slate-600">
+                                                {language === 'vi'
+                                                    ? 'Phân tích hiệu suất và tỷ lệ bể chi tiết cho từng loại kích cỡ hạt trên từng chuyền máy. Giúp xác định các điểm nghẽn hoặc vấn đề chất lượng đặc thù của từng Size.'
+                                                    : 'Detailed analysis of efficiency and broken rates for each product size on each specific line. Helps identify bottlenecks or quality issues specific to certain sizes.'
+                                                }
+                                            </CardDescription>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
@@ -1228,6 +1234,12 @@ export default function ReportPage() {
                                                     </div>
                                                     {language === 'vi' ? 'Hiệu suất Tổng thể (So sánh)' : 'Overall Performance Comparison'}
                                                 </CardTitle>
+                                                <CardDescription className="text-[11px] leading-relaxed text-slate-600 px-1 pt-1 opacity-90">
+                                                    {language === 'vi' 
+                                                        ? 'So sánh tổng sản lượng (Tấn) và công suất chạy máy trung bình (T/h) giữa các tổ trưởng. Giúp đánh giá khả năng vận hành và tiến độ hoàn thành kế hoạch của từng nhóm ca.'
+                                                        : 'Compares total production (Tons) and average throughput (T/h) across shift leaders. Evaluates operational capability and plan attainment for each shift group.'
+                                                    }
+                                                </CardDescription>
                                             </CardHeader>
                                             <CardContent className="pt-4 px-2 sm:px-4">
                                                 <div className="h-60 sm:h-64">
@@ -1259,6 +1271,12 @@ export default function ReportPage() {
                                                     </div>
                                                     {language === 'vi' ? 'Kiểm soát Chất lượng (% Bể)' : 'Quality Control (% Broken)'}
                                                 </CardTitle>
+                                                <CardDescription className="text-[11px] leading-relaxed text-slate-600 px-1 pt-1 opacity-90">
+                                                    {language === 'vi' 
+                                                        ? 'So sánh tỷ lệ hạt bể trung bình, được tính theo trọng số sản lượng (Weighted Average). Cột đỏ đậm cảnh báo tỷ lệ bể vượt ngưỡng cho phép (>0.8%).'
+                                                        : 'Compares average broken kernel rates, weighted by production volume (Weighted Average). Dark red bars indicate rates exceeding the 0.8% threshold.'
+                                                    }
+                                                </CardDescription>
                                             </CardHeader>
                                             <CardContent className="pt-4 px-2 sm:px-4">
                                                 <div className="h-60 sm:h-64">
@@ -1468,6 +1486,37 @@ export default function ReportPage() {
                                         </CardContent>
                                     </Card>
                                 </div>
+
+                                {/* Missing Analytics Notes Section */}
+                                <div className="mt-8 p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/30">
+                                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2">
+                                        <div className="p-1 rounded bg-amber-100 italic">
+                                            <FileText className="h-4 w-4 text-amber-600" />
+                                        </div>
+                                        {language === 'vi' ? 'Lưu ý về Dữ liệu & Các báo cáo bổ sung đề xuất' : 'Data Notes & Strategic Opportunities'}
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] leading-relaxed text-slate-600">
+                                        <div className="space-y-2">
+                                            <p className="font-semibold text-slate-800 underline">
+                                                {language === 'vi' ? 'Lưu ý hiện tại:' : 'Current Notes:'}
+                                            </p>
+                                            <ul className="list-disc pl-4 space-y-1">
+                                                <li>{language === 'vi' ? 'Toàn bộ Tỷ lệ Bể (% Broken) đều được tính TRUNG BÌNH CÓ TRỌNG SỐ theo sản lượng để đảm bảo tính khách quan.' : 'All Broken rates (% Broken) are VOLUME-WEIGHTED to ensure statistical accuracy across varied batch sizes.'}</li>
+                                                <li>{language === 'vi' ? 'Tên Tổ trưởng đã được chuẩn hóa tự động để đảm bảo dữ liệu không bị trùng lặp do sai sót nhập liệu.' : 'Shift Leader names are auto-normalized to prevent duplication caused by inconsistent data entry.'}</li>
+                                            </ul>
+                                        </div>
+                                        <div className="space-y-2 border-l-0 md:border-l md:pl-4">
+                                            <p className="font-semibold text-amber-700 underline">
+                                                {language === 'vi' ? 'Các báo cáo đang thiếu (Phát triển thêm):' : 'Missing Insights (Future Development):'}
+                                            </p>
+                                            <ul className="list-disc pl-4 space-y-1">
+                                                <li><strong>{language === 'vi' ? 'Phân tích Downtime Pareto' : 'Downtime Pareto Analytics'}:</strong> {language === 'vi' ? 'Cần bổ sung cột nguyên nhân dừng máy để phân loại cụ thể (Cơ khí, điện, nguyên liệu...).' : 'Requires root-cause categorization (Mechanical, Electrical, Material, etc.) for better targeting.'}</li>
+                                                <li><strong>{language === 'vi' ? 'Suất tiêu hao Năng lượng (kWh/Tấn)' : 'Energy Intensity (kWh/Ton)'}:</strong> {language === 'vi' ? 'Hiện tại Shelling mới chỉ có tổng kWh, cần chia theo sản lượng để tính hiệu quả năng lượng.' : 'Currently only tracking total kWh for Shelling; needs per-ton normalization for true efficiency.'}</li>
+                                                <li><strong>{language === 'vi' ? 'Tỷ lệ thu hồi (Yield %)' : 'Yield Analysis'}:</strong> {language === 'vi' ? 'So sánh Nhân thu hồi / Nguyên liệu đầu vào để đánh giá mức độ hao hụt cơ học.' : 'Comparing Kernels vs. RCN Input to evaluate mechanical loss levels.'}</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1490,6 +1539,12 @@ export default function ReportPage() {
                             <Card>
                                 <CardHeader className="pb-0">
                                     <CardTitle className="text-sm font-bold text-purple-700">🌬️ {language === 'vi' ? 'Năng lượng MNK vs Sản lượng' : 'Compressor Energy vs Production'}</CardTitle>
+                                    <CardDescription className="text-[11px] text-slate-600 leading-relaxed">
+                                        {language === 'vi' 
+                                            ? 'Theo dõi mối tương quan giữa điện tiêu thụ của máy nén khí (kWh) và sản lượng sản xuất. Giúp đánh giá hiệu quả sử dụng năng lượng (kWh/Tấn). Nếu sản lượng thấp mà điện cao, cần kiểm tra rò rỉ khí hoặc máy chạy không tải.'
+                                            : 'Tracks the correlation between air compressor electricity (kWh) and production output. Helps evaluate energy intensity (kWh/Ton). High energy with low output may indicate air leaks or excessive idling.'
+                                        }
+                                    </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="h-72 w-full mt-4">
