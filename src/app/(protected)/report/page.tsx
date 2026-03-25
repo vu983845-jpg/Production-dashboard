@@ -4,11 +4,11 @@ import { useState, useCallback, useEffect, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { ddsClient } from "@/lib/supabase/dds-client"
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
-import { Download, Search, FileText, TrendingUp, TrendingDown } from "lucide-react"
+import { Download, Search, FileText, TrendingUp, TrendingDown, PieChart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Scatter, Cell, ReferenceLine } from "recharts"
+import { ComposedChart, BarChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Scatter, Cell, ReferenceLine } from "recharts"
 import * as XLSX from "xlsx"
 import { useLanguage } from "@/contexts/LanguageContext"
 
@@ -533,8 +533,8 @@ export default function ReportPage() {
 
     const leaderCompareData = (() => {
         if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
-        const map = new Map<string, { leader: string; totalTon: number; totalManpower: number; totalDowntime: number; totalRunHours: number }>();
-        uniqueLeaders.forEach(l => map.set(l, { leader: l, totalTon: 0, totalManpower: 0, totalDowntime: 0, totalRunHours: 0 }));
+        const map = new Map<string, { leader: string; totalTon: number; totalManpower: number; totalDowntime: number; totalRunHours: number; totalBroken: number; brokenCount: number; lines: Set<string> }>();
+        uniqueLeaders.forEach(l => map.set(l, { leader: l, totalTon: 0, totalManpower: 0, totalDowntime: 0, totalRunHours: 0, totalBroken: 0, brokenCount: 0, lines: new Set() }));
         
         shellingLines.forEach(r => {
             const l = r.shift_leader;
@@ -544,6 +544,11 @@ export default function ReportPage() {
                 curr.totalManpower += Number(r.manpower || 0);
                 curr.totalDowntime += Number(r.downtime_min || 0);
                 curr.totalRunHours += Number(r.run_hours || 0);
+                if (Number(r.broken_pct) > 0) {
+                    curr.totalBroken += Number(r.broken_pct);
+                    curr.brokenCount += 1;
+                }
+                if (r.line_code) curr.lines.add(r.line_code);
             }
         });
         
@@ -552,7 +557,9 @@ export default function ReportPage() {
             Sản_Lượng: Number(r.totalTon.toFixed(2)),
             Downtime: r.totalDowntime,
             Hiệu_Suất_T_h: r.totalRunHours > 0 ? Number((r.totalTon / r.totalRunHours).toFixed(3)) : 0,
-            Năng_Suất_TNg: r.totalManpower > 0 ? Number((r.totalTon / r.totalManpower).toFixed(3)) : 0
+            Năng_Suất_TNg: r.totalManpower > 0 ? Number((r.totalTon / r.totalManpower).toFixed(3)) : 0,
+            Tỷ_Lệ_Bể: r.brokenCount > 0 ? Number((r.totalBroken / r.brokenCount).toFixed(2)) : 0,
+            Lines: Array.from(r.lines).sort().join(", ")
         }));
     })();
 
@@ -1204,6 +1211,78 @@ export default function ReportPage() {
                                         )}
                                     </div>
                                 </div>
+                                
+                                {selectedDept === 'SHELL' && leaderCompareData.length > 0 && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                                        {/* Comparison Chart 1: Production & Throughput */}
+                                        <Card className="shadow-sm border-slate-200 overflow-hidden">
+                                            <CardHeader className="pb-2 bg-slate-50/50 border-b">
+                                                <CardTitle className="text-[13px] font-bold flex items-center gap-2">
+                                                    <div className="p-1 rounded bg-blue-100 italic">
+                                                        <TrendingUp className="h-3.5 w-3.5 text-blue-600" />
+                                                    </div>
+                                                    {language === 'vi' ? 'Hiệu suất Tổng thể (So sánh)' : 'Overall Performance Comparison'}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="pt-4 px-2 sm:px-4">
+                                                <div className="h-60 sm:h-64">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <BarChart data={leaderCompareData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.4} />
+                                                            <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 'bold', fill: '#475569' }} axisLine={false} tickLine={false} />
+                                                            <YAxis yAxisId="left" tick={{ fontSize: 9 }} unit="T" axisLine={false} tickLine={false} />
+                                                            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9 }} unit="h" axisLine={false} tickLine={false} />
+                                                            <Tooltip 
+                                                                contentStyle={{ fontSize: '11px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                                                                cursor={{ fill: '#f1f5f9' }}
+                                                            />
+                                                            <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} iconType="circle" />
+                                                            <Bar yAxisId="left" dataKey="Sản_Lượng" name={language === 'vi' ? 'Sản Lượng (T)' : 'Production (T)'} fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={24} />
+                                                            <Bar yAxisId="right" dataKey="Hiệu_Suất_T_h" name={language === 'vi' ? 'Hiệu Suất (T/h)' : 'Throughput (T/h)'} fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        {/* Comparison Chart 2: Quality (% Broken) */}
+                                        <Card className="shadow-sm border-slate-200 overflow-hidden">
+                                            <CardHeader className="pb-2 bg-slate-50/50 border-b">
+                                                <CardTitle className="text-[13px] font-bold flex items-center gap-2">
+                                                    <div className="p-1 rounded bg-rose-100 italic">
+                                                        <PieChart className="h-3.5 w-3.5 text-rose-600" />
+                                                    </div>
+                                                    {language === 'vi' ? 'Kiểm soát Chất lượng (% Bể)' : 'Quality Control (% Broken)'}
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="pt-4 px-2 sm:px-4">
+                                                <div className="h-60 sm:h-64">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <BarChart data={leaderCompareData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.4} />
+                                                            <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 'bold', fill: '#475569' }} axisLine={false} tickLine={false} />
+                                                            <YAxis tick={{ fontSize: 9 }} unit="%" domain={[0, 'auto']} axisLine={false} tickLine={false} />
+                                                            <Tooltip 
+                                                                contentStyle={{ fontSize: '11px', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                                cursor={{ fill: '#f1f5f9' }}
+                                                                formatter={(value: any, name: any, props: any) => {
+                                                                    const lines = props.payload.Lines;
+                                                                    return [`${value}%`, `${language === 'vi' ? 'Chuyền làm việc' : 'Lines'}: ${lines}`];
+                                                                }}
+                                                            />
+                                                            <ReferenceLine y={THRESHOLD_BROKEN} stroke="#e11d48" strokeDasharray="3 3" opacity={0.6} label={{ position: 'insideTopLeft', value: `Limit ${THRESHOLD_BROKEN}%`, fill: '#be123c', fontSize: 9, fontWeight: 'bold' }} />
+                                                            <Bar dataKey="Tỷ_Lệ_Bể" name={language === 'vi' ? 'Tỷ lệ bể trung bình' : 'Avg Broken %'} radius={[4, 4, 0, 0]} barSize={32}>
+                                                                {leaderCompareData.map((entry, index) => (
+                                                                    <Cell key={`cell-${index}`} fill={entry.Tỷ_Lệ_Bể > THRESHOLD_BROKEN ? "#b91c1c" : "#f43f5e"} />
+                                                                ))}
+                                                            </Bar>
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     {/* Chart 1: Performance */}
