@@ -188,7 +188,13 @@ export default function ReportPage() {
                 .lte("work_date", end)
                 .order("work_date", { ascending: true })
                 .order("line_code", { ascending: true })
-            setShellingLines(ld ?? [])
+            
+            // Aggressive normalization of shift leader names
+            const cleanedLD = (ld ?? []).map((r: any) => ({
+                ...r,
+                shift_leader: r.shift_leader ? r.shift_leader.trim().replace(/\s+/g, ' ') : ""
+            }));
+            setShellingLines(cleanedLD)
 
             // Fetch Shelling Energy
             const { data: deptInfo } = await supabase.from("departments").select("id").eq("code", "SHELL").single();
@@ -353,19 +359,14 @@ export default function ReportPage() {
     }, [shellingLines, selectedLeader]);
 
     const uniqueLeaders = useMemo(() => {
-        const cleaned = shellingLines
-            .map(r => r.shift_leader?.trim())
-            .filter(Boolean) as string[];
-        
-        // Use a map to handle case-insensitive uniqueness while keeping the original display case
         const nameMap = new Map<string, string>();
-        cleaned.forEach(name => {
+        shellingLines.forEach(r => {
+            const name = r.shift_leader;
+            if (!name) return;
             const lower = name.toLowerCase();
-            if (!nameMap.has(lower)) {
-                nameMap.set(lower, name);
-            }
+            // We keep the first encountered casing as the display name
+            if (!nameMap.has(lower)) nameMap.set(lower, name);
         });
-        
         return Array.from(nameMap.values()).sort();
     }, [shellingLines]);
 
