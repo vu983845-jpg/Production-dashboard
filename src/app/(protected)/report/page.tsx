@@ -1486,37 +1486,6 @@ export default function ReportPage() {
                                         </CardContent>
                                     </Card>
                                 </div>
-
-                                {/* Missing Analytics Notes Section */}
-                                <div className="mt-8 p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/30">
-                                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2">
-                                        <div className="p-1 rounded bg-amber-100 italic">
-                                            <FileText className="h-4 w-4 text-amber-600" />
-                                        </div>
-                                        {language === 'vi' ? 'Lưu ý về Dữ liệu & Các báo cáo bổ sung đề xuất' : 'Data Notes & Strategic Opportunities'}
-                                    </h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] leading-relaxed text-slate-600">
-                                        <div className="space-y-2">
-                                            <p className="font-semibold text-slate-800 underline">
-                                                {language === 'vi' ? 'Lưu ý hiện tại:' : 'Current Notes:'}
-                                            </p>
-                                            <ul className="list-disc pl-4 space-y-1">
-                                                <li>{language === 'vi' ? 'Toàn bộ Tỷ lệ Bể (% Broken) đều được tính TRUNG BÌNH CÓ TRỌNG SỐ theo sản lượng để đảm bảo tính khách quan.' : 'All Broken rates (% Broken) are VOLUME-WEIGHTED to ensure statistical accuracy across varied batch sizes.'}</li>
-                                                <li>{language === 'vi' ? 'Tên Tổ trưởng đã được chuẩn hóa tự động để đảm bảo dữ liệu không bị trùng lặp do sai sót nhập liệu.' : 'Shift Leader names are auto-normalized to prevent duplication caused by inconsistent data entry.'}</li>
-                                            </ul>
-                                        </div>
-                                        <div className="space-y-2 border-l-0 md:border-l md:pl-4">
-                                            <p className="font-semibold text-amber-700 underline">
-                                                {language === 'vi' ? 'Các báo cáo đang thiếu (Phát triển thêm):' : 'Missing Insights (Future Development):'}
-                                            </p>
-                                            <ul className="list-disc pl-4 space-y-1">
-                                                <li><strong>{language === 'vi' ? 'Phân tích Downtime Pareto' : 'Downtime Pareto Analytics'}:</strong> {language === 'vi' ? 'Cần bổ sung cột nguyên nhân dừng máy để phân loại cụ thể (Cơ khí, điện, nguyên liệu...).' : 'Requires root-cause categorization (Mechanical, Electrical, Material, etc.) for better targeting.'}</li>
-                                                <li><strong>{language === 'vi' ? 'Suất tiêu hao Năng lượng (kWh/Tấn)' : 'Energy Intensity (kWh/Ton)'}:</strong> {language === 'vi' ? 'Hiện tại Shelling mới chỉ có tổng kWh, cần chia theo sản lượng để tính hiệu quả năng lượng.' : 'Currently only tracking total kWh for Shelling; needs per-ton normalization for true efficiency.'}</li>
-                                                <li><strong>{language === 'vi' ? 'Tỷ lệ thu hồi (Yield %)' : 'Yield Analysis'}:</strong> {language === 'vi' ? 'So sánh Nhân thu hồi / Nguyên liệu đầu vào để đánh giá mức độ hao hụt cơ học.' : 'Comparing Kernels vs. RCN Input to evaluate mechanical loss levels.'}</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
