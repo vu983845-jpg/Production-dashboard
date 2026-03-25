@@ -23,7 +23,8 @@ import { createClient } from "@/lib/supabase/client"
 import { ddsClient } from "@/lib/supabase/dds-client"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { GaugeChart } from "@/components/ui/gauge-chart"
-
+import { FadeIn, FadeInStagger } from "@/components/magicui/fade-in"
+import { AnimatedNumber } from "@/components/magicui/animated-number"
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -699,7 +700,7 @@ export default function DashboardPage() {
 
         if (isFgwh) {
             return (
-                <Card key={id} className="bg-white rounded-r-xl border shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col h-full border-l-[4px] border-l-primary">
+                <Card key={id} className="bg-white/80 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-xl transition-all duration-300 relative overflow-hidden flex flex-col h-full border-l-[4px] border-l-primary">
                     {/* Glossy highlight effect on top edge */}
                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent z-10"></div>
                     
@@ -749,7 +750,7 @@ export default function DashboardPage() {
 
         if (id === 'virtual-container') {
             return (
-                <Card key={id} className={`bg-white rounded-r-xl border shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full border-l-[4px] border-l-primary`}>
+                <Card key={id} className={`bg-white/80 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-xl transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full border-l-[4px] border-l-[#e63121]`}>
                     {/* Glowing ambient background highlights */}
                     <div className="absolute -top-32 -right-32 w-64 h-64 bg-red-400/20 rounded-full blur-3xl pointer-events-none"></div>
                     <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-rose-400/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -869,7 +870,7 @@ export default function DashboardPage() {
         }
 
         return (
-            <Card key={id} className={`bg-white rounded-r-xl border shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full border-l-[4px] ${isTotal ? 'border-l-primary' : 'border-l-slate-400'}`}>
+            <Card key={id} className={`bg-white/85 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-xl transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full border-l-[4px] ${isTotal ? 'border-l-primary' : 'border-l-slate-400'}`}>
 
                 {/* Subtle gradient glow in background */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#e63121]/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -1258,65 +1259,94 @@ export default function DashboardPage() {
                 </div>
 
                 {selectedDept === 'all' && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 mt-2 bg-white/40 backdrop-blur-md border border-white/60 p-2 md:p-3 rounded-xl shadow-sm">
-                        <div className="flex justify-between items-center p-1 md:px-4 border-r border-slate-200/50">
-                            <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${kpiSummary.steamActual >= kpiSummary.steamTarget ? 'bg-emerald-500' : 'bg-amber-500'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                <span className="text-[8px] sm:text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">HẤP / STEAM</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-lg md:text-2xl font-black text-slate-900">{Number(kpiSummary.steamActual).toLocaleString(undefined, {maximumFractionDigits:1})}</span>
-                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {Number(kpiSummary.steamTarget).toLocaleString(undefined, {maximumFractionDigits:1})} T</span>
-                            </div>
+                    <FadeInStagger faster>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 mt-2">
+                            <FadeIn>
+                                <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${kpiSummary.steamActual >= kpiSummary.steamTarget ? 'bg-emerald-500' : 'bg-[#e63121]'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
+                                            <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight uppercase">Hấp / Steam</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter">
+                                            <AnimatedNumber value={kpiSummary.steamActual} />
+                                        </span>
+                                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">/ {Number(kpiSummary.steamTarget).toLocaleString(undefined, {maximumFractionDigits:1})} T</span>
+                                    </div>
+                                </div>
+                            </FadeIn>
+                            <FadeIn>
+                                <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${kpiSummary.contActual >= kpiSummary.contTarget ? 'bg-blue-500' : 'bg-amber-500'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
+                                            <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CONTAINER</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter">
+                                            <AnimatedNumber value={kpiSummary.contActual} />
+                                        </span>
+                                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">/ {Number(kpiSummary.contTarget).toLocaleString(undefined, {maximumFractionDigits:1})} C</span>
+                                    </div>
+                                </div>
+                            </FadeIn>
+                            <FadeIn className="col-span-2 sm:col-span-1">
+                                <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'bg-rose-500' : 'bg-[#e63121]'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
+                                            <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CO₂e (SCOPE 1+2)</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-1">
+                                            <AnimatedNumber value={kpiSummary.totalEmission >= 1000 ? kpiSummary.totalEmission/1000 : kpiSummary.totalEmission} />
+                                            {kpiSummary.totalEmission >= 1000 && 'k'}
+                                        </span>
+                                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">/ {kpiSummary.totalEmissionTarget} T</span>
+                                    </div>
+                                </div>
+                            </FadeIn>
                         </div>
-                        <div className="flex justify-between items-center p-1 md:px-4 border-r border-slate-200/50">
-                            <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${kpiSummary.contActual >= kpiSummary.contTarget ? 'bg-blue-500' : 'bg-amber-500'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                <span className="text-[8px] sm:text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CONTAINER</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-lg md:text-2xl font-black text-slate-900">{Number(kpiSummary.contActual).toLocaleString(undefined, {maximumFractionDigits:1})}</span>
-                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {Number(kpiSummary.contTarget).toLocaleString(undefined, {maximumFractionDigits:1})} C</span>
-                            </div>
-                        </div>
-                        <div className="flex justify-between items-center p-1 md:px-4 col-span-2 sm:col-span-1">
-                            <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'bg-rose-500' : 'bg-red-600'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                <span className="text-[8px] sm:text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CO₂e (SCOPE 1+2)</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-lg md:text-2xl font-black text-slate-900">{kpiSummary.totalEmission >= 1000 ? (kpiSummary.totalEmission/1000).toFixed(1) + 'k' : kpiSummary.totalEmission.toFixed(1)}</span>
-                                <span className="text-[10px] md:text-xs text-muted-foreground">/ {kpiSummary.totalEmissionTarget} T</span>
-                            </div>
-                        </div>
-                    </div>
+                    </FadeInStagger>
                 )}
 
-                <TabsContent value="stations" className="mt-0">
-                    <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-2">
-                        {/* Total Factory Card - Full Width / 2 columns */}
-                        <div className="lg:col-span-1">{renderMiniDashboard("all", t('all_factory_card'), true)}</div>
+                <TabsContent value="stations" className="mt-0 pt-2">
+                    <FadeInStagger faster>
+                        <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-2">
+                            {/* Total Factory Card - Full Width / 2 columns */}
+                            <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard("all", t('all_factory_card'), true)}</FadeIn>
 
-                        {/* Virtual Container Card */}
-                        <div className="lg:col-span-1">{renderMiniDashboard("virtual-container", "Container")}</div>
-                    </div>
+                            {/* Virtual Container Card */}
+                            <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard("virtual-container", "Container")}</FadeIn>
+                        </div>
 
-                    {/* DEPARTMENT MINI DASHBOARDS (DENSE BENTO GRID) */}
-                    <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                        {/* Department Cards - exclude FGWH since it will be appended separately below */}
-                        {departments.filter(d => d.code !== 'FGWH').map(d => renderMiniDashboard(d.id, d.name_en))}
-                        
-                        {/* FGWH Finished Goods Warehouse Card */}
-                        {renderMiniDashboard("fgwh", "FGWH - Finished Goods", true)}
-                    </div>
+                        {/* DEPARTMENT MINI DASHBOARDS (DENSE BENTO GRID) */}
+                        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                            {/* Department Cards - exclude FGWH since it will be appended separately below */}
+                            {departments.filter(d => d.code !== 'FGWH').map(d => (
+                                <FadeIn key={d.id} className="h-full">
+                                    {renderMiniDashboard(d.id, d.name_en)}
+                                </FadeIn>
+                            ))}
+                            
+                            {/* FGWH Finished Goods Warehouse Card */}
+                            <FadeIn className="h-full sm:col-span-2 lg:col-span-1 xl:col-span-2 2xl:col-span-1">{renderMiniDashboard("fgwh", "FGWH - Finished Goods", true)}</FadeIn>
+                        </div>
+                    </FadeInStagger>
                 </TabsContent>
 
-                <TabsContent value="regions" className="mt-0">
-                    <div className="grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-3">
-                        {renderMiniDashboard("region-RCN", t('region_rcn'), true)}
-                        {renderMiniDashboard("region-LCA", t('region_lca'), true)}
-                        {renderMiniDashboard("region-HCA", t('region_hca'), true)}
-                    </div>
+                <TabsContent value="regions" className="mt-0 pt-2">
+                    <FadeInStagger faster>
+                        <div className="grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-3">
+                            <FadeIn className="h-full">{renderMiniDashboard("region-RCN", t('region_rcn'), true)}</FadeIn>
+                            <FadeIn className="h-full">{renderMiniDashboard("region-LCA", t('region_lca'), true)}</FadeIn>
+                            <FadeIn className="h-full">{renderMiniDashboard("region-HCA", t('region_hca'), true)}</FadeIn>
+                        </div>
+                    </FadeInStagger>
                 </TabsContent>
             </Tabs>
 

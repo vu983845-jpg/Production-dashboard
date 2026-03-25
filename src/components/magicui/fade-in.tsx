@@ -1,7 +1,6 @@
 'use client';
 
-import { motion, useInView } from 'framer-motion';
-import { useRef } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface FadeInProps {
@@ -13,10 +12,35 @@ interface FadeInProps {
   once?: boolean;
 }
 
-/**
- * FadeIn — wrap bất kỳ component nào, nó sẽ fade + slide vào khi xuất hiện trong màn hình.
- * Rất đơn giản: <FadeIn direction="up" delay={0.2}><Card /></FadeIn>
- */
+export function FadeInStagger({
+  faster = false,
+  className,
+  children,
+}: {
+  faster?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: '-50px' }}
+      variants={{
+        hidden: {},
+        visible: {
+          transition: {
+            staggerChildren: faster ? 0.05 : 0.1,
+          },
+        },
+      }}
+      className={cn(className)}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export function FadeIn({
   children,
   className,
@@ -25,28 +49,28 @@ export function FadeIn({
   duration = 0.5,
   once = true,
 }: FadeInProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once, margin: '-50px' });
-
   const directionMap = {
-    up:    { y: 24, x: 0 },
-    down:  { y: -24, x: 0 },
-    left:  { x: 24, y: 0 },
+    up: { y: 24, x: 0 },
+    down: { y: -24, x: 0 },
+    left: { x: 24, y: 0 },
     right: { x: -24, y: 0 },
-    none:  { x: 0, y: 0 },
+    none: { x: 0, y: 0 },
   };
-
-  const initial = { opacity: 0, ...directionMap[direction] };
-  const animate = isInView
-    ? { opacity: 1, x: 0, y: 0 }
-    : initial;
 
   return (
     <motion.div
-      ref={ref}
-      initial={initial}
-      animate={animate}
-      transition={{ duration, delay, ease: 'easeOut' }}
+      variants={{
+        hidden: { opacity: 0, ...directionMap[direction] },
+        visible: { 
+          opacity: 1, 
+          x: 0, 
+          y: 0,
+          transition: { duration, ease: 'easeOut' }
+        },
+      }}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once, margin: '-50px' }}
       className={cn(className)}
     >
       {children}
