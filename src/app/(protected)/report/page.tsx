@@ -169,14 +169,17 @@ export default function ReportPage() {
         const totalActual  = rows.reduce((s, r) => s + r.actual_ton, 0)
         const totalPlan    = rows.reduce((s, r) => s + r.plan_ton, 0)
         const totalDowntime = rows.reduce((s, r) => s + r.downtime_min, 0)
-        const brokenRows   = rows.filter(r => r.avg_broken_pct > 0)
-        const unpeelRows   = rows.filter(r => r.avg_unpeel_pct > 0)
+        
+        // Weighted Average for Broken % and Unpeel %
+        const sumBrokenWeight = rows.reduce((s, r) => s + (r.avg_broken_pct * r.actual_ton), 0)
+        const sumUnpeelWeight = rows.reduce((s, r) => s + (r.avg_unpeel_pct * r.actual_ton), 0)
+        
         setSummary({
             totalActual,
             totalPlan,
             totalDowntime,
-            avgBroken:  brokenRows.length > 0 ? brokenRows.reduce((s,r) => s + r.avg_broken_pct, 0) / brokenRows.length : 0,
-            avgUnpeel:  unpeelRows.length > 0 ? unpeelRows.reduce((s,r) => s + r.avg_unpeel_pct, 0) / unpeelRows.length : 0,
+            avgBroken:  totalActual > 0 ? sumBrokenWeight / totalActual : 0,
+            avgUnpeel:  totalActual > 0 ? sumUnpeelWeight / totalActual : 0,
             daysWithData,
         })
 
@@ -518,9 +521,11 @@ export default function ReportPage() {
                 mCurr[r.line_code] = Number((mCurr._sums[r.line_code] / mCurr._counts[r.line_code]).toFixed(3));
             }
             if (brk !== null) {
-                bCurr._sums[r.line_code] = (bCurr._sums[r.line_code] || 0) + brk;
-                bCurr._counts[r.line_code] = (bCurr._counts[r.line_code] || 0) + 1;
-                bCurr[r.line_code] = Number((bCurr._sums[r.line_code] / bCurr._counts[r.line_code]).toFixed(2));
+                bCurr._sums[r.line_code] = (bCurr._sums[r.line_code] || 0) + (brk * Number(r.actual_ton || 0));
+                bCurr._counts[r.line_code] = (bCurr._counts[r.line_code] || 0) + Number(r.actual_ton || 0);
+                bCurr[r.line_code] = bCurr._counts[r.line_code] > 0 
+                    ? Number((bCurr._sums[r.line_code] / bCurr._counts[r.line_code]).toFixed(2)) 
+                    : 0;
             }
         });
 
@@ -545,8 +550,8 @@ export default function ReportPage() {
                 curr.totalDowntime += Number(r.downtime_min || 0);
                 curr.totalRunHours += Number(r.run_hours || 0);
                 if (Number(r.broken_pct) > 0) {
-                    curr.totalBroken += Number(r.broken_pct);
-                    curr.brokenCount += 1;
+                    curr.totalBroken += (Number(r.broken_pct) * Number(r.actual_ton || 0));
+                    curr.brokenCount += Number(r.actual_ton || 0); // Using weight for weighted avg
                 }
                 if (r.line_code) curr.lines.add(r.line_code);
             }
@@ -583,18 +588,18 @@ export default function ReportPage() {
 
     const sizeBrokenChartData = (() => {
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
-        const map = new Map<string, { size: string, totalBroken: number, count: number, lines: Set<string> }>();
+        const map = new Map<string, { size: string, totalBroken: number, weight: number, lines: Set<string> }>();
         filteredShellingLines.forEach(r => {
             if (!r.size || !Number(r.broken_pct)) return;
-            if (!map.has(r.size)) map.set(r.size, { size: r.size, totalBroken: 0, count: 0, lines: new Set() });
+            if (!map.has(r.size)) map.set(r.size, { size: r.size, totalBroken: 0, weight: 0, lines: new Set() });
             const curr = map.get(r.size)!;
-            curr.totalBroken += Number(r.broken_pct);
-            curr.count += 1;
+            curr.totalBroken += (Number(r.broken_pct) * Number(r.actual_ton || 0));
+            curr.weight += Number(r.actual_ton || 0);
             if (r.line_code) curr.lines.add(r.line_code);
         });
         return Array.from(map.values()).map(r => ({
             name: r.size,
-            Tỷ_Lệ_Bể: r.count > 0 ? Number((r.totalBroken / r.count).toFixed(2)) : 0,
+            Tỷ_Lệ_Bể: r.weight > 0 ? Number((r.totalBroken / r.weight).toFixed(2)) : 0,
             Lines: Array.from(r.lines).sort().join(', ')
         })).sort((a,b) => a.name.localeCompare(b.name));
     })();
