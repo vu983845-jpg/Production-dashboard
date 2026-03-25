@@ -90,15 +90,15 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
-            <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+            <header className="sticky top-0 z-30 flex h-16 items-center gap-4 bg-[#E30613] text-white px-4 md:px-6 shadow-md">
                 <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
                     <Link
                         href="/dashboard"
-                        className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0 md:mr-2"
+                        className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0 md:mr-2 text-white"
                     >
-                        <IntersnackLogo className="h-8 w-8" />
-                        <span className="hidden lg:inline text-red-600 font-bold tracking-tight whitespace-nowrap">VICC LA</span>
-                        <span className="lg:hidden text-red-600 font-bold whitespace-nowrap">VICC LA</span>
+                        <IntersnackLogo className="h-8 w-8 text-white fill-current" />
+                        <span className="hidden lg:inline text-white font-bold tracking-tight whitespace-nowrap">VICC LA</span>
+                        <span className="lg:hidden text-white font-bold whitespace-nowrap">VICC LA</span>
                     </Link>
                     {navItems
                         .filter((item) => item.roles.includes(role))
@@ -109,7 +109,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    className={`transition-colors hover:text-foreground flex items-center gap-2 whitespace-nowrap shrink-0 ${isActive ? "text-foreground font-semibold" : "text-muted-foreground"
+                                    className={`transition-colors hover:text-white flex items-center gap-2 whitespace-nowrap shrink-0 ${isActive ? "text-white font-bold" : "text-white/70"
                                         }`}
                                 >
                                     <Icon className="h-4 w-4" />
@@ -142,25 +142,27 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                                 ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0">
-                        <IntersnackLogo className="h-7 w-7" />
-                        <span className="text-red-600 font-bold tracking-tight" style={{ fontSize: '0.95rem' }}>VICC LA</span>
+                    <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0 text-white">
+                        <IntersnackLogo className="h-7 w-7 text-white fill-current" />
+                        <span className="text-white font-bold tracking-tight" style={{ fontSize: '0.95rem' }}>VICC LA</span>
                     </Link>
                 </div>
 
                 <div className="flex flex-1 items-center justify-end gap-2 md:gap-4 lg:gap-6 shrink-0">
-                    <Button variant="outline" size="sm" asChild className="gap-1.5 px-2 sm:px-3 text-muted-foreground hover:text-foreground">
+                    <Button variant="ghost" size="sm" asChild className="gap-1.5 px-2 sm:px-3 text-white hover:bg-white/10 hover:text-white">    
                         <a href="https://dds-meeting.vercel.app/">
                             <ArrowLeft className="h-4 w-4" />
                             <span className="hidden sm:inline">DDS Meeting</span>
                             <span className="sm:hidden text-xs font-semibold">DDS</span>
                         </a>
                     </Button>
-                    <LanguageToggle />
+                    <div className="text-white hover:bg-white/10 rounded-md">
+                        <LanguageToggle />
+                    </div>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="secondary" size="icon" className="rounded-full">
+                            <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/10 hover:text-white border border-white/20">
                                 <Users className="h-5 w-5" />
                                 <span className="sr-only">Toggle user menu</span>
                             </Button>

@@ -65,7 +65,7 @@ function fmtDate(d: string) {
 
 function KPICard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
     return (
-        <div className="bg-white rounded-xl border shadow-sm p-4 flex flex-col gap-1">
+        <div className="bg-white rounded-r-xl border border-l-[4px] border-l-primary shadow-sm p-4 flex flex-col gap-1 transition-all hover:shadow-md">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
             <p className={`text-2xl font-black ${color ?? "text-slate-800"}`}>{value}</p>
             {sub && <p className="text-xs text-muted-foreground">{sub}</p>}

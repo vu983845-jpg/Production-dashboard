@@ -49,15 +49,15 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --background: oklch(0.99 0 0); /* Off-white #FCF9F8 equivalent */
+  --foreground: oklch(0.2 0 0); /* Charcoal #1A1A1A equivalent */
+  --card: oklch(1 0 0); /* Pure white */
+  --card-foreground: oklch(0.2 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
+  --popover-foreground: oklch(0.2 0 0);
+  --primary: #E30613; /* Intersnack Red */
+  --primary-foreground: oklch(1 0 0); /* White text on red */
+  --secondary: oklch(0.96 0 0); /* Light gray surface */
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
@@ -89,8 +89,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: #E30613; /* Intersnack Red */
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);

@@ -699,7 +699,7 @@ export default function DashboardPage() {
 
         if (isFgwh) {
             return (
-                <Card key={id} className="bg-white/70 backdrop-blur-xl border border-white/50 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden flex flex-col h-full ring-1 ring-black/5">
+                <Card key={id} className="bg-white rounded-r-xl border shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col h-full border-l-[4px] border-l-primary">
                     {/* Glossy highlight effect on top edge */}
                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent z-10"></div>
                     
@@ -749,7 +749,7 @@ export default function DashboardPage() {
 
         if (id === 'virtual-container') {
             return (
-                <Card key={id} className={`bg-gradient-to-br from-red-50/90 to-white/60 backdrop-blur-xl border border-red-200/60 shadow-lg shadow-red-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden flex flex-col justify-start h-full ring-1 ring-red-100/50`}>
+                <Card key={id} className={`bg-white rounded-r-xl border shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full border-l-[4px] border-l-primary`}>
                     {/* Glowing ambient background highlights */}
                     <div className="absolute -top-32 -right-32 w-64 h-64 bg-red-400/20 rounded-full blur-3xl pointer-events-none"></div>
                     <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-rose-400/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -869,7 +869,7 @@ export default function DashboardPage() {
         }
 
         return (
-            <Card key={id} className={`bg-gradient-to-br from-white/90 to-slate-50/60 backdrop-blur-xl border border-slate-200/60 shadow-lg shadow-slate-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden flex flex-col justify-start h-full ring-1 ${isTotal ? 'ring-red-400/60 shadow-red-900/10' : 'ring-slate-100/50'}`}>
+            <Card key={id} className={`bg-white rounded-r-xl border shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full border-l-[4px] ${isTotal ? 'border-l-primary' : 'border-l-slate-400'}`}>
 
                 {/* Subtle gradient glow in background */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#e63121]/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -1322,7 +1322,7 @@ export default function DashboardPage() {
 
             {
                 selectedDept === 'all' && energyHistory.length > 0 && (
-                    <Card className="mt-3 md:mt-4 bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+                    <Card className="mt-3 md:mt-4 bg-white border border-slate-200 shadow-sm relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-blue-500/5 pointer-events-none"></div>
                         <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-white/40 border-b border-white/50 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">
@@ -1436,15 +1436,15 @@ export default function DashboardPage() {
             }
 
             <div className="grid gap-4 mt-4">
-                <Card className="bg-white/70 backdrop-blur-xl border border-white/50 shadow-md">
+                <Card className="bg-white border border-slate-200 shadow-sm">
                     <CardHeader className="border-b border-white/50 bg-white/40">
                         <CardTitle className="text-xl font-bold text-slate-800">{t('master_data_table')}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="overflow-x-auto w-full">
-                        <Table className="bg-transparent w-full text-xs sm:text-sm">
+                        <Table className="bg-white w-full text-xs sm:text-sm border-collapse">
 
-                            <TableHeader className="bg-slate-50/50">
+                            <TableHeader className="bg-slate-50 border-b border-slate-200">
                                 {selectedDept === 'all' ? (
                                     <TableRow>
                                         <TableHead>{t('col_dept')}</TableHead>

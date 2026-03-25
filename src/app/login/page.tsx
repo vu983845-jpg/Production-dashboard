@@ -73,190 +73,209 @@ export default function LoginPage() {
                     width: 100%;
                     font-family: 'Inter', sans-serif;
                     overflow: hidden;
+                    background: #000;
                 }
 
-                /* ── LEFT PANEL ── */
+                /* ── LEFT PANEL: Industrial Premium ── */
                 .login-left {
-                    flex: 0 0 48%;
-                    background: #E30613;
+                    flex: 0 0 50%;
+                    background: #111111;
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
                     align-items: flex-start;
-                    padding: 60px 52px;
+                    padding: 80px 64px;
                     position: relative;
                     overflow: hidden;
                 }
-                .login-left .deco {
+
+                /* Subtle Grid Pattern */
+                .login-left::before {
+                    content: '';
                     position: absolute;
-                    border-radius: 50%;
+                    inset: 0;
+                    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+                    background-size: 40px 40px;
                     pointer-events: none;
                 }
-                .deco-1 { width:520px;height:520px;border:1px solid rgba(255,255,255,.12);top:-160px;right:-160px; }
-                .deco-2 { width:360px;height:360px;border:1px solid rgba(255,255,255,.1);bottom:-110px;left:-90px; }
-                .deco-3 { width:200px;height:200px;background:rgba(255,255,255,.06);bottom:80px;right:36px; }
+
+                /* Elegant Red Accent Line */
+                .login-left::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 4px;
+                    height: 100%;
+                    background: #E30613;
+                }
 
                 .login-brand {
                     display: flex;
                     align-items: center;
-                    gap: 14px;
-                    margin-bottom: 44px;
-                    z-index: 1;
+                    gap: 16px;
+                    margin-bottom: 60px;
+                    z-index: 2;
                 }
                 .login-brand-logo {
-                    background: #fff;
-                    border-radius: 14px;
-                    padding: 8px;
+                    background: #E30613; /* Primary Red as accent for logo background */
+                    border-radius: 12px;
+                    padding: 10px;
                     display: flex;
-                    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+                    box-shadow: 0 8px 24px rgba(227, 6, 19, 0.3);
                 }
-                .login-brand-name  { color:#fff; font-weight:800; font-size:20px; letter-spacing:-0.3px; line-height:1.1; }
-                .login-brand-sub   { color:rgba(255,255,255,.65); font-size:12px; font-weight:500; }
+                .login-brand-name  { color:#fff; font-weight:800; font-size:22px; letter-spacing:-0.5px; }
+                .login-brand-sub   { color:rgba(255,255,255,0.5); font-size:12px; font-weight:500; margin-top: -2px; }
 
-                .login-headline { z-index:1; margin-bottom:32px; }
+                .login-headline { z-index:2; margin-bottom:44px; }
                 .login-headline-label {
-                    color:rgba(255,255,255,.65); font-size:11px; font-weight:700;
-                    letter-spacing:2.5px; text-transform:uppercase; margin-bottom:8px;
+                    color:#E30613; font-size:11px; font-weight:800;
+                    letter-spacing:3px; text-transform:uppercase; margin-bottom:12px;
                 }
                 .login-headline h1 {
-                    color:#fff; font-weight:800; font-size:36px;
-                    line-height:1.15; margin:0; letter-spacing:-0.5px;
+                    color:#fff; font-weight:800; font-size:48px;
+                    line-height:1.1; margin:0; letter-spacing:-1px;
                 }
-                .login-headline h1 em { font-style:italic; font-weight:300; }
+                .login-headline h1 em { font-style:italic; font-weight:300; display:block; opacity: 0.8; }
 
-                .cv-list { display:flex; flex-direction:column; gap:12px; width:100%; max-width:400px; z-index:1; }
+                .cv-list { display:flex; flex-direction:column; gap:14px; width:100%; max-width:440px; z-index:2; }
                 .cv-card {
-                    display:flex; align-items:center; gap:14px;
-                    background:rgba(255,255,255,.1);
-                    border: 1px solid rgba(255,255,255,.2);
-                    border-radius:14px;
-                    padding:13px 16px;
+                    display:flex; align-items:center; gap:18px;
+                    background: rgba(255, 255, 255, 0.03);
+                    backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    border-radius:16px;
+                    padding:16px 20px;
                     opacity:0;
-                    animation: slideUp 0.45s ease forwards;
-                    transition: background .2s, transform .2s;
+                    animation: slideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+                    transition: all .3s;
                     cursor:default;
                 }
-                .cv-card:hover { background:rgba(255,255,255,.18); transform:translateX(4px); }
-                .cv-card:nth-child(1) { animation-delay:.08s; }
-                .cv-card:nth-child(2) { animation-delay:.2s;  }
-                .cv-card:nth-child(3) { animation-delay:.32s; }
-                .cv-card:nth-child(4) { animation-delay:.44s; }
+                .cv-card:hover { 
+                    background: rgba(255, 255, 255, 0.07); 
+                    border-color: rgba(227, 6, 19, 0.4);
+                    transform: translateX(8px); 
+                }
+
+                .cv-card:nth-child(1) { animation-delay:.1s; }
+                .cv-card:nth-child(2) { animation-delay:.2s; }
+                .cv-card:nth-child(3) { animation-delay:.3s; }
+                .cv-card:nth-child(4) { animation-delay:.4s; }
 
                 .cv-icon {
-                    font-size:20px; width:42px; height:42px; flex-shrink:0;
+                    width:44px; height:44px; flex-shrink:0;
                     display:flex; align-items:center; justify-content:center;
-                    background:rgba(255,255,255,.15); border-radius:11px;
+                    background:rgba(255,255,255,0.05); border-radius:12px;
+                    border: 1px solid rgba(255,255,255,0.05);
                 }
-                .cv-title { color:#fff; font-weight:700; font-size:13px; line-height:1.3; }
-                .cv-desc  { color:rgba(255,255,255,.6); font-size:11px; margin-top:2px; line-height:1.4; }
+                .cv-title { color:#fff; font-weight:700; font-size:14px; margin-bottom: 2px; }
+                .cv-desc  { color:rgba(255,255,255,0.4); font-size:12px; line-height:1.4; }
 
                 .login-footer {
-                    position:absolute; bottom:24px; left:52px;
-                    color:rgba(255,255,255,.35); font-size:11px; z-index:1;
+                    position:absolute; bottom:32px; left:64px;
+                    color:rgba(255,255,255,0.2); font-size:11px; z-index:2;
+                    letter-spacing: 0.5px;
                 }
 
                 /* ── RIGHT PANEL ── */
                 .login-right {
                     flex: 1;
-                    background: #fff;
+                    background: #ffffff;
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
                     align-items: center;
-                    padding: 56px 48px;
+                    padding: 60px;
                     position: relative;
                     overflow-y: auto;
                 }
                 .login-back {
-                    position:absolute; top:24px; left:24px;
-                    display:flex; align-items:center; gap:6px;
-                    color:#999; font-size:13px; text-decoration:none;
-                    font-weight:500; transition:color .2s;
+                    position:absolute; top:32px; left:32px;
+                    display:flex; align-items:center; gap:8px;
+                    color:#888; font-size:13px; text-decoration:none;
+                    font-weight:600; transition:all .2s;
+                    padding: 8px 12px;
+                    border-radius: 8px;
                 }
-                .login-back:hover { color:#E30613; }
+                .login-back:hover { color:#111; background: #f5f5f5; }
 
-                .login-form-wrap { width:100%; max-width:360px; }
+                .login-form-wrap { width:100%; max-width:380px; }
 
                 .login-form-title {
-                    font-size:28px; font-weight:800; color:#111;
-                    margin:0 0 6px; letter-spacing:-0.5px;
+                    font-size:32px; font-weight:800; color:#111;
+                    margin:0 0 8px; letter-spacing:-1px;
                 }
-                .login-form-sub { color:#888; font-size:14px; margin:0 0 32px; }
+                .login-form-sub { color:#666; font-size:15px; margin:0 0 40px; font-weight: 400; }
 
-                .field-group { display:flex; flex-direction:column; gap:16px; }
-                .field { display:flex; flex-direction:column; gap:6px; }
-                .field label { color:#333; font-size:13px; font-weight:600; }
+                .field-group { display:flex; flex-direction:column; gap:20px; }
+                .field { display:flex; flex-direction:column; gap:8px; }
+                .field label { color:#111; font-size:13px; font-weight:700; text-transform: uppercase; letter-spacing: 0.5px; }
 
                 .field input {
-                    border-radius:10px;
-                    border:1.5px solid #e5e5e5;
-                    padding:11px 14px;
-                    font-size:14px;
+                    border-radius:12px;
+                    border: 2px solid #f0f0f0;
+                    padding:14px 16px;
+                    font-size:15px;
                     font-family:inherit;
-                    transition:border-color .2s;
+                    transition: all .2s;
                     outline:none;
                     width:100%;
-                    background:#fafafa;
+                    background:#f9f9f9;
                 }
-                .field input:focus { border-color:#E30613; background:#fff; }
+                .field input:focus { border-color:#E30613; background:#fff; box-shadow: 0 0 0 4px rgba(227, 6, 19, 0.05); }
 
-                .captcha-wrap { display:flex; justify-content:center; }
+                .captcha-wrap { display:flex; justify-content:center; margin-top: 5px; }
 
                 .btn-login {
-                    width:100%; padding:13px;
-                    border-radius:10px; border:none;
-                    font-weight:700; font-size:15px;
+                    width:100%; padding:16px;
+                    border-radius:12px; border:none;
+                    font-weight:800; font-size:16px;
                     cursor:pointer; font-family:inherit;
-                    letter-spacing:-0.2px;
-                    transition: background .2s, opacity .2s;
+                    letter-spacing:-0.3px;
+                    transition: all .3s cubic-bezier(0.22, 1, 0.36, 1);
+                    margin-top: 10px;
                 }
-                .btn-login.active   { background:#E30613; color:#fff; }
-                .btn-login.active:hover { background:#c0040f; }
-                .btn-login.inactive { background:#f0f0f0; color:#aaa; cursor:not-allowed; }
+                .btn-login.active { 
+                    background:#111; color:#fff; 
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }
+                .btn-login.active:hover { 
+                    background:#E30613; 
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 24px rgba(227, 6, 19, 0.25);
+                }
+                .btn-login.inactive { background:#f5f5f5; color:#bbb; cursor:not-allowed; }
 
-                .login-help { text-align:center; font-size:13px; color:#999; }
-                .login-help span { color:#E30613; font-weight:600; cursor:pointer; }
+                .login-help { text-align:center; font-size:14px; color:#666; margin-top: 24px; }
+                .login-help span { color:#E30613; font-weight:700; cursor:pointer; text-decoration: underline; text-underline-offset: 4px; }
 
                 @keyframes slideUp {
-                    from { opacity:0; transform:translateY(18px); }
+                    from { opacity:0; transform:translateY(30px); }
                     to   { opacity:1; transform:translateY(0); }
                 }
 
                 /* ── MOBILE ── */
-                @media (max-width: 768px) {
-                    .login-root { flex-direction: column; height: auto; min-height: 100vh; }
-
-                    /* Red banner on top for mobile */
-                    .login-left {
-                        flex: none;
-                        width: 100%;
-                        padding: 32px 24px 28px;
-                        align-items: center;
-                    }
-                    .login-brand { margin-bottom: 20px; }
-                    .login-headline { margin-bottom: 20px; text-align: center; }
-                    .login-headline h1 { font-size: 26px; }
-                    .login-headline-label { text-align: center; }
-                    .cv-list { max-width: 100%; gap: 10px; }
-                    .cv-title { font-size: 12px; }
-                    .cv-desc  { font-size: 10px; }
-                    .login-footer { display: none; }
-                    .deco-1, .deco-2, .deco-3 { display: none; }
-
-                    /* Form below */
-                    .login-right {
-                        flex: 1;
-                        padding: 36px 24px 48px;
-                        justify-content: flex-start;
-                    }
-                    .login-back { top: -999px; } /* hide on mobile, footer handles nav */
-                    .login-form-title { font-size: 24px; }
+                @media (max-width: 1024px) {
+                    .login-left { flex: 0 0 45%; padding: 60px 40px; }
                 }
 
-                @media (max-width: 400px) {
-                    .login-left { padding: 24px 16px 20px; }
-                    .cv-card { padding: 10px 12px; gap: 10px; }
-                    .cv-icon { width:36px; height:36px; font-size:16px; }
+                @media (max-width: 768px) {
+                    .login-root { flex-direction: column; height: auto; min-height: 100vh; }
+                    .login-left {
+                        flex: none; width: 100%; padding: 60px 24px;
+                        align-items: center; text-align: center;
+                    }
+                    .login-left::after { width: 100%; height: 4px; top: 0; left: 0; }
+                    .login-brand { margin-bottom: 32px; justify-content: center; }
+                    .login-headline { margin-bottom: 32px; }
+                    .login-headline h1 { font-size: 36px; }
+                    .cv-list { max-width: 100%; }
+                    .cv-card:hover { transform: translateY(-4px); }
+                    .login-footer { display: none; }
+                    
+                    .login-right { flex: 1; padding: 48px 24px; }
+                    .login-back { top: 16px; left: 16px; }
                 }
             `}</style>
 
@@ -264,9 +283,6 @@ export default function LoginPage() {
 
                 {/* ── LEFT ── */}
                 <div className="login-left">
-                    <div className="deco deco-1" />
-                    <div className="deco deco-2" />
-                    <div className="deco deco-3" />
 
                     <div className="login-brand">
                         <div className="login-brand-logo">
