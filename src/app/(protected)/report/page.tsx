@@ -189,16 +189,25 @@ export default function ReportPage() {
                 .order("work_date", { ascending: true })
                 .order("line_code", { ascending: true })
             
-            // Robust normalization of shift leader names (Mr. Trí, Mrs. Tâm, Ms. Linh)
+            // Canonical normalization of shift leader names (Unify all variations into exactly 3 leaders)
             const cleanedLD = (ld ?? []).map((r: any) => {
-                let name = r.shift_leader || "";
+                let name = (r.shift_leader || "").trim();
                 if (name) {
-                    name = name.trim()
-                        .replace(/^mr\.?\s*/i, 'Mr. ')
-                        .replace(/^mrs\.?\s*/i, 'Mrs. ')
-                        .replace(/^ms\.?\s*/i, 'Ms. ')
-                        .replace(/\s+/g, ' ')
-                        .trim();
+                    const lower = name.toLowerCase();
+                    // Explicitly map to canonical names based on keywords
+                    if (lower.includes("trí")) name = "Mr. Trí";
+                    else if (lower.includes("tâm")) name = "Mrs. Tâm";
+                    else if (lower.includes("linh")) name = "Ms. Linh";
+                    else {
+                        // Fallback for any other names
+                        name = name.replace(/^(mrs|mr|ms)\.?\s*/i, (m: string, p: string) => {
+                            const pre = p.toLowerCase();
+                            if (pre === 'mrs') return 'Mrs. ';
+                            if (pre === 'mr') return 'Mr. ';
+                            if (pre === 'ms') return 'Ms. ';
+                            return m;
+                        }).replace(/\s+/g, ' ').trim();
+                    }
                 }
                 return { ...r, shift_leader: name };
             });
