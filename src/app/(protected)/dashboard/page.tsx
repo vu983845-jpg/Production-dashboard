@@ -1295,38 +1295,100 @@ export default function DashboardPage() {
                     <FadeInStagger faster>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 mt-2">
                             <FadeIn>
-                                <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
-                                    <div className="flex flex-col gap-1.5">
-                                        <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Hấp / Steam</span>
-                                        <BadgePulse
-                                            label={kpiSummary.steamActual >= kpiSummary.steamTarget ? 'Đạt KH' : 'Chưa đạt'}
-                                            color={kpiSummary.steamActual >= kpiSummary.steamTarget ? 'green' : 'red'}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter">
-                                            <AnimatedNumber value={kpiSummary.steamActual} />
-                                        </span>
-                                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">/ {Number(kpiSummary.steamTarget).toLocaleString(undefined, {maximumFractionDigits:1})} T</span>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    const pct = kpiSummary.steamTarget > 0
+                                        ? (kpiSummary.steamActual / kpiSummary.steamTarget) * 100 : 0
+                                    const isGood = pct >= 100
+                                    const barColor = isGood ? '#10b981' : pct >= 85 ? '#f59e0b' : '#e63121'
+                                    return (
+                                        <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
+                                            <div className="flex justify-between items-start">
+                                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Hấp / Steam</span>
+                                                <BadgePulse
+                                                    label={isGood ? 'Đạt KH' : 'Chưa đạt'}
+                                                    color={isGood ? 'green' : 'red'}
+                                                />
+                                            </div>
+                                            {/* Big value */}
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">
+                                                    <AnimatedNumber value={kpiSummary.steamActual} />
+                                                </span>
+                                                <span className="text-[11px] text-slate-400 font-medium">
+                                                    / {Number(kpiSummary.steamTarget).toLocaleString(undefined, { maximumFractionDigits: 1 })} T
+                                                </span>
+                                            </div>
+                                            {/* Progress bar with % label */}
+                                            <div className="w-full">
+                                                <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-[1200ms] ease-out"
+                                                        style={{
+                                                            width: `${Math.min(pct, 100)}%`,
+                                                            background: isGood
+                                                                ? 'linear-gradient(90deg, #10b981, #34d399)'
+                                                                : pct >= 85
+                                                                    ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                                                                    : 'linear-gradient(90deg, #e63121, #f87171)',
+                                                        }}
+                                                    />
+                                                    <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)', animation: 'shimmer 2s infinite', backgroundSize: '200% 100%' }} />
+                                                </div>
+                                                <div className="flex justify-end mt-1">
+                                                    <span className="text-[10px] font-black tabular-nums" style={{ color: barColor }}>{pct.toFixed(1)}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
                             </FadeIn>
                             <FadeIn>
-                                <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
-                                    <div className="flex flex-col gap-1.5">
-                                        <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Container</span>
-                                        <BadgePulse
-                                            label={kpiSummary.contActual >= kpiSummary.contTarget ? 'Đạt KH' : 'Chưa đạt'}
-                                            color={kpiSummary.contActual >= kpiSummary.contTarget ? 'blue' : 'yellow'}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter">
-                                            <AnimatedNumber value={kpiSummary.contActual} />
-                                        </span>
-                                        <span className="text-[10px] md:text-xs text-muted-foreground font-medium">/ {Number(kpiSummary.contTarget).toLocaleString(undefined, {maximumFractionDigits:1})} C</span>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    const pct = kpiSummary.contTarget > 0
+                                        ? (kpiSummary.contActual / kpiSummary.contTarget) * 100 : 0
+                                    const isGood = pct >= 100
+                                    const barColor = isGood ? '#10b981' : pct >= 85 ? '#f59e0b' : '#e63121'
+                                    return (
+                                        <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
+                                            <div className="flex justify-between items-start">
+                                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Container</span>
+                                                <BadgePulse
+                                                    label={isGood ? 'Đạt KH' : 'Chưa đạt'}
+                                                    color={isGood ? 'blue' : 'yellow'}
+                                                />
+                                            </div>
+                                            {/* Big value */}
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">
+                                                    <AnimatedNumber value={kpiSummary.contActual} />
+                                                </span>
+                                                <span className="text-[11px] text-slate-400 font-medium">
+                                                    / {Number(kpiSummary.contTarget).toLocaleString(undefined, { maximumFractionDigits: 1 })} Cont
+                                                </span>
+                                            </div>
+                                            {/* Progress bar with % label */}
+                                            <div className="w-full">
+                                                <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-[1200ms] ease-out"
+                                                        style={{
+                                                            width: `${Math.min(pct, 100)}%`,
+                                                            background: isGood
+                                                                ? 'linear-gradient(90deg, #10b981, #34d399)'
+                                                                : pct >= 85
+                                                                    ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                                                                    : 'linear-gradient(90deg, #e63121, #f87171)',
+                                                        }}
+                                                    />
+                                                    <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)', animation: 'shimmer 2s infinite', backgroundSize: '200% 100%' }} />
+                                                </div>
+                                                <div className="flex justify-end mt-1">
+                                                    <span className="text-[10px] font-black tabular-nums" style={{ color: barColor }}>{pct.toFixed(1)}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })()}
                             </FadeIn>
                             <FadeIn className="col-span-2 sm:col-span-1">
                                 {(() => {
