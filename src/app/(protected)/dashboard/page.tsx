@@ -1234,14 +1234,44 @@ export default function DashboardPage() {
                             <TabsTrigger value="overview">⚡ Overview</TabsTrigger>
                         </TabsList>
                         <div className="flex space-x-2">
-                            <input
-                                type="month"
-                                value={format(selectedMonth, "yyyy-MM")}
-                                onChange={(e) => {
-                                    if (e.target.value) setSelectedMonth(new Date(e.target.value))
+                            {/* Month selector */}
+                            <Select
+                                value={String(selectedMonth.getMonth() + 1)}
+                                onValueChange={(val) => {
+                                    const d = new Date(selectedMonth)
+                                    d.setMonth(Number(val) - 1)
+                                    setSelectedMonth(d)
                                 }}
-                                className="border rounded-md px-3 py-1 text-sm bg-background border-input ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-w-[160px]"
-                            />
+                            >
+                                <SelectTrigger className="w-[110px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Array.from({ length: 12 }, (_, i) => (
+                                        <SelectItem key={i + 1} value={String(i + 1)}>
+                                            Tháng {i + 1}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {/* Year selector */}
+                            <Select
+                                value={String(selectedMonth.getFullYear())}
+                                onValueChange={(val) => {
+                                    const d = new Date(selectedMonth)
+                                    d.setFullYear(Number(val))
+                                    setSelectedMonth(d)
+                                }}
+                            >
+                                <SelectTrigger className="w-[90px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[2024, 2025, 2026, 2027].map(y => (
+                                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <Select value={selectedDept} onValueChange={setSelectedDept}>
                                 <SelectTrigger className="w-[180px] hidden md:flex">
                                     <SelectValue placeholder={t('dropdown_placeholder')} />
