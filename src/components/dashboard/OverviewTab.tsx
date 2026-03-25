@@ -30,8 +30,6 @@ interface OverviewTabProps {
         woodActual: number; woodTarget: number
         totalEmission: number; totalEmissionTarget: number
     }
-    shellingLineMonthData: Record<string, { actual_ton: number; run_hours: number }>
-    SHELLING_LINES_DASH: readonly string[]
 }
 
 // ─── Tooltip ─────────────────────────────────────────────────────────────────
@@ -93,8 +91,7 @@ function KpiCard({ label, value, unit, sub, pct, icon: Icon, color, inverse }: {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function OverviewTab({
-    selectedMonth, departments, dashboardsData,
-    kpiSummary, shellingLineMonthData, SHELLING_LINES_DASH
+    selectedMonth, departments, dashboardsData, kpiSummary
 }: OverviewTabProps) {
     const allSum = dashboardsData['all']?.summary
     const allHistory = dashboardsData['all']?.history || []
@@ -133,8 +130,7 @@ export function OverviewTab({
     // Add Container
     deptRows.push({ name: 'Container', code: 'CONT', pct: contPct, actual: kpiSummary.contActual, plan: kpiSummary.contTarget, downtime: 0, badge: 'CNT' })
 
-    // Shelling lines
-    const maxShell = Math.max(...SHELLING_LINES_DASH.map(l => shellingLineMonthData[l]?.actual_ton || 0), 1)
+
 
     // Energy list
     const energyItems = [
@@ -280,29 +276,50 @@ export function OverviewTab({
                         </div>
                     </div>
 
-                    {/* Shelling Lines */}
-                    <div className="flex-shrink-0 bg-white/80 backdrop-blur-xl border border-white/50 rounded-xl p-3">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-amber-500 mb-2 flex items-center gap-1.5">
-                            <span className="w-1 h-3.5 bg-amber-500 rounded-full inline-block" />
-                            Shelling Lines — MTD Output (Tons)
-                        </p>
-                        <div className="flex gap-2 items-end" style={{ height: '64px' }}>
-                            {SHELLING_LINES_DASH.map(line => {
-                                const tons = shellingLineMonthData[line]?.actual_ton || 0
-                                const barPct = (tons / maxShell) * 100
-                                return (
-                                    <div key={line} className="flex-1 flex flex-col items-center gap-0.5">
-                                        <span className="text-[8px] font-bold text-slate-600 tabular-nums">{tons.toFixed(0)}</span>
-                                        <div className="w-full bg-slate-100 rounded-md overflow-hidden flex items-end" style={{ height: '40px' }}>
-                                            <div className="w-full rounded-md transition-all duration-700"
-                                                style={{ height: `${Math.max(barPct, 4)}%`, background: 'linear-gradient(to top, #f59e0b, #fbbf24)' }} />
-                                        </div>
-                                        <span className="text-[8px] font-black text-slate-500">Line {line}</span>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
+                    {/* Downtime by Department */}
+                    {(() => {
+                        const downtimeRows = deptRows
+                            .filter(r => r.downtime > 0 && r.code !== 'FGWH' && r.code !== 'CONT')
+                            .sort((a, b) => b.downtime - a.downtime)
+                        const maxDt = downtimeRows[0]?.downtime || 1
+                        const totalDt = downtimeRows.reduce((s, r) => s + r.downtime, 0)
+                        return (
+                            <div className="flex-shrink-0 bg-white/80 backdrop-blur-xl border border-white/50 rounded-xl p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-orange-500 flex items-center gap-1.5">
+                                        <span className="w-1 h-3.5 bg-orange-500 rounded-full inline-block" />
+                                        Downtime by Department (MTD)
+                                    </p>
+                                    <span className="text-[9px] font-black text-orange-600 tabular-nums bg-orange-50 px-1.5 py-0.5 rounded-full border border-orange-100">
+                                        {totalDt >= 60 ? `${Math.floor(totalDt / 60)}h ${totalDt % 60}m` : `${totalDt}m`} total
+                                    </span>
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    {downtimeRows.length === 0 ? (
+                                        <span className="text-[9px] text-slate-400 italic">Không có downtime</span>
+                                    ) : downtimeRows.map((row, i) => {
+                                        const barPct = (row.downtime / maxDt) * 100
+                                        const hrs = Math.floor(row.downtime / 60)
+                                        const mins = row.downtime % 60
+                                        const label = hrs > 0 ? `${hrs}h${mins > 0 ? ` ${mins}m` : ''}` : `${mins}m`
+                                        const barColor = row.downtime > 1000 ? '#e63121' : row.downtime > 500 ? '#f59e0b' : '#94a3b8'
+                                        return (
+                                            <div key={i} className="flex items-center gap-2">
+                                                <span className="text-[8px] font-bold text-slate-500 w-14 shrink-0 truncate">{row.name.replace(' MC', '').replace('Peeling', 'Peel')}</span>
+                                                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full transition-all duration-700"
+                                                        style={{ width: `${barPct}%`, backgroundColor: barColor }}
+                                                    />
+                                                </div>
+                                                <span className="text-[8px] font-black tabular-nums w-10 text-right shrink-0" style={{ color: barColor }}>{label}</span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )
+                    })()}
                 </div>
 
                 {/* RIGHT: Donut + Energy */}

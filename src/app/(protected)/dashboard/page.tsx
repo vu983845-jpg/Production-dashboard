@@ -1493,8 +1493,6 @@ export default function DashboardPage() {
                         departments={departments}
                         dashboardsData={dashboardsData}
                         kpiSummary={kpiSummary}
-                        shellingLineMonthData={shellingLineMonthData}
-                        SHELLING_LINES_DASH={SHELLING_LINES_DASH}
                     />
                 </TabsContent>
             </Tabs>
