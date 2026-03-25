@@ -357,6 +357,24 @@ export default function ReportPage() {
         return Array.from(set).sort() as string[];
     }, [shellingLines]);
 
+    const derivedSummary = useMemo(() => {
+        if (!summary) return null;
+        if (selectedDept !== 'SHELL' || selectedLeader === "Tất cả") return summary;
+
+        const leaderTons = filteredShellingLines.reduce((s, r) => s + Number(r.actual_ton), 0);
+        const leaderDowntime = filteredShellingLines.reduce((s, r) => s + Number(r.downtime_min), 0);
+        const brokenRows = filteredShellingLines.filter(r => Number(r.broken_pct) > 0);
+        
+        return {
+            ...summary,
+            totalActual: leaderTons,
+            totalDowntime: leaderDowntime,
+            avgBroken: brokenRows.length > 0 ? brokenRows.reduce((s, r) => s + Number(r.broken_pct), 0) / brokenRows.length : 0,
+            avgUnpeel: summary.avgUnpeel, // Use global unpeel for now
+            daysWithData: new Set(filteredShellingLines.map(r => r.work_date)).size
+        };
+    }, [summary, selectedDept, selectedLeader, filteredShellingLines]);
+
     useEffect(() => {
         if (uniqueLeaders.length > 0 && !selectedDeepDiveLeader) {
             setSelectedDeepDiveLeader(uniqueLeaders[0]);
@@ -372,9 +390,18 @@ export default function ReportPage() {
             if (!map.has(dateStr)) map.set(dateStr, { name: dateStr });
             const curr = map.get(dateStr);
             const eff = Number(r.run_hours) > 0 ? Number(r.actual_ton) / Number(r.run_hours) : 0;
-            if (r.shift_name === 'Ca 1') curr.Ca1 = Number(eff.toFixed(2));
-            if (r.shift_name === 'Ca 2') curr.Ca2 = Number(eff.toFixed(2));
-            if (r.shift_name === 'Ca 3') curr.Ca3 = Number(eff.toFixed(2));
+            if (r.shift_name === 'Ca 1') { 
+                curr.Ca1 = Number(eff.toFixed(2));
+                curr.Ca1_leader = r.shift_leader;
+            }
+            if (r.shift_name === 'Ca 2') {
+                curr.Ca2 = Number(eff.toFixed(2));
+                curr.Ca2_leader = r.shift_leader;
+            }
+            if (r.shift_name === 'Ca 3') {
+                curr.Ca3 = Number(eff.toFixed(2));
+                curr.Ca3_leader = r.shift_leader;
+            }
         });
         return Array.from(map.values());
     })();
@@ -400,9 +427,18 @@ export default function ReportPage() {
             if (!map.has(dateStr)) map.set(dateStr, { name: dateStr });
             const curr = map.get(dateStr);
             const eff = Number(r.manpower) > 0 ? Number(r.actual_ton) / Number(r.manpower) : 0;
-            if (r.shift_name === 'Ca 1') curr.Ca1 = Number(eff.toFixed(2));
-            if (r.shift_name === 'Ca 2') curr.Ca2 = Number(eff.toFixed(2));
-            if (r.shift_name === 'Ca 3') curr.Ca3 = Number(eff.toFixed(2));
+            if (r.shift_name === 'Ca 1') {
+                curr.Ca1 = Number(eff.toFixed(2));
+                curr.Ca1_leader = r.shift_leader;
+            }
+            if (r.shift_name === 'Ca 2') {
+                curr.Ca2 = Number(eff.toFixed(2));
+                curr.Ca2_leader = r.shift_leader;
+            }
+            if (r.shift_name === 'Ca 3') {
+                curr.Ca3 = Number(eff.toFixed(2));
+                curr.Ca3_leader = r.shift_leader;
+            }
         });
         return Array.from(map.values());
     })();
@@ -416,9 +452,18 @@ export default function ReportPage() {
             if (!map.has(dateStr)) map.set(dateStr, { name: dateStr });
             const curr = map.get(dateStr);
             const brk = Number(r.broken_pct);
-            if (r.shift_name === 'Ca 1' && brk > 0) curr.Ca1 = brk;
-            if (r.shift_name === 'Ca 2' && brk > 0) curr.Ca2 = brk;
-            if (r.shift_name === 'Ca 3' && brk > 0) curr.Ca3 = brk;
+            if (r.shift_name === 'Ca 1' && brk > 0) {
+                curr.Ca1 = brk;
+                curr.Ca1_leader = r.shift_leader;
+            }
+            if (r.shift_name === 'Ca 2' && brk > 0) {
+                curr.Ca2 = brk;
+                curr.Ca2_leader = r.shift_leader;
+            }
+            if (r.shift_name === 'Ca 3' && brk > 0) {
+                curr.Ca3 = brk;
+                curr.Ca3_leader = r.shift_leader;
+            }
         });
         return Array.from(map.values());
     })();
@@ -463,8 +508,7 @@ export default function ReportPage() {
     const leaderCompareData = (() => {
         if (selectedDept !== 'SHELL' || !shellingLines.length) return [];
         const map = new Map<string, { leader: string; totalTon: number; totalManpower: number; totalDowntime: number; totalRunHours: number }>();
-        const validLeaders = ['Mrs.Tâm', 'Ms.Linh', 'Mr.Trí'];
-        validLeaders.forEach(l => map.set(l, { leader: l, totalTon: 0, totalManpower: 0, totalDowntime: 0, totalRunHours: 0 }));
+        uniqueLeaders.forEach(l => map.set(l, { leader: l, totalTon: 0, totalManpower: 0, totalDowntime: 0, totalRunHours: 0 }));
         
         shellingLines.forEach(r => {
             const l = r.shift_leader;
@@ -659,13 +703,31 @@ export default function ReportPage() {
                             </select>
                         </div>
                         {/* Department picker */}
-                        <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+                        <div className="flex flex-col gap-1 flex-1 min-w-[150px]">
                             <label className="text-xs font-semibold text-muted-foreground uppercase">Department</label>
                             <select value={selectedDept} onChange={e => setSelectedDept(e.target.value)}
                                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                                 {departments.map(d => <option key={d.code} value={d.code}>{language === 'vi' ? (d.name_vi || d.name_en) : (d.name_en || d.name_vi)}</option>)}
                             </select>
                         </div>
+
+                        {/* Shift Leader picker (Shelling only) */}
+                        {selectedDept === "SHELL" && (
+                            <div className="flex flex-col gap-1 flex-1 min-w-[150px]">
+                                <label className="text-xs font-semibold text-muted-foreground uppercase">Shift Leader</label>
+                                <select 
+                                    value={selectedLeader} 
+                                    onChange={e => {
+                                        setSelectedLeader(e.target.value);
+                                        if (e.target.value !== "Tất cả") setSelectedDeepDiveLeader(e.target.value);
+                                    }}
+                                    className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+                                >
+                                    <option value="Tất cả">{language === 'vi' ? 'Tất cả' : 'All Leaders'}</option>
+                                    {uniqueLeaders.map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                            </div>
+                        )}
                         <Button onClick={fetchReport} disabled={loading} className="gap-2">
                             <Search className="h-4 w-4" />
                             {loading ? "Loading..." : "View Report"}
@@ -683,18 +745,24 @@ export default function ReportPage() {
             {/* Results */}
             {hasData && summary && dept && (
                 <>
-                    {/* Title */}
+                    {/* Results Title */}
                     <div className="flex items-center justify-between">
                         <h2 className="text-lg font-bold">
                             {dept.name_vi || dept.name_en} — Month {String(selectedMonth).padStart(2,"0")}/{selectedYear}
+                            {selectedLeader !== "Tất cả" && <span className="text-primary italic ml-2"> (Leader: {selectedLeader})</span>}
                         </h2>
-                        <span className="text-sm text-muted-foreground">{summary.daysWithData} days with data</span>
+                        <span className="text-sm text-muted-foreground">{derivedSummary?.daysWithData} days with data</span>
                     </div>
 
                     {/* KPI Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <KPICard label="Actual Production" value={`${summary.totalActual.toFixed(1)} T`}
-                            sub={`KH: ${summary.totalPlan.toFixed(1)} T`} />
+                        <KPICard 
+                            label="Actual Production" 
+                            value={`${derivedSummary?.totalActual?.toFixed(1) || "0.0"} T`}
+                            sub={selectedLeader !== "Tất cả" && summary && derivedSummary
+                                ? `${((derivedSummary.totalActual || 0) / (summary.totalActual || 1) * 100).toFixed(1)}% of total month`
+                                : `KH: ${summary?.totalPlan?.toFixed(1) || "0.0"} T`} 
+                        />
                         <KPICard
                             label="MTD Achievement"
                             value={achievePct !== null ? `${achievePct.toFixed(1)}%` : "—"}
@@ -703,21 +771,21 @@ export default function ReportPage() {
                         />
                         <KPICard
                             label="Variance"
-                            value={`${summary.totalActual - summary.totalPlan >= 0 ? "+" : ""}${(summary.totalActual - summary.totalPlan).toFixed(1)} T`}
-                            color={summary.totalActual >= summary.totalPlan ? "text-green-600" : "text-red-600"}
+                            value={`${(derivedSummary?.totalActual || 0) - (summary?.totalPlan || 0) >= 0 ? "+" : ""}${((derivedSummary?.totalActual || 0) - (summary?.totalPlan || 0)).toFixed(1)} T`}
+                            color={(derivedSummary?.totalActual || 0) >= (summary?.totalPlan || 0) ? "text-green-600" : "text-red-600"}
                         />
-                        <KPICard label="Total Downtime" value={`${summary.totalDowntime} mins`}
-                            sub={`~${(summary.totalDowntime/60).toFixed(1)} hrs`} />
+                        <KPICard label="Total Downtime" value={`${derivedSummary?.totalDowntime || 0} mins`}
+                            sub={`~${((derivedSummary?.totalDowntime || 0)/60).toFixed(1)} hrs`} />
                     </div>
 
                     {/* Quality KPIs */}
-                    {(summary.avgBroken > 0 || summary.avgUnpeel > 0) && (
+                    {(derivedSummary && (derivedSummary.avgBroken > 0 || derivedSummary.avgUnpeel > 0)) && (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {summary.avgBroken > 0 && (
-                                <KPICard label="Avg Broken %" value={`${summary.avgBroken.toFixed(2)}%`} color="text-red-600" />
+                            {derivedSummary.avgBroken > 0 && (
+                                <KPICard label="Avg Broken %" value={`${derivedSummary.avgBroken.toFixed(2)}%`} color="text-red-600" />
                             )}
-                            {summary.avgUnpeel > 0 && (
-                                <KPICard label="Avg Unpeel %" value={`${summary.avgUnpeel.toFixed(2)}%`} color="text-amber-600" />
+                            {derivedSummary.avgUnpeel > 0 && (
+                                <KPICard label="Avg Unpeel %" value={`${derivedSummary.avgUnpeel.toFixed(2)}%`} color="text-amber-600" />
                             )}
                         </div>
                     )}
@@ -728,19 +796,6 @@ export default function ReportPage() {
                             <Card>
                             <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-slate-50/50">
                                 <CardTitle className="text-sm font-bold text-slate-800">Shelling Lines — {language === 'vi' ? 'Tổng tháng' : 'Monthly Total'}</CardTitle>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Shift Leader:</span>
-                                    <select 
-                                        value={selectedLeader} 
-                                        onChange={e => setSelectedLeader(e.target.value)}
-                                        className="h-8 text-xs rounded border border-slate-300 bg-white px-2 focus:outline-none focus:border-primary font-medium shadow-sm transition-colors"
-                                    >
-                                        <option value="Tất cả">All</option>
-                                        <option value="Mrs.Tâm">Mrs. Tâm</option>
-                                        <option value="Ms.Linh">Ms. Linh</option>
-                                        <option value="Mr.Trí">Mr. Trí</option>
-                                    </select>
-                                </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="overflow-x-auto">
@@ -1078,6 +1133,8 @@ export default function ReportPage() {
                                         </CardContent>
                                     </Card>
                                     )}
+                                </div>
+                            </div>
 
                             {/* SECTION 3: DEEP-DIVE ANALYSIS */}
                             <div className="pt-6 mt-4">
@@ -1132,7 +1189,10 @@ export default function ReportPage() {
                                         ) : (
                                             <select 
                                                 value={selectedDeepDiveLeader} 
-                                                onChange={e => setSelectedDeepDiveLeader(e.target.value)}
+                                                onChange={e => {
+                                                    setSelectedDeepDiveLeader(e.target.value);
+                                                    setSelectedLeader(e.target.value); // Sync back to top level
+                                                }}
                                                 className="h-8 text-sm font-bold text-primary rounded-md border-none bg-transparent px-2 focus:outline-none cursor-pointer"
                                             >
                                                 {uniqueLeaders.map(l => <option key={l} value={l}>{l}</option>)}
@@ -1169,7 +1229,16 @@ export default function ReportPage() {
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                         <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                                                         <YAxis tick={{ fontSize: 10 }} />
-                                                        <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                        <Tooltip 
+                                                            contentStyle={{ fontSize: '11px' }} 
+                                                            formatter={(value: any, name: any, props: any) => {
+                                                                if (deepDiveMode === 'line') {
+                                                                    const leader = props.payload[`${name}_leader`];
+                                                                    return [`${Number(value).toFixed(3)} T/h`, `${name} (Leader: ${leader || '?'})`];
+                                                                }
+                                                                return [`${Number(value).toFixed(3)} T/h`, `Line ${name}`];
+                                                            }}
+                                                        />
                                                         <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
                                                         {deepDiveMode === 'line' ? (
                                                             <>
@@ -1219,7 +1288,16 @@ export default function ReportPage() {
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                         <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                                                         <YAxis tick={{ fontSize: 10 }} />
-                                                        <Tooltip contentStyle={{ fontSize: '11px' }} />
+                                                        <Tooltip 
+                                                            contentStyle={{ fontSize: '11px' }} 
+                                                            formatter={(value: any, name: any, props: any) => {
+                                                                if (deepDiveMode === 'line') {
+                                                                    const leader = props.payload[`${name}_leader`];
+                                                                    return [`${Number(value).toFixed(3)} T/P`, `${name} (Leader: ${leader || '?'})`];
+                                                                }
+                                                                return [`${Number(value).toFixed(3)} T/P`, `Line ${name}`];
+                                                            }}
+                                                        />
                                                         <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
                                                         {deepDiveMode === 'line' ? (
                                                             <>
@@ -1269,7 +1347,16 @@ export default function ReportPage() {
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                         <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                                                         <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
-                                                        <Tooltip contentStyle={{ fontSize: '11px' }} formatter={(v: any) => [`${Number(v).toFixed(2)}%`]} />
+                                                        <Tooltip 
+                                                            contentStyle={{ fontSize: '11px' }} 
+                                                            formatter={(value: any, name: any, props: any) => {
+                                                                if (deepDiveMode === 'line') {
+                                                                    const leader = props.payload[`${name}_leader`];
+                                                                    return [`${Number(value).toFixed(2)}%`, `${name} (Leader: ${leader || '?'})`];
+                                                                }
+                                                                return [`${Number(value).toFixed(2)}%`, `Line ${name}`];
+                                                            }}
+                                                        />
                                                         <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
                                                         <ReferenceLine y={THRESHOLD_BROKEN} stroke="red" strokeDasharray="3 3" opacity={0.5} label={{ position: 'insideTopLeft', value: `Alarm >${THRESHOLD_BROKEN}%`, fill: 'red', fontSize: 10 }} />
                                                         {deepDiveMode === 'line' ? (
