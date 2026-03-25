@@ -96,7 +96,9 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                         href="/dashboard"
                         className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0 md:mr-2 text-white"
                     >
-                        <IntersnackLogo className="h-8 w-8 text-white fill-current" />
+                        <div className="bg-white p-1.5 rounded-xl shadow-sm">
+                            <IntersnackLogo className="h-7 w-7" />
+                        </div>
                         <span className="hidden lg:inline text-white font-bold tracking-tight whitespace-nowrap">VICC LA</span>
                         <span className="lg:hidden text-white font-bold whitespace-nowrap">VICC LA</span>
                     </Link>
@@ -142,8 +144,10 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                                 ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0 text-white">
-                        <IntersnackLogo className="h-7 w-7 text-white fill-current" />
+                    <Link href="/dashboard" className="flex items-center gap-2 shrink-0 text-white transition-opacity hover:opacity-90">
+                        <div className="bg-white p-1 rounded-lg shadow-sm">
+                            <IntersnackLogo className="h-6 w-6" />
+                        </div>
                         <span className="text-white font-bold tracking-tight" style={{ fontSize: '0.95rem' }}>VICC LA</span>
                     </Link>
                 </div>

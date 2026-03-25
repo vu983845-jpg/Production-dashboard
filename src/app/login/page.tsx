@@ -119,11 +119,12 @@ export default function LoginPage() {
                     z-index: 2;
                 }
                 .login-brand-logo {
-                    background: #E30613; /* Primary Red as accent for logo background */
-                    border-radius: 12px;
-                    padding: 10px;
+                    background: #ffffff; /* Use white background for the logo container for premium look */
+                    border-radius: 20px;
+                    padding: 8px;
                     display: flex;
-                    box-shadow: 0 8px 24px rgba(227, 6, 19, 0.3);
+                    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                 }
                 .login-brand-name  { color:#fff; font-weight:800; font-size:22px; letter-spacing:-0.5px; }
                 .login-brand-sub   { color:rgba(255,255,255,0.5); font-size:12px; font-weight:500; margin-top: -2px; }
