@@ -12,7 +12,7 @@ import {
     BatteryWarning,
     Download
 } from "lucide-react"
-import { AreaChart, Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine } from "recharts"
+import { AreaChart, Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart, PieChart, Pie, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend, ReferenceLine } from "recharts"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,8 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { GaugeChart } from "@/components/ui/gauge-chart"
 import { FadeIn, FadeInStagger } from "@/components/magicui/fade-in"
 import { AnimatedNumber } from "@/components/magicui/animated-number"
+import { BadgePulse } from "@/components/magicui/badge-pulse"
+import { OverviewTab } from "@/components/dashboard/OverviewTab"
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -1229,6 +1231,7 @@ export default function DashboardPage() {
                         <TabsList>
                             <TabsTrigger value="stations">{t('tab_stations')}</TabsTrigger>
                             <TabsTrigger value="regions">{t('tab_regions')}</TabsTrigger>
+                            <TabsTrigger value="overview">⚡ Overview</TabsTrigger>
                         </TabsList>
                         <div className="flex space-x-2">
                             <input
@@ -1237,7 +1240,7 @@ export default function DashboardPage() {
                                 onChange={(e) => {
                                     if (e.target.value) setSelectedMonth(new Date(e.target.value))
                                 }}
-                                className="border rounded-md px-3 py-1 text-sm bg-background border-input ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                className="border rounded-md px-3 py-1 text-sm bg-background border-input ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-w-[160px]"
                             />
                             <Select value={selectedDept} onValueChange={setSelectedDept}>
                                 <SelectTrigger className="w-[180px] hidden md:flex">
@@ -1258,16 +1261,17 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {selectedDept === 'all' && (
+                {selectedDept === 'all' && selectedTab !== 'overview' && (
                     <FadeInStagger faster>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 mt-2">
                             <FadeIn>
                                 <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${kpiSummary.steamActual >= kpiSummary.steamTarget ? 'bg-emerald-500' : 'bg-[#e63121]'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                            <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight uppercase">Hấp / Steam</span>
-                                        </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Hấp / Steam</span>
+                                        <BadgePulse
+                                            label={kpiSummary.steamActual >= kpiSummary.steamTarget ? 'Đạt KH' : 'Chưa đạt'}
+                                            color={kpiSummary.steamActual >= kpiSummary.steamTarget ? 'green' : 'red'}
+                                        />
                                     </div>
                                     <div className="flex flex-col items-end">
                                         <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter">
@@ -1279,11 +1283,12 @@ export default function DashboardPage() {
                             </FadeIn>
                             <FadeIn>
                                 <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${kpiSummary.contActual >= kpiSummary.contTarget ? 'bg-blue-500' : 'bg-amber-500'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                            <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CONTAINER</span>
-                                        </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Container</span>
+                                        <BadgePulse
+                                            label={kpiSummary.contActual >= kpiSummary.contTarget ? 'Đạt KH' : 'Chưa đạt'}
+                                            color={kpiSummary.contActual >= kpiSummary.contTarget ? 'blue' : 'yellow'}
+                                        />
                                     </div>
                                     <div className="flex flex-col items-end">
                                         <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter">
@@ -1295,11 +1300,12 @@ export default function DashboardPage() {
                             </FadeIn>
                             <FadeIn className="col-span-2 sm:col-span-1">
                                 <div className="flex justify-between items-center p-3 md:px-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'bg-rose-500' : 'bg-[#e63121]'} shadow-[0_0_5px_rgba(0,0,0,0.1)]`} />
-                                            <span className="text-[10px] md:text-sm font-bold text-slate-700 tracking-tight">CO₂e (SCOPE 1+2)</span>
-                                        </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">CO₂e (Scope 1+2)</span>
+                                        <BadgePulse
+                                            label={kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'Trong mục tiêu' : 'Vượt mục tiêu'}
+                                            color={kpiSummary.totalEmission <= kpiSummary.totalEmissionTarget ? 'green' : 'red'}
+                                        />
                                     </div>
                                     <div className="flex flex-col items-end">
                                         <span className="text-xl md:text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-1">
@@ -1347,6 +1353,17 @@ export default function DashboardPage() {
                             <FadeIn className="h-full">{renderMiniDashboard("region-HCA", t('region_hca'), true)}</FadeIn>
                         </div>
                     </FadeInStagger>
+                </TabsContent>
+
+                <TabsContent value="overview" className="mt-0 pt-0">
+                    <OverviewTab
+                        selectedMonth={selectedMonth}
+                        departments={departments}
+                        dashboardsData={dashboardsData}
+                        kpiSummary={kpiSummary}
+                        shellingLineMonthData={shellingLineMonthData}
+                        SHELLING_LINES_DASH={SHELLING_LINES_DASH}
+                    />
                 </TabsContent>
             </Tabs>
 
