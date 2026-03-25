@@ -189,11 +189,19 @@ export default function ReportPage() {
                 .order("work_date", { ascending: true })
                 .order("line_code", { ascending: true })
             
-            // Aggressive normalization of shift leader names
-            const cleanedLD = (ld ?? []).map((r: any) => ({
-                ...r,
-                shift_leader: r.shift_leader ? r.shift_leader.trim().replace(/\s+/g, ' ') : ""
-            }));
+            // Robust normalization of shift leader names
+            const cleanedLD = (ld ?? []).map((r: any) => {
+                let name = r.shift_leader || "";
+                if (name) {
+                    name = name.trim()
+                        .replace(/\.(?!\s|$)/g, '. ') // Ensure space after period if not at end
+                        .replace(/\s+/g, ' ')         // Collapse multiple spaces
+                        .replace(/^mr\./i, 'Mr.')     // Standardize prefixes
+                        .replace(/^mrs\./i, 'Mrs.')
+                        .replace(/^ms\./i, 'Ms.');
+                }
+                return { ...r, shift_leader: name };
+            });
             setShellingLines(cleanedLD)
 
             // Fetch Shelling Energy
