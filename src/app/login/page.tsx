@@ -150,6 +150,13 @@ export default function LoginPage() {
                     height: 2px;
                     background: #E30613;
                     margin-left: 12px;
+                    border-radius: 2px;
+                    box-shadow: 0 0 8px rgba(227, 6, 19, 0.4);
+                    animation: pulseDigital 2s infinite alternate;
+                }
+                @keyframes pulseDigital {
+                    0% { width: 20px; box-shadow: 0 0 4px rgba(227, 6, 19, 0.2); }
+                    100% { width: 60px; box-shadow: 0 0 12px rgba(227, 6, 19, 0.6); }
                 }
                 .login-headline h1 {
                     color:#1A1A1A; font-weight:800; font-size: 56px;
@@ -318,7 +325,7 @@ export default function LoginPage() {
             <div className="login-root">
                 <div className="login-bg">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/assets/intersnack-light-bg.png" alt="Intersnack Premium Facility" />
+                    <img src="/assets/digital-cashew-bg.png" alt="Intersnack Premium Cashew Facility" />
                 </div>
 
                 {/* ── LEFT ── */}
@@ -329,14 +336,14 @@ export default function LoginPage() {
                         </div>
                         <div>
                             <div className="login-brand-name">Intersnack</div>
-                            <div className="login-brand-sub">VICC LA · Dashboard</div>
+                            <div className="login-brand-sub">VICC LA · Digital Cashew Ops</div>
                         </div>
                     </div>
 
                     <div className="login-headline">
-                        <div className="login-headline-label">Production Excellence</div>
+                        <div className="login-headline-label">Manufacturing Intelligence</div>
                         <h1>
-                            Shaping the future <em>of savory snacks.</em>
+                            Digitizing the future <em>of premium cashews.</em>
                         </h1>
                     </div>
 
