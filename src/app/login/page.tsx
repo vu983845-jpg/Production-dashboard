@@ -13,10 +13,10 @@ import HCaptcha from "@hcaptcha/react-hcaptcha";
 const HCAPTCHA_SITE_KEY = "9830204c-9c10-41fc-98fc-ba4a9aa2e2c8";
 
 const CORE_VALUES = [
-    { icon: "🌍", title: "Thinking Responsibly",     desc: "Đặt trách nhiệm lên hàng đầu trong mọi quyết định" },
-    { icon: "🚀", title: "Acting Entrepreneurially", desc: "Tinh thần khởi nghiệp — sáng tạo và chủ động" },
-    { icon: "🤝", title: "Growing Together",          desc: "Cùng nhau phát triển, tin tưởng và minh bạch" },
-    { icon: "⭐", title: "Excellence & Passion",      desc: "Xuất sắc trong công việc với niềm đam mê" },
+    { img: "/cv-thinking.svg", bg: "#6B8C2A", title: "Thinking Responsibly",     desc: "Đặt trách nhiệm lên hàng đầu trong mọi quyết định" },
+    { img: "/cv-acting.svg",   bg: "#C8102E", title: "Acting Entrepreneurially", desc: "Tinh thần khởi nghiệp — sáng tạo và chủ động" },
+    { img: "/cv-growing.svg",  bg: "#D4A017", title: "Growing Together",          desc: "Cùng nhau phát triển, tin tưởng và minh bạch" },
+    { img: "/cv-acting.svg",   bg: "#7C3AED", title: "Excellence & Passion",      desc: "Xuất sắc trong công việc với niềm đam mê" },
 ];
 
 export default function LoginPage() {
@@ -287,7 +287,10 @@ export default function LoginPage() {
                         <div className="cv-list">
                             {CORE_VALUES.map((cv) => (
                                 <div key={cv.title} className="cv-card">
-                                    <div className="cv-icon">{cv.icon}</div>
+                                    <div className="cv-icon" style={{ background: cv.bg }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={cv.img} alt={cv.title} style={{ width: 26, height: 26, objectFit: "contain" }} />
+                                    </div>
                                     <div>
                                         <div className="cv-title">{cv.title}</div>
                                         <div className="cv-desc">{cv.desc}</div>
