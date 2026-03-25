@@ -207,6 +207,7 @@ export default function InputPage() {
         kwh_maintenance: number; 
     };
     const [otherElecData, setOtherElecData] = useState<OtherElecRecord[]>([]);
+    const [woodTotalInput, setWoodTotalInput] = useState<string>(""); // State for wood distribution input
 
     // Shelling Line Tracking State
     const SHELLING_LINES = ['A', 'B', 'C', 'D1', 'D2'] as const
@@ -1860,36 +1861,62 @@ export default function InputPage() {
                                         <div className="flex-1 min-w-[180px]">
                                             <Label className="text-sm font-bold text-orange-700 mb-1 block">🔥 Tổng Củi Tháng (kg)</Label>
                                             <p className="text-[11px] text-orange-500 mb-1">Nhập tổng kg → hệ thống chia đều cho các ngày đến hôm nay</p>
-                                            <Input
-                                                type="number"
-                                                step="1"
-                                                placeholder="VD: 50000"
-                                                className="border-orange-300 focus-visible:ring-orange-400"
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        const total = Number((e.target as HTMLInputElement).value);
-                                                        if (!total || total <= 0) return;
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    type="number"
+                                                    step="1"
+                                                    placeholder="VD: 50000"
+                                                    value={woodTotalInput}
+                                                    className="border-orange-300 focus-visible:ring-orange-400 flex-1"
+                                                    onChange={(e) => setWoodTotalInput(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            const total = Number(woodTotalInput);
+                                                            if (!total || total <= 0) return;
+                                                            const today = new Date();
+                                                            const todayStr = format(today, "yyyy-MM-dd");
+                                                            const newData = [...monthlyEnergyData];
+                                                            const daysUpToToday = newData.filter(d => d.work_date <= todayStr);
+                                                            const count = daysUpToToday.length;
+                                                            if (count === 0) return;
+                                                            const perDay = Math.round(total / count);
+                                                            daysUpToToday.forEach((d) => {
+                                                                d.wood_kg = perDay;
+                                                            });
+                                                            setMonthlyEnergyData([...newData]);
+                                                            toast.success(`Đã chia ${total.toLocaleString()} kg cho ${count} ngày (${perDay.toLocaleString()} kg/ngày)`);
+                                                        }
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="border-orange-400 text-orange-700 hover:bg-orange-100 whitespace-nowrap"
+                                                    onClick={() => {
+                                                        const total = Number(woodTotalInput);
+                                                        if (!total || total <= 0) {
+                                                            toast.error("Vui lòng nhập tổng kg củi trước");
+                                                            return;
+                                                        }
                                                         const today = new Date();
                                                         const todayStr = format(today, "yyyy-MM-dd");
                                                         const newData = [...monthlyEnergyData];
                                                         const daysUpToToday = newData.filter(d => d.work_date <= todayStr);
                                                         const count = daysUpToToday.length;
                                                         if (count === 0) return;
-                                                        const perDay = Math.floor(total / count);
-                                                        const remainder = total - perDay * count;
-                                                        newData.forEach((d) => {
-                                                            if (d.work_date <= todayStr) {
-                                                                const idx = daysUpToToday.indexOf(d);
-                                                                d.wood_kg = perDay + (idx < remainder ? 1 : 0);
-                                                            }
+                                                        const perDay = Math.round(total / count);
+                                                        daysUpToToday.forEach((d) => {
+                                                            d.wood_kg = perDay;
                                                         });
-                                                        setMonthlyEnergyData(newData);
-                                                        toast.success(`Đã chia ${total.toLocaleString()} kg cho ${count} ngày (≈ ${perDay.toLocaleString()} kg/ngày)`);
-                                                    }
-                                                }}
-                                            />
-                                            <p className="text-[10px] text-orange-400 mt-1">Nhập số rồi nhấn Enter ↵</p>
+                                                        setMonthlyEnergyData([...newData]);
+                                                        toast.success(`Đã chia ${total.toLocaleString()} kg cho ${count} ngày (${perDay.toLocaleString()} kg/ngày)`);
+                                                    }}
+                                                >
+                                                    Chia đều
+                                                </Button>
+                                            </div>
+                                            <p className="text-[10px] text-orange-400 mt-1">Nhập số rồi nhấn Enter ↵ hoặc bấm Chia đều</p>
                                         </div>
                                     </div>
                                 </div>

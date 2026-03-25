@@ -1043,7 +1043,7 @@ export default function DashboardPage() {
                                         <div key={line} className="flex items-center gap-2">
                                             <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color }}>{line}</span>
                                             <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                                <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${pct}%`, backgroundColor: color }} />
                                             </div>
                                             <span className="text-[10px] font-bold w-11 text-right shrink-0" style={{ color }}>{ld.actual_ton.toFixed(1)}T</span>
                                             <span className="text-[10px] text-muted-foreground w-8 text-right shrink-0">{ld.run_hours.toFixed(0)}h</span>
@@ -1068,7 +1068,7 @@ export default function DashboardPage() {
                                                 <div key={line} className="flex items-center gap-2">
                                                     <span className="text-[10px] font-black w-5 text-center shrink-0" style={{ color: lineColor }}>{line}</span>
                                                     <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                                        <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, capPct)}%`, backgroundColor: barColor }} />
+                                                        <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${Math.min(100, capPct)}%`, backgroundColor: barColor }} />
                                                     </div>
                                                     <span className="text-[10px] font-bold w-14 text-right shrink-0" style={{ color: barColor }}>
                                                         {actualPerDay.toFixed(1)}<span className="font-normal text-muted-foreground">/{design}T</span>
