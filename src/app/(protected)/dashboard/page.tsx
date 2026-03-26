@@ -1112,10 +1112,6 @@ export default function DashboardPage() {
                         <ChartWrapper className={`w-full rounded-xl border-t h-[160px] md:h-[200px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 8, right: 6, left: -12, bottom: 5 }}>
-                                    <defs>
-<linearGradient id="ispGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="ispRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
-</defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                                     <XAxis 
                                         dataKey="name" 
@@ -1134,14 +1130,48 @@ export default function DashboardPage() {
                                         tickMargin={4} 
                                     />
                                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(0)} width={28} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
-                                    <Bar dataKey="IspActual" name="ISP Thực tế (T)" radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out">
-                                        {displayHistory.map((entry: any, index: number) => {
-                                            const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "url(#ispRedGrad)" : "url(#ispGreenGrad)";
-                                            return <Cell key={`isp-cell-${index}`} fill={color} />;
-                                        })}
-                                    </Bar>
-                                    {deptCode === 'CS' && <Line type="monotone" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} name="ISP Kế hoạch" animationDuration={600} />}
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139, 92, 246, 0.08)' }} />
+                                    {deptCode === 'HAND' ? (
+                                        <>
+                                            <Line
+                                                type="monotone"
+                                                dataKey="IspActual"
+                                                name="ISP Thực tế (T)"
+                                                stroke="#8b5cf6"
+                                                strokeWidth={2.5}
+                                                dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }}
+                                                activeDot={{ r: 5, fill: '#8b5cf6', strokeWidth: 0 }}
+                                                animationDuration={800}
+                                                animationEasing="ease-out"
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="IspPlan"
+                                                name="ISP Kế hoạch"
+                                                stroke="#c4b5fd"
+                                                strokeDasharray="4 3"
+                                                strokeWidth={1.5}
+                                                dot={false}
+                                                animationDuration={600}
+                                            />
+                                            <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '4px', fontWeight: 600, color: '#64748b' }} iconType="plainline" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <defs>
+                                                <linearGradient id="ispGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+                                                <linearGradient id="ispRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+                                            </defs>
+                                            <Bar dataKey="IspActual" name="ISP Thực tế (T)" radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out" legendType="none">
+                                                {displayHistory.map((entry: any, index: number) => {
+                                                    const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "url(#ispRedGrad)" : "url(#ispGreenGrad)";
+                                                    return <Cell key={`isp-cell-${index}`} fill={color} />;
+                                                })}
+                                            </Bar>
+                                            <Line type="monotone" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} name="ISP Kế hoạch" animationDuration={600} />
+                                            <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '4px', fontWeight: 600, color: '#64748b' }} iconType="plainline" />
+                                        </>
+                                    )}
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </ChartWrapper>
@@ -1218,13 +1248,13 @@ export default function DashboardPage() {
                                             <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name={t('legend.intensity')} animationDuration={700} />
                                         </>
                                     )}
-                                    <Bar dataKey="Actual" name={t('legend.actual')} radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out">
+                                    <Bar dataKey="Actual" name={t('legend.actual')} radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out" legendType="none">
                                         {displayHistory.map((entry: any, index: number) => {
                                             const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "url(#mainRedGrad)" : "url(#mainGreenGrad)";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
-                                    <Line type="monotone" dataKey="Plan" stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} name={t('legend.plan')} animationDuration={600} />
+                                    <Line type="monotone" dataKey="Plan" stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} name={t('legend.plan')} animationDuration={600} legendType="none" />
 
                                     {deptCode === "ALL" && (
                                         <>
@@ -1232,7 +1262,9 @@ export default function DashboardPage() {
                                             <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#e63121" dot={false} strokeWidth={2} name={t('legend.emission')} animationDuration={700} />
                                         </>
                                     )}
-                                    {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', paddingTop: '4px', fontWeight: 500 }} />}
+                                    {(deptCode === "SHELL" || deptCode === "PEEL_MC" || deptCode === "ALL" || isTotal || isFgwh) && (
+                                        <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '4px', fontWeight: 600, color: '#64748b' }} iconType="plainline" />
+                                    )}
                             </ComposedChart>
                         </ResponsiveContainer>
                     </ChartWrapper>
