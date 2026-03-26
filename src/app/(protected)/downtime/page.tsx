@@ -1,52 +1,83 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { format, startOfMonth, endOfMonth } from "date-fns"
-import { AlertTriangle, Plus, Trash2, BarChart2, ClipboardEdit } from "lucide-react"
+import { format, endOfMonth, differenceInMinutes, parseISO } from "date-fns"
+import { AlertTriangle, Plus, Trash2, BarChart2, ClipboardEdit, Clock, CheckCircle, XCircle } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-const ROOT_CAUSES = [
-    "Lỗi Máy Móc (Hardware)",
-    "Lỗi Điện / Mất điện",
-    "Đợi Vật Tư / Nguyên liệu",
-    "Lỗi Chất lượng / Thay đổi Quy Cách",
-    "Bảo trì Định kỳ (PM)",
-    "Tai nạn / Sự cố An toàn",
-    "Khác",
+// ── REASON CODES (matching DDS Meeting exactly) ──────────────────────────────
+const REASON_CODES = [
+    { code: "BD", label: "BD – Breakdown", planned: false, desc: "Hư hỏng sửa chữa" },
+    { code: "BL", label: "BL – Blocked", planned: false, desc: "Bị chặn / tắc nghẽn" },
+    { code: "BT", label: "BT – Breaktime", planned: true, desc: "Dừng nghỉ" },
+    { code: "CIL", label: "CIL – Cleaning", planned: true, desc: "Vệ sinh thiết bị" },
+    { code: "LU", label: "LU – Lack of Utility", planned: false, desc: "Thiếu nguồn lực / điện / hơi" },
+    { code: "MP", label: "MP – Maintenance Plan", planned: true, desc: "Bảo dưỡng định kỳ" },
+    { code: "MS", label: "MS – Minor Stop", planned: false, desc: "Dừng nhỏ / lỗi vặt" },
+    { code: "PF", label: "PF – Process Failures", planned: false, desc: "Lỗi quy trình" },
+    { code: "PT", label: "PT – Pit Stop", planned: true, desc: "Pit Stop" },
+    { code: "PW", label: "PW – Project Work", planned: true, desc: "Thực hiện dự án" },
+    { code: "SP", label: "SP – Sampling", planned: false, desc: "Lấy mẫu" },
+    { code: "TP", label: "TP – Trial Plan", planned: true, desc: "Thử nghiệm" },
+    { code: "TT", label: "TT – Training Time", planned: true, desc: "Đào tạo" },
+    { code: "WT", label: "WT – Waiting", planned: false, desc: "Chờ đợi" },
 ]
 
-const PIE_COLORS = ["#e63121", "#f59e0b", "#3b82f6", "#10b981", "#8b5cf6", "#ec4899", "#94a3b8"]
+const SEVERITY_LEVELS = [
+    { value: "Thấp", label: "🟢 Thấp" },
+    { value: "Trung bình", label: "🟡 Trung bình" },
+    { value: "Cao", label: "🟠 Cao" },
+    { value: "Rất nghiêm trọng", label: "🔴 Rất nghiêm trọng" },
+]
 
+const PIE_COLORS = ["#e63121", "#f59e0b", "#3b82f6", "#10b981", "#8b5cf6", "#ec4899", "#64748b", "#06b6d4", "#84cc16", "#f97316", "#a855f7", "#14b8a6", "#eab308"]
+
+const now = () => format(new Date(), "yyyy-MM-dd'T'HH:mm")
 const currentYear = new Date().getFullYear()
+
+function calcDuration(start: string, end: string): number {
+    try {
+        const s = parseISO(start)
+        const e = parseISO(end)
+        return Math.max(0, differenceInMinutes(e, s))
+    } catch { return 0 }
+}
 
 export default function DowntimePage() {
     const supabase = createClient()
 
-    // Profile
     const [profile, setProfile] = useState<any>(null)
     const [departments, setDepartments] = useState<any[]>([])
 
-    // Entry tab state
+    // ── ENTRY FORM ──────────────────────────────────────────────────────────
     const [entryDeptId, setEntryDeptId] = useState("")
-    const [entryDate, setEntryDate] = useState(format(new Date(), "yyyy-MM-dd"))
-    const [entryDuration, setEntryDuration] = useState("")
-    const [entryRootCause, setEntryRootCause] = useState(ROOT_CAUSES[0])
-    const [entryNote, setEntryNote] = useState("")
+    const [machineArea, setMachineArea] = useState("")
+    const [severity, setSeverity] = useState("Trung bình")
+    const [reasonCode, setReasonCode] = useState("BD")
+    const [description, setDescription] = useState("")
+    const [startTime, setStartTime] = useState(now())
+    const [endTime, setEndTime] = useState("")
+    const [isOngoing, setIsOngoing] = useState(false)
+    const [excludeDowntime, setExcludeDowntime] = useState(false)
+    const [detailNote, setDetailNote] = useState("")
     const [saving, setSaving] = useState(false)
     const [saveMsg, setSaveMsg] = useState("")
 
-    // Events list for entry tab
+    // ── EVENTS LIST ────────────────────────────────────────────────────────
+    const [filterDept, setFilterDept] = useState("")
+    const [filterStatus, setFilterStatus] = useState("all")
     const [events, setEvents] = useState<any[]>([])
     const [loadingEvents, setLoadingEvents] = useState(false)
 
-    // Report tab state
+    // ── REPORT ──────────────────────────────────────────────────────────────
     const [reportDeptId, setReportDeptId] = useState("")
     const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1)
     const [reportYear, setReportYear] = useState(currentYear)
+    const [reportRange, setReportRange] = useState("month")
     const [reportEvents, setReportEvents] = useState<any[]>([])
     const [loadingReport, setLoadingReport] = useState(false)
 
@@ -55,28 +86,22 @@ export default function DowntimePage() {
         async function load() {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
-            const { data: prof } = await supabase.from("profiles").select("*, departments(id, code, name_vi, name_en)").eq("id", user.id).single()
+            const { data: prof } = await supabase.from("profiles").select("*").eq("id", user.id).single()
             setProfile(prof)
-
             const { data: allDepts } = await supabase.from("departments").select("id, code, name_vi, name_en").order("sort_order")
             if (allDepts) setDepartments(allDepts)
-
-            // Default to user's dept
             if (prof?.department_id) {
                 setEntryDeptId(prof.department_id)
+                setFilterDept(prof.department_id)
                 setReportDeptId(prof.department_id)
             }
         }
         load()
     }, [])
 
-    // Determine allowed departments for input
     const allowedDeptIds = useMemo(() => {
         if (!profile) return []
-        const role = profile.role
-        if (["admin", "HSE", "maint"].includes(role)) {
-            return departments.map(d => d.id) // all departments
-        }
+        if (["admin", "HSE", "hse", "maint"].includes(profile.role)) return departments.map(d => d.id)
         const ids = []
         if (profile.department_id) ids.push(profile.department_id)
         if (profile.secondary_department_id) ids.push(profile.secondary_department_id)
@@ -85,48 +110,78 @@ export default function DowntimePage() {
 
     const allowedDepts = useMemo(() => departments.filter(d => allowedDeptIds.includes(d.id)), [departments, allowedDeptIds])
 
-    // Fetch events for entry tab
+    // ── Fetch events list ─────────────────────────────────────────────────
     const fetchEvents = useCallback(async () => {
-        if (!entryDeptId || !entryDate) return
         setLoadingEvents(true)
-        const { data } = await supabase
-            .from("downtime_events")
-            .select("*")
-            .eq("department_id", entryDeptId)
-            .eq("work_date", entryDate)
-            .order("created_at")
+        let q = supabase.from("downtime_events")
+            .select("*, departments(id, name_vi, code)")
+            .order("start_time", { ascending: false })
+            .limit(100)
+        if (filterDept) q = q.eq("department_id", filterDept)
+        if (filterStatus === "open") q = q.eq("is_ongoing", true)
+        if (filterStatus === "closed") q = q.eq("is_ongoing", false)
+        const { data } = await q
         setEvents(data || [])
         setLoadingEvents(false)
-    }, [entryDeptId, entryDate])
+    }, [filterDept, filterStatus])
 
     useEffect(() => { fetchEvents() }, [fetchEvents])
 
+    // ── Add event ────────────────────────────────────────────────────────
     const handleAdd = async () => {
-        if (!entryDeptId || !entryDate || !entryDuration || !entryRootCause) {
-            setSaveMsg("❌ Vui lòng điền đầy đủ thông tin.")
+        if (!entryDeptId || !startTime) {
+            setSaveMsg("❌ Vui lòng chọn bộ phận và thời gian bắt đầu.")
             setTimeout(() => setSaveMsg(""), 3000)
             return
         }
         setSaving(true)
         const { data: { user } } = await supabase.auth.getUser()
+
+        let durationMins = 0
+        let status = "Open"
+        if (!isOngoing && endTime) {
+            durationMins = calcDuration(startTime, endTime)
+            status = "Closed"
+        }
+
         const { error } = await supabase.from("downtime_events").insert({
             department_id: entryDeptId,
-            work_date: entryDate,
-            duration_mins: parseInt(entryDuration),
-            root_cause: entryRootCause,
-            note: entryNote || null,
+            work_date: startTime.split("T")[0],
+            start_time: startTime,
+            end_time: isOngoing ? null : (endTime || null),
+            duration_mins: durationMins,
+            root_cause: reasonCode,
+            machine_area: machineArea || null,
+            severity: severity,
+            description: description || null,
+            note: detailNote || null,
+            is_ongoing: isOngoing,
+            exclude_downtime: excludeDowntime,
+            status: status,
             created_by: user?.id
         })
         setSaving(false)
         if (error) {
             setSaveMsg("❌ Lỗi: " + error.message)
         } else {
-            setSaveMsg("✅ Đã thêm sự cố!")
-            setEntryDuration("")
-            setEntryNote("")
+            setSaveMsg("✅ Đã ghi nhận sự cố!")
+            setMachineArea(""); setDescription(""); setDetailNote(""); setStartTime(now()); setEndTime(""); setIsOngoing(false); setExcludeDowntime(false)
             fetchEvents()
         }
         setTimeout(() => setSaveMsg(""), 3000)
+    }
+
+    // ── Close an ongoing event ────────────────────────────────────────────
+    const handleClose = async (ev: any) => {
+        const closedAt = now()
+        const mins = calcDuration(ev.start_time, closedAt)
+        await supabase.from("downtime_events").update({
+            end_time: closedAt,
+            duration_mins: mins,
+            is_ongoing: false,
+            status: "Closed"
+        }).eq("id", ev.id)
+        fetchEvents()
     }
 
     const handleDelete = async (id: string) => {
@@ -134,221 +189,296 @@ export default function DowntimePage() {
         fetchEvents()
     }
 
-    const totalMins = events.reduce((s, e) => s + e.duration_mins, 0)
-
-    // Fetch report
+    // ── Report ────────────────────────────────────────────────────────────
     const fetchReport = useCallback(async () => {
         setLoadingReport(true)
         const start = format(new Date(reportYear, reportMonth - 1, 1), "yyyy-MM-dd")
         const end = format(endOfMonth(new Date(reportYear, reportMonth - 1, 1)), "yyyy-MM-dd")
 
-        let query = supabase.from("downtime_events").select("*, departments(name_vi, code)").gte("work_date", start).lte("work_date", end)
-        if (reportDeptId) query = query.eq("department_id", reportDeptId)
-        const { data } = await query
+        let q = supabase.from("downtime_events")
+            .select("*, departments(name_vi, code)")
+            .gte("work_date", start)
+            .lte("work_date", end)
+            .eq("exclude_downtime", false)
+        if (reportDeptId) q = q.eq("department_id", reportDeptId)
+        const { data } = await q
         setReportEvents(data || [])
         setLoadingReport(false)
     }, [reportDeptId, reportMonth, reportYear])
 
-    // Pie chart: by root cause
+    const totMins = useMemo(() => reportEvents.filter(e => !e.is_ongoing).reduce((s, e) => s + e.duration_mins, 0), [reportEvents])
+    const openCount = useMemo(() => reportEvents.filter(e => e.is_ongoing).length, [reportEvents])
+
+    // Pie by reason code
     const pieData = useMemo(() => {
         const map: Record<string, number> = {}
-        reportEvents.forEach(e => {
-            map[e.root_cause] = (map[e.root_cause] || 0) + e.duration_mins
-        })
+        reportEvents.filter(e => !e.is_ongoing).forEach(e => { map[e.root_cause] = (map[e.root_cause] || 0) + e.duration_mins })
         return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
     }, [reportEvents])
 
-    // Bar chart: by date
-    const barData = useMemo(() => {
+    // Bar by dept
+    const deptBarData = useMemo(() => {
         const map: Record<string, number> = {}
-        reportEvents.forEach(e => {
-            const d = format(new Date(e.work_date), "dd/MM")
+        reportEvents.filter(e => !e.is_ongoing).forEach(e => {
+            const d = e.departments?.name_vi || e.departments?.code || "—"
             map[d] = (map[d] || 0) + e.duration_mins
         })
-        return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).map(([name, value]) => ({ name, value }))
+        return Object.entries(map).map(([name, value]) => ({ name, value: +(value / 60).toFixed(2) })).sort((a, b) => b.value - a.value)
     }, [reportEvents])
 
-    const totalReportMins = reportEvents.reduce((s, e) => s + e.duration_mins, 0)
+    const openEvents = events.filter(e => e.is_ongoing)
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">
-            {/* Header */}
             <div className="flex items-center gap-3">
                 <AlertTriangle className="h-7 w-7 text-red-500" />
                 <div>
                     <h1 className="text-2xl font-black">Quản lý Sự cố / Downtime</h1>
-                    <p className="text-sm text-muted-foreground">Nhập và theo dõi thời gian dừng máy theo bộ phận</p>
+                    <p className="text-sm text-muted-foreground">Ghi nhận và theo dõi sự cố dừng máy theo tiêu chuẩn DDS</p>
                 </div>
             </div>
 
             <Tabs defaultValue="entry">
-                <TabsList className="w-full grid grid-cols-2">
-                    <TabsTrigger value="entry" className="gap-2"><ClipboardEdit className="h-4 w-4" />Nhập Sự cố</TabsTrigger>
-                    <TabsTrigger value="report" className="gap-2"><BarChart2 className="h-4 w-4" />Báo cáo</TabsTrigger>
+                <TabsList className="w-full grid grid-cols-3">
+                    <TabsTrigger value="entry" className="gap-1.5"><ClipboardEdit className="h-4 w-4" />Ghi nhận</TabsTrigger>
+                    <TabsTrigger value="list" className="gap-1.5 relative">
+                        <Clock className="h-4 w-4" />Danh sách
+                        {openEvents.length > 0 && <span className="ml-1 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">{openEvents.length}</span>}
+                    </TabsTrigger>
+                    <TabsTrigger value="report" className="gap-1.5"><BarChart2 className="h-4 w-4" />Báo cáo</TabsTrigger>
                 </TabsList>
 
-                {/* ── ENTRY TAB ── */}
-                <TabsContent value="entry" className="space-y-4 mt-4">
+                {/* ── ENTRY TAB ────────────────────────────────────────────── */}
+                <TabsContent value="entry" className="mt-4">
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold">Thêm sự cố mới</CardTitle>
+                        <CardHeader className="pb-3 border-b">
+                            <CardTitle className="text-sm font-bold">Ghi nhận Sự cố Mới</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent className="pt-4 space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {/* Dept */}
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Bộ phận</label>
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Bộ phận *</label>
                                     <select value={entryDeptId} onChange={e => setEntryDeptId(e.target.value)}
                                         className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                                         <option value="">-- Chọn bộ phận --</option>
                                         {allowedDepts.map(d => <option key={d.id} value={d.id}>{d.name_vi || d.name_en}</option>)}
                                     </select>
                                 </div>
+                                {/* Machine area */}
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Ngày</label>
-                                    <input type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)}
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Máy móc / Khu vực</label>
+                                    <input type="text" value={machineArea} onChange={e => setMachineArea(e.target.value)}
+                                        placeholder="VD: Line A, Máy bóc vỏ..."
                                         className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                                 </div>
+                                {/* Severity */}
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Thời gian dừng (phút)</label>
-                                    <input type="number" min="1" value={entryDuration} onChange={e => setEntryDuration(e.target.value)}
-                                        placeholder="VD: 30"
-                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Nguyên nhân</label>
-                                    <select value={entryRootCause} onChange={e => setEntryRootCause(e.target.value)}
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Mức độ</label>
+                                    <select value={severity} onChange={e => setSeverity(e.target.value)}
                                         className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                                        {ROOT_CAUSES.map(r => <option key={r} value={r}>{r}</option>)}
+                                        {SEVERITY_LEVELS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                                     </select>
                                 </div>
+                                {/* Reason code */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Mã Lý do *</label>
+                                    <select value={reasonCode} onChange={e => setReasonCode(e.target.value)}
+                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                        <optgroup label="🔴 Không có kế hoạch">
+                                            {REASON_CODES.filter(r => !r.planned).map(r => (
+                                                <option key={r.code} value={r.code}>{r.label} — {r.desc}</option>
+                                            ))}
+                                        </optgroup>
+                                        <optgroup label="🟢 Có kế hoạch">
+                                            {REASON_CODES.filter(r => r.planned).map(r => (
+                                                <option key={r.code} value={r.code}>{r.label} — {r.desc}</option>
+                                            ))}
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                {/* Start time */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Bắt đầu *</label>
+                                    <input type="datetime-local" value={startTime} onChange={e => setStartTime(e.target.value)}
+                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                                {/* End time - hidden if ongoing */}
+                                {!isOngoing && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase">Kết thúc</label>
+                                        <input type="datetime-local" value={endTime} onChange={e => setEndTime(e.target.value)}
+                                            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                                        {startTime && endTime && (
+                                            <span className="text-xs text-muted-foreground">
+                                                ≈ <strong>{calcDuration(startTime, endTime)} phút</strong> ({(calcDuration(startTime, endTime) / 60).toFixed(1)}h)
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
+                            {/* Description */}
                             <div className="flex flex-col gap-1">
-                                <label className="text-xs font-semibold text-muted-foreground uppercase">Ghi chú (tuỳ chọn)</label>
-                                <input type="text" value={entryNote} onChange={e => setEntryNote(e.target.value)}
-                                    placeholder="Mô tả thêm..."
+                                <label className="text-xs font-semibold text-muted-foreground uppercase">Mô tả ngắn</label>
+                                <input type="text" value={description} onChange={e => setDescription(e.target.value)}
+                                    placeholder="Tóm tắt sự cố..."
                                     className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold text-muted-foreground uppercase">Ghi chú chi tiết & Hành động khắc phục</label>
+                                <textarea value={detailNote} onChange={e => setDetailNote(e.target.value)}
+                                    rows={2} placeholder="Nguyên nhân chi tiết, hành động đã thực hiện..."
+                                    className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+                            </div>
+                            {/* Checkboxes */}
+                            <div className="flex flex-wrap gap-5">
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" checked={isOngoing} onChange={e => setIsOngoing(e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary" />
+                                    <span>⏳ Đang tiếp diễn (chưa xử lý xong)</span>
+                                </label>
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" checked={excludeDowntime} onChange={e => setExcludeDowntime(e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary" />
+                                    <span>⛔ Không tính vào Downtime (chỉ theo dõi)</span>
+                                </label>
+                            </div>
+                            <div className="flex items-center gap-3 pt-1 border-t">
                                 <Button onClick={handleAdd} disabled={saving} className="gap-2">
                                     <Plus className="h-4 w-4" />
-                                    {saving ? "Đang lưu..." : "Thêm sự cố"}
+                                    {saving ? "Đang lưu..." : "Ghi nhận sự cố"}
                                 </Button>
                                 {saveMsg && <span className="text-sm font-medium">{saveMsg}</span>}
                             </div>
                         </CardContent>
                     </Card>
+                </TabsContent>
 
-                    {/* Events list for selected date/dept */}
-                    {entryDeptId && entryDate && (
-                        <Card>
-                            <CardHeader className="pb-2 border-b">
-                                <div className="flex justify-between items-center">
-                                    <CardTitle className="text-sm font-bold">
-                                        Sự cố ngày {format(new Date(entryDate), "dd/MM/yyyy")}
-                                    </CardTitle>
-                                    <span className="text-sm font-bold text-red-600">
-                                        Tổng: {totalMins} phút ({(totalMins / 60).toFixed(1)} h)
-                                    </span>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="pt-3">
-                                {loadingEvents ? (
-                                    <p className="text-sm text-muted-foreground">Đang tải...</p>
-                                ) : events.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground italic">Chưa có sự cố nào được ghi nhận.</p>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {events.map(ev => (
-                                            <div key={ev.id} className="flex items-start justify-between gap-2 p-2 rounded-lg border bg-muted/30 text-sm">
-                                                <div>
-                                                    <span className="font-bold text-red-600">{ev.duration_mins} phút</span>
-                                                    <span className="mx-2 text-muted-foreground">—</span>
-                                                    <span className="font-semibold">{ev.root_cause}</span>
-                                                    {ev.note && <p className="text-xs text-muted-foreground mt-0.5">{ev.note}</p>}
+                {/* ── LIST TAB ──────────────────────────────────────────────── */}
+                <TabsContent value="list" className="mt-4 space-y-4">
+                    {/* Filters */}
+                    <div className="flex flex-wrap gap-3">
+                        <select value={filterDept} onChange={e => setFilterDept(e.target.value)}
+                            className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                            <option value="">Tất cả bộ phận</option>
+                            {departments.map(d => <option key={d.id} value={d.id}>{d.name_vi || d.name_en}</option>)}
+                        </select>
+                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                            className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                            <option value="all">Tất cả trạng thái</option>
+                            <option value="open">🔵 Đang mở (Open)</option>
+                            <option value="closed">🟢 Đã đóng (Closed)</option>
+                        </select>
+                    </div>
+
+                    {loadingEvents ? (
+                        <p className="text-sm text-muted-foreground">Đang tải...</p>
+                    ) : events.length === 0 ? (
+                        <Card><CardContent className="py-8 text-center text-sm text-muted-foreground italic">Không có sự cố nào.</CardContent></Card>
+                    ) : (
+                        <div className="space-y-2">
+                            {events.map(ev => {
+                                const rc = REASON_CODES.find(r => r.code === ev.root_cause)
+                                return (
+                                    <Card key={ev.id} className={`border-l-4 ${ev.is_ongoing ? "border-l-blue-500" : "border-l-green-500"}`}>
+                                        <CardContent className="py-3 px-4">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ev.is_ongoing ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                                                            {ev.is_ongoing ? "Open" : "Closed"}
+                                                        </span>
+                                                        <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{ev.root_cause}</span>
+                                                        {rc && <span className="text-xs text-muted-foreground">{rc.desc}</span>}
+                                                        {ev.exclude_downtime && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Không tính DT</span>}
+                                                    </div>
+                                                    <p className="text-sm font-semibold mt-1">{ev.departments?.name_vi || ev.departments?.code} {ev.machine_area ? `— ${ev.machine_area}` : ""}</p>
+                                                    {ev.description && <p className="text-sm text-muted-foreground">{ev.description}</p>}
+                                                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                                                        <span>▶ {ev.start_time ? format(parseISO(ev.start_time), "HH:mm dd/MM/yy") : ev.work_date}</span>
+                                                        {!ev.is_ongoing && ev.end_time && <span>⏹ {format(parseISO(ev.end_time), "HH:mm dd/MM/yy")}</span>}
+                                                        {!ev.is_ongoing && <span className="text-red-600 font-bold">⏱ {ev.duration_mins} phút ({(ev.duration_mins / 60).toFixed(1)}h)</span>}
+                                                        <span>📊 {ev.severity}</span>
+                                                    </div>
                                                 </div>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
-                                                    onClick={() => handleDelete(ev.id)}>
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
+                                                <div className="flex flex-col gap-1 shrink-0">
+                                                    {ev.is_ongoing && (
+                                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-green-600 border-green-200 hover:bg-green-50"
+                                                            onClick={() => handleClose(ev)}>
+                                                            <CheckCircle className="h-3 w-3" />Đóng
+                                                        </Button>
+                                                    )}
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600"
+                                                        onClick={() => handleDelete(ev.id)}>
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                        </CardContent>
+                                    </Card>
+                                )
+                            })}
+                        </div>
                     )}
                 </TabsContent>
 
-                {/* ── REPORT TAB ── */}
-                <TabsContent value="report" className="space-y-4 mt-4">
+                {/* ── REPORT TAB ────────────────────────────────────────────── */}
+                <TabsContent value="report" className="mt-4 space-y-4">
                     <Card>
                         <CardContent className="pt-5">
                             <div className="flex flex-wrap items-end gap-3">
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs font-semibold text-muted-foreground uppercase">Tháng</label>
                                     <select value={reportMonth} onChange={e => setReportMonth(Number(e.target.value))}
-                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m =>
-                                            <option key={m} value={m}>Tháng {m}</option>)}
+                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs font-semibold text-muted-foreground uppercase">Năm</label>
                                     <select value={reportYear} onChange={e => setReportYear(Number(e.target.value))}
-                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm">
                                         {[currentYear - 1, currentYear].map(y => <option key={y} value={y}>{y}</option>)}
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs font-semibold text-muted-foreground uppercase">Bộ phận</label>
                                     <select value={reportDeptId} onChange={e => setReportDeptId(e.target.value)}
-                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm">
                                         <option value="">Tất cả</option>
                                         {departments.map(d => <option key={d.id} value={d.id}>{d.name_vi || d.name_en}</option>)}
                                     </select>
                                 </div>
-                                <Button onClick={fetchReport} disabled={loadingReport} className="gap-2">
-                                    {loadingReport ? "Đang tải..." : "Xem báo cáo"}
-                                </Button>
+                                <Button onClick={fetchReport} disabled={loadingReport}>{loadingReport ? "Đang tải..." : "Xem báo cáo"}</Button>
                             </div>
                         </CardContent>
                     </Card>
 
                     {reportEvents.length > 0 && (
                         <>
-                            {/* KPI summary */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                <Card className="p-4 flex flex-col gap-1">
-                                    <span className="text-xs text-muted-foreground uppercase font-semibold">Tổng sự cố</span>
-                                    <span className="text-2xl font-black text-red-600">{reportEvents.length}</span>
-                                </Card>
-                                <Card className="p-4 flex flex-col gap-1">
-                                    <span className="text-xs text-muted-foreground uppercase font-semibold">Tổng thời gian dừng</span>
-                                    <span className="text-2xl font-black text-red-600">{totalReportMins} phút</span>
-                                    <span className="text-xs text-muted-foreground">≈ {(totalReportMins / 60).toFixed(1)} giờ</span>
-                                </Card>
-                                <Card className="p-4 flex flex-col gap-1">
-                                    <span className="text-xs text-muted-foreground uppercase font-semibold">TB / Sự cố</span>
-                                    <span className="text-2xl font-black">{(totalReportMins / reportEvents.length).toFixed(0)} phút</span>
-                                </Card>
+                            {/* KPI */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <Card className="p-4"><span className="text-xs text-muted-foreground uppercase font-semibold">Tổng sự cố</span><p className="text-2xl font-black mt-1">{reportEvents.length}</p></Card>
+                                <Card className="p-4"><span className="text-xs text-muted-foreground uppercase font-semibold">Tổng Downtime</span><p className="text-2xl font-black mt-1 text-red-600">{(totMins / 60).toFixed(1)} <span className="text-base">h</span></p></Card>
+                                <Card className="p-4"><span className="text-xs text-muted-foreground uppercase font-semibold">Đang mở</span><p className="text-2xl font-black mt-1 text-blue-600">{openCount}</p></Card>
+                                <Card className="p-4"><span className="text-xs text-muted-foreground uppercase font-semibold">Tỉ lệ xử lý</span><p className="text-2xl font-black mt-1 text-green-600">{reportEvents.length > 0 ? (((reportEvents.length - openCount) / reportEvents.length) * 100).toFixed(0) : 0}%</p></Card>
                             </div>
 
-                            {/* Charts */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Pie */}
+                                {/* Pie by reason code */}
                                 <Card>
-                                    <CardHeader className="pb-2 border-b">
-                                        <CardTitle className="text-sm font-bold">Phân bổ theo Nguyên nhân</CardTitle>
-                                    </CardHeader>
+                                    <CardHeader className="pb-2 border-b"><CardTitle className="text-sm font-bold">Phân bổ theo Mã Lý do (giờ)</CardTitle></CardHeader>
                                     <CardContent className="pt-4">
                                         <div className="h-64">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <PieChart>
-                                                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90}
-                                                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                                                    <Pie data={pieData.map(d => ({ ...d, value: +(d.value / 60).toFixed(2) }))}
+                                                        dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85}
+                                                        label={({ name, percent }) => percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ""}
+                                                        labelLine={false}>
                                                         {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                                                     </Pie>
-                                                    <Tooltip formatter={(v: any) => [`${v} phút`, "Downtime"]} contentStyle={{ fontSize: "12px" }} />
+                                                    <Tooltip formatter={(v: any) => [`${v}h`, "Downtime"]} contentStyle={{ fontSize: "12px" }} />
                                                     <Legend wrapperStyle={{ fontSize: "11px" }} />
                                                 </PieChart>
                                             </ResponsiveContainer>
@@ -356,20 +486,18 @@ export default function DowntimePage() {
                                     </CardContent>
                                 </Card>
 
-                                {/* Bar by date */}
+                                {/* Bar by dept */}
                                 <Card>
-                                    <CardHeader className="pb-2 border-b">
-                                        <CardTitle className="text-sm font-bold">Downtime theo Ngày (phút)</CardTitle>
-                                    </CardHeader>
+                                    <CardHeader className="pb-2 border-b"><CardTitle className="text-sm font-bold">Downtime theo Bộ phận (giờ)</CardTitle></CardHeader>
                                     <CardContent className="pt-4">
                                         <div className="h-64">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={barData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                    <YAxis tick={{ fontSize: 10 }} />
-                                                    <Tooltip formatter={(v: any) => [`${v} phút`, "Downtime"]} contentStyle={{ fontSize: "12px" }} />
-                                                    <Bar dataKey="value" name="Downtime (phút)" fill="#e63121" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                                <BarChart data={deptBarData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                                                    <XAxis type="number" tick={{ fontSize: 10 }} />
+                                                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                                                    <Tooltip formatter={(v: any) => [`${v}h`, "Downtime"]} contentStyle={{ fontSize: "12px" }} />
+                                                    <Bar dataKey="value" name="Downtime (h)" fill="#e63121" radius={[0, 4, 4, 0]} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -379,9 +507,7 @@ export default function DowntimePage() {
 
                             {/* Detail table */}
                             <Card>
-                                <CardHeader className="pb-2 border-b">
-                                    <CardTitle className="text-sm font-bold">Danh sách chi tiết</CardTitle>
-                                </CardHeader>
+                                <CardHeader className="pb-2 border-b"><CardTitle className="text-sm font-bold">Danh sách chi tiết</CardTitle></CardHeader>
                                 <CardContent>
                                     <div className="overflow-x-auto mt-2">
                                         <table className="w-full text-sm">
@@ -389,19 +515,27 @@ export default function DowntimePage() {
                                                 <tr className="border-b bg-muted/40">
                                                     <th className="text-left p-2 font-semibold">Ngày</th>
                                                     <th className="text-left p-2 font-semibold">Bộ phận</th>
+                                                    <th className="text-left p-2 font-semibold">Mã</th>
+                                                    <th className="text-left p-2 font-semibold">Khu vực</th>
                                                     <th className="text-right p-2 font-semibold">Phút</th>
-                                                    <th className="text-left p-2 font-semibold">Nguyên nhân</th>
-                                                    <th className="text-left p-2 font-semibold">Ghi chú</th>
+                                                    <th className="text-left p-2 font-semibold">Trạng thái</th>
+                                                    <th className="text-left p-2 font-semibold">Mô tả</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {reportEvents.map(ev => (
                                                     <tr key={ev.id} className="border-b hover:bg-muted/20">
-                                                        <td className="p-2 whitespace-nowrap">{format(new Date(ev.work_date), "dd/MM/yyyy")}</td>
-                                                        <td className="p-2 whitespace-nowrap">{ev.departments?.name_vi || ev.departments?.code || "—"}</td>
-                                                        <td className="p-2 text-right font-bold text-red-600">{ev.duration_mins}</td>
-                                                        <td className="p-2">{ev.root_cause}</td>
-                                                        <td className="p-2 text-muted-foreground text-xs">{ev.note || "—"}</td>
+                                                        <td className="p-2 whitespace-nowrap">{ev.work_date}</td>
+                                                        <td className="p-2 whitespace-nowrap">{ev.departments?.name_vi || ev.departments?.code}</td>
+                                                        <td className="p-2"><span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{ev.root_cause}</span></td>
+                                                        <td className="p-2 text-xs text-muted-foreground">{ev.machine_area || "—"}</td>
+                                                        <td className="p-2 text-right font-bold text-red-600">{ev.is_ongoing ? "⏳" : ev.duration_mins}</td>
+                                                        <td className="p-2">
+                                                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${ev.is_ongoing ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                                                                {ev.is_ongoing ? "Open" : "Closed"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-2 text-xs text-muted-foreground">{ev.description || "—"}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
