@@ -56,16 +56,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 }
 
-// ChartWrapper: dismisses tooltip on mobile touch-end
+// ChartWrapper: dismisses tooltip reliably on mobile touch-end
 const ChartWrapper = ({ children, className }: { children: React.ReactNode; className?: string }) => {
     const ref = useRef<HTMLDivElement>(null);
     const handleTouchEnd = () => {
         setTimeout(() => {
-            const surface = ref.current?.querySelector('.recharts-surface');
-            if (surface) {
-                surface.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true, cancelable: true }));
+            const wrapper = ref.current?.querySelector('.recharts-wrapper');
+            if (wrapper) {
+                wrapper.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true, cancelable: true }));
+                wrapper.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true }));
             }
-        }, 80);
+        }, 50);
     };
     return (
         <div ref={ref} className={className} onTouchEnd={handleTouchEnd}>
@@ -899,58 +900,57 @@ export default function DashboardPage() {
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#e63121]/5 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-slate-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                <CardHeader className={`${(isTotal || isFgwh) ? 'p-2 md:p-4' : 'p-1.5 md:p-2'} bg-gradient-to-b from-slate-50/80 to-transparent border-b border-slate-200/50 flex-shrink-0 relative z-10`}>
-                    <div className="flex justify-between items-start mb-1.5 px-0.5">
-                        <span className={`flex items-center gap-1 flex-wrap uppercase font-black tracking-tight ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-[10px] md:text-xs text-slate-800'}`}>
-                            {!(isTotal || isFgwh) && <div className={`w-1.5 h-1.5 rounded-full ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
+                <CardHeader className={`${(isTotal || isFgwh) ? 'p-2 md:p-3' : 'p-2'} bg-gradient-to-b from-slate-50/80 to-transparent border-b border-slate-200/50 flex-shrink-0 relative z-10`}>
+                    {/* Row 1: dept name + % MTD inline */}
+                    <div className="flex justify-between items-center mb-1.5">
+                        <span className={`flex items-center gap-1.5 flex-wrap uppercase font-black tracking-tight ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-xs md:text-sm text-slate-800'}`}>
+                            {!(isTotal || isFgwh) && <div className={`w-2 h-2 rounded-full flex-shrink-0 ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
                             {name}
-                            {['CS', 'HAND'].includes(deptCode) && <span className="hidden sm:inline text-[9px] text-blue-600 font-bold ml-0.5 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 uppercase tracking-tighter">ISP: {summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp?.toFixed(1) || 0}T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%) MTD</span>}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
-                        
-                        <div className="flex items-center gap-1">
-                            <span className={`font-black flex items-baseline gap-0.5 ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-500'} ${(isTotal || isFgwh) ? 'text-xl md:text-2xl' : 'text-sm md:text-base'}`}>
-                                {summary.achivementPct.toFixed(0)}% <span className={`font-semibold tracking-normal uppercase text-muted-foreground ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[9px] md:text-[10px]'}`}>MTD</span>
-                            </span>
-                        </div>
+                        <span className={`font-black flex items-baseline gap-0.5 ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-500'} ${(isTotal || isFgwh) ? 'text-xl md:text-2xl' : 'text-base md:text-lg'}`}>
+                            {summary.achivementPct.toFixed(0)}%
+                            <span className={`font-semibold uppercase text-muted-foreground ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[9px] md:text-[10px]'}`}>MTD</span>
+                        </span>
                     </div>
 
-                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((deptCode === 'PEEL_MC' && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-1 divide-x divide-slate-200/60 bg-white/50 rounded-md p-1 border border-slate-100 shadow-sm`}>
-                        <div className="flex flex-col items-center justify-center px-1">
-                            <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>{t('stat.mtd_plan')}</span>
-                            <div className="flex items-baseline gap-0.5 mt-0.5">
-                                <span className={`font-bold text-slate-800 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'}`}>{actualNum.toFixed(1)}</span>
-                                <span className={`text-slate-500 ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[8px] md:text-[9px]'}`}>/{planNum.toFixed(1)}</span>
+                    {/* Row 2: Stats compact inline */}
+                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((deptCode === 'PEEL_MC' && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-0 divide-x divide-slate-200/60 bg-white/60 rounded-lg border border-slate-100/80`}>
+                        <div className="flex flex-col items-center py-1.5 px-1">
+                            <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">{t('stat.mtd_plan')}</span>
+                            <div className="flex items-baseline gap-0.5">
+                                <span className={`font-bold text-slate-800 ${(isTotal || isFgwh) ? 'text-sm md:text-base' : 'text-xs md:text-sm'}`}>{actualNum.toFixed(1)}</span>
+                                <span className={`text-slate-400 text-[9px] md:text-[10px]`}>/{planNum.toFixed(1)}</span>
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-center justify-center px-1">
-                            <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>DAILY TARGET</span>
-                            <div className={`font-bold mt-0.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'} ${isReached ? 'text-emerald-600' : 'text-primary'}`}>
-                                {isReached ? 'Đạt' : `${dailyNeeded} ${unit}`}
+                        <div className="flex flex-col items-center py-1.5 px-1">
+                            <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">DAILY TARGET</span>
+                            <div className={`font-bold ${(isTotal || isFgwh) ? 'text-sm md:text-base' : 'text-xs md:text-sm'} ${isReached ? 'text-emerald-600' : 'text-primary'}`}>
+                                {isReached ? '✓ Đạt' : `${dailyNeeded} ${unit}`}
                             </div>
                         </div>
 
                         {id !== 'virtual-container' && (
-                            <div className="flex flex-col items-center justify-center px-1">
-                                <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>{t('stat.downtime').toUpperCase()}</span>
-                                <div className={`font-bold mt-0.5 text-amber-600 flex items-center gap-0.5 ${(isTotal || isFgwh) ? 'text-base md:text-lg' : 'text-[10px] md:text-xs'}`}>
-                                    {(isTotal || isFgwh) && <Clock className="h-3 w-3" />} {Number((summary.downtime / 60).toFixed(1))}h
+                            <div className="flex flex-col items-center py-1.5 px-1">
+                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">{t('stat.downtime').toUpperCase()}</span>
+                                <div className={`font-bold text-amber-600 ${(isTotal || isFgwh) ? 'text-sm md:text-base' : 'text-xs md:text-sm'}`}>
+                                    {Number((summary.downtime / 60).toFixed(1))}h
                                 </div>
                             </div>
                         )}
 
                         {(deptCode === 'PEEL_MC' && !isTotal) && (
-                            <div className="flex flex-col items-center justify-center px-1">
-                                <span className={`text-[8px] md:text-[9px] uppercase text-slate-500 tracking-tighter mb-0.5 text-center leading-none`}>{t('stat.compressor')}</span>
-                                <div className={`font-bold mt-0.5 text-purple-600 flex items-center gap-0.5 text-[10px] md:text-xs`}>
-                                    {(summary.totalCompressorKwhMtd || 0).toLocaleString('en-US', {maximumFractionDigits: 0})} <span className="text-[8px] font-normal text-slate-400">kWh</span>
+                            <div className="flex flex-col items-center py-1.5 px-1">
+                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">{t('stat.compressor')}</span>
+                                <div className="font-bold text-purple-600 text-xs md:text-sm">
+                                    {((summary.totalCompressorKwhMtd || 0) / 1000).toFixed(0)}<span className="text-[9px] font-normal text-slate-400">MWh</span>
                                 </div>
                             </div>
                         )}
                     </div>
                 </CardHeader>
-                <CardContent className={`flex-1 flex flex-col justify-start ${(isTotal || isFgwh) ? 'p-3 pt-3 md:p-5 md:pt-4' : 'p-2 pt-2'}`}>
+                <CardContent className={`flex flex-col gap-2 ${(isTotal || isFgwh) ? 'p-3 pt-2 md:p-4 md:pt-3' : 'p-2 pt-2'}`}>
 
 
                     {/* Sub-view Toggles for Standard Cards */}
@@ -1109,7 +1109,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : ['CS', 'HAND'].includes(deptCode) && deptViewModes[id] === 'isp' ? (
-                        <ChartWrapper className={`w-full rounded-xl mt-auto border-t h-[160px] md:h-[200px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                        <ChartWrapper className={`w-full rounded-xl border-t h-[160px] md:h-[200px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 8, right: 6, left: -12, bottom: 5 }}>
                                     <defs>
@@ -1183,7 +1183,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <ChartWrapper className={`w-full rounded-xl mt-auto border-t ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[200px] md:h-[260px]' : 'h-[180px] md:h-[220px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                    <ChartWrapper className={`w-full rounded-xl border-t ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[200px] md:h-[260px]' : 'h-[180px] md:h-[220px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: -10, bottom: 5 }}>
                                 <defs>
