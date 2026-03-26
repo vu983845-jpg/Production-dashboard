@@ -225,22 +225,31 @@ export default function DowntimePage() {
         setLoadingReport(false)
     }, [reportDeptId, reportMonth, reportYear])
 
-    const totMins = useMemo(() => reportEvents.filter(e => !e.is_ongoing).reduce((s, e) => s + e.duration_mins, 0), [reportEvents])
+    // Match DDS: calculate duration from start→end (or start→now for open events)
+    const calcMins = (e: DowntimeEvent) => {
+        if (e.start_time) {
+            const end = e.end_time ? new Date(e.end_time) : new Date()
+            return Math.max(0, Math.round((end.getTime() - new Date(e.start_time).getTime()) / 60000))
+        }
+        return e.duration_mins || 0
+    }
+
+    const totMins = useMemo(() => reportEvents.reduce((s, e) => s + calcMins(e), 0), [reportEvents])
     const openCount = useMemo(() => reportEvents.filter(e => e.is_ongoing).length, [reportEvents])
 
     // Pie by reason code
     const pieData = useMemo(() => {
         const map: Record<string, number> = {}
-        reportEvents.filter(e => !e.is_ongoing).forEach(e => { map[e.root_cause] = (map[e.root_cause] || 0) + e.duration_mins })
+        reportEvents.forEach(e => { map[e.root_cause] = (map[e.root_cause] || 0) + calcMins(e) })
         return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
     }, [reportEvents])
 
     // Bar by dept
     const deptBarData = useMemo(() => {
         const map: Record<string, number> = {}
-        reportEvents.filter(e => !e.is_ongoing).forEach(e => {
+        reportEvents.forEach(e => {
             const d = e.departments?.name_vi || e.departments?.code || "—"
-            map[d] = (map[d] || 0) + e.duration_mins
+            map[d] = (map[d] || 0) + calcMins(e)
         })
         return Object.entries(map).map(([name, value]) => ({ name, value: +(value / 60).toFixed(2) })).sort((a, b) => b.value - a.value)
     }, [reportEvents])
