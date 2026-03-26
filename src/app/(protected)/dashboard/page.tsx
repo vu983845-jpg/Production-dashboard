@@ -1256,13 +1256,27 @@ export default function DashboardPage() {
                                     </Bar>
                                     <Line type="monotone" dataKey="Plan" stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} name={t('legend.plan')} animationDuration={600} legendType="none" />
 
+                                    {deptCode === "HAND" && (
+                                        <Line
+                                            type="monotone"
+                                            dataKey="IspActual"
+                                            name="ISP (T)"
+                                            stroke="#8b5cf6"
+                                            strokeWidth={2}
+                                            dot={{ r: 2.5, fill: '#8b5cf6', strokeWidth: 0 }}
+                                            activeDot={{ r: 4.5, fill: '#8b5cf6', strokeWidth: 0 }}
+                                            animationDuration={800}
+                                            animationEasing="ease-out"
+                                        />
+                                    )}
+
                                     {deptCode === "ALL" && (
                                         <>
                                             <YAxis yAxisId="emission" orientation="right" hide />
                                             <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#e63121" dot={false} strokeWidth={2} name={t('legend.emission')} animationDuration={700} />
                                         </>
                                     )}
-                                    {(deptCode === "SHELL" || deptCode === "PEEL_MC" || deptCode === "ALL" || isTotal || isFgwh) && (
+                                    {(deptCode === "HAND" || deptCode === "SHELL" || deptCode === "PEEL_MC" || deptCode === "ALL" || isTotal || isFgwh) && (
                                         <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '4px', fontWeight: 600, color: '#64748b' }} iconType="plainline" />
                                     )}
                             </ComposedChart>
