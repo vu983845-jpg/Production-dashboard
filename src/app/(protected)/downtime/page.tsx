@@ -39,6 +39,15 @@ const PIE_COLORS = ["#e63121", "#f59e0b", "#3b82f6", "#10b981", "#8b5cf6", "#ec4
 const now = () => format(new Date(), "yyyy-MM-dd'T'HH:mm")
 const currentYear = new Date().getFullYear()
 
+const SHELLING_LINES = [
+    { value: "Line A", label: "Line A" },
+    { value: "Line B", label: "Line B" },
+    { value: "Line C", label: "Line C" },
+    { value: "Line D1", label: "Line D1" },
+    { value: "Line D2", label: "Line D2" },
+    { value: "Other", label: "Khác (Other)" },
+]
+
 function calcDuration(start: string, end: string): number {
     try {
         const s = parseISO(start)
@@ -56,6 +65,7 @@ export default function DowntimePage() {
     // ── ENTRY FORM ──────────────────────────────────────────────────────────
     const [entryDeptId, setEntryDeptId] = useState("")
     const [machineArea, setMachineArea] = useState("")
+    const [machineAreaOther, setMachineAreaOther] = useState("")
     const [severity, setSeverity] = useState("Trung bình")
     const [reasonCode, setReasonCode] = useState("BD")
     const [description, setDescription] = useState("")
@@ -110,6 +120,15 @@ export default function DowntimePage() {
 
     const allowedDepts = useMemo(() => departments.filter(d => allowedDeptIds.includes(d.id)), [departments, allowedDeptIds])
 
+    // Detect if selected dept is Shelling
+    const isShelling = useMemo(() => {
+        const d = departments.find(d => d.id === entryDeptId)
+        return d?.code === "SHELL"
+    }, [entryDeptId, departments])
+
+    // Final machine area value
+    const finalMachineArea = isShelling && machineArea === "Other" ? machineAreaOther : machineArea
+
     // ── Fetch events list ─────────────────────────────────────────────────
     const fetchEvents = useCallback(async () => {
         setLoadingEvents(true)
@@ -151,7 +170,7 @@ export default function DowntimePage() {
             end_time: isOngoing ? null : (endTime || null),
             duration_mins: durationMins,
             root_cause: reasonCode,
-            machine_area: machineArea || null,
+            machine_area: finalMachineArea || null,
             severity: severity,
             description: description || null,
             note: detailNote || null,
@@ -165,7 +184,7 @@ export default function DowntimePage() {
             setSaveMsg("❌ Lỗi: " + error.message)
         } else {
             setSaveMsg("✅ Đã ghi nhận sự cố!")
-            setMachineArea(""); setDescription(""); setDetailNote(""); setStartTime(now()); setEndTime(""); setIsOngoing(false); setExcludeDowntime(false)
+            setMachineArea(""); setMachineAreaOther(""); setDescription(""); setDetailNote(""); setStartTime(now()); setEndTime(""); setIsOngoing(false); setExcludeDowntime(false)
             fetchEvents()
         }
         setTimeout(() => setSaveMsg(""), 3000)
@@ -265,12 +284,27 @@ export default function DowntimePage() {
                                         {allowedDepts.map(d => <option key={d.id} value={d.id}>{d.name_vi || d.name_en}</option>)}
                                     </select>
                                 </div>
-                                {/* Machine area */}
+                                {/* Machine area: dropdown for Shelling, text for others */}
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs font-semibold text-muted-foreground uppercase">Máy móc / Khu vực</label>
-                                    <input type="text" value={machineArea} onChange={e => setMachineArea(e.target.value)}
-                                        placeholder="VD: Line A, Máy bóc vỏ..."
-                                        className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    {isShelling ? (
+                                        <>
+                                            <select value={machineArea} onChange={e => { setMachineArea(e.target.value); if (e.target.value !== "Other") setMachineAreaOther("") }}
+                                                className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                                <option value="">-- Chọn line bị sự cố --</option>
+                                                {SHELLING_LINES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                                            </select>
+                                            {machineArea === "Other" && (
+                                                <input type="text" value={machineAreaOther} onChange={e => setMachineAreaOther(e.target.value)}
+                                                    placeholder="Nhập tên máy / khu vực khác..."
+                                                    className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary mt-1" />
+                                            )}
+                                        </>
+                                    ) : (
+                                        <input type="text" value={machineArea} onChange={e => setMachineArea(e.target.value)}
+                                            placeholder="VD: Line A, Máy bóc vỏ..."
+                                            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    )}
                                 </div>
                                 {/* Severity */}
                                 <div className="flex flex-col gap-1">
