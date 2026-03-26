@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { format, startOfMonth, startOfWeek, isSunday, endOfMonth, addDays, subDays } from "date-fns"
 import { vi } from "date-fns/locale"
 import {
@@ -58,7 +58,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // ChartWrapper: dismisses tooltip on mobile touch-end
 const ChartWrapper = ({ children, className }: { children: React.ReactNode; className?: string }) => {
-    const ref = React.useRef<HTMLDivElement>(null);
+    const ref = useRef<HTMLDivElement>(null);
     const handleTouchEnd = () => {
         setTimeout(() => {
             const surface = ref.current?.querySelector('.recharts-surface');
