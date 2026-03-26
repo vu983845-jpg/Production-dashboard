@@ -381,7 +381,9 @@ export default function LoginPage() {
 
                 {/* ── RIGHT ── */}
                 <div className="login-right">
-
+                    <Link href="/downtime" className="login-back">
+                        <ArrowLeft size={16} strokeWidth={2.5} /> Quản lý Downtime
+                    </Link>
 
                     <div className="login-form-wrap">
                         <h2 className="login-form-title">Đăng nhập</h2>
