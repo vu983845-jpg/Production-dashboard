@@ -1088,7 +1088,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : ['CS', 'HAND'].includes(deptCode) && deptViewModes[id] === 'isp' ? (
-                        <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 h-[100px] md:h-[120px]`}>
+                        <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 h-[160px] md:h-[200px]`}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
                                     <defs>
@@ -1160,7 +1160,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[180px] md:h-[220px]' : 'h-[110px] md:h-[130px]'}`}>
+                    <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[200px] md:h-[260px]' : 'h-[180px] md:h-[220px]'}`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
                                 <defs>
