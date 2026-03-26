@@ -11,7 +11,7 @@ import {
     Users,
     LogOut,
     Menu,
-    ArrowLeft,
+    AlertTriangle,
     Zap,
     ShieldCheck,
 } from "lucide-react"
@@ -153,12 +153,12 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                 </div>
 
                 <div className="flex flex-1 items-center justify-end gap-2 md:gap-4 lg:gap-6 shrink-0">
-                    <Button variant="ghost" size="sm" asChild className="gap-1.5 px-2 sm:px-3 text-white hover:bg-white/10 hover:text-white">    
-                        <a href="https://dds-meeting.vercel.app/">
-                            <ArrowLeft className="h-4 w-4" />
-                            <span className="hidden sm:inline">DDS Meeting</span>
-                            <span className="sm:hidden text-xs font-semibold">DDS</span>
-                        </a>
+                    <Button variant="ghost" size="sm" asChild className="gap-1.5 px-2 sm:px-3 text-white hover:bg-white/10 hover:text-white">
+                        <Link href="/downtime">
+                            <AlertTriangle className="h-4 w-4" />
+                            <span className="hidden sm:inline">Downtime</span>
+                            <span className="sm:hidden text-xs font-semibold">DT</span>
+                        </Link>
                     </Button>
                     <div className="text-white hover:bg-white/10 rounded-md">
                         <LanguageToggle />
