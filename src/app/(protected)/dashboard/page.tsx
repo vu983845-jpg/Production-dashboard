@@ -31,21 +31,21 @@ import { OverviewTab } from "@/components/dashboard/OverviewTab"
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-xl shadow-xl p-3.5 text-xs z-50 ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-200">
-                <p className="font-bold text-slate-800 mb-2.5 border-b pb-1.5 uppercase tracking-wider">{label}</p>
-                <div className="space-y-1.5">
+            <div className="bg-white/98 backdrop-blur-xl border border-slate-100 rounded-2xl shadow-2xl p-4 z-50 ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150 min-w-[140px]">
+                <p className="font-black text-slate-700 mb-3 pb-2 border-b border-slate-100 text-sm tracking-wide">{label}</p>
+                <div className="space-y-2.5">
                     {payload.map((entry: any, i: number) => {
                         let color = entry.color || '#334155';
                         if (entry.name && (entry.name.includes('Thực tế') || entry.name.includes('Actual'))) {
                             color = entry.payload.Actual >= entry.payload.Plan ? '#10b981' : '#e63121';
                         }
                         return (
-                            <div key={i} className="flex justify-between items-center gap-6">
-                                <span className="text-slate-600 font-medium flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
+                            <div key={i} className="flex justify-between items-center gap-8">
+                                <span className="text-slate-500 text-xs font-medium flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full shadow-md flex-shrink-0" style={{ backgroundColor: color }}></div>
                                     {entry.name}
                                 </span>
-                                <span className="font-black text-slate-800">{Number(entry.value).toLocaleString('vi-VN', {maximumFractionDigits: 1})}</span>
+                                <span className="font-black text-slate-900 text-sm tabular-nums">{Number(entry.value).toLocaleString('vi-VN', {maximumFractionDigits: 1})}</span>
                             </div>
                         )
                     })}
@@ -55,6 +55,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     }
     return null;
 }
+
+// ChartWrapper: dismisses tooltip on mobile touch-end
+const ChartWrapper = ({ children, className }: { children: React.ReactNode; className?: string }) => {
+    const ref = React.useRef<HTMLDivElement>(null);
+    const handleTouchEnd = () => {
+        setTimeout(() => {
+            const surface = ref.current?.querySelector('.recharts-surface');
+            if (surface) {
+                surface.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true, cancelable: true }));
+            }
+        }, 80);
+    };
+    return (
+        <div ref={ref} className={className} onTouchEnd={handleTouchEnd}>
+            {children}
+        </div>
+    );
+}
+
 
 export default function DashboardPage() {
     const supabase = createClient()
@@ -725,26 +744,28 @@ export default function DashboardPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-3 pt-3 md:p-5 md:pt-4 flex-1 flex flex-col">
-                        <div className="flex-1">
-                            <ResponsiveContainer width="100%" height={160}>
-                                <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 25 }}>
+                        <ChartWrapper className="flex-1">
+                            <ResponsiveContainer width="100%" height={220}>
+                                <ComposedChart data={displayHistory} margin={{ top: 8, right: 8, left: -10, bottom: 20 }}>
                                     <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="fgwhGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.75}/></linearGradient>
+<linearGradient id="fgwhRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.75}/></linearGradient>
 </defs>
-<XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={30} minTickGap={10} tickMargin={5} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
-                                    <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '5px' }} />
-                                    <Bar dataKey="Actual" name={t('legend.actual')} radius={[2, 2, 0, 0]}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+<XAxis dataKey="name" tick={{ fontSize: 11, dy: 4, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} height={28} minTickGap={12} tickMargin={5} />
+                                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)} width={32} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
+                                    <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', paddingTop: '6px', fontWeight: 500 }} />
+                                    <Bar dataKey="Actual" name={t('legend.actual')} radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out">
                                         {history.map((entry: any, index: number) => {
-                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "url(#actualRedGrad)" : "url(#actualGreenGrad)";
+                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "url(#fgwhRedGrad)" : "url(#fgwhGreenGrad)";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
-                                    <Line type="step" dataKey="Plan" name={t('legend.plan')} stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} />
+                                    <Line type="monotone" dataKey="Plan" name={t('legend.plan')} stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} animationDuration={600} />
                                 </ComposedChart>
                             </ResponsiveContainer>
-                        </div>
+                        </ChartWrapper>
                     </CardContent>
                 </Card>
             );
@@ -1088,19 +1109,20 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : ['CS', 'HAND'].includes(deptCode) && deptViewModes[id] === 'isp' ? (
-                        <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 h-[160px] md:h-[200px]`}>
+                        <ChartWrapper className={`w-full rounded-xl mt-auto border-t h-[160px] md:h-[200px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
+                                <ComposedChart data={displayHistory} margin={{ top: 8, right: 6, left: -12, bottom: 5 }}>
                                     <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="ispGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="ispRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
 </defs>
-<XAxis 
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                                    <XAxis 
                                         dataKey="name" 
-                                        tick={{ fontSize: 9, dy: 5, fill: '#64748b' }} 
+                                        tick={{ fontSize: 10, dy: 4, fill: '#94a3b8', fontWeight: 500 }} 
                                         tickLine={false} 
-                                        axisLine={{ stroke: '#e2e8f0' }}
-                                        height={20}
+                                        axisLine={false}
+                                        height={22}
                                         tickFormatter={(val) => {
                                             const day = parseInt(val, 10);
                                             if (!isNaN(day) && (day === 1 || day === 8 || day === 15 || day === 22 || day === 29)) {
@@ -1111,17 +1133,18 @@ export default function DashboardPage() {
                                         interval={0}
                                         tickMargin={4} 
                                     />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
-                                    <Bar dataKey="IspActual" name="ISP Thực tế (Tấn)" radius={[2, 2, 0, 0]}>
+                                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(0)} width={28} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
+                                    <Bar dataKey="IspActual" name="ISP Thực tế (T)" radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out">
                                         {displayHistory.map((entry: any, index: number) => {
-                                            const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "url(#actualRedGrad)" : "url(#actualGreenGrad)";
+                                            const color = (entry.IspPlan > 0 && entry.IspActual < entry.IspPlan) ? "url(#ispRedGrad)" : "url(#ispGreenGrad)";
                                             return <Cell key={`isp-cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
-                                    {deptCode === 'CS' && <Line type="step" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name="ISP Kế hoạch" />}
+                                    {deptCode === 'CS' && <Line type="monotone" dataKey="IspPlan" stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} name="ISP Kế hoạch" animationDuration={600} />}
                                 </ComposedChart>
                             </ResponsiveContainer>
-                        </div>
+                        </ChartWrapper>
                     ) : deptCode === "ALL" && showCo2Intensity ? (
                         <div className="h-36 w-full mt-auto border-t pt-2">
                             {(() => {
@@ -1160,19 +1183,20 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <div className={`w-full bg-slate-50/30 rounded-lg mt-auto pt-1 border-t opacity-90 ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[200px] md:h-[260px]' : 'h-[180px] md:h-[220px]'}`}>
+                    <ChartWrapper className={`w-full rounded-xl mt-auto border-t ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[200px] md:h-[260px]' : 'h-[180px] md:h-[220px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={displayHistory} margin={{ top: 5, right: 0, left: 0, bottom: 2 }}>
+                            <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: -10, bottom: 5 }}>
                                 <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+<linearGradient id="mainGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.75}/></linearGradient>
+<linearGradient id="mainRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.75}/></linearGradient>
 </defs>
-<XAxis 
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                                <XAxis 
                                     dataKey="name" 
-                                    tick={{ fontSize: 9, dy: 5, fill: '#64748b' }} 
+                                    tick={{ fontSize: 11, dy: 4, fill: '#94a3b8', fontWeight: 500 }} 
                                     tickLine={false} 
-                                    axisLine={{ stroke: '#e2e8f0' }}
-                                    height={20}
+                                    axisLine={false}
+                                    height={24}
                                     tickFormatter={(val) => {
                                         const day = parseInt(val, 10);
                                         if (!isNaN(day) && (day === 1 || day === 8 || day === 15 || day === 22 || day === 29)) {
@@ -1181,36 +1205,37 @@ export default function DashboardPage() {
                                         return '';
                                     }}
                                     interval={0}
-                                    tickMargin={4} 
+                                    tickMargin={5} 
                                 />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
+                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)} width={32} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
-                                        <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name={t('legend.daily_needed')} connectNulls={false} />
+                                        <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name={t('legend.daily_needed')} connectNulls={false} animationDuration={600} />
                                     )}
                                     {(deptCode === "SHELL" || deptCode === "PEEL_MC") && (
                                         <>
-                                            <YAxis yAxisId="intensity" orientation="right" hide />
-                                            <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name={t('legend.intensity')} />
+                                            <YAxis yAxisId="intensity" orientation="right" tick={{ fontSize: 10, fill: '#f59e0b', fontWeight: 600 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => v.toFixed(0)} />
+                                            <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name={t('legend.intensity')} animationDuration={700} />
                                         </>
                                     )}
-                                    <Bar dataKey="Actual" name={t('legend.actual')} radius={[2, 2, 0, 0]}>
+                                    <Bar dataKey="Actual" name={t('legend.actual')} radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out">
                                         {displayHistory.map((entry: any, index: number) => {
-                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "url(#actualRedGrad)" : "url(#actualGreenGrad)";
+                                            const color = (entry.Plan > 0 && entry.Actual < entry.Plan) ? "url(#mainRedGrad)" : "url(#mainGreenGrad)";
                                             return <Cell key={`cell-${index}`} fill={color} />;
                                         })}
                                     </Bar>
-                                    <Line type="step" dataKey="Plan" stroke="#94a3b8" strokeDasharray="3 3" dot={false} strokeWidth={1} name={t('legend.plan')} />
+                                    <Line type="monotone" dataKey="Plan" stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} name={t('legend.plan')} animationDuration={600} />
 
                                     {deptCode === "ALL" && (
                                         <>
                                             <YAxis yAxisId="emission" orientation="right" hide />
-                                            <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="url(#actualRedGrad)" dot={true} strokeWidth={2} name={t('legend.emission')} />
+                                            <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#e63121" dot={false} strokeWidth={2} name={t('legend.emission')} animationDuration={700} />
                                         </>
                                     )}
-                                    {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '2px' }} />}
+                                    {(isTotal || isFgwh) && <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', paddingTop: '4px', fontWeight: 500 }} />}
                             </ComposedChart>
                         </ResponsiveContainer>
-                    </div>
+                    </ChartWrapper>
                     )}
                 </CardContent>
             </Card>
