@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { ddsClient } from "@/lib/supabase/dds-client"
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns"
 import { Download, Search, FileText, TrendingUp, TrendingDown, PieChart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -127,26 +126,20 @@ export default function ReportPage() {
 
         if (error) console.error("Report query error:", error)
 
-        // Fetch DDS downtime (same as dashboard)
-        const deptCodeToDDS: Record<string, string> = {
-            STEAM: 'Steaming', SHELL: 'Shelling', BORMA: 'Borma',
-            PEEL_MC: 'Peeling MC', CS: 'ColorSorter', HAND: 'HandPeeling', PACK: 'Packing'
-        }
-        const ddsDeptName = deptCodeToDDS[selectedDept]
-        const ddsDownByDate: Record<string, number> = {}
-        if (ddsDeptName) {
-            const { data: ddsIssues } = await ddsClient
-                .from('issues')
-                .select('department, duration_mins, start_time')
-                .eq('is_downtime', true)
-                .eq('status', 'Closed')
-                .eq('department', ddsDeptName)
-                .gte('start_time', `${start}T00:00:00Z`)
-                .lte('start_time', `${end}T23:59:59Z`)
-            if (ddsIssues) {
-                ddsIssues.forEach((issue: any) => {
-                    const d = format(new Date(issue.start_time), 'yyyy-MM-dd')
-                    ddsDownByDate[d] = (ddsDownByDate[d] || 0) + Number(issue.duration_mins || 0)
+        // Fetch Native Downtime Events
+        const nativeDownByDate: Record<string, number> = {}
+        if (dept?.id) {
+            const { data: dtEvents } = await supabase
+                .from('downtime_events')
+                .select('work_date, duration_mins')
+                .eq('department_id', dept.id)
+                .gte('work_date', start)
+                .lte('work_date', end)
+                
+            if (dtEvents) {
+                dtEvents.forEach((evt: any) => {
+                    const d = evt.work_date
+                    nativeDownByDate[d] = (nativeDownByDate[d] || 0) + Number(evt.duration_mins || 0)
                 })
             }
         }
@@ -155,7 +148,7 @@ export default function ReportPage() {
             work_date:      r.work_date,
             actual_ton:     Number(r.actual_ton || 0),
             plan_ton:       Number(r.plan_ton || 0),
-            downtime_min:   ddsDownByDate[r.work_date] || Number(r.downtime_min || 0),
+            downtime_min:   nativeDownByDate[r.work_date] || Number(r.downtime_min || 0),
             input_ton:      Number(r.input_ton || 0),
             output_ton:     Number(r.output_ton || 0),
             avg_broken_pct: Number(r.broken_pct || r.avg_broken_pct || 0),

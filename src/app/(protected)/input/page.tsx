@@ -3,14 +3,13 @@
 import { useState, useEffect, useRef } from "react"
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
 import { vi } from "date-fns/locale"
-import { CalendarIcon, Save, Edit2 } from "lucide-react"
+import { CalendarIcon, Save, Edit2, Trash2, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
-import { cn } from "@/lib/utils"
-import { ddsClient } from "@/lib/supabase/dds-client"
+import { cn, getShiftName } from "@/lib/utils"
 
 export type MonthlyEnergyRecord = {
     work_date: string;
@@ -178,6 +177,12 @@ export default function InputPage() {
     const [prevMeterReading, setPrevMeterReading] = useState<number | null>(null)
     const [prevDayActual, setPrevDayActual] = useState<number | null>(null)
     const [recentRecords, setRecentRecords] = useState<any[]>([])
+
+    // Downtime State
+    const [downtimes, setDowntimes] = useState<any[]>([])
+    const [dtDuration, setDtDuration] = useState("")
+    const [dtCause, setDtCause] = useState("")
+    const [dtNote, setDtNote] = useState("")
 
     // Shelling Monthly Energy State
     const [shellingMonthlyEnergyData, setShellingMonthlyEnergyData] = useState<ShellingMonthlyEnergyRecord[]>([])
@@ -369,6 +374,15 @@ export default function InputPage() {
             } else {
                 formKpi.reset({ wip_open_ton: 0, wip_close_ton: 0, input_ton: 0, good_output_ton: 0, actual_container: Number(actualData?.actual_container || 0), downtime_min: 0, broken_pct: 0, unpeel_pct: 0, isp_pct: 0, sw_pct: 0, electricity_meter_reading: 0, note: "" })
             }
+
+            // Fetch Downtime
+            const { data: dtData } = await supabase
+                .from("downtime_events")
+                .select("*")
+                .eq("department_id", selectedDept)
+                .eq("work_date", formattedDate)
+                .order("created_at", { ascending: true })
+            setDowntimes(dtData || [])
 
             // Fetch Previous Day's Meter Reading & Actual Ton for Shelling
             const currentDeptCode = departments.find(d => d.id === selectedDept)?.code
@@ -774,6 +788,50 @@ export default function InputPage() {
         setIsSaving(false)
     }
 
+    async function handleAddDowntime() {
+        if (!selectedDept || !dtDuration || !dtCause) return;
+        setIsSaving(true);
+        const formattedDate = format(date, "yyyy-MM-dd");
+        const { data, error } = await supabase.from('downtime_events').insert({
+            department_id: selectedDept,
+            work_date: formattedDate,
+            duration_mins: parseInt(dtDuration),
+            root_cause: dtCause,
+            note: dtNote,
+            created_by: userId
+        }).select().single();
+
+        if (error) {
+            toast.error("Lỗi khi lưu sự cố: " + error.message);
+        } else {
+            toast.success("Đã ghi nhận sự cố");
+            setDowntimes(prev => [...prev, data]);
+            setDtDuration("");
+            setDtCause("");
+            setDtNote("");
+            // Update the KPI downtime_min logic if they want to sum it up dynamically
+            const newTotal = downtimes.reduce((s, r) => s + Number(r.duration_mins), 0) + data.duration_mins;
+            formKpi.setValue("downtime_min", newTotal);
+        }
+        setIsSaving(false);
+    }
+
+    async function handleDeleteDowntime(id: string) {
+        if (!window.confirm("Bạn có chắc muốn xóa sự cố này?")) return;
+        const { error } = await supabase.from('downtime_events').delete().eq('id', id);
+        if (error) {
+            toast.error("Lỗi khi xóa: " + error.message);
+        } else {
+            toast.success("Đã xóa sự cố");
+            setDowntimes(prev => {
+                const updated = prev.filter(r => r.id !== id);
+                const newTotal = updated.reduce((s, r) => s + Number(r.duration_mins), 0);
+                formKpi.setValue("downtime_min", newTotal);
+                return updated;
+            });
+        }
+    }
+
     async function saveFgwh() {
         setIsSaving(true)
         const formattedDate = format(date, "yyyy-MM-dd")
@@ -871,63 +929,7 @@ export default function InputPage() {
             .select('*')
             .eq('work_date', formattedDate)
             
-        // Fetch DDS downtime
-        const prevDay = format(subDays(date, 1), "yyyy-MM-dd")
-        const nextDay = format(subDays(date, -1), "yyyy-MM-dd")
-        const { data: ddsIssues } = await ddsClient
-            .from('issues')
-            .select('department, duration_mins, start_time, machine_area')
-            .eq('is_downtime', true)
-            .eq('status', 'Closed')
-            .eq('department', 'Shelling')
-            .gte('start_time', `${prevDay}T00:00:00Z`)
-            .lte('start_time', `${nextDay}T23:59:59Z`)
-
         if (shellingFetchRef.current !== currentRef) return; // Race condition escape
-
-        // Map DDS issues to Line and Shift
-        const ddsDownMap: Record<ShellLine, Record<ShellShift, number>> = {
-            A: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
-            B: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
-            C: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
-            D1: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
-            D2: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
-        }
-        
-        if (ddsIssues) {
-            const targetDateStr = formattedDate
-            ddsIssues.forEach((iss: any) => {
-                const area = (iss.machine_area || "").toUpperCase()
-                let targetLine: ShellLine | null = null
-                if (area.includes('D2')) targetLine = 'D2'
-                else if (area.includes('D1')) targetLine = 'D1'
-                else if (area.includes('A')) targetLine = 'A'
-                else if (area.includes('B')) targetLine = 'B'
-                else if (area.includes('C')) targetLine = 'C'
-                
-                if (targetLine) {
-                    const st = new Date(iss.start_time)
-                    const vnHour = (st.getUTCHours() + 7) % 24
-                    const vnDate = new Date(st.getTime() + 7 * 60 * 60 * 1000)
-                    const vnDateStr = vnDate.toISOString().split('T')[0]
-                    
-                    let issueWorkDate = vnDateStr;
-                    if (vnHour >= 0 && vnHour < 6) {
-                        const prev = new Date(vnDate.getTime() - 24 * 60 * 60 * 1000)
-                        issueWorkDate = prev.toISOString().split('T')[0]
-                    }
-                    
-                    if (issueWorkDate === targetDateStr) {
-                        let shift: ShellShift = 'Ca 1'
-                        if (vnHour >= 6 && vnHour < 14) shift = 'Ca 1'
-                        else if (vnHour >= 14 && vnHour < 22) shift = 'Ca 2'
-                        else shift = 'Ca 3'
-                        
-                        ddsDownMap[targetLine][shift] += Number(iss.duration_mins || 0)
-                    }
-                }
-            })
-        }
 
         if (data) {
             const newState = { A: initShiftObj(), B: initShiftObj(), C: initShiftObj(), D1: initShiftObj(), D2: initShiftObj() } as Record<ShellLine, Record<ShellShift, ShellLineEntry>>
@@ -939,21 +941,13 @@ export default function InputPage() {
                     newState[r.line_code as ShellLine][shift] = { 
                         actual_ton: Number(r.actual_ton || 0), 
                         run_hours: Number(r.run_hours || 0), 
-                        downtime_min: ddsDownMap[r.line_code as ShellLine][shift], // Override with sync data
+                        downtime_min: Number(r.downtime_min || 0),
                         manpower: Number(r.manpower) || 0,
                         broken_pct: Number(r.broken_pct) || 0,
                         size: r.size || '',
                         note: r.note || '' 
                     }
                 }
-            })
-            // Fill missing db lines with synced down map
-            SHELLING_LINES.forEach(l => {
-                (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).forEach(s => {
-                    if (newState[l][s].downtime_min === 0 && ddsDownMap[l][s] > 0) {
-                        newState[l][s].downtime_min = ddsDownMap[l][s]
-                    }
-                })
             })
             setShellingLineData(newState)
             setShiftLeaders(newLeaders)
@@ -1255,6 +1249,7 @@ export default function InputPage() {
                                 <TabsList>
                                     <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
                                     <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
+                                    <TabsTrigger value="downtime">Downtime (Sự cố)</TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent value="actual" className="space-y-4">
@@ -1767,6 +1762,81 @@ export default function InputPage() {
                                                     </div>
                                                 </form>
                                             </Form>
+                                        </div>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="downtime" className="space-y-4">
+                                    <div className="rounded-xl border bg-card text-card-foreground shadow p-6 max-w-2xl">
+                                        <div className="flex flex-col gap-6">
+                                            {/* Data Entry Row */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end bg-muted/30 p-4 rounded-lg border">
+                                                <div className="sm:col-span-1 space-y-2">
+                                                    <Label>Số phút dừng</Label>
+                                                    <Input type="number" value={dtDuration} onChange={e => setDtDuration(e.target.value)} placeholder="0" className="bg-white" />
+                                                </div>
+                                                <div className="sm:col-span-1 space-y-2">
+                                                    <Label>Nguyên nhân</Label>
+                                                    <Select value={dtCause} onValueChange={setDtCause}>
+                                                        <SelectTrigger className="bg-white"><SelectValue placeholder="Chọn..." /></SelectTrigger>
+                                                        <SelectContent>
+                                                          <SelectItem value="Thiết bị / Máy móc">Thiết bị / Máy móc</SelectItem>
+                                                          <SelectItem value="Thiếu NLĐV">Thiếu NLĐV</SelectItem>
+                                                          <SelectItem value="Sự cố điện/nước">Sự cố điện/nước</SelectItem>
+                                                          <SelectItem value="Chất lượng">Chất lượng</SelectItem>
+                                                          <SelectItem value="Thay đổi kế hoạch">Thay đổi kế hoạch</SelectItem>
+                                                          <SelectItem value="Vệ sinh / Cài đặt">Vệ sinh / Cài đặt</SelectItem>
+                                                          <SelectItem value="Khác">Khác</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="sm:col-span-2 space-y-2">
+                                                    <Label>Ghi chú chi tiết</Label>
+                                                    <div className="flex gap-2">
+                                                        <Input value={dtNote} onChange={e => setDtNote(e.target.value)} placeholder="Vd: Mất điện lưới kéo dài..." className="bg-white flex-1" />
+                                                        <Button onClick={handleAddDowntime} disabled={isSaving || !dtDuration || !dtCause} className="bg-red-600 hover:bg-red-700">
+                                                            <Plus className="h-4 w-4 mr-1" /> Thêm
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Data Table */}
+                                            <div className="border rounded-md overflow-hidden">
+                                                <Table>
+                                                    <TableHeader className="bg-red-50 text-red-900">
+                                                        <TableRow>
+                                                            <TableHead className="w-[100px]">Thời gian</TableHead>
+                                                            <TableHead className="w-[150px]">Nguyên nhân</TableHead>
+                                                            <TableHead>Ghi chú</TableHead>
+                                                            <TableHead className="w-[60px] text-center"></TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {downtimes.length === 0 ? (
+                                                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-20 bg-white">Chưa có sự cố nào được ghi nhận trong ngày.</TableCell></TableRow>
+                                                        ) : (
+                                                            downtimes.map((dt) => (
+                                                                <TableRow key={dt.id} className="bg-white">
+                                                                    <TableCell className="font-semibold text-red-600">{dt.duration_mins} phút</TableCell>
+                                                                    <TableCell className="font-medium">{dt.root_cause}</TableCell>
+                                                                    <TableCell className="text-muted-foreground text-sm">{dt.note || "-"}</TableCell>
+                                                                    <TableCell className="text-center">
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100" onClick={() => handleDeleteDowntime(dt.id)}>
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))
+                                                        )}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                            
+                                            <div className="flex justify-between items-center px-4 py-3 bg-red-50 rounded-md border border-red-100">
+                                                <span className="text-sm font-medium text-red-800">Tổng thời gian dừng máy:</span>
+                                                <span className="text-lg font-black text-red-700">{downtimes.reduce((s, r) => s + Number(r.duration_mins), 0)} phút</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </TabsContent>

@@ -336,7 +336,7 @@ export default function LoginPage() {
                         </div>
                         <div>
                             <div className="login-brand-name">Intersnack</div>
-                            <div className="login-brand-sub">VICC LA · Digital Cashew Ops</div>
+                            <div className="login-brand-sub">VICC LA · Production Dashboard</div>
                         </div>
                     </div>
 

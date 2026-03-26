@@ -20,7 +20,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { createClient } from "@/lib/supabase/client"
-import { ddsClient } from "@/lib/supabase/dds-client"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { GaugeChart } from "@/components/ui/gauge-chart"
 import { FadeIn, FadeInStagger } from "@/components/magicui/fade-in"
@@ -290,44 +289,31 @@ export default function DashboardPage() {
             const startFilter = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
             const endFilter = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
 
-            // 0. Fetch DDS-meeting Downtime Data
-            const { data: ddsIssues } = await ddsClient
-                .from('issues')
-                .select('department, duration_mins, start_time')
-                .eq('is_downtime', true)
-                .eq('status', 'Closed')
-                .gte('start_time', `${startFilter}T00:00:00Z`)
-                .lte('start_time', `${endFilter}T23:59:59Z`);
+            // 0. Fetch Native Downtime Data
+            const { data: dtEvents } = await supabase
+                .from('downtime_events')
+                .select('department_id, work_date, duration_mins')
+                .gte('work_date', startFilter)
+                .lte('work_date', endFilter);
 
-            const ddsDownTimeSum: Record<string, number> = {};
-            const ddsTotalDownTimeSum: Record<string, number> = {};
+            const nativeDownTimeSum: Record<string, number> = {};
+            const nativeTotalDownTimeSum: Record<string, number> = {};
 
-            if (ddsIssues) {
-                ddsIssues.forEach((issue: any) => {
-                    const issueDate = format(new Date(issue.start_time), 'yyyy-MM-dd');
-                    const deptName = issue.department;
+            if (dtEvents) {
+                dtEvents.forEach((evt: any) => {
+                    const issueDate = evt.work_date;
+                    const deptId = evt.department_id;
 
-                    const key = `${deptName}_${issueDate}`;
-                    if (!ddsDownTimeSum[key]) ddsDownTimeSum[key] = 0;
-                    ddsDownTimeSum[key] += Number(issue.duration_mins || 0);
+                    const key = `${deptId}_${issueDate}`;
+                    if (!nativeDownTimeSum[key]) nativeDownTimeSum[key] = 0;
+                    nativeDownTimeSum[key] += Number(evt.duration_mins || 0);
 
-                    if (!ddsTotalDownTimeSum[issueDate]) ddsTotalDownTimeSum[issueDate] = 0;
-                    ddsTotalDownTimeSum[issueDate] += Number(issue.duration_mins || 0);
+                    if (!nativeTotalDownTimeSum[issueDate]) nativeTotalDownTimeSum[issueDate] = 0;
+                    nativeTotalDownTimeSum[issueDate] += Number(evt.duration_mins || 0);
                 });
             }
 
-            const getExternalDeptName = (deptCode: string) => {
-                switch (deptCode) {
-                    case 'STEAM': return 'Steaming';
-                    case 'SHELL': return 'Shelling';
-                    case 'BORMA': return 'Borma';
-                    case 'PEEL_MC': return 'Peeling MC';
-                    case 'CS': return 'ColorSorter';
-                    case 'HAND': return 'HandPeeling';
-                    case 'PACK': return 'Packing';
-                    default: return null;
-                }
-            };
+
 
             // 0.5 Fetch Energy Data (needed for Total Emission injected into Total Factory history)
             const { data: eData } = await supabase
@@ -384,9 +370,9 @@ export default function DashboardPage() {
                 .order("work_date")
 
             if (totalData) {
-                // Pre-process and inject external downtime mappings 
+                // Pre-process and inject native downtime mappings 
                 totalData.forEach((d: any) => {
-                    d.total_downtime_min = ddsTotalDownTimeSum[d.work_date] || 0;
+                    d.total_downtime_min = nativeTotalDownTimeSum[d.work_date] || 0;
                 });
                 const history = totalData.map(d => ({
                     name: format(new Date(d.work_date), 'dd/MM'),
@@ -419,14 +405,9 @@ export default function DashboardPage() {
                 .order("work_date")
 
             if (dData) {
-                // Map the downloaded external Downtime values
+                // Map the downloaded native Downtime values
                 dData.forEach((curr: any) => {
-                    const extDept = getExternalDeptName(curr.dept_code);
-                    if (extDept) {
-                        curr.downtime_min = ddsDownTimeSum[`${extDept}_${curr.work_date}`] || 0;
-                    } else {
-                        curr.downtime_min = 0;
-                    }
+                    curr.downtime_min = nativeDownTimeSum[`${curr.department_id}_${curr.work_date}`] || 0;
                 });
 
                 // Determine regions mapping
@@ -616,12 +597,22 @@ export default function DashboardPage() {
             if (dData) {
                 const map = new Map()
                 dData.forEach(r => {
-                    if (!map.has(r.dept_name_en)) map.set(r.dept_name_en, { name: r.dept_name_en, Actual: 0, Plan: 0, Down: 0 })
+                    // FGWH dept has no data in daily_actual — skip it here, will be added separately
+                    if (r.dept_code === 'FGWH') return;
+                    if (!map.has(r.dept_name_en)) map.set(r.dept_name_en, { name: r.dept_name_en, code: r.dept_code, Actual: 0, Plan: 0, Down: 0 })
                     const current = map.get(r.dept_name_en)
                     current.Actual += Number(r.actual_ton)
                     current.Plan += Number(r.plan_ton)
                     current.Down += Number(r.downtime_min)
                 })
+                // Add correct FGWH row from daily_fgwh (joined via v_dashboard_total_daily)
+                if (totalData && totalData.length > 0) {
+                    const fgwhPlan = totalData.reduce((s: number, r: any) => s + Number(r.total_plan_isp_ton || 0), 0);
+                    const fgwhActualRow = totalData.reduce((s: number, r: any) => s + Number(r.total_actual_isp_ton || 0), 0);
+                    if (fgwhPlan > 0 || fgwhActualRow > 0) {
+                        map.set('FGWH', { name: 'FGWH – ISP', code: 'FGWH', Actual: fgwhActualRow, Plan: fgwhPlan, Down: 0 })
+                    }
+                }
                 setDeptData(Array.from(map.values()))
 
                 if (selectedDept !== 'all') {
@@ -903,14 +894,14 @@ export default function DashboardPage() {
                 <CardHeader className={`${(isTotal || isFgwh) ? 'p-2 md:p-3' : 'p-2'} bg-gradient-to-b from-slate-50/80 to-transparent border-b border-slate-200/50 flex-shrink-0 relative z-10`}>
                     {/* Row 1: dept name + % MTD inline */}
                     <div className="flex justify-between items-center mb-1.5">
-                        <span className={`flex items-center gap-1.5 flex-wrap uppercase font-black tracking-tight ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-xs md:text-sm text-slate-800'}`}>
-                            {!(isTotal || isFgwh) && <div className={`w-2 h-2 rounded-full flex-shrink-0 ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
+                        <span className={`flex items-center gap-1.5 flex-wrap uppercase font-black tracking-tight ${(isTotal || isFgwh) ? 'text-base md:text-lg text-primary' : 'text-base md:text-lg text-slate-800'}`}>
+                            {!(isTotal || isFgwh) && <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${summary.achivementPct >= 100 ? 'bg-emerald-500' : summary.achivementPct >= 80 ? 'bg-amber-500' : 'bg-red-500'} shadow-sm`} />}
                             {name}
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                         </span>
-                        <span className={`font-black flex items-baseline gap-0.5 ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-500'} ${(isTotal || isFgwh) ? 'text-xl md:text-2xl' : 'text-base md:text-lg'}`}>
+                        <span className={`font-black flex items-baseline gap-0.5 ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-500'} ${'text-xl md:text-2xl'}`}>
                             {summary.achivementPct.toFixed(0)}%
-                            <span className={`font-semibold uppercase text-muted-foreground ${(isTotal || isFgwh) ? 'text-[10px] md:text-xs' : 'text-[9px] md:text-[10px]'}`}>MTD</span>
+                            <span className={`font-semibold uppercase text-muted-foreground ${'text-[10px] md:text-xs'}`}>MTD</span>
                         </span>
                     </div>
 
@@ -1213,7 +1204,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : (
-                    <ChartWrapper className={`w-full rounded-xl border-t ${(isTotal || isFgwh || id === 'virtual-container') ? 'h-[200px] md:h-[260px]' : 'h-[180px] md:h-[220px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                    <ChartWrapper className={`w-full rounded-xl border-t h-[220px] md:h-[260px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: -10, bottom: 5 }}>
                                 <defs>
