@@ -1558,6 +1558,21 @@ export default function InputPage() {
                                                                                         <p className="text-xs font-semibold text-indigo-700">📈 OEE (Hiệu suất Tổng thể)</p>
                                                                                         <span className="text-[10px] text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded-full">Avail × Perf × Quality</span>
                                                                                     </div>
+                                                                                    {/* OEE Explanation Card */}
+                                                                                    <div className="mb-3 rounded-lg border border-indigo-200 bg-white/70 p-2.5 text-[10px] text-slate-600 space-y-1.5">
+                                                                                        <p className="font-bold text-indigo-800 text-[11px]">📖 OEE là gì?</p>
+                                                                                        <p>OEE (<b>Overall Equipment Effectiveness</b>) đo lường hiệu quả tổng thể của thiết bị qua 3 thành phần:</p>
+                                                                                        <div className="grid grid-cols-1 gap-1 mt-1">
+                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-blue-600 shrink-0">Tính sẵn sàng (A):</span><span>Run Hours / 8h kế hoạch. Ca nào có line khác chạy mà line này tắt → A giảm.</span></div>
+                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-emerald-600 shrink-0">Hiệu suất (P):</span><span>Sản lượng thực / (Run Hours × Tốc độ thiết kế). P thấp = chạy chậm hơn lý thuyết.</span></div>
+                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-rose-600 shrink-0">Chất lượng (Q):</span><span>1 − % Bể. Q thấp = nhiều hạt vỡ.</span></div>
+                                                                                        </div>
+                                                                                        <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-indigo-100">
+                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span> ≥75% Tốt</span>
+                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> 55–74% Cần cải thiện</span>
+                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> &lt;55% Kém</span>
+                                                                                        </div>
+                                                                                    </div>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>

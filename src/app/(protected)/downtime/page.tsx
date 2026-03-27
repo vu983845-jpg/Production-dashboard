@@ -341,6 +341,26 @@ export default function DowntimePage() {
                                         </optgroup>
                                     </select>
                                 </div>
+                                {/* Reason Code Legend */}
+                                <div className="col-span-1 sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px]">
+                                    <p className="font-bold text-slate-700 mb-2">📋 Giải thích Mã Sự cố</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                                        <div className="font-semibold text-red-600 col-span-full mb-0.5">🔴 Không có kế hoạch (tính vào Downtime)</div>
+                                        {REASON_CODES.filter(r => !r.planned).map(r => (
+                                            <div key={r.code} className="flex gap-1.5">
+                                                <span className="font-mono font-bold text-red-700 w-8 shrink-0">{r.code}</span>
+                                                <span className="text-slate-600">{r.desc}</span>
+                                            </div>
+                                        ))}
+                                        <div className="font-semibold text-green-700 col-span-full mt-2 mb-0.5">🟢 Có kế hoạch (thường không tính Downtime)</div>
+                                        {REASON_CODES.filter(r => r.planned).map(r => (
+                                            <div key={r.code} className="flex gap-1.5">
+                                                <span className="font-mono font-bold text-green-700 w-8 shrink-0">{r.code}</span>
+                                                <span className="text-slate-600">{r.desc}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                                 {/* Start time */}
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs font-semibold text-muted-foreground uppercase">Bắt đầu *</label>
