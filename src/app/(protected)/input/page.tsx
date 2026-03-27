@@ -224,6 +224,9 @@ export default function InputPage() {
     size?: string;
     note: string; }
     
+    // Fixed default staffing (nhân sự cố định) per line when running
+    const SHELLING_LINE_MANPOWER: Record<ShellLine, number> = { A: 2, B: 2, C: 2, D1: 2, D2: 3 }
+    
     const initShiftObj = () => ({ 'Ca 1': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' }, 'Ca 2': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' }, 'Ca 3': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' } });
     
     const [shellingLineData, setShellingLineData] = useState<Record<ShellLine, Record<ShellShift, ShellLineEntry>>>({
@@ -984,11 +987,17 @@ export default function InputPage() {
                 const shift = (r.shift_name || 'Ca 1') as ShellShift;
                 if (r.shift_leader) newLeaders[shift] = r.shift_leader;
                 if (SHELLING_LINES.includes(r.line_code)) {
+                    const aTon = Number(r.actual_ton || 0);
+                    const savedManpower = Number(r.manpower) || 0;
+                    // Auto-fill with fixed default if line is running and no manpower was saved
+                    const effectiveManpower = (savedManpower === 0 && aTon > 0)
+                        ? SHELLING_LINE_MANPOWER[r.line_code as ShellLine]
+                        : savedManpower;
                     newState[r.line_code as ShellLine][shift] = { 
-                        actual_ton: Number(r.actual_ton || 0), 
+                        actual_ton: aTon, 
                         run_hours: Number(r.run_hours || 0), 
                         downtime_min: Number(r.downtime_min || 0),
-                        manpower: Number(r.manpower) || 0,
+                        manpower: effectiveManpower,
                         broken_pct: Number(r.broken_pct) || 0,
                         size: r.size || '',
                         note: r.note || '' 
@@ -1345,7 +1354,10 @@ export default function InputPage() {
                                                                                                                 onChange={e => {
                                                                                                                     const val = Number(e.target.value) || 0
                                                                                                                     setShellingLineData(prev => {
-                                                                                                                        const next = { ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], actual_ton: val } } }
+                                                                                                                        const currentMp = prev[line]?.[shift]?.manpower || 0;
+                                                                                                                        // Auto-fill manpower with fixed default when line starts running and manpower not yet set
+                                                                                                                        const newMp = (val > 0 && currentMp === 0) ? SHELLING_LINE_MANPOWER[line] : currentMp;
+                                                                                                                        const next = { ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], actual_ton: val, manpower: newMp } } }
                                                                                                                         let total = 0
                                                                                                                         SHELLING_LINES.forEach(l => {
                                                                                                                             (['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).forEach(s => total += (next[l]?.[s]?.actual_ton || 0))
@@ -1452,22 +1464,35 @@ export default function InputPage() {
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-amber-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-amber-700 mb-2">🧑‍🤝‍🧑 Nhân sự tham gia (Người)</p>
+                                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                                        <p className="text-xs font-semibold text-amber-700">🧑‍🤝‍🧑 Nhân sự tham gia (Người)</p>
+                                                                                        <span className="text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full font-medium">Định mức: A/B/C/D1=2, D2=3</span>
+                                                                                    </div>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
                                                                                             <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => (
+                                                                                                {SHELLING_LINES.map(line => {
+                                                                                                    const currentMp = shellingLineData[line]?.[shift]?.manpower || 0;
+                                                                                                    const defaultMp = SHELLING_LINE_MANPOWER[line];
+                                                                                                    const isRunning = (shellingLineData[line]?.[shift]?.actual_ton || 0) > 0;
+                                                                                                    const isOverridden = isRunning && currentMp !== defaultMp && currentMp !== 0;
+                                                                                                    return (
                                                                                                     <div key={`${line}-${shift}`} className="flex flex-col items-center">
-                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
+                                                                                                        <label className="text-[10px] font-bold mb-0.5 text-gray-500">
+                                                                                                            {line}
+                                                                                                            <span className="text-[9px] text-amber-500 ml-0.5">({defaultMp})</span>
+                                                                                                        </label>
                                                                                                         <input
                                                                                                             type="number" step="1" min="0"
-                                                                                                            className="w-full text-right p-1 rounded border-2 border-amber-200 bg-white text-sm focus:outline-none"
-                                                                                                            value={shellingLineData[line]?.[shift]?.manpower || ''}
+                                                                                                            className={`w-full text-right p-1 rounded border-2 text-sm focus:outline-none ${isOverridden ? 'border-orange-400 bg-orange-50 text-orange-800 font-semibold' : 'border-amber-200 bg-white'}`}
+                                                                                                            value={currentMp || ''}
+                                                                                                            title={isRunning ? `Định mức cố định: ${defaultMp} người` : 'Nhập volume trước để tự điền'}
                                                                                                             onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], manpower: Number(e.target.value) || 0 } } }))}
                                                                                                         />
                                                                                                     </div>
-                                                                                                ))}
+                                                                                                    );
+                                                                                                })}
                                                                                             </div>
                                                                                         </div>
                                                                                     ))}
