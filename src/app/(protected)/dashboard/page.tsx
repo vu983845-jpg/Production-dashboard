@@ -302,12 +302,17 @@ export default function DashboardPage() {
 
             if (dtEvents) {
                 dtEvents.forEach((evt: any) => {
-                    // Skip ongoing events — calculating from start_time to now() for open events
-                    // produces unrealistic totals (e.g. 10 unclosed events = thousands of hours).
-                    // Only count closed events with a stored duration_mins.
-                    if (evt.is_ongoing) return;
+                    let mins: number;
 
-                    const mins = Number(evt.duration_mins || 0);
+                    if (evt.is_ongoing && evt.start_time) {
+                        // Ongoing event: count elapsed time, capped at 24h to prevent
+                        // accidentally-open events from inflating totals.
+                        const elapsed = Math.round((Date.now() - new Date(evt.start_time).getTime()) / 60000);
+                        mins = Math.min(elapsed, 1440); // cap 24h
+                    } else {
+                        mins = Number(evt.duration_mins || 0);
+                    }
+
                     if (mins <= 0) return;
 
                     const issueDate = evt.work_date;
