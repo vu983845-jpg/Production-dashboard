@@ -292,7 +292,8 @@ export default function DashboardPage() {
             // 0. Fetch Native Downtime Data
             const { data: dtEvents } = await supabase
                 .from('downtime_events')
-                .select('department_id, work_date, duration_mins')
+                .select('department_id, work_date, duration_mins, start_time, end_time, is_ongoing')
+                .eq('exclude_downtime', false)
                 .gte('work_date', startFilter)
                 .lte('work_date', endFilter);
 
@@ -304,12 +305,18 @@ export default function DashboardPage() {
                     const issueDate = evt.work_date;
                     const deptId = evt.department_id;
 
+                    let mins = Number(evt.duration_mins || 0);
+                    if (evt.is_ongoing && evt.start_time) {
+                        const endT = evt.end_time ? new Date(evt.end_time) : new Date();
+                        mins = Math.max(0, Math.round((endT.getTime() - new Date(evt.start_time).getTime()) / 60000));
+                    }
+
                     const key = `${deptId}_${issueDate}`;
                     if (!nativeDownTimeSum[key]) nativeDownTimeSum[key] = 0;
-                    nativeDownTimeSum[key] += Number(evt.duration_mins || 0);
+                    nativeDownTimeSum[key] += mins;
 
                     if (!nativeTotalDownTimeSum[issueDate]) nativeTotalDownTimeSum[issueDate] = 0;
-                    nativeTotalDownTimeSum[issueDate] += Number(evt.duration_mins || 0);
+                    nativeTotalDownTimeSum[issueDate] += mins;
                 });
             }
 

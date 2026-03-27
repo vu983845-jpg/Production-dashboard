@@ -64,7 +64,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
         },
         {
             title: t("nav.plan"),
-            href: "/admin/plan",
+            href: "/plan",
             icon: FileSpreadsheet,
             roles: ["admin", "dept_user"],
         },

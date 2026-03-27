@@ -131,15 +131,21 @@ export default function ReportPage() {
         if (dept?.id) {
             const { data: dtEvents } = await supabase
                 .from('downtime_events')
-                .select('work_date, duration_mins')
+                .select('work_date, duration_mins, start_time, end_time, is_ongoing')
                 .eq('department_id', dept.id)
+                .eq('exclude_downtime', false)
                 .gte('work_date', start)
                 .lte('work_date', end)
                 
             if (dtEvents) {
                 dtEvents.forEach((evt: any) => {
                     const d = evt.work_date
-                    nativeDownByDate[d] = (nativeDownByDate[d] || 0) + Number(evt.duration_mins || 0)
+                    let mins = Number(evt.duration_mins || 0)
+                    if (evt.is_ongoing && evt.start_time) {
+                        const endT = evt.end_time ? new Date(evt.end_time) : new Date()
+                        mins = Math.max(0, Math.round((endT.getTime() - new Date(evt.start_time).getTime()) / 60000))
+                    }
+                    nativeDownByDate[d] = (nativeDownByDate[d] || 0) + mins
                 })
             }
         }

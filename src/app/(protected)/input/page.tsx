@@ -9,7 +9,7 @@ import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
-import { cn, getShiftName } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 export type MonthlyEnergyRecord = {
     work_date: string;
@@ -421,6 +421,52 @@ export default function InputPage() {
             }
         }
     }, [selectedDept, date, formActual, formKpi, departments])
+
+    // Auto calculate Shelling Line downtime based on downtimes
+    useEffect(() => {
+        if (!selectedDept || departments.find(d => d.id === selectedDept)?.code !== 'SHELL') return;
+
+        // Aggregate downtimes by line and shift
+        const dtMap: Record<ShellLine, Record<ShellShift, number>> = {
+            A: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+            B: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+            C: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+            D1: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+            D2: { 'Ca 1': 0, 'Ca 2': 0, 'Ca 3': 0 },
+        };
+
+        downtimes.forEach(dt => {
+            if (dt.exclude_downtime) return;
+            const machineArea = String(dt.machine_area || '');
+            const line = machineArea.replace('Line ', '') as ShellLine;
+            if (['A', 'B', 'C', 'D1', 'D2'].includes(line)) {
+                // Determine shift from start_time (format usually HH:mm:ss)
+                let shift: ShellShift = 'Ca 1'; // Default
+                if (dt.start_time) {
+                    const h = parseInt(dt.start_time.split(':')[0], 10);
+                    if (h >= 6 && h < 14) shift = 'Ca 1';
+                    else if (h >= 14 && h < 22) shift = 'Ca 2';
+                    else shift = 'Ca 3';
+                }
+                dtMap[line][shift] += Number(dt.duration_mins || 0);
+            }
+        });
+
+        // Apply to shellingLineData
+        setShellingLineData(prev => {
+            const next = { ...prev };
+            let changed = false;
+            (['A', 'B', 'C', 'D1', 'D2'] as ShellLine[]).forEach(l => {
+                (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).forEach(s => {
+                    if (next[l]?.[s] && next[l][s].downtime_min !== dtMap[l][s]) {
+                        next[l] = { ...next[l], [s]: { ...next[l][s], downtime_min: dtMap[l][s] } };
+                        changed = true;
+                    }
+                })
+            });
+            return changed ? next : prev;
+        });
+    }, [downtimes, selectedDept, departments]);
 
     // Fetch History
     // Auto-save energy data when it changes (debounced)
@@ -954,11 +1000,6 @@ export default function InputPage() {
         } else {
             // No data in db yet, set just downtime
             const newState = { A: initShiftObj(), B: initShiftObj(), C: initShiftObj(), D1: initShiftObj(), D2: initShiftObj() } as Record<ShellLine, Record<ShellShift, ShellLineEntry>>
-            SHELLING_LINES.forEach(l => {
-                (['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).forEach(s => {
-                    newState[l][s].downtime_min = ddsDownMap[l][s]
-                })
-            })
             setShellingLineData(newState)
         }
     }
