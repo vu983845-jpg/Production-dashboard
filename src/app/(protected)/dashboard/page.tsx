@@ -444,8 +444,23 @@ export default function DashboardPage() {
                 // Build summary and history
                 Object.keys(grouped).forEach(key => {
                     const records = grouped[key];
-                    // Some regions contain multiple departments ON THE SAME DATE.
-                    // To build an accurate history (Actual vs Plan per day), we must group regions by Work_Date!
+                    const summary = buildSummary(records, false);
+
+                    // DOWNTIME FIX: v_dashboard_daily can have N rows per (dept, date)
+                    // (e.g. per shift or per line), causing downtime_min to be summed N times.
+                    // Override summary.downtime by de-duplicating on unique dept+date keys.
+                    const seen = new Set<string>();
+                    let correctDowntime = 0;
+                    records.forEach((r: any) => {
+                        const dkey = `${r.department_id}_${r.work_date}`;
+                        if (!seen.has(dkey)) {
+                            correctDowntime += nativeDownTimeSum[dkey] || 0;
+                            seen.add(dkey);
+                        }
+                    });
+                    summary.downtime = correctDowntime;
+
+                    // Build daily history (group by work_date, summing across depts for regions)
                     const recordsByDay = records.reduce((dayAcc: any, r: any) => {
                         if (!dayAcc[r.work_date]) {
                             dayAcc[r.work_date] = { plan: 0, actual: 0, plan_cont: 0, actual_cont: 0, elec: 0, isp_actual: 0, isp_plan: 0 };
@@ -473,10 +488,7 @@ export default function DashboardPage() {
                         NonIspActual: Math.max(0, recordsByDay[d].actual - recordsByDay[d].isp_actual)
                     }));
 
-                    dashboards[key] = {
-                        summary: buildSummary(records, false),
-                        history
-                    };
+                    dashboards[key] = { summary, history };
                 });
 
                 // Extract Container data from PACK department to create a Virtual Container Dashboard
