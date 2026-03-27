@@ -302,17 +302,7 @@ export default function DashboardPage() {
 
             if (dtEvents) {
                 dtEvents.forEach((evt: any) => {
-                    let mins: number;
-
-                    if (evt.is_ongoing && evt.start_time) {
-                        // Ongoing event: count elapsed time, capped at 24h to prevent
-                        // accidentally-open events from inflating totals.
-                        const elapsed = Math.round((Date.now() - new Date(evt.start_time).getTime()) / 60000);
-                        mins = Math.min(elapsed, 1440); // cap 24h
-                    } else {
-                        mins = Number(evt.duration_mins || 0);
-                    }
-
+                    const mins = Number(evt.duration_mins || 0);
                     if (mins <= 0) return;
 
                     const issueDate = evt.work_date;
