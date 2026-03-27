@@ -218,7 +218,7 @@ export default function DowntimePage() {
             .select("*, departments(name_vi, code)")
             .gte("work_date", start)
             .lte("work_date", end)
-            .eq("exclude_downtime", false)
+            // No exclude_downtime filter: show ALL events, even those not counted as downtime
         if (reportDeptId) q = q.eq("department_id", reportDeptId)
         const { data } = await q
         setReportEvents(data || [])
@@ -234,20 +234,21 @@ export default function DowntimePage() {
         return e.duration_mins || 0
     }
 
-    const totMins = useMemo(() => reportEvents.reduce((s, e) => s + calcMins(e), 0), [reportEvents])
+    // Only count events that should be counted as downtime
+    const totMins = useMemo(() => reportEvents.filter(e => !e.exclude_downtime).reduce((s, e) => s + calcMins(e), 0), [reportEvents])
     const openCount = useMemo(() => reportEvents.filter(e => e.is_ongoing).length, [reportEvents])
 
-    // Pie by reason code
+    // Pie by reason code (only counting events that are real downtime)
     const pieData = useMemo(() => {
         const map: Record<string, number> = {}
-        reportEvents.forEach(e => { map[e.root_cause] = (map[e.root_cause] || 0) + calcMins(e) })
+        reportEvents.filter(e => !e.exclude_downtime).forEach(e => { map[e.root_cause] = (map[e.root_cause] || 0) + calcMins(e) })
         return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
     }, [reportEvents])
 
-    // Bar by dept
+    // Bar by dept (only counting real downtime events)
     const deptBarData = useMemo(() => {
         const map: Record<string, number> = {}
-        reportEvents.forEach(e => {
+        reportEvents.filter(e => !e.exclude_downtime).forEach(e => {
             const d = e.departments?.name_vi || e.departments?.code || "—"
             map[d] = (map[d] || 0) + calcMins(e)
         })
