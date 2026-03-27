@@ -218,6 +218,8 @@ export default function DowntimePage() {
             .select("*, departments(name_vi, code)")
             .gte("work_date", start)
             .lte("work_date", end)
+            .order("work_date", { ascending: false })
+            .order("start_time", { ascending: false })
             // No exclude_downtime filter: show ALL events, even those not counted as downtime
         if (reportDeptId) q = q.eq("department_id", reportDeptId)
         const { data } = await q
