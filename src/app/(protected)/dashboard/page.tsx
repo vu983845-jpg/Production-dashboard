@@ -393,14 +393,14 @@ export default function DashboardPage() {
                     Plan: Number(d.total_plan_isp_ton || 0)
                 }));
 
-                dashboards["all"] = {
-                    summary: buildSummary(totalData, true),
-                    history
-                };
-                dashboards["fgwh"] = {
-                    summary: buildSummary(totalData, true),
-                    history: fgwhIspHistory
-                };
+                // Correct factory total downtime = sum of nativeTotalDownTimeSum values (one per date, not multiplied by dept rows)
+                const factoryTotalDowntimeMin = Object.values(nativeTotalDownTimeSum).reduce((s: number, v: any) => s + (v as number), 0);
+                const allSummary = buildSummary(totalData, true);
+                allSummary.downtime = factoryTotalDowntimeMin;
+                dashboards["all"] = { summary: allSummary, history };
+                const fgwhSummary = buildSummary(totalData, true);
+                fgwhSummary.downtime = factoryTotalDowntimeMin;
+                dashboards["fgwh"] = { summary: fgwhSummary, history: fgwhIspHistory };
             }
 
             // 2. Fetch All Individual Dept Data
