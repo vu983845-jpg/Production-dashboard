@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { format, endOfMonth, differenceInMinutes, parseISO } from "date-fns"
-import { AlertTriangle, Plus, Trash2, BarChart2, ClipboardEdit, Clock, CheckCircle, XCircle } from "lucide-react"
+import { AlertTriangle, Plus, Trash2, BarChart2, ClipboardEdit, Clock, CheckCircle, XCircle, Download } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -257,6 +257,45 @@ export default function DowntimePage() {
 
     const openEvents = events.filter(e => e.is_ongoing)
 
+    // ── Export downtime report to CSV ─────────────────────────────────────
+    const handleExportDowntime = () => {
+        if (!reportEvents.length) return
+        const headers = ["Ngày", "Bộ phận", "Mã", "Mô tả mã", "Khu vực máy", "Mô tả sự cố", "Mức độ", "Bắt đầu", "Kết thúc", "Phút DT", "Tính DT?", "Trạng thái", "Ghi chú"]
+        const rows = reportEvents.map(ev => {
+            const rc = REASON_CODES.find(r => r.code === ev.root_cause)
+            const mins = calcMins(ev)
+            const tinhDT = ev.exclude_downtime ? "Không" : "Có"
+            const status = ev.is_ongoing ? "Open" : "Closed"
+            const startStr = ev.start_time ? format(parseISO(ev.start_time), "HH:mm dd/MM/yyyy") : ev.work_date
+            const endStr = ev.end_time ? format(parseISO(ev.end_time), "HH:mm dd/MM/yyyy") : ""
+            return [
+                ev.work_date,
+                `"${ev.departments?.name_vi || ev.departments?.code || ""}",`,
+                ev.root_cause,
+                `"${rc?.desc || ""}",`,
+                `"${ev.machine_area || ""}",`,
+                `"${(ev.description || "").replace(/"/g, "'")}",`,
+                ev.severity,
+                startStr,
+                endStr,
+                mins,
+                tinhDT,
+                status,
+                `"${(ev.detail_note || "").replace(/"/g, "'")}"`
+            ].join(",")
+        })
+        const csv = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n")
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.setAttribute("download", `Downtime_T${reportMonth}_${reportYear}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+    }
+
     return (
         <div className="max-w-5xl mx-auto space-y-6">
             <div className="flex items-center gap-3">
@@ -494,6 +533,9 @@ export default function DowntimePage() {
                                     </select>
                                 </div>
                                 <Button onClick={fetchReport} disabled={loadingReport}>{loadingReport ? "Đang tải..." : "Xem báo cáo"}</Button>
+                                <Button variant="outline" onClick={handleExportDowntime} disabled={reportEvents.length === 0} className="gap-1.5">
+                                    <Download className="h-4 w-4" /> Xuất Excel
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
