@@ -933,7 +933,12 @@ export default function DashboardPage() {
                             <div className="flex flex-col items-center py-1.5 px-1">
                                 <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">{t('stat.downtime').toUpperCase()}</span>
                                 <div className={`font-bold text-amber-600 ${(isTotal || isFgwh) ? 'text-sm md:text-base' : 'text-xs md:text-sm'}`}>
-                                    {Number((summary.downtime / 60).toFixed(1))}h
+                                    {(() => {
+                                        const totalMin = summary.downtime || 0
+                                        const h = Math.floor(totalMin / 60)
+                                        const m = totalMin % 60
+                                        return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`
+                                    })()}
                                 </div>
                             </div>
                         )}
