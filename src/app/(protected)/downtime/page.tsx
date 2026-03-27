@@ -80,6 +80,9 @@ export default function DowntimePage() {
     // ── EVENTS LIST ────────────────────────────────────────────────────────
     const [filterDept, setFilterDept] = useState("")
     const [filterStatus, setFilterStatus] = useState("all")
+    const [filterDateFrom, setFilterDateFrom] = useState("")
+    const [filterDateTo, setFilterDateTo] = useState("")
+    const [sortBy, setSortBy] = useState("date_desc")
     const [events, setEvents] = useState<any[]>([])
     const [loadingEvents, setLoadingEvents] = useState(false)
 
@@ -145,14 +148,19 @@ export default function DowntimePage() {
         let q = supabase.from("downtime_events")
             .select("*, departments(id, name_vi, code)")
             .order("start_time", { ascending: false })
-            .limit(100)
+            .limit(500)
         if (filterDept) q = q.eq("department_id", filterDept)
         if (filterStatus === "open") q = q.eq("is_ongoing", true)
         if (filterStatus === "closed") q = q.eq("is_ongoing", false)
+        if (filterDateFrom) q = q.gte("work_date", filterDateFrom)
+        if (filterDateTo) q = q.lte("work_date", filterDateTo)
         const { data } = await q
-        setEvents(data || [])
+        let sorted = data || []
+        if (sortBy === "duration_desc") sorted = [...sorted].sort((a, b) => (b.duration_mins || 0) - (a.duration_mins || 0))
+        else if (sortBy === "duration_asc") sorted = [...sorted].sort((a, b) => (a.duration_mins || 0) - (b.duration_mins || 0))
+        setEvents(sorted)
         setLoadingEvents(false)
-    }, [filterDept, filterStatus])
+    }, [filterDept, filterStatus, filterDateFrom, filterDateTo, sortBy])
 
     useEffect(() => { fetchEvents() }, [fetchEvents])
 
@@ -661,6 +669,19 @@ export default function DowntimePage() {
                             <option value="all">Tất cả trạng thái</option>
                             <option value="open">🔵 Đang mở (Open)</option>
                             <option value="closed">🟢 Đã đóng (Closed)</option>
+                        </select>
+                        <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+                            title="Từ ngày"
+                            className="h-9 rounded-md border border-input bg-background px-3 text-sm" />
+                        <span className="text-sm text-muted-foreground self-center">→</span>
+                        <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+                            title="Đến ngày"
+                            className="h-9 rounded-md border border-input bg-background px-3 text-sm" />
+                        <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                            className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                            <option value="date_desc">📅 Mới nhất</option>
+                            <option value="duration_desc">⬇️ DT nhiều nhất</option>
+                            <option value="duration_asc">⬆️ DT ít nhất</option>
                         </select>
                     </div>
 
