@@ -205,9 +205,12 @@ export function OverviewTab({
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {row.downtime > 0 && (
-                                                <span className="text-[8px] text-orange-500 font-medium">▼{row.downtime}min</span>
-                                            )}
+                                            {row.downtime > 0 && (() => {
+                                                const h = Math.floor(row.downtime / 60)
+                                                const m = row.downtime % 60
+                                                const dtLabel = h > 0 ? `${h}h${m > 0 ? `${m}m` : ''}` : `${m}m`
+                                                return <span className="text-[8px] text-orange-500 font-medium">▼{dtLabel}</span>
+                                            })()}
                                             <span className={`text-[11px] font-black tabular-nums ${textCls}`}>
                                                 {row.pct.toFixed(0)}%
                                             </span>
