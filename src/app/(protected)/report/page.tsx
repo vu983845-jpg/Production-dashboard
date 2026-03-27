@@ -1724,7 +1724,7 @@ export default function ReportPage() {
                                                             </span>
                                                         ) : "—"}
                                                     </td>
-                                                    <td className="p-3 text-right text-amber-600">{r.downtime_min > 0 ? `${r.downtime_min}p` : "—"}</td>
+                                                    <td className="p-3 text-right text-amber-600">{(() => { const m = r.downtime_min || 0; if (!m) return '—'; const h = Math.floor(m/60), rm = m%60; return h > 0 ? `${h}h${rm > 0 ? ` ${rm}m` : ''}` : `${rm}m` })()}</td>
                                                     {hasBroken && <td className="p-3 text-right text-red-600">{r.avg_broken_pct > 0 ? r.avg_broken_pct.toFixed(2)+"%" : "—"}</td>}
                                                     {hasUnpeel && <td className="p-3 text-right text-amber-700">{r.avg_unpeel_pct > 0 ? r.avg_unpeel_pct.toFixed(2)+"%" : "—"}</td>}
                                                     <td className="p-3 text-muted-foreground text-xs max-w-[200px] truncate">{r.note}</td>
@@ -1740,7 +1740,7 @@ export default function ReportPage() {
                                             <td className={`p-3 text-right ${achievePct !== null && achievePct >= 100 ? "text-green-600" : "text-red-600"}`}>
                                                 {achievePct !== null ? achievePct.toFixed(1)+"%" : "—"}
                                             </td>
-                                            <td className="p-3 text-right text-amber-600">{summary.totalDowntime}p</td>
+                                            <td className="p-3 text-right text-amber-600">{(() => { const m = summary.totalDowntime || 0; const h = Math.floor(m/60), rm = m%60; return h > 0 ? `${h}h${rm > 0 ? ` ${rm}m` : ''}` : `${rm}m` })()}</td>
                                             {records.some(r => r.avg_broken_pct > 0) && <td className="p-3 text-right text-red-600">{summary.avgBroken > 0 ? summary.avgBroken.toFixed(2)+"%" : "—"}</td>}
                                             {records.some(r => r.avg_unpeel_pct > 0) && <td className="p-3 text-right text-amber-700">{summary.avgUnpeel > 0 ? summary.avgUnpeel.toFixed(2)+"%" : "—"}</td>}
                                             <td></td>
@@ -1800,7 +1800,7 @@ export default function ReportPage() {
                                                             <td className="p-3 text-center text-muted-foreground">{r.shift_name || 'Ca 1'}</td>
                                                             <td className="p-3 text-right font-bold text-primary">{Number(r.actual_ton) > 0 ? Number(r.actual_ton).toFixed(2) : "—"}</td>
                                                             <td className="p-3 text-right font-medium text-muted-foreground">{Number(r.run_hours) > 0 ? Number(r.run_hours).toFixed(1) : "—"}</td>
-                                                            <td className="p-3 text-right font-medium text-amber-600 px-6">{Number(r.downtime_min) > 0 ? `${r.downtime_min}p` : "—"}</td>
+                                                            <td className="p-3 text-right font-medium text-amber-600 px-6">{(() => { const m = Number(r.downtime_min) || 0; if (!m) return '—'; const h = Math.floor(m/60), rm = m%60; return h > 0 ? `${h}h${rm > 0 ? ` ${rm}m` : ''}` : `${rm}m` })()}</td>
                                                             <td className="p-3 text-center font-bold text-purple-700">{r.size || "—"}</td>
                                                             <td className="p-3 text-right font-medium text-red-600">{Number(r.broken_pct) > 0 ? `${Number(r.broken_pct)}%` : "—"}</td>
                                                             <td className="p-3 text-left text-muted-foreground text-xs max-w-[200px] truncate" title={r.note || ""}>{r.note || "—"}</td>
@@ -1812,7 +1812,7 @@ export default function ReportPage() {
                                                         <td colSpan={3} className="p-2">Monthly Total:</td>
                                                         <td className="p-2 text-primary">{shellingLines.reduce((s, r)=>s+Number(r.actual_ton),0).toFixed(2)}</td>
                                                         <td className="p-2 text-muted-foreground">{shellingLines.reduce((s, r)=>s+Number(r.run_hours),0).toFixed(1)}</td>
-                                                        <td className="p-2 text-amber-600 px-6">{shellingLines.reduce((s, r)=>s+Number(r.downtime_min||0),0)}p</td>
+                                                        <td className="p-2 text-amber-600 px-6">{(() => { const m = shellingLines.reduce((s,r)=>s+Number(r.downtime_min||0),0); const h = Math.floor(m/60), rm = m%60; return h > 0 ? `${h}h${rm > 0 ? ` ${rm}m` : ''}` : `${rm}m` })()}</td>
                                                         <td></td>
                                                         <td className="p-2 text-red-600">
                                                             {(shellingLines.filter(r => Number(r.broken_pct)>0).length > 0) ? 
