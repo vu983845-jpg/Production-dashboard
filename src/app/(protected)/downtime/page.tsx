@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { format, endOfMonth, differenceInMinutes, parseISO } from "date-fns"
-import { AlertTriangle, Plus, Trash2, BarChart2, ClipboardEdit, Clock, CheckCircle, XCircle, Download } from "lucide-react"
+import { AlertTriangle, Plus, Trash2, BarChart2, ClipboardEdit, Clock, CheckCircle, XCircle, Download, Pencil } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -95,6 +95,11 @@ export default function DowntimePage() {
     const [closingEvent, setClosingEvent] = useState<any>(null)
     const [closeTime, setCloseTime] = useState("")
     const [closing, setClosing] = useState(false)
+
+    // ── EDIT DIALOG ──────────────────────────────────────────────────────────
+    const [editingEvent, setEditingEvent] = useState<any>(null)
+    const [editDraft, setEditDraft] = useState<any>({})
+    const [saving2, setSaving2] = useState(false)
 
     // Load profile & depts
     useEffect(() => {
@@ -220,6 +225,43 @@ export default function DowntimePage() {
         fetchEvents()
     }
 
+    // ── Permission: who can close an event? ──────────────────────────────
+    const canClose = (ev: any) => {
+        if (!profile) return false
+        if (["admin", "HSE", "hse", "hse_admin", "maint"].includes(profile.role)) return true
+        return allowedDeptIds.includes(ev.department_id)
+    }
+
+    // ── Edit a downtime event ─────────────────────────────────────────────
+    const openEditDialog = (ev: any) => {
+        setEditingEvent(ev)
+        setEditDraft({
+            root_cause: ev.root_cause || "BD",
+            machine_area: ev.machine_area || "",
+            description: ev.description || "",
+            note: ev.note || "",
+            severity: ev.severity || "Trung bình",
+            exclude_downtime: ev.exclude_downtime || false,
+            duration_mins: ev.duration_mins || 0,
+        })
+    }
+    const handleSaveEdit = async () => {
+        if (!editingEvent) return
+        setSaving2(true)
+        await supabase.from("downtime_events").update({
+            root_cause: editDraft.root_cause,
+            machine_area: editDraft.machine_area || null,
+            description: editDraft.description || null,
+            note: editDraft.note || null,
+            severity: editDraft.severity,
+            exclude_downtime: editDraft.exclude_downtime,
+            duration_mins: Number(editDraft.duration_mins),
+        }).eq("id", editingEvent.id)
+        setSaving2(false)
+        setEditingEvent(null)
+        fetchEvents()
+    }
+
     // ── Report ────────────────────────────────────────────────────────────
     const fetchReport = useCallback(async () => {
         setLoadingReport(true)
@@ -320,7 +362,63 @@ export default function DowntimePage() {
                 </div>
             </div>
 
-            {/* ── CLOSE DIALOG MODAL ── */}
+            {/* ── EDIT DIALOG MODAL ── */}
+            {editingEvent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
+                        <h2 className="font-black text-lg mb-3">✏️ Chỉnh sửa sự cố</h2>
+                        <div className="flex flex-col gap-3">
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Mã sự cố</label>
+                                <select value={editDraft.root_cause} onChange={e => setEditDraft((d: any) => ({ ...d, root_cause: e.target.value }))}
+                                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+                                    {REASON_CODES.map(r => <option key={r.code} value={r.code}>{r.label}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Khu vực máy</label>
+                                <input type="text" value={editDraft.machine_area} onChange={e => setEditDraft((d: any) => ({ ...d, machine_area: e.target.value }))}
+                                    placeholder="VD: Line A, Máy 1..."
+                                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Mô tả</label>
+                                <input type="text" value={editDraft.description} onChange={e => setEditDraft((d: any) => ({ ...d, description: e.target.value }))}
+                                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Ghi chú</label>
+                                <input type="text" value={editDraft.note} onChange={e => setEditDraft((d: any) => ({ ...d, note: e.target.value }))}
+                                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Mức độ</label>
+                                <select value={editDraft.severity} onChange={e => setEditDraft((d: any) => ({ ...d, severity: e.target.value }))}
+                                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+                                    {SEVERITY_LEVELS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Thời lượng (phút)</label>
+                                <input type="number" min={0} value={editDraft.duration_mins} onChange={e => setEditDraft((d: any) => ({ ...d, duration_mins: e.target.value }))}
+                                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
+                            </div>
+                            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="checkbox" checked={editDraft.exclude_downtime} onChange={e => setEditDraft((d: any) => ({ ...d, exclude_downtime: e.target.checked }))}
+                                    className="h-4 w-4 rounded" />
+                                <span>⛔ Không tính vào Downtime</span>
+                            </label>
+                            <div className="flex gap-2 pt-1">
+                                <Button onClick={handleSaveEdit} disabled={saving2} className="flex-1 gap-1">
+                                    <CheckCircle className="h-4 w-4" />{saving2 ? "Đang lưu..." : "Lưu thay đổi"}
+                                </Button>
+                                <Button variant="outline" onClick={() => setEditingEvent(null)} className="flex-1">Huỷ</Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {closingEvent && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                     <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border p-6 w-full max-w-sm mx-4">
@@ -570,12 +668,16 @@ export default function DowntimePage() {
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col gap-1 shrink-0">
-                                                    {ev.is_ongoing && (
+                                                    {ev.is_ongoing && canClose(ev) && (
                                                         <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-green-600 border-green-200 hover:bg-green-50"
                                                             onClick={() => openCloseDialog(ev)}>
                                                             <CheckCircle className="h-3 w-3" />Đóng
                                                         </Button>
                                                     )}
+                                                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                                        onClick={() => openEditDialog(ev)}>
+                                                        <Pencil className="h-3 w-3" />Sửa
+                                                    </Button>
                                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600"
                                                         onClick={() => handleDelete(ev.id)}>
                                                         <Trash2 className="h-3.5 w-3.5" />
