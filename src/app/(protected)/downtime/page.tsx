@@ -91,6 +91,11 @@ export default function DowntimePage() {
     const [reportEvents, setReportEvents] = useState<any[]>([])
     const [loadingReport, setLoadingReport] = useState(false)
 
+    // ── CLOSE DIALOG ────────────────────────────────────────────────────────
+    const [closingEvent, setClosingEvent] = useState<any>(null)
+    const [closeTime, setCloseTime] = useState("")
+    const [closing, setClosing] = useState(false)
+
     // Load profile & depts
     useEffect(() => {
         async function load() {
@@ -190,16 +195,23 @@ export default function DowntimePage() {
         setTimeout(() => setSaveMsg(""), 3000)
     }
 
-    // ── Close an ongoing event ────────────────────────────────────────────
-    const handleClose = async (ev: any) => {
-        const closedAt = now()
-        const mins = calcDuration(ev.start_time, closedAt)
+    // ── Close an ongoing event (dialog) ──────────────────────────────────
+    const openCloseDialog = (ev: any) => {
+        setClosingEvent(ev)
+        setCloseTime(now())
+    }
+    const confirmClose = async () => {
+        if (!closingEvent || !closeTime) return
+        setClosing(true)
+        const mins = calcDuration(closingEvent.start_time, closeTime)
         await supabase.from("downtime_events").update({
-            end_time: closedAt,
+            end_time: closeTime,
             duration_mins: mins,
             is_ongoing: false,
             status: "Closed"
-        }).eq("id", ev.id)
+        }).eq("id", closingEvent.id)
+        setClosingEvent(null)
+        setClosing(false)
         fetchEvents()
     }
 
@@ -307,6 +319,49 @@ export default function DowntimePage() {
                     <p className="text-sm text-muted-foreground">Ghi nhận và theo dõi sự cố dừng máy theo tiêu chuẩn DDS</p>
                 </div>
             </div>
+
+            {/* ── CLOSE DIALOG MODAL ── */}
+            {closingEvent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border p-6 w-full max-w-sm mx-4">
+                        <h2 className="font-black text-lg mb-1">⏹ Đóng sự cố</h2>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">{closingEvent.root_cause}</span>
+                            {" "}{closingEvent.departments?.name_vi || closingEvent.departments?.code}
+                            {closingEvent.machine_area ? ` — ${closingEvent.machine_area}` : ""}
+                        </p>
+                        <div className="flex flex-col gap-3">
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Bắt đầu</label>
+                                <p className="text-sm font-medium">{closingEvent.start_time ? format(parseISO(closingEvent.start_time), "HH:mm dd/MM/yyyy") : "—"}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Thời gian đóng *</label>
+                                <input
+                                    type="datetime-local"
+                                    value={closeTime}
+                                    onChange={e => setCloseTime(e.target.value)}
+                                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                            {closeTime && closingEvent.start_time && (
+                                <p className="text-sm text-amber-700 bg-amber-50 rounded px-3 py-1.5">
+                                    ⏱ Thời lượng: <strong>{calcDuration(closingEvent.start_time, closeTime)} phút</strong>
+                                    {" "}({(calcDuration(closingEvent.start_time, closeTime) / 60).toFixed(1)}h)
+                                </p>
+                            )}
+                            <div className="flex gap-2 pt-1">
+                                <Button onClick={confirmClose} disabled={closing || !closeTime} className="flex-1 gap-1">
+                                    <CheckCircle className="h-4 w-4" />{closing ? "Đang lưu..." : "Xác nhận Đóng"}
+                                </Button>
+                                <Button variant="outline" onClick={() => setClosingEvent(null)} className="flex-1">
+                                    Huỷ
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Tabs defaultValue="entry">
                 <TabsList className="w-full grid grid-cols-3">
@@ -441,6 +496,34 @@ export default function DowntimePage() {
 
                 {/* ── LIST TAB ──────────────────────────────────────────────── */}
                 <TabsContent value="list" className="mt-4 space-y-4">
+                    {/* Open events alert */}
+                    {openEvents.filter(e => !e.exclude_downtime).length > 0 && (
+                        <div className="rounded-xl border-2 border-orange-300 bg-orange-50 p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Clock className="h-5 w-5 text-orange-600 shrink-0" />
+                                <p className="font-bold text-orange-800">
+                                    ⚠️ Có {openEvents.filter(e => !e.exclude_downtime).length} sự cố đang tính downtime chưa đóng!
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                {openEvents.filter(e => !e.exclude_downtime).map(ev => (
+                                    <div key={ev.id} className="flex items-center justify-between bg-white/80 rounded-lg px-3 py-2 border border-orange-200">
+                                        <div className="flex items-center gap-2 text-sm flex-wrap">
+                                            <span className="font-mono text-xs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-bold">{ev.root_cause}</span>
+                                            <span className="font-semibold text-slate-700">{ev.departments?.name_vi || ev.departments?.code}</span>
+                                            {ev.machine_area && <span className="text-muted-foreground text-xs">— {ev.machine_area}</span>}
+                                            <span className="text-xs text-muted-foreground">▶ {ev.start_time ? format(parseISO(ev.start_time), "HH:mm dd/MM") : ev.work_date}</span>
+                                        </div>
+                                        <Button size="sm" className="h-7 text-xs gap-1 bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+                                            onClick={() => openCloseDialog(ev)}>
+                                            <CheckCircle className="h-3 w-3" />Đóng
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Filters */}
                     <div className="flex flex-wrap gap-3">
                         <select value={filterDept} onChange={e => setFilterDept(e.target.value)}
@@ -489,7 +572,7 @@ export default function DowntimePage() {
                                                 <div className="flex flex-col gap-1 shrink-0">
                                                     {ev.is_ongoing && (
                                                         <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-green-600 border-green-200 hover:bg-green-50"
-                                                            onClick={() => handleClose(ev)}>
+                                                            onClick={() => openCloseDialog(ev)}>
                                                             <CheckCircle className="h-3 w-3" />Đóng
                                                         </Button>
                                                     )}
