@@ -703,43 +703,44 @@ export default function ReportPage() {
     const SHELLING_IDEAL_RATE_REPORT: Record<string, number> = { A: 1.4, B: 1.8, C: 1.5, D1: 1.2, D2: 1.2 }
     const SHELL_PLANNED_H = 8
 
-    // Compute OEE from a group of shelling_line_daily rows
-    const calcGroupOEE = (rows: ShellingLineRecord[], line: string) => {
-        const rate = SHELLING_IDEAL_RATE_REPORT[line] ?? 1
-        // Only count shifts where the line actually ran (ignore no-production days)
-        const activeRows = rows.filter(r => Number(r.actual_ton || 0) > 0 || Number(r.run_hours || 0) > 0)
-        if (activeRows.length === 0) return null
-        const totalTon = activeRows.reduce((s, r) => s + Number(r.actual_ton || 0), 0)
-        const totalRunH = activeRows.reduce((s, r) => s + Number(r.run_hours || 0), 0)
-        const totalDownMin = activeRows.reduce((s, r) => s + Number(r.downtime_min || 0), 0)
-        const totalPlannedH = activeRows.length * SHELL_PLANNED_H
-        const effRunH = Math.max(0, totalPlannedH - totalDownMin / 60)
-        const avail = effRunH / totalPlannedH
-        const idealTon = totalRunH > 0 ? totalRunH * rate : effRunH * rate
-        const perf = idealTon > 0 ? Math.min(1, totalTon / idealTon) : 0
-        // Weighted quality
-        const totalBrokenW = activeRows.reduce((s, r) => s + (Number(r.broken_pct || 0) / 100) * Number(r.actual_ton || 0), 0)
-        const qual = totalTon > 0 ? 1 - totalBrokenW / totalTon : 1
-        return { avail, perf, qual, oee: avail * perf * qual }
-    }
+    // OEE (Report) — cross-line active-shift approach:
+    // Planned time for a line = all shifts where ANY line ran × 8h
+    // If a line was idle in an active shift → its run_hours=0 for that shift → Availability drops
 
-    // OEE trend chart data: per-day, all lines combined
+    // OEE trend chart data: per-day OEE per line
     const oeeChartData = (() => {
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return []
         const map = new Map<string, any>()
         filteredShellingLines.forEach(r => {
             const dateStr = format(parseISO(r.work_date), 'dd/MM')
-            if (!map.has(dateStr)) map.set(dateStr, { name: dateStr, _rows: {} })
+            if (!map.has(dateStr)) map.set(dateStr, { name: dateStr, _rows: {} as Record<string, ShellingLineRecord[]>, _activeShifts: new Set<string>() })
             const curr = map.get(dateStr)
             if (!curr._rows[r.line_code]) curr._rows[r.line_code] = []
             curr._rows[r.line_code].push(r)
+            if (Number(r.actual_ton || 0) > 0 || Number(r.run_hours || 0) > 0) {
+                curr._activeShifts.add(r.shift_name || 'Ca 1')
+            }
         })
         return Array.from(map.values()).map(day => {
             const row: any = { name: day.name }
+            const activeShifts = day._activeShifts as Set<string>
+            if (activeShifts.size === 0) return row
             ;['A','B','C','D1','D2'].forEach(line => {
-                const rows: ShellingLineRecord[] = day._rows[line] || []
-                const oee = calcGroupOEE(rows, line)
-                row[line] = oee ? Number((oee.oee * 100).toFixed(1)) : null
+                const rate = SHELLING_IDEAL_RATE_REPORT[line] ?? 1
+                const lineRows: ShellingLineRecord[] = day._rows[line] || []
+                const shiftMap = new Map<string, ShellingLineRecord>()
+                lineRows.forEach((r: ShellingLineRecord) => shiftMap.set(r.shift_name || 'Ca 1', r))
+                let runH = 0, ton = 0, brokenW = 0
+                activeShifts.forEach(shift => {
+                    const r = shiftMap.get(shift)
+                    if (r) { runH += Number(r.run_hours || 0); ton += Number(r.actual_ton || 0); brokenW += (Number(r.broken_pct || 0) / 100) * Number(r.actual_ton || 0) }
+                })
+                if (runH === 0) { row[line] = null; return }
+                const plannedH = activeShifts.size * SHELL_PLANNED_H
+                const avail = runH / plannedH
+                const perf = Math.min(1, ton / (runH * rate))
+                const qual = ton > 0 ? 1 - brokenW / ton : 1
+                row[line] = Number(((avail * perf * qual) * 100).toFixed(1))
             })
             return row
         })
@@ -748,12 +749,35 @@ export default function ReportPage() {
     // OEE monthly summary per line
     const oeeSummaryByLine = (() => {
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [] as { line: string; avail: number; perf: number; qual: number; oee: number }[]
+        // Active shifts = all (date|shift) where any line ran this month
+        const activeShiftKeys = new Set<string>()
+        filteredShellingLines.forEach(r => {
+            if (Number(r.actual_ton || 0) > 0 || Number(r.run_hours || 0) > 0)
+                activeShiftKeys.add(`${r.work_date}|${r.shift_name || 'Ca 1'}`)
+        })
+        if (activeShiftKeys.size === 0) return []
+        const totalPlannedH = activeShiftKeys.size * SHELL_PLANNED_H
         return ['A','B','C','D1','D2'].map(line => {
-            const rows = filteredShellingLines.filter(r => r.line_code === line)
-            const oee = calcGroupOEE(rows, line)
-            return oee ? { line, ...oee } : null
+            const rate = SHELLING_IDEAL_RATE_REPORT[line] ?? 1
+            const rowMap = new Map<string, ShellingLineRecord>()
+            filteredShellingLines.filter(r => r.line_code === line).forEach(r => rowMap.set(`${r.work_date}|${r.shift_name || 'Ca 1'}`, r))
+            let totalRunH = 0, totalTon = 0, totalBrokenW = 0
+            activeShiftKeys.forEach(key => {
+                const r = rowMap.get(key)
+                if (r) {
+                    totalRunH += Number(r.run_hours || 0)
+                    totalTon += Number(r.actual_ton || 0)
+                    totalBrokenW += (Number(r.broken_pct || 0) / 100) * Number(r.actual_ton || 0)
+                }
+            })
+            if (totalRunH === 0 && totalTon === 0) return null
+            const avail = totalRunH / totalPlannedH
+            const perf = totalRunH > 0 ? Math.min(1, totalTon / (totalRunH * rate)) : 0
+            const qual = totalTon > 0 ? 1 - totalBrokenW / totalTon : 1
+            return { line, avail, perf, qual, oee: avail * perf * qual }
         }).filter(Boolean) as { line: string; avail: number; perf: number; qual: number; oee: number }[]
     })()
+
 
     return (
         <motion.div 

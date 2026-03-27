@@ -229,21 +229,28 @@ export default function InputPage() {
     // Ideal (theoretical) capacity per hour per line in tons/hour
     const SHELLING_IDEAL_RATE: Record<ShellLine, number> = { A: 1.4, B: 1.8, C: 1.5, D1: 1.2, D2: 1.2 }
     const SHELL_PLANNED_HOURS = 8
-    // Helper: compute OEE components and overall for a given line+shift entry
+    // Helper: compute OEE for a line+shift using cross-line active-shift logic
+    // If the factory shift is active (any line ran) but THIS line has no output,
+    // those 8h count as planned time → Availability drops accordingly.
     const calcOEE = (line: ShellLine, shift: ShellShift) => {
+        // Check if ANY line is running this shift (factory active)
+        const shiftIsActive = SHELLING_LINES.some(l => {
+            const d = shellingLineData[l]?.[shift]
+            return (d?.actual_ton || 0) > 0 || (d?.run_hours || 0) > 0
+        })
+        if (!shiftIsActive) return null
         const d = shellingLineData[line]?.[shift]
-        if (!d) return null
-        const runH = d.run_hours || 0
-        const aTon = d.actual_ton || 0
-        const dMin = d.downtime_min || 0
-        const broken = d.broken_pct || 0
-        const effRun = Math.max(0, SHELL_PLANNED_HOURS - dMin / 60)
-        const avail = effRun / SHELL_PLANNED_HOURS
-        const idealTon = runH > 0 ? runH * SHELLING_IDEAL_RATE[line] : effRun * SHELLING_IDEAL_RATE[line]
+        const runH = (d?.run_hours || 0)
+        const aTon = (d?.actual_ton || 0)
+        const broken = (d?.broken_pct || 0)
+        // Availability = actual run hours / planned 8h
+        // If line didn't run in an active shift → runH=0 → avail=0 (correct!)
+        const avail = runH / SHELL_PLANNED_HOURS
+        const idealTon = runH > 0 ? runH * SHELLING_IDEAL_RATE[line] : 0
         const perf = idealTon > 0 ? Math.min(1, aTon / idealTon) : 0
         const qual = 1 - broken / 100
         const oee = avail * perf * qual
-        return { avail, perf, qual, oee, hasData: aTon > 0 || runH > 0 }
+        return { avail, perf, qual, oee, hasData: true }
     }
     const initShiftObj = () => ({ 'Ca 1': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' }, 'Ca 2': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' }, 'Ca 3': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' } });
     
