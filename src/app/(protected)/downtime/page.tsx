@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // ── REASON CODES (matching DDS Meeting exactly) ──────────────────────────────
 const REASON_CODES = [
@@ -58,6 +59,7 @@ function calcDuration(start: string, end: string): number {
 
 export default function DowntimePage() {
     const supabase = createClient()
+    const { t } = useLanguage()
 
     const [profile, setProfile] = useState<any>(null)
     const [departments, setDepartments] = useState<any[]>([])
@@ -369,8 +371,8 @@ export default function DowntimePage() {
             <div className="flex items-center gap-3">
                 <AlertTriangle className="h-7 w-7 text-red-500" />
                 <div>
-                    <h1 className="text-2xl font-black">Quản lý Sự cố / Downtime</h1>
-                    <p className="text-sm text-muted-foreground">Ghi nhận và theo dõi sự cố dừng máy theo tiêu chuẩn DDS</p>
+                    <h1 className="text-2xl font-black">{t("dt.title")}</h1>
+                    <p className="text-sm text-muted-foreground">{t("dt.desc")}</p>
                 </div>
             </div>
 
@@ -378,33 +380,33 @@ export default function DowntimePage() {
             {editingEvent && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                     <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
-                        <h2 className="font-black text-lg mb-3">✏️ Chỉnh sửa sự cố</h2>
+                        <h2 className="font-black text-lg mb-3">{t("dt.edit_title")}</h2>
                         <div className="flex flex-col gap-3">
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Mã sự cố</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.reason_code")}</label>
                                 <select value={editDraft.root_cause} onChange={e => setEditDraft((d: any) => ({ ...d, root_cause: e.target.value }))}
                                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
                                     {REASON_CODES.map(r => <option key={r.code} value={r.code}>{r.label}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Khu vực máy</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.machine_area")}</label>
                                 <input type="text" value={editDraft.machine_area} onChange={e => setEditDraft((d: any) => ({ ...d, machine_area: e.target.value }))}
                                     placeholder="VD: Line A, Máy 1..."
                                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Mô tả</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.description")}</label>
                                 <input type="text" value={editDraft.description} onChange={e => setEditDraft((d: any) => ({ ...d, description: e.target.value }))}
                                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Ghi chú</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.note")}</label>
                                 <input type="text" value={editDraft.note} onChange={e => setEditDraft((d: any) => ({ ...d, note: e.target.value }))}
                                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Mức độ</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.severity")}</label>
                                 <select value={editDraft.severity} onChange={e => setEditDraft((d: any) => ({ ...d, severity: e.target.value }))}
                                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
                                     {SEVERITY_LEVELS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -413,7 +415,7 @@ export default function DowntimePage() {
                             {/* Start / End time */}
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Bắt đầu</label>
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.start_time")}</label>
                                     <input type="datetime-local" value={editDraft.start_time?.slice(0,16) || ""}
                                         onChange={e => {
                                             const st = e.target.value
@@ -423,7 +425,7 @@ export default function DowntimePage() {
                                         className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Kết thúc</label>
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.end_time")}</label>
                                     <input type="datetime-local" value={editDraft.end_time?.slice(0,16) || ""}
                                         onChange={e => {
                                             const et = e.target.value
@@ -434,20 +436,20 @@ export default function DowntimePage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Thời lượng (phút) — tự tính khi có giờ</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.duration_mins")}</label>
                                 <input type="number" min={0} value={editDraft.duration_mins} onChange={e => setEditDraft((d: any) => ({ ...d, duration_mins: e.target.value }))}
                                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
                             </div>
                             <label className="flex items-center gap-2 text-sm cursor-pointer">
                                 <input type="checkbox" checked={editDraft.exclude_downtime} onChange={e => setEditDraft((d: any) => ({ ...d, exclude_downtime: e.target.checked }))}
                                     className="h-4 w-4 rounded" />
-                                <span>⛔ Không tính vào Downtime</span>
+                                <span>{t("dt.exclude_dt")}</span>
                             </label>
                             <div className="flex gap-2 pt-1">
                                 <Button onClick={handleSaveEdit} disabled={saving2} className="flex-1 gap-1">
-                                    <CheckCircle className="h-4 w-4" />{saving2 ? "Đang lưu..." : "Lưu thay đổi"}
+                                    <CheckCircle className="h-4 w-4" />{saving2 ? t("dt.saving") : t("dt.save")}
                                 </Button>
-                                <Button variant="outline" onClick={() => setEditingEvent(null)} className="flex-1">Huỷ</Button>
+                                <Button variant="outline" onClick={() => setEditingEvent(null)} className="flex-1">{t("dt.cancel")}</Button>
                             </div>
                         </div>
                     </div>
@@ -457,7 +459,7 @@ export default function DowntimePage() {
             {closingEvent && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                     <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border p-6 w-full max-w-sm mx-4">
-                        <h2 className="font-black text-lg mb-1">⏹ Đóng sự cố</h2>
+                        <h2 className="font-black text-lg mb-1">{t("dt.close_title")}</h2>
                         <p className="text-sm text-muted-foreground mb-4">
                             <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">{closingEvent.root_cause}</span>
                             {" "}{closingEvent.departments?.name_vi || closingEvent.departments?.code}
@@ -465,11 +467,11 @@ export default function DowntimePage() {
                         </p>
                         <div className="flex flex-col gap-3">
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Bắt đầu</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.start_time")}</label>
                                 <p className="text-sm font-medium">{closingEvent.start_time ? format(parseISO(closingEvent.start_time), "HH:mm dd/MM/yyyy") : "—"}</p>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Thời gian đóng *</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{t("dt.close_time")} *</label>
                                 <input
                                     type="datetime-local"
                                     value={closeTime}
@@ -479,16 +481,16 @@ export default function DowntimePage() {
                             </div>
                             {closeTime && closingEvent.start_time && (
                                 <p className="text-sm text-amber-700 bg-amber-50 rounded px-3 py-1.5">
-                                    ⏱ Thời lượng: <strong>{calcDuration(closingEvent.start_time, closeTime)} phút</strong>
+                                    ⏱ {t("dt.duration_preview")}: <strong>{calcDuration(closingEvent.start_time, closeTime)} {t("dt.minutes")}</strong>
                                     {" "}({(calcDuration(closingEvent.start_time, closeTime) / 60).toFixed(1)}h)
                                 </p>
                             )}
                             <div className="flex gap-2 pt-1">
                                 <Button onClick={confirmClose} disabled={closing || !closeTime} className="flex-1 gap-1">
-                                    <CheckCircle className="h-4 w-4" />{closing ? "Đang lưu..." : "Xác nhận Đóng"}
+                                    <CheckCircle className="h-4 w-4" />{closing ? t("dt.closing") : t("dt.confirm_close")}
                                 </Button>
                                 <Button variant="outline" onClick={() => setClosingEvent(null)} className="flex-1">
-                                    Huỷ
+                                    {t("dt.cancel")}
                                 </Button>
                             </div>
                         </div>
@@ -661,14 +663,14 @@ export default function DowntimePage() {
                     <div className="flex flex-wrap gap-3">
                         <select value={filterDept} onChange={e => setFilterDept(e.target.value)}
                             className="h-9 rounded-md border border-input bg-background px-3 text-sm">
-                            <option value="">Tất cả bộ phận</option>
+                            <option value="">{t("dt.all_dept")}</option>
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name_vi || d.name_en}</option>)}
                         </select>
                         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                             className="h-9 rounded-md border border-input bg-background px-3 text-sm">
-                            <option value="all">Tất cả trạng thái</option>
-                            <option value="open">🔵 Đang mở (Open)</option>
-                            <option value="closed">🟢 Đã đóng (Closed)</option>
+                            <option value="all">{t("dt.all_status")}</option>
+                            <option value="open">{t("dt.status_open")}</option>
+                            <option value="closed">{t("dt.status_closed")}</option>
                         </select>
                         <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
                             title="Từ ngày"
@@ -679,14 +681,14 @@ export default function DowntimePage() {
                             className="h-9 rounded-md border border-input bg-background px-3 text-sm" />
                         <select value={sortBy} onChange={e => setSortBy(e.target.value)}
                             className="h-9 rounded-md border border-input bg-background px-3 text-sm">
-                            <option value="date_desc">📅 Mới nhất</option>
-                            <option value="duration_desc">⬇️ DT nhiều nhất</option>
-                            <option value="duration_asc">⬆️ DT ít nhất</option>
+                            <option value="date_desc">{t("dt.newest")}</option>
+                            <option value="duration_desc">{t("dt.duration_high")}</option>
+                            <option value="duration_asc">{t("dt.duration_low")}</option>
                         </select>
                     </div>
 
                     {loadingEvents ? (
-                        <p className="text-sm text-muted-foreground">Đang tải...</p>
+                        <p className="text-sm text-muted-foreground">{t("dt.loading")}</p>
                     ) : events.length === 0 ? (
                         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground italic">Không có sự cố nào.</CardContent></Card>
                     ) : (
