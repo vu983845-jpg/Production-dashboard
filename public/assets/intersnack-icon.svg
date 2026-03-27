@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Red rounded square background -->
+  <rect x="2" y="2" width="96" height="96" rx="16" ry="16" fill="#C1332A"/>
+  
+  <!-- White flower / clover icon (Intersnack symbol) -->
+  <!-- 4 petal flower - each petal is a circle offset from center -->
+  <!-- Top petal -->
+  <circle cx="50" cy="33" r="14" fill="white"/>
+  <!-- Bottom petal -->
+  <circle cx="50" cy="67" r="14" fill="white"/>
+  <!-- Left petal -->
+  <circle cx="33" cy="50" r="14" fill="white"/>
+  <!-- Right petal -->
+  <circle cx="67" cy="50" r="14" fill="white"/>
+  
+  <!-- Center circle to merge petals -->
+  <circle cx="50" cy="50" r="10" fill="white"/>
+  
+  <!-- Center hole - red dot -->
+  <circle cx="50" cy="50" r="5" fill="#C1332A"/>
+</svg>

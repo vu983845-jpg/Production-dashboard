@@ -12,6 +12,10 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Dashboard VICC LA',
   description: 'KPI, Yield, Plan vs Actual Dashboard',
+  icons: {
+    icon: '/assets/intersnack-icon.svg',
+    apple: '/assets/intersnack-icon.svg',
+  },
 }
 
 export default function RootLayout({

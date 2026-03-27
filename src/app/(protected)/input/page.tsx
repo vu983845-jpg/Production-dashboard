@@ -226,7 +226,25 @@ export default function InputPage() {
     
     // Fixed default staffing (nhân sự cố định) per line when running
     const SHELLING_LINE_MANPOWER: Record<ShellLine, number> = { A: 2, B: 2, C: 2, D1: 2, D2: 3 }
-    
+    // Ideal (theoretical) capacity per hour per line in tons/hour
+    const SHELLING_IDEAL_RATE: Record<ShellLine, number> = { A: 1.4, B: 1.8, C: 1.5, D1: 1.2, D2: 1.2 }
+    const SHELL_PLANNED_HOURS = 8
+    // Helper: compute OEE components and overall for a given line+shift entry
+    const calcOEE = (line: ShellLine, shift: ShellShift) => {
+        const d = shellingLineData[line]?.[shift]
+        if (!d) return null
+        const runH = d.run_hours || 0
+        const aTon = d.actual_ton || 0
+        const dMin = d.downtime_min || 0
+        const broken = d.broken_pct || 0
+        const effRun = Math.max(0, SHELL_PLANNED_HOURS - dMin / 60)
+        const avail = effRun / SHELL_PLANNED_HOURS
+        const idealTon = runH > 0 ? runH * SHELLING_IDEAL_RATE[line] : effRun * SHELLING_IDEAL_RATE[line]
+        const perf = idealTon > 0 ? Math.min(1, aTon / idealTon) : 0
+        const qual = 1 - broken / 100
+        const oee = avail * perf * qual
+        return { avail, perf, qual, oee, hasData: aTon > 0 || runH > 0 }
+    }
     const initShiftObj = () => ({ 'Ca 1': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' }, 'Ca 2': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' }, 'Ca 3': { actual_ton: 0, run_hours: 0, downtime_min: 0, manpower: 0, broken_pct: 0, size: '', note: '' } });
     
     const [shellingLineData, setShellingLineData] = useState<Record<ShellLine, Record<ShellShift, ShellLineEntry>>>({
@@ -1518,6 +1536,47 @@ export default function InputPage() {
                                                                                                         />
                                                                                                     </div>
                                                                                                 ))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </TableCell>
+                                                                        </TableRow>
+
+                                                                        {/* OEE Row */}
+                                                                        <TableRow>
+                                                                            <TableCell colSpan={2} className="p-0">
+                                                                                <div className="bg-indigo-50/60 border-b px-4 pt-2 pb-3">
+                                                                                    <div className="flex items-center gap-2 mb-2">
+                                                                                        <p className="text-xs font-semibold text-indigo-700">📈 OEE (Hiệu suất Tổng thể)</p>
+                                                                                        <span className="text-[10px] text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded-full">Avail × Perf × Quality</span>
+                                                                                    </div>
+                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (
+                                                                                        <div key={shift} className="mb-3">
+                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
+                                                                                            <div className="grid grid-cols-5 gap-2">
+                                                                                                {SHELLING_LINES.map(line => {
+                                                                                                    const oeeData = calcOEE(line, shift)
+                                                                                                    const oeeVal = oeeData?.hasData ? oeeData.oee : null
+                                                                                                    const oeeColor = oeeVal === null ? 'border-gray-200 bg-gray-50 text-gray-300'
+                                                                                                        : oeeVal >= 0.75 ? 'border-green-400 bg-green-50 text-green-800'
+                                                                                                        : oeeVal >= 0.55 ? 'border-yellow-400 bg-yellow-50 text-yellow-800'
+                                                                                                        : 'border-red-400 bg-red-50 text-red-800'
+                                                                                                    const tooltip = oeeData?.hasData
+                                                                                                        ? `Avail: ${(oeeData.avail * 100).toFixed(1)}% | Perf: ${(oeeData.perf * 100).toFixed(1)}% | Quality: ${(oeeData.qual * 100).toFixed(1)}%`
+                                                                                                        : 'Chưa có dữ liệu'
+                                                                                                    return (
+                                                                                                        <div key={`${line}-${shift}`} className="flex flex-col items-center">
+                                                                                                            <label className="text-[10px] font-bold mb-1 text-indigo-500">{line}</label>
+                                                                                                            <div
+                                                                                                                title={tooltip}
+                                                                                                                className={`w-full text-right p-1 rounded border-2 text-sm font-bold ${oeeColor}`}
+                                                                                                            >
+                                                                                                                {oeeVal !== null ? `${(oeeVal * 100).toFixed(1)}%` : '—'}
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    )
+                                                                                                })}
                                                                                             </div>
                                                                                         </div>
                                                                                     ))}

@@ -699,6 +699,61 @@ export default function ReportPage() {
     // Threshold constant for visual alarm line on broken chart
     const THRESHOLD_BROKEN = 4.5;
 
+    // ── OEE constants & helpers (Report Page) ─────────────────────────────
+    const SHELLING_IDEAL_RATE_REPORT: Record<string, number> = { A: 1.4, B: 1.8, C: 1.5, D1: 1.2, D2: 1.2 }
+    const SHELL_PLANNED_H = 8
+
+    // Compute OEE from a group of shelling_line_daily rows
+    const calcGroupOEE = (rows: ShellingLineRecord[], line: string) => {
+        const rate = SHELLING_IDEAL_RATE_REPORT[line] ?? 1
+        const totalTon = rows.reduce((s, r) => s + Number(r.actual_ton || 0), 0)
+        const totalRunH = rows.reduce((s, r) => s + Number(r.run_hours || 0), 0)
+        const totalDownMin = rows.reduce((s, r) => s + Number(r.downtime_min || 0), 0)
+        const totalSessions = rows.length  // number of shifts
+        if (totalSessions === 0 || (totalTon === 0 && totalRunH === 0)) return null
+        const totalPlannedH = totalSessions * SHELL_PLANNED_H
+        const effRunH = Math.max(0, totalPlannedH - totalDownMin / 60)
+        const avail = effRunH / totalPlannedH
+        const idealTon = totalRunH > 0 ? totalRunH * rate : effRunH * rate
+        const perf = idealTon > 0 ? Math.min(1, totalTon / idealTon) : 0
+        // Weighted quality
+        const totalBrokenW = rows.reduce((s, r) => s + (Number(r.broken_pct || 0) / 100) * Number(r.actual_ton || 0), 0)
+        const qual = totalTon > 0 ? 1 - totalBrokenW / totalTon : 1
+        return { avail, perf, qual, oee: avail * perf * qual }
+    }
+
+    // OEE trend chart data: per-day, all lines combined
+    const oeeChartData = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return []
+        const map = new Map<string, any>()
+        filteredShellingLines.forEach(r => {
+            const dateStr = format(parseISO(r.work_date), 'dd/MM')
+            if (!map.has(dateStr)) map.set(dateStr, { name: dateStr, _rows: {} })
+            const curr = map.get(dateStr)
+            if (!curr._rows[r.line_code]) curr._rows[r.line_code] = []
+            curr._rows[r.line_code].push(r)
+        })
+        return Array.from(map.values()).map(day => {
+            const row: any = { name: day.name }
+            ;['A','B','C','D1','D2'].forEach(line => {
+                const rows: ShellingLineRecord[] = day._rows[line] || []
+                const oee = calcGroupOEE(rows, line)
+                row[line] = oee ? Number((oee.oee * 100).toFixed(1)) : null
+            })
+            return row
+        })
+    })()
+
+    // OEE monthly summary per line
+    const oeeSummaryByLine = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [] as { line: string; avail: number; perf: number; qual: number; oee: number }[]
+        return ['A','B','C','D1','D2'].map(line => {
+            const rows = filteredShellingLines.filter(r => r.line_code === line)
+            const oee = calcGroupOEE(rows, line)
+            return oee ? { line, ...oee } : null
+        }).filter(Boolean) as { line: string; avail: number; perf: number; qual: number; oee: number }[]
+    })()
+
     return (
         <motion.div 
             initial={{ opacity: 0, scale: 0.98, y: 15 }}
@@ -894,6 +949,36 @@ export default function ReportPage() {
                             </CardContent>
                         </Card>
 
+                        {/* OEE Summary KPI Cards */}
+                        {oeeSummaryByLine.length > 0 && (
+                            <Card>
+                                <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-indigo-50/30">
+                                    <CardTitle className="text-sm font-bold text-indigo-800">📈 OEE — Hiệu suất Tổng thể từng Line (Tháng)</CardTitle>
+                                    <span className="text-[10px] text-indigo-500 bg-indigo-100 px-2 py-0.5 rounded-full">Avail × Perf × Quality | Lý thuyết 8h/ca</span>
+                                </CardHeader>
+                                <CardContent className="pt-4">
+                                    <div className="grid grid-cols-5 gap-3">
+                                        {oeeSummaryByLine.map(({ line, avail, perf, qual, oee }) => {
+                                            const lineColors: Record<string, string> = { A: 'border-blue-400', B: 'border-emerald-400', C: 'border-amber-400', D1: 'border-red-400', D2: 'border-purple-400' }
+                                            const oeeColor = oee >= 0.75 ? 'text-green-700 bg-green-50' : oee >= 0.55 ? 'text-yellow-700 bg-yellow-50' : 'text-red-700 bg-red-50'
+                                            return (
+                                                <div key={line} className={`flex flex-col items-center gap-1.5 p-3 border-2 rounded-xl ${lineColors[line]} bg-white shadow-sm`}>
+                                                    <span className="text-xs font-black text-slate-700">Line {line}</span>
+                                                    <div className={`text-xl font-black px-3 py-1 rounded-lg ${oeeColor}`}>{(oee * 100).toFixed(1)}%</div>
+                                                    <div className="w-full text-[10px] text-center space-y-0.5 text-slate-500">
+                                                        <div>Avail: <b className="text-blue-600">{(avail * 100).toFixed(1)}%</b></div>
+                                                        <div>Perf: <b className="text-emerald-600">{(perf * 100).toFixed(1)}%</b></div>
+                                                        <div>Quality: <b className="text-rose-600">{(qual * 100).toFixed(1)}%</b></div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-3 text-center">🟢 ≥75% tốt · 🟡 55–74% cần cải thiện · 🔴 &lt;55% kém</p>
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Shelling Analytics Overview */}
                         <div>
                             {/* SECTION 1: OVERALL FACTORY PERFORMANCE */}
@@ -934,6 +1019,40 @@ export default function ReportPage() {
                                             </div>
                                         </CardContent>
                                     </Card>
+
+                                    {/* OEE Trend Chart */}
+                                    {oeeChartData.length > 0 && (
+                                    <Card className="col-span-1 lg:col-span-3 shadow-sm border-indigo-100">
+                                        <CardHeader className="pb-2 bg-indigo-50/30 border-b border-indigo-50">
+                                            <CardTitle className="text-sm font-bold text-indigo-800 flex items-center gap-2">
+                                                <TrendingUp className="h-4 w-4" />
+                                                OEE (%) theo Ngày — Từng Line
+                                            </CardTitle>
+                                            <CardDescription className="text-xs text-indigo-600 leading-relaxed">
+                                                Biểu đồ OEE (%) của từng Line theo ngày trong tháng. OEE = Tính sẵn sàng × Hiệu suất × Chất lượng. Ngưỡng tốt ≥ 75%. Dùng để phát hiện ngày/Line nào có hiệu quả tổng thể thấp cần can thiệp.
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="pt-4">
+                                            <div className="h-72 w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={oeeChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                        <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                                                        <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }} formatter={(v: any) => [`${v}%`, 'OEE']} />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <ReferenceLine y={75} stroke="#16a34a" strokeDasharray="4 2" opacity={0.5} label={{ position: 'insideTopLeft', value: 'Good ≥75%', fill: '#16a34a', fontSize: 9 }} />
+                                                        <Line type="monotone" dataKey="A" name="Line A" stroke="#2563eb" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                        <Line type="monotone" dataKey="B" name="Line B" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                        <Line type="monotone" dataKey="C" name="Line C" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                        <Line type="monotone" dataKey="D1" name="Line D1" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                        <Line type="monotone" dataKey="D2" name="Line D2" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                    )}
 
                                     {/* Chart 4: Leader Comparison */}
                                     <Card className="col-span-1 lg:col-span-3 shadow-sm border-violet-100">
