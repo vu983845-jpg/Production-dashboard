@@ -242,6 +242,8 @@ export default function DowntimePage() {
             note: ev.note || "",
             severity: ev.severity || "Trung bình",
             exclude_downtime: ev.exclude_downtime || false,
+            start_time: ev.start_time || "",
+            end_time: ev.end_time || "",
             duration_mins: ev.duration_mins || 0,
         })
     }
@@ -255,6 +257,8 @@ export default function DowntimePage() {
             note: editDraft.note || null,
             severity: editDraft.severity,
             exclude_downtime: editDraft.exclude_downtime,
+            start_time: editDraft.start_time || null,
+            end_time: editDraft.end_time || null,
             duration_mins: Number(editDraft.duration_mins),
         }).eq("id", editingEvent.id)
         setSaving2(false)
@@ -398,8 +402,31 @@ export default function DowntimePage() {
                                     {SEVERITY_LEVELS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                                 </select>
                             </div>
+                            {/* Start / End time */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Bắt đầu</label>
+                                    <input type="datetime-local" value={editDraft.start_time?.slice(0,16) || ""}
+                                        onChange={e => {
+                                            const st = e.target.value
+                                            const dur = st && editDraft.end_time ? calcDuration(st, editDraft.end_time.slice(0,16)) : editDraft.duration_mins
+                                            setEditDraft((d: any) => ({ ...d, start_time: st, duration_mins: dur }))
+                                        }}
+                                        className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Kết thúc</label>
+                                    <input type="datetime-local" value={editDraft.end_time?.slice(0,16) || ""}
+                                        onChange={e => {
+                                            const et = e.target.value
+                                            const dur = editDraft.start_time && et ? calcDuration(editDraft.start_time.slice(0,16), et) : editDraft.duration_mins
+                                            setEditDraft((d: any) => ({ ...d, end_time: et, duration_mins: dur }))
+                                        }}
+                                        className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs" />
+                                </div>
+                            </div>
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Thời lượng (phút)</label>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Thời lượng (phút) — tự tính khi có giờ</label>
                                 <input type="number" min={0} value={editDraft.duration_mins} onChange={e => setEditDraft((d: any) => ({ ...d, duration_mins: e.target.value }))}
                                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" />
                             </div>
