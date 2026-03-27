@@ -302,14 +302,16 @@ export default function DashboardPage() {
 
             if (dtEvents) {
                 dtEvents.forEach((evt: any) => {
+                    // Skip ongoing events — calculating from start_time to now() for open events
+                    // produces unrealistic totals (e.g. 10 unclosed events = thousands of hours).
+                    // Only count closed events with a stored duration_mins.
+                    if (evt.is_ongoing) return;
+
+                    const mins = Number(evt.duration_mins || 0);
+                    if (mins <= 0) return;
+
                     const issueDate = evt.work_date;
                     const deptId = evt.department_id;
-
-                    let mins = Number(evt.duration_mins || 0);
-                    if (evt.is_ongoing && evt.start_time) {
-                        const endT = evt.end_time ? new Date(evt.end_time) : new Date();
-                        mins = Math.max(0, Math.round((endT.getTime() - new Date(evt.start_time).getTime()) / 60000));
-                    }
 
                     const key = `${deptId}_${issueDate}`;
                     if (!nativeDownTimeSum[key]) nativeDownTimeSum[key] = 0;
