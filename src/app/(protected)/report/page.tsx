@@ -706,18 +706,19 @@ export default function ReportPage() {
     // Compute OEE from a group of shelling_line_daily rows
     const calcGroupOEE = (rows: ShellingLineRecord[], line: string) => {
         const rate = SHELLING_IDEAL_RATE_REPORT[line] ?? 1
-        const totalTon = rows.reduce((s, r) => s + Number(r.actual_ton || 0), 0)
-        const totalRunH = rows.reduce((s, r) => s + Number(r.run_hours || 0), 0)
-        const totalDownMin = rows.reduce((s, r) => s + Number(r.downtime_min || 0), 0)
-        const totalSessions = rows.length  // number of shifts
-        if (totalSessions === 0 || (totalTon === 0 && totalRunH === 0)) return null
-        const totalPlannedH = totalSessions * SHELL_PLANNED_H
+        // Only count shifts where the line actually ran (ignore no-production days)
+        const activeRows = rows.filter(r => Number(r.actual_ton || 0) > 0 || Number(r.run_hours || 0) > 0)
+        if (activeRows.length === 0) return null
+        const totalTon = activeRows.reduce((s, r) => s + Number(r.actual_ton || 0), 0)
+        const totalRunH = activeRows.reduce((s, r) => s + Number(r.run_hours || 0), 0)
+        const totalDownMin = activeRows.reduce((s, r) => s + Number(r.downtime_min || 0), 0)
+        const totalPlannedH = activeRows.length * SHELL_PLANNED_H
         const effRunH = Math.max(0, totalPlannedH - totalDownMin / 60)
         const avail = effRunH / totalPlannedH
         const idealTon = totalRunH > 0 ? totalRunH * rate : effRunH * rate
         const perf = idealTon > 0 ? Math.min(1, totalTon / idealTon) : 0
         // Weighted quality
-        const totalBrokenW = rows.reduce((s, r) => s + (Number(r.broken_pct || 0) / 100) * Number(r.actual_ton || 0), 0)
+        const totalBrokenW = activeRows.reduce((s, r) => s + (Number(r.broken_pct || 0) / 100) * Number(r.actual_ton || 0), 0)
         const qual = totalTon > 0 ? 1 - totalBrokenW / totalTon : 1
         return { avail, perf, qual, oee: avail * perf * qual }
     }
