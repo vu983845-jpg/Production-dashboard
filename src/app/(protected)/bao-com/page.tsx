@@ -169,7 +169,7 @@ function parseBlock(block: string): HeadcountRecord | null {
         if (inlineDate) dateVal = normalizeDate(inlineDate[0])
     }
 
-    const hasKeyword = /khu\s*v[ựu]c|chính\s*th[ứu]c\s*hi[eệ]n\s*di[eệ]n|ca\s*:/i.test(text)
+    const hasKeyword = /khu\s*v[ựu]c|chính\s*th[ứu]c|ca\s*:/i.test(text)
     if (!dateVal && !hasKeyword) return null
 
     let area = getField(text, ["khu vực", "khu vuc", "bộ phận", "bo phan", "bộphận"])
@@ -183,15 +183,31 @@ function parseBlock(block: string): HeadcountRecord | null {
     const inlineShift = getField(text, ["khu vực", "khu vuc"]).match(/ca\s*:\s*(\S+)/i)
     if (inlineShift) shift = inlineShift[1]
     shift = shift.replace(/\./g, ", ").trim()
+    // Strip trailing descriptive text like "và HC", "và Highcare" after the shift number
+    shift = shift.replace(/\s+và\s+.*/i, "").trim()
+    // Keep only leading digits/commas/spaces (shift number part)
+    const shiftOnlyMatch = shift.match(/^[\d,\s]+/)
+    if (shiftOnlyMatch) shift = shiftOnlyMatch[0].trim()
 
     // Fuzzy match: ch[íi]nh th[ứu]c hi[eệ]n di[eệ]n (any diacritic mix)
     const offPresentFuzzy = text.match(/ch[íi]nh\s+th[ứu]c\s+hi[eệ]n\s+di[eệ]n\s*:?\s*([^\n]*)/i)
-    const offPresentRaw = offPresentFuzzy ? offPresentFuzzy[1].trim() : getField(text, [
+    let offPresentRaw = offPresentFuzzy ? offPresentFuzzy[1].trim() : getField(text, [
         "chính thức hiện diện", "chính thuc hiện diện", "chinh thuc hien dien",
     ])
+    // Fallback: bare "Chính thức N" without hiện diện
+    if (!offPresentRaw) {
+        const bareMatch = text.match(/ch[íi]nh\s+th[ứu]c\s*:?\s*(\d[^\n]*)/i)
+        if (bareMatch) offPresentRaw = bareMatch[1].trim()
+    }
     const { total: officialPresent, vegetarian, note: offNote } = extractNumber(offPresentRaw)
 
-    const offAbsentRaw = getField(text, ["chính thức vắng", "chinh thuc vang"])
+    let offAbsentRaw = getField(text, ["chính thức vắng", "chinh thuc vang"])
+    // Fallback: bare "Vắng N" (without "chính thức" prefix) — only when no other vang label found
+    if (!offAbsentRaw) {
+        // Tìm dòng chứa "vắng" không có prefix thời vụ
+        const bareVangMatch = text.match(/(?<!thời\s+vụ\s+)vắng\s*:?\s*(\d[^\n]*)/i)
+        if (bareVangMatch) offAbsentRaw = bareVangMatch[1].trim()
+    }
     const { total: officialAbsent } = extractNumber(offAbsentRaw)
 
     const seasPresentRaw = getField(text, ["thời vụ hiện diện", "2thời vụ hiện diện", "thoi vu hien dien"])
@@ -270,12 +286,56 @@ function splitIntoBlocks(rawText: string): string[] {
     return blocks.filter((b) => b.length > 5)
 }
 
+// Detect/split a single area block that contains multiple "Ca N" sub-sections
+// e.g. "Ca 1\nChính thức 8\nCa 2\nChính thức 1" → 2 sub-blocks each with inherited date+area
+function splitMultiShiftBlock(block: string): string[] {
+    const lines = block.split("\n")
+    // Regex to detect a bare "Ca N" line (shift marker, N = 1/2/3)
+    const IS_SHIFT_LINE = /^ca\s+([1-3])(?:\s|$|v[àa])/i
+
+    // Collect header lines (date, area) — before first bare Ca line
+    const headerLines: string[] = []
+    let firstCaIdx = -1
+    for (let i = 0; i < lines.length; i++) {
+        const l = lines[i].trim()
+        if (IS_SHIFT_LINE.test(l)) {
+            firstCaIdx = i
+            break
+        }
+        headerLines.push(lines[i])
+    }
+    if (firstCaIdx === -1) return [block]
+
+    // Collect indices of all shift-start lines
+    const caIndices: number[] = []
+    for (let i = firstCaIdx; i < lines.length; i++) {
+        if (IS_SHIFT_LINE.test(lines[i].trim())) caIndices.push(i)
+    }
+    if (caIndices.length <= 1) return [block]
+
+    // Build sub-blocks: header + each Ca section
+    const subBlocks: string[] = []
+    for (let ci = 0; ci < caIndices.length; ci++) {
+        const start = caIndices[ci]
+        const end = ci + 1 < caIndices.length ? caIndices[ci + 1] : lines.length
+        // Convert "Ca N ..." bare line to "Ca: N" so getField("ca") can parse it
+        const shiftLine = lines[start].trim().replace(/^ca\s+([1-3]).*/i, "Ca: $1")
+        const sectionLines = [shiftLine, ...lines.slice(start + 1, end)]
+        subBlocks.push([...headerLines, ...sectionLines].join("\n"))
+    }
+    return subBlocks
+}
+
 function parseZaloText(rawText: string): HeadcountRecord[] {
     const blocks = splitIntoBlocks(rawText)
     const records: HeadcountRecord[] = []
     for (const block of blocks) {
-        const record = parseBlock(block)
-        if (record && (record.date || record.area !== "—")) records.push(record)
+        // Expand multi-shift blocks (1 area, nhiều ca) thành records riêng
+        const subBlocks = splitMultiShiftBlock(block)
+        for (const sub of subBlocks) {
+            const record = parseBlock(sub)
+            if (record && (record.date || record.area !== "—")) records.push(record)
+        }
     }
     return records
 }
@@ -365,6 +425,8 @@ export default function BaoCom() {
         seasonal_present: number; seasonal_absent: number;
         ot_count: number; vegetarian: number
     }>({ official_present: 0, official_absent: 0, seasonal_present: 0, seasonal_absent: 0, ot_count: 0, vegetarian: 0 })
+    // Refresh key: tăng lên mỗi khi kitchen tab thay đổi data → trigger re-fetch history
+    const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
 
     // Load departments + user role on mount
     useEffect(() => {
@@ -428,6 +490,10 @@ export default function BaoCom() {
             .eq("id", id)
         if (error) { alert("Lỗi: " + error.message); return }
         setHistoryRecords(prev => prev.map(r => r.id === id ? { ...r, ...histEditFields } : r))
+        // Cập nhật luôn summaryData nếu đang hiển
+        setSummaryData(prev => prev ? prev.map(r =>
+            r.id === id ? { ...r, ...histEditFields } : r
+        ) : prev)
         setHistEditId(null)
     }
 
@@ -436,6 +502,8 @@ export default function BaoCom() {
         const { error } = await supabase.from("meal_headcount").delete().eq("id", id)
         if (error) { alert("Lỗi: " + error.message); return }
         setHistoryRecords(prev => prev.filter(r => r.id !== id))
+        // Cập nhật luôn summaryData nếu đang hiển
+        setSummaryData(prev => prev ? prev.filter(r => r.id !== id) : prev)
     }
 
     // ─── Monthly stats state ───
@@ -574,7 +642,15 @@ export default function BaoCom() {
     const handleDeleteRow = async (id: string) => {
         if (!confirm("Đồng ý xóa bản ghi này?")) return
         const { error } = await supabase.from("meal_headcount").delete().eq("id", id)
-        if (!error) setSummaryData(prev => prev ? prev.filter(r => r.id !== id) : prev)
+        if (error) {
+            alert("Lỗi xóa: " + error.message)
+            return
+        }
+        // Xóa luôn trong historyRecords (state local)
+        setHistoryRecords(prev => prev.filter(r => r.id !== id))
+        setHistoryRefreshKey(k => k + 1)
+        // Re-fetch từ DB để đảm bảo không có bản ghi trùng cũ hiện lại
+        await fetchSummaryFromDB()
     }
 
     const handleStartEdit = (r: SavedRecord) => {
@@ -592,6 +668,18 @@ export default function BaoCom() {
         }).eq("id", id)
         if (!error) {
             setSummaryData(prev => prev ? prev.map(r => r.id === id ? { ...r, ...editFields } : r) : prev)
+            // Đồng bộ: cập nhật luôn trong historyRecords nếu đang giữ record đó
+            setHistoryRecords(prev => prev.map(r =>
+                r.id === id
+                    ? { ...r,
+                        official_present: editFields.official_present,
+                        seasonal_present: editFields.seasonal_present,
+                        vegetarian: editFields.vegetarian,
+                        ot_count: editFields.ot_count,
+                      }
+                    : r
+            ))
+            setHistoryRefreshKey(k => k + 1)
             setEditingRowId(null)
         }
     }
@@ -620,6 +708,8 @@ export default function BaoCom() {
         if (!error) {
             setAddRow(null)
             await fetchSummaryFromDB()
+            // Đồng bộ: đánh dấu để re-fetch lịch sử khi chuyển tab
+            setHistoryRefreshKey(k => k + 1)
         } else {
             alert("Lỗi lưu: " + error.message)
         }
@@ -743,7 +833,7 @@ export default function BaoCom() {
 
     useEffect(() => {
         if (activeTab === "history") fetchHistory()
-    }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [activeTab, historyRefreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Summary stats from parsed records
     const summary = records.reduce(
