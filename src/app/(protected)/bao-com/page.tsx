@@ -30,7 +30,7 @@ const SHIFT_HOUR: Record<string, string> = { "1": "6h", "2": "14h", "3": "22h" }
 
 // Dỳ kiến các bộ phận cần báo cơm (lowercase name_en or Zalo name)
 const EXPECTED_DEPTS = [
-    "PEEL", "GRAD", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL"
+    "PEEL", "GRAD", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA"
 ]
 
 // ─────────────────────────────────────────────
@@ -99,6 +99,18 @@ const DEPT_MAP: Record<string, string> = {
     "bao tri may cat": "MAINT_SHELL",
     "bảo trì may cắt": "MAINT_SHELL",
     "bao tri máy cắt": "MAINT_SHELL",
+    // Maint Highcare
+    "maint hca": "MAINT_HCA",
+    "maint highcare": "MAINT_HCA",
+    "maintenance highcare": "MAINT_HCA",
+    "maint - highcare": "MAINT_HCA",
+    "maint-highcare": "MAINT_HCA",
+    "bảo trì highcare": "MAINT_HCA",
+    "bao tri highcare": "MAINT_HCA",
+    "bảo trì hca": "MAINT_HCA",
+    "bao tri hca": "MAINT_HCA",
+    "highcare maint": "MAINT_HCA",
+    "highcare maintenance": "MAINT_HCA",
 }
 
 // ─────────────────────────────────────────────
