@@ -380,25 +380,58 @@ export default function BaoCom() {
         return lines.join("\n\n")
     }
 
-    // ─── Missing depts per shift ───
-    const getMissingDepts = (): { key: string; missing: string[] }[] => {
-        const groups = new Map<string, Set<string>>()
-        records.forEach((r, i) => {
-            const area = getEffectiveArea(r, i).toUpperCase()
-            const key = `${r.date}|||${r.shift}`
-            if (!groups.has(key)) groups.set(key, new Set())
-            // Find matching code from DEPT_MAP
-            const code = Object.entries(DEPT_MAP).find(([k]) =>
-                k.toLowerCase() === area.toLowerCase()
-            )?.[1] ?? area
-            groups.get(key)!.add(code)
-        })
-        const result: { key: string; missing: string[] }[] = []
-        groups.forEach((reported, key) => {
-            const missing = EXPECTED_DEPTS.filter(d => !reported.has(d))
-            if (missing.length > 0) result.push({ key, missing })
-        })
-        return result
+    // ─── Check if area has a DEPT_MAP rule ───
+    const hasDeptRule = (area: string): boolean => {
+        const key = area.toLowerCase().trim()
+        return Object.prototype.hasOwnProperty.call(DEPT_MAP, key)
+    }
+
+    // ─── DB-based summary state ───
+    const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
+    const [summaryShift, setSummaryShift] = useState<string>("2")
+    const [summaryLoading, setSummaryLoading] = useState(false)
+    const [summaryData, setSummaryData] = useState<SavedRecord[] | null>(null)
+    const [summaryError, setSummaryError] = useState<string | null>(null)
+
+    const fetchSummaryFromDB = async () => {
+        setSummaryLoading(true)
+        setSummaryError(null)
+        setSummaryData(null)
+        try {
+            const { data, error } = await supabase
+                .from("headcount_zalo")
+                .select("*, departments(code, name_en)")
+                .eq("work_date", summaryDate)
+                .eq("shift", summaryShift)
+                .order("department_name")
+            if (error) throw error
+            setSummaryData(data ?? [])
+        } catch (e: unknown) {
+            setSummaryError(e instanceof Error ? e.message : "Lỗi kết nối DB")
+        } finally {
+            setSummaryLoading(false)
+        }
+    }
+
+    const buildDBSummaryText = (rows: SavedRecord[]): string => {
+        const totalPresent = rows.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
+        const totalVeg = rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)
+        const totalOT = rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)
+        const man = totalPresent - totalVeg
+        const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
+        const shiftHour = SHIFT_HOUR[summaryShift] ?? ""
+        let msg = `Ngày ${dateDisplay}\nCa ${summaryShift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
+        if (totalOT > 0) msg += `\n${totalOT} OT lúc ${shiftHour}`
+        return msg
+    }
+
+    const getDBMissingDepts = (rows: SavedRecord[]): string[] => {
+        const reported = new Set(rows.map(r =>
+            r.department_id
+                ? (deptList.find(d => d.id === r.department_id)?.code ?? r.department_name.toUpperCase())
+                : r.department_name.toUpperCase()
+        ))
+        return EXPECTED_DEPTS.filter(d => !reported.has(d))
     }
 
     // ─── Parse handlers ───
@@ -640,61 +673,131 @@ export default function BaoCom() {
                             </div>
 
                             {/* Summary panel */}
-                            {showSummary && (() => {
-                                const summaryText = buildSummaryText()
-                                const missingList = getMissingDepts()
-                                return (
-                                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-4">
-                                        <div className="flex items-center gap-2 font-semibold text-orange-700">
-                                            <MessageSquare className="h-4 w-4" />
-                                            Tin nhắn báo cơm nhà ăn
-                                        </div>
-
-                                        {/* Formatted message */}
-                                        <div className="bg-white rounded-lg border border-orange-100 p-3 font-mono text-sm whitespace-pre-wrap text-gray-800">
-                                            {summaryText}
-                                        </div>
-
-                                        <Button
-                                            size="sm"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(summaryText)
-                                                setCopiedSummary(true)
-                                                setTimeout(() => setCopiedSummary(false), 2000)
-                                            }}
-                                            className="gap-2 bg-orange-600 hover:bg-orange-700 text-white"
-                                        >
-                                            {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                            {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
-                                        </Button>
-
-                                        {/* Missing depts */}
-                                        {missingList.length > 0 && (
-                                            <div className="space-y-2">
-                                                <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
-                                                    <Bell className="h-4 w-4" />
-                                                    Bộ phận chưa báo cơm
-                                                </div>
-                                                {missingList.map(({ key, missing }) => {
-                                                    const [date, shift] = key.split("|||")
-                                                    return (
-                                                        <div key={key} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
-                                                            <span className="font-medium text-amber-800">Ca {shift} — {date}:</span>
-                                                            <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                                                {missing.map(d => (
-                                                                    <span key={d} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded-full font-medium">
-                                                                        {d}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
+                            {showSummary && (
+                                <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-4">
+                                    <div className="flex items-center gap-2 font-semibold text-orange-700">
+                                        <MessageSquare className="h-4 w-4" />
+                                        Tổng hợp báo cơm nhà ăn
                                     </div>
-                                )
-                            })()}
+
+                                    {/* Date + Shift selectors */}
+                                    <div className="flex flex-wrap items-end gap-3">
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-medium text-orange-700">Ngày</label>
+                                            <input
+                                                type="date"
+                                                value={summaryDate}
+                                                onChange={e => setSummaryDate(e.target.value)}
+                                                className="border border-orange-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-xs font-medium text-orange-700">Ca</label>
+                                            <div className="flex gap-1">
+                                                {["1", "2", "3"].map(s => (
+                                                    <button
+                                                        key={s}
+                                                        onClick={() => setSummaryShift(s)}
+                                                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${
+                                                            summaryShift === s
+                                                                ? "bg-orange-500 text-white border-orange-500"
+                                                                : "bg-white text-orange-700 border-orange-300 hover:bg-orange-100"
+                                                        }`}
+                                                    >{s}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={fetchSummaryFromDB}
+                                            disabled={summaryLoading}
+                                            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                                        >
+                                            <BarChart3 className="h-4 w-4" />
+                                            {summaryLoading ? "Đang tải..." : "Tổng hợp"}
+                                        </button>
+                                    </div>
+
+                                    {summaryError && (
+                                        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{summaryError}</div>
+                                    )}
+
+                                    {summaryData !== null && (() => {
+                                        if (summaryData.length === 0) return (
+                                            <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                                Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
+                                            </div>
+                                        )
+                                        const msgText = buildDBSummaryText(summaryData)
+                                        const missingDepts = getDBMissingDepts(summaryData)
+                                        return (
+                                            <div className="space-y-3">
+                                                {/* Kitchen message */}
+                                                <div className="bg-white rounded-lg border border-orange-100 p-3 font-mono text-sm whitespace-pre-wrap text-gray-800">
+                                                    {msgText}
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(msgText)
+                                                        setCopiedSummary(true)
+                                                        setTimeout(() => setCopiedSummary(false), 2000)
+                                                    }}
+                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                                                        copiedSummary ? "bg-green-600 text-white" : "bg-orange-600 hover:bg-orange-700 text-white"
+                                                    }`}
+                                                >
+                                                    {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                                    {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
+                                                </button>
+
+                                                {/* Per-dept breakdown */}
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-xs border rounded-lg overflow-hidden">
+                                                        <thead>
+                                                            <tr className="bg-orange-100 text-orange-700 text-left">
+                                                                <th className="px-2 py-1.5 font-semibold">Bộ phận</th>
+                                                                <th className="px-2 py-1.5 font-semibold text-right">CT HĐ</th>
+                                                                <th className="px-2 py-1.5 font-semibold text-right">TV HĐ</th>
+                                                                <th className="px-2 py-1.5 font-semibold text-right">Chay</th>
+                                                                <th className="px-2 py-1.5 font-semibold text-right">OT</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y">
+                                                            {summaryData.map(r => (
+                                                                <tr key={r.id} className="hover:bg-orange-50">
+                                                                    <td className="px-2 py-1 font-medium">
+                                                                        {r.department_id
+                                                                            ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
+                                                                            : r.department_name}
+                                                                    </td>
+                                                                    <td className="px-2 py-1 text-right text-green-700 font-semibold">{r.official_present ?? 0}</td>
+                                                                    <td className="px-2 py-1 text-right">{r.seasonal_present ?? 0}</td>
+                                                                    <td className="px-2 py-1 text-right text-emerald-600">{r.vegetarian ?? 0}</td>
+                                                                    <td className="px-2 py-1 text-right">{r.ot_count ?? 0}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                {/* Missing depts */}
+                                                {missingDepts.length > 0 && (
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
+                                                            <Bell className="h-4 w-4" />
+                                                            Chưa có dữ liệu từ các bộ phận:
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {missingDepts.map(d => (
+                                                                <span key={d} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded-full font-medium">{d}</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })()}
+                                </div>
+                            )}
 
                             {/* Save message */}
                             {saveMsg && (
@@ -768,9 +871,10 @@ export default function BaoCom() {
                                             </thead>
                                             <tbody className="divide-y">
                                                 {records.map((r, i) => {
-                                                    const effArea = r.area.replace(/\s*\(.*?\)/g, "").trim()
-                                                    const deptId = findDeptId(effArea)
+                                                    const effArea = getEffectiveArea(r, i)
+                                                    const deptId = getEffectiveDeptId(r, i)
                                                     const linked = deptList.find((d) => d.id === deptId)
+                                                    const isUnknown = !linked && !hasDeptRule(effArea)
                                                     return (
                                                         <tr key={i} className="hover:bg-muted/30 transition-colors">
                                                             <td className="px-3 py-2.5 text-muted-foreground">{i + 1}</td>
@@ -818,9 +922,9 @@ export default function BaoCom() {
                                                                         <Database className="h-3 w-3" />
                                                                         {linked.name_en}
                                                                     </span>
-                                                                ) : (
-                                                                     <div className="flex flex-col gap-1 min-w-[150px]">
-                                                                         <span className="text-xs text-amber-600 font-semibold">⚠ Không rõ: &quot;{r.area}&quot;</span>
+                                                                ) : isUnknown ? (
+                                                                    <div className="flex flex-col gap-1 min-w-[150px]">
+                                                                        <span className="text-xs text-amber-600 font-semibold">⚠ Không rõ: &quot;{effArea}&quot;</span>
                                                                          <select
                                                                              className="text-xs border border-amber-300 rounded px-1 py-0.5 bg-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                                                              value={areaOverrides[i] ?? ""}
@@ -832,8 +936,10 @@ export default function BaoCom() {
                                                                              ))}
                                                                          </select>
                                                                      </div>
+                                                                 ) : (
+                                                                     <span className="text-xs text-muted-foreground">—</span>
                                                                  )}
-                                                            </td>
+                                                             </td>
                                                         </tr>
                                                     )
                                                 })}
