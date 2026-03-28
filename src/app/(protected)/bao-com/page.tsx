@@ -70,9 +70,11 @@ const DEPT_MAP: Record<string, string> = {
     "qc": "QC",
     "warehouse": "FGWH",
     "handpeeling": "HPEEL",
-    // NOT mapped to production depts:
-    // "clearning" → stored as-is
-    // "maint - shelling" → stored as-is
+    "maint shelling": "MAINT_SHELL",
+    "maint - shelling": "MAINT_SHELL",
+    "maintenance shelling": "MAINT_SHELL",
+    "bảo trì shelling": "MAINT_SHELL",
+    "bao tri shelling": "MAINT_SHELL",
 }
 
 // ─────────────────────────────────────────────
