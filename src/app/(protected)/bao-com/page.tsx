@@ -319,7 +319,7 @@ export default function BaoCom() {
     const [records, setRecords] = useState<HeadcountRecord[]>([])
     const [parsed, setParsed] = useState(false)
     const [copied, setCopied] = useState(false)
-    const [activeTab, setActiveTab] = useState<"parse" | "history">("parse")
+    const [activeTab, setActiveTab] = useState<"parse" | "history" | "kitchen">("parse")
 
     const [areaOverrides, setAreaOverrides] = useState<Record<number, string>>({})
     const [showSummary, setShowSummary] = useState(false)
@@ -594,7 +594,163 @@ export default function BaoCom() {
                     <History className="h-4 w-4" />
                     Lịch sử đã lưu
                 </button>
+                <button
+                    onClick={() => { setActiveTab("kitchen"); if (summaryData === null) fetchSummaryFromDB() }}
+                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                        activeTab === "kitchen"
+                            ? "border-green-500 text-green-600"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                    <MessageSquare className="h-4 w-4" />
+                    🍳 Báo cơm nhà ăn
+                </button>
             </div>
+
+            {/* ═══════════════════════════════════════════ */}
+            {/* TAB 3: KITCHEN / BÁO CƠM NHÀ ĂN               */}
+            {/* ═══════════════════════════════════════════ */}
+            {activeTab === "kitchen" && (
+                <div className="space-y-5">
+                    <div className="flex items-center gap-2 font-semibold text-green-700 text-lg">
+                        <MessageSquare className="h-5 w-5" />
+                        Tổng hợp báo cơm nhà ăn
+                    </div>
+
+                    {/* Date + Shift selectors */}
+                    <div className="flex flex-wrap items-end gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-green-700">Ngày</label>
+                            <input
+                                type="date"
+                                value={summaryDate}
+                                onChange={e => setSummaryDate(e.target.value)}
+                                className="border border-green-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-green-700">Ca</label>
+                            <div className="flex gap-1">
+                                {["1", "2", "3"].map(s => (
+                                    <button
+                                        key={s}
+                                        onClick={() => setSummaryShift(s)}
+                                        className={`px-4 py-1.5 rounded-lg text-sm font-bold border transition-colors ${
+                                            summaryShift === s
+                                                ? "bg-green-500 text-white border-green-500"
+                                                : "bg-white text-green-700 border-green-300 hover:bg-green-100"
+                                        }`}
+                                    >{s}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <button
+                            onClick={fetchSummaryFromDB}
+                            disabled={summaryLoading}
+                            className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                        >
+                            <BarChart3 className="h-4 w-4" />
+                            {summaryLoading ? "Đang tải..." : "Tổng hợp"}
+                        </button>
+                    </div>
+
+                    {summaryError && (
+                        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{summaryError}</div>
+                    )}
+
+                    {summaryData !== null && (() => {
+                        if (summaryData.length === 0) return (
+                            <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                ⚠️ Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
+                            </div>
+                        )
+                        const msgText = buildDBSummaryText(summaryData)
+                        const missingDepts = getDBMissingDepts(summaryData)
+                        return (
+                            <div className="space-y-4">
+                                {/* Kitchen message box */}
+                                <div className="bg-white rounded-xl border-2 border-green-200 shadow-sm p-4">
+                                    <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">Tin nhắn gửi nhà ăn</div>
+                                    <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">{msgText}</pre>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(msgText)
+                                            setCopiedSummary(true)
+                                            setTimeout(() => setCopiedSummary(false), 2000)
+                                        }}
+                                        className={`mt-3 flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                                            copiedSummary ? "bg-green-600 text-white" : "bg-green-100 hover:bg-green-200 text-green-700"
+                                        }`}
+                                    >
+                                        {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                        {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
+                                    </button>
+                                </div>
+
+                                {/* Per-dept breakdown */}
+                                <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                                    <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold">Chi tiết từng bộ phận</div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide text-left">
+                                                    <th className="px-4 py-2 font-semibold">Bộ phận</th>
+                                                    <th className="px-4 py-2 font-semibold text-right">CT HĐ</th>
+                                                    <th className="px-4 py-2 font-semibold text-right">TV HĐ</th>
+                                                    <th className="px-4 py-2 font-semibold text-right">Tổng</th>
+                                                    <th className="px-4 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
+                                                    <th className="px-4 py-2 font-semibold text-right">OT</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y">
+                                                {summaryData.map(r => (
+                                                    <tr key={r.id} className="hover:bg-muted/30">
+                                                        <td className="px-4 py-2 font-medium">
+                                                            {r.department_id
+                                                                ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
+                                                                : r.department_name}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-right font-semibold text-green-700">{r.official_present ?? 0}</td>
+                                                        <td className="px-4 py-2 text-right">{r.seasonal_present ?? 0}</td>
+                                                        <td className="px-4 py-2 text-right font-bold">{(r.official_present ?? 0) + (r.seasonal_present ?? 0)}</td>
+                                                        <td className="px-4 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
+                                                        <td className="px-4 py-2 text-right">{r.ot_count ?? 0}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="bg-muted/60 font-bold border-t-2 text-sm">
+                                                    <td className="px-4 py-2">TỔNG</td>
+                                                    <td className="px-4 py-2 text-right text-green-700">{summaryData.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
+                                                    <td className="px-4 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
+                                                    <td className="px-4 py-2 text-right">{summaryData.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}</td>
+                                                    <td className="px-4 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
+                                                    <td className="px-4 py-2 text-right">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0), 0)}</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Missing depts */}
+                                {missingDepts.length > 0 && (
+                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+                                        <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
+                                            <Bell className="h-4 w-4" />
+                                            Chưa có dữ liệu từ:
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {missingDepts.map(d => (
+                                                <span key={d} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2.5 py-1 rounded-full font-medium">{d}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })()}
+                </div>
+            )}
 
             {/* ═══════════════════════════════════════════ */}
             {/* TAB 1: PARSE & SAVE                        */}
