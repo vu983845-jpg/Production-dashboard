@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns"
+import * as XLSX from "xlsx"
 
 // Ca → giờ bắt đầu (cho OT hint)
 const SHIFT_HOUR: Record<string, string> = { "1": "6h", "2": "14h", "3": "22h" }
@@ -441,6 +442,49 @@ export default function BaoCom() {
         // Sorted depts by name
         const depts = [...deptMap.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name))
         return { days, depts }
+    }
+
+    const exportMonthlyExcel = () => {
+        if (!statsData || statsData.length === 0) return
+        const { days, depts } = buildMonthlyPivot(statsData)
+
+        // Header row: ['Bộ phận', day1, day2, ..., 'TỔNG']
+        const header = [
+            "Bộ phận",
+            ...days.map(d => parseInt(d.slice(8), 10)),
+            "TỔNG"
+        ]
+
+        // Data rows
+        const dataRows = depts.map(([, dept]) => {
+            const rowTotal = [...dept.days.values()].reduce((a, b) => a + b, 0)
+            return [
+                dept.name,
+                ...days.map(d => dept.days.get(d) ?? 0),
+                rowTotal
+            ]
+        })
+
+        // Footer: TỔNG NGÀY
+        const footerRow = [
+            "TỔNG NGÀY",
+            ...days.map(d => depts.reduce((s, [, dept]) => s + (dept.days.get(d) ?? 0), 0)),
+            depts.reduce((s, [, dept]) => s + [...dept.days.values()].reduce((a, b) => a + b, 0), 0)
+        ]
+
+        const wsData = [header, ...dataRows, footerRow]
+        const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+        // Column widths
+        ws["!cols"] = [
+            { wch: 20 },
+            ...days.map(() => ({ wch: 6 })),
+            { wch: 8 }
+        ]
+
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, `Cơm ${statsMonth}`)
+        XLSX.writeFile(wb, `bao-com-${statsMonth}.xlsx`)
     }
 
     // ─── DB-based summary state ───
@@ -979,6 +1023,15 @@ export default function BaoCom() {
                             )}
                             Xem thống kê
                         </button>
+                        {statsData && statsData.length > 0 && (
+                            <button
+                                onClick={exportMonthlyExcel}
+                                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                            >
+                                <FileSpreadsheet className="h-4 w-4" />
+                                Xuất Excel
+                            </button>
+                        )}
                     </div>
 
                     {statsError && (
@@ -994,9 +1047,16 @@ export default function BaoCom() {
 
                         return (
                             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                                <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold">
-                                    Tháng {statsMonth} — tổng suất cơm (CT + TV, tất cả ca)
-                                </div>
+                            <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
+                                <span>Tháng {statsMonth} — tổng suất cơm (CT + TV, tất cả ca)</span>
+                                <button
+                                    onClick={exportMonthlyExcel}
+                                    className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                                    Xuất Excel
+                                </button>
+                            </div>
                                 <div className="overflow-x-auto">
                                     <table className="text-xs min-w-full">
                                         <thead>
