@@ -14,6 +14,7 @@ import {
     AlertTriangle,
     Zap,
     ShieldCheck,
+    UtensilsCrossed,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -85,7 +86,13 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             href: "/energy",
             icon: Zap,
             roles: ["admin", "dept_user", "viewer", "HSE", "hse", "plant_manager", "maint"],
-        }
+        },
+        {
+            title: "Báo Cơm",
+            href: "/bao-com",
+            icon: UtensilsCrossed,
+            roles: ["admin", "dept_user", "viewer", "hr", "HSE", "hse", "hse_admin"],
+        },
     ]
 
     return (
