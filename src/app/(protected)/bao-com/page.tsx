@@ -347,6 +347,12 @@ export default function BaoCom() {
     const [historyLoading, setHistoryLoading] = useState(false)
     const [historyFrom, setHistoryFrom] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"))
     const [historyTo, setHistoryTo] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"))
+    const [histEditId, setHistEditId] = useState<string | null>(null)
+    const [histEditFields, setHistEditFields] = useState<{
+        official_present: number; official_absent: number;
+        seasonal_present: number; seasonal_absent: number;
+        ot_count: number; vegetarian: number
+    }>({ official_present: 0, official_absent: 0, seasonal_present: 0, seasonal_absent: 0, ot_count: 0, vegetarian: 0 })
 
     // Load departments + user role on mount
     useEffect(() => {
@@ -393,6 +399,31 @@ export default function BaoCom() {
     const hasDeptRule = (area: string): boolean => {
         const key = area.toLowerCase().trim()
         return Object.prototype.hasOwnProperty.call(DEPT_MAP, key)
+    }
+
+    // ─── History edit / delete handlers ───
+    const handleHistSave = async (id: string) => {
+        const { error } = await supabase
+            .from("meal_headcount")
+            .update({
+                official_present: histEditFields.official_present,
+                official_absent: histEditFields.official_absent,
+                seasonal_present: histEditFields.seasonal_present,
+                seasonal_absent: histEditFields.seasonal_absent,
+                ot_count: histEditFields.ot_count,
+                vegetarian: histEditFields.vegetarian,
+            })
+            .eq("id", id)
+        if (error) { alert("Lỗi: " + error.message); return }
+        setHistoryRecords(prev => prev.map(r => r.id === id ? { ...r, ...histEditFields } : r))
+        setHistEditId(null)
+    }
+
+    const handleHistDelete = async (id: string) => {
+        if (!confirm("Xóa bản ghi này?")) return
+        const { error } = await supabase.from("meal_headcount").delete().eq("id", id)
+        if (error) { alert("Lỗi: " + error.message); return }
+        setHistoryRecords(prev => prev.filter(r => r.id !== id))
     }
 
     // ─── Monthly stats state ───
@@ -1586,41 +1617,94 @@ export default function BaoCom() {
                                             <th className="px-3 py-2.5 font-semibold text-right">TV Vắng</th>
                                             <th className="px-3 py-2.5 font-semibold text-right">OT</th>
                                             <th className="px-3 py-2.5 font-semibold text-right">🥦 Chay</th>
+                                            <th className="px-3 py-2.5 font-semibold text-center">Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
-                                        {historyRecords.map((r, i) => (
-                                            <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                                                <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                                                <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
-                                                    {format(parseISO(r.work_date), "dd/MM/yyyy")}
-                                                </td>
-                                                <td className="px-3 py-2 font-medium whitespace-nowrap">
-                                                    {r.department_id
-                                                        ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
-                                                        : r.department_name}
-                                                </td>
-                                                <td className="px-3 py-2 text-center">
-                                                    <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                                        Ca {r.shift}
-                                                    </span>
-                                                </td>
-                                                <td className="px-3 py-2 text-right font-bold text-green-700">{r.official_present || "—"}</td>
-                                                <td className="px-3 py-2 text-right">
-                                                    <span className={r.official_absent > 0 ? "font-bold text-red-600" : "text-muted-foreground"}>
-                                                        {r.official_absent || "—"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-3 py-2 text-right">{r.seasonal_present || "—"}</td>
-                                                <td className="px-3 py-2 text-right">{r.seasonal_absent || "—"}</td>
-                                                <td className="px-3 py-2 text-right text-xs">{r.ot_count || "—"}</td>
-                                                <td className="px-3 py-2 text-right">
-                                                    {r.vegetarian > 0 ? (
-                                                        <span className="font-semibold text-emerald-600">{r.vegetarian}</span>
-                                                    ) : <span className="text-muted-foreground">—</span>}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {historyRecords.map((r, i) => {
+                                            const isEditing = histEditId === r.id
+                                            const numInput = (field: keyof typeof histEditFields) => (
+                                                <input
+                                                    type="number" min={0}
+                                                    value={histEditFields[field]}
+                                                    onChange={e => setHistEditFields(prev => ({ ...prev, [field]: parseInt(e.target.value) || 0 }))}
+                                                    className="w-14 border rounded px-1 py-0.5 text-xs text-right"
+                                                />
+                                            )
+                                            return (
+                                                <tr key={r.id} className={`transition-colors ${isEditing ? "bg-yellow-50" : "hover:bg-muted/30"}`}>
+                                                    <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
+                                                    <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
+                                                        {format(parseISO(r.work_date), "dd/MM/yyyy")}
+                                                    </td>
+                                                    <td className="px-3 py-2 font-medium whitespace-nowrap">
+                                                        {r.department_id
+                                                            ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
+                                                            : r.department_name}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-center">
+                                                        <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                                                            Ca {r.shift}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right font-bold text-green-700">
+                                                        {isEditing ? numInput("official_present") : (r.official_present || "—")}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right">
+                                                        {isEditing ? numInput("official_absent") : (
+                                                            <span className={r.official_absent > 0 ? "font-bold text-red-600" : "text-muted-foreground"}>
+                                                                {r.official_absent || "—"}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right">
+                                                        {isEditing ? numInput("seasonal_present") : (r.seasonal_present || "—")}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right">
+                                                        {isEditing ? numInput("seasonal_absent") : (r.seasonal_absent || "—")}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right text-xs">
+                                                        {isEditing ? numInput("ot_count") : (r.ot_count || "—")}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right">
+                                                        {isEditing ? numInput("vegetarian") : (
+                                                            r.vegetarian > 0
+                                                                ? <span className="font-semibold text-emerald-600">{r.vegetarian}</span>
+                                                                : <span className="text-muted-foreground">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-center whitespace-nowrap">
+                                                        {isEditing ? (
+                                                            <>
+                                                                <button onClick={() => handleHistSave(r.id)} className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700 mr-1">✓ Lưu</button>
+                                                                <button onClick={() => setHistEditId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Hủy</button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setHistEditId(r.id)
+                                                                        setHistEditFields({
+                                                                            official_present: r.official_present,
+                                                                            official_absent: r.official_absent,
+                                                                            seasonal_present: r.seasonal_present,
+                                                                            seasonal_absent: r.seasonal_absent,
+                                                                            ot_count: r.ot_count,
+                                                                            vegetarian: r.vegetarian,
+                                                                        })
+                                                                    }}
+                                                                    className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded hover:bg-blue-200 mr-1"
+                                                                >✏ Sửa</button>
+                                                                <button
+                                                                    onClick={() => handleHistDelete(r.id)}
+                                                                    className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded hover:bg-red-200"
+                                                                >🗑 Xóa</button>
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
                                     </tbody>
                                     <tfoot>
                                         <tr className="bg-muted/60 font-bold border-t-2 text-sm">
