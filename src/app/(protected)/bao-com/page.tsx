@@ -36,7 +36,6 @@ interface HeadcountRecord {
     seasonalAbsent: number | null
     ot: string
     vegetarian: number | null
-    forecast: string
     raw: string
 }
 
@@ -143,7 +142,9 @@ function parseBlock(block: string): HeadcountRecord | null {
     if (inlineShift) shift = inlineShift[1]
     shift = shift.replace(/\./g, ", ").trim()
 
-    const offPresentRaw = getField(text, [
+    // Fuzzy match: ch[íi]nh th[ứu]c hi[eệ]n di[eệ]n (any diacritic mix)
+    const offPresentFuzzy = text.match(/ch[íi]nh\s+th[ứu]c\s+hi[eệ]n\s+di[eệ]n\s*:?\s*([^\n]*)/i)
+    const offPresentRaw = offPresentFuzzy ? offPresentFuzzy[1].trim() : getField(text, [
         "chính thức hiện diện", "chính thuc hiện diện", "chinh thuc hien dien",
     ])
     const { total: officialPresent, vegetarian, note: offNote } = extractNumber(offPresentRaw)
@@ -157,8 +158,12 @@ function parseBlock(block: string): HeadcountRecord | null {
     const seasAbsentRaw = getField(text, ["thời vụ vắng", "thoi vu vang"])
     const { total: seasonalAbsent } = extractNumber(seasAbsentRaw)
 
-    let ot = getField(text, ["ot"])
-    const forecastRaw = getField(text, ["dự trù", "du tru"])
+    // OT: grab only the leading number/token (stop before any next keyword or whitespace-separated text)
+    let otRaw = getField(text, ["ot"])
+    // Trim away anything after the first number + optional symbol (e.g. "0 Dự trù ngày ...")
+    const otNumMatch = otRaw.match(/^(\d+[h]?(?:\.\d+)?(?:\s*giờ|\s*h)?)/i)
+    let ot = otNumMatch ? otNumMatch[1].trim() : (otRaw.split(/\s{2,}|(?=d[ựu]\s*tr[ùu])|(?=ca\s*:)/i)[0] || otRaw).trim()
+    // Dự trù (forecast) is intentionally ignored — trailing info after OT is skipped
 
     let vegTotal = vegetarian
     const vegInOT = ot.match(/(\d+)\s*[p]?\s*[(\[]?\s*(\d+)\s*chay/i)
@@ -190,7 +195,7 @@ function parseBlock(block: string): HeadcountRecord | null {
         seasonalAbsent,
         ot: ot || "0",
         vegetarian: vegTotal,
-        forecast: forecastRaw ? `Dự trù: ${forecastRaw}` : "",
+
         raw: text,
     }
 }
@@ -237,12 +242,12 @@ function parseZaloText(rawText: string): HeadcountRecord[] {
 // CSV Export
 // ─────────────────────────────────────────────
 function exportCSV(records: HeadcountRecord[]) {
-    const headers = ["Ngày", "Khu vực", "Ca", "CT Hiện diện", "CT Vắng", "TV Hiện diện", "TV Vắng", "OT", "Chay", "Dự trù"]
+    const headers = ["Ngày", "Khu vực", "Ca", "CT Hiện diện", "CT Vắng", "TV Hiện diện", "TV Vắng", "OT", "Chay"]
     const rows = records.map((r) => [
         r.date, r.area, r.shift,
         r.officialPresent ?? "", r.officialAbsent ?? "",
         r.seasonalPresent ?? "", r.seasonalAbsent ?? "",
-        r.ot, r.vegetarian ?? "", r.forecast,
+        r.ot, r.vegetarian ?? "",
     ])
     const csvContent =
         "\uFEFF" +
@@ -377,7 +382,7 @@ export default function BaoCom() {
                 seasonal_absent: r.seasonalAbsent ?? 0,
                 ot_count: parseInt(r.ot) || 0,
                 vegetarian: r.vegetarian ?? 0,
-                note: r.forecast || null,
+                note: null,
                 created_by: user?.id,
                 updated_at: new Date().toISOString(),
             }))
