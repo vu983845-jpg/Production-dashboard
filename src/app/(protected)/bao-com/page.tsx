@@ -399,15 +399,16 @@ export default function BaoCom() {
         setSummaryData(null)
         try {
             const { data, error } = await supabase
-                .from("headcount_zalo")
-                .select("*, departments(code, name_en)")
+                .from("meal_headcount")
+                .select("*")
                 .eq("work_date", summaryDate)
                 .eq("shift", summaryShift)
                 .order("department_name")
             if (error) throw error
             setSummaryData(data ?? [])
         } catch (e: unknown) {
-            setSummaryError(e instanceof Error ? e.message : "Lỗi kết nối DB")
+            const msg = e instanceof Error ? e.message : String(e)
+            setSummaryError(msg || "Lỗi không xác định")
         } finally {
             setSummaryLoading(false)
         }
@@ -595,7 +596,7 @@ export default function BaoCom() {
                     Lịch sử đã lưu
                 </button>
                 <button
-                    onClick={() => { setActiveTab("kitchen"); if (summaryData === null) fetchSummaryFromDB() }}
+                    onClick={() => setActiveTab("kitchen")}
                     className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
                         activeTab === "kitchen"
                             ? "border-green-500 text-green-600"
