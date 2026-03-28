@@ -142,6 +142,10 @@ function parseBlock(block: string): HeadcountRecord | null {
 
     let area = getField(text, ["khu vực", "khu vuc", "bộ phận", "bo phan", "bộphận"])
     area = area.replace(/\s*ca\s*:\s*\w+.*/i, "").trim()
+    // Strip trailing parenthetical hints like "(Dung)", "(Linh)", etc.
+    area = area.replace(/\s*\([^)]*\)\s*$/, "").trim()
+    // Strip trailing comma or punctuation
+    area = area.replace(/[,;.]+$/, "").trim()
 
     let shift = getField(text, ["ca"])
     const inlineShift = getField(text, ["khu vực", "khu vuc"]).match(/ca\s*:\s*(\S+)/i)
@@ -306,7 +310,11 @@ export default function BaoCom() {
     const [copied, setCopied] = useState(false)
     const [activeTab, setActiveTab] = useState<"parse" | "history">("parse")
 
-    // Save to DB state
+    const [areaOverrides, setAreaOverrides] = useState<Record<number, string>>({})
+
+    // Helper: get effective area (overridden or parsed)
+    const getEffectiveArea = (r: HeadcountRecord, i: number) => areaOverrides[i] ?? r.area
+    const getEffectiveDeptId = (r: HeadcountRecord, i: number) => findDeptId(getEffectiveArea(r, i))
     const [saving, setSaving] = useState(false)
     const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
     const [deptList, setDeptList] = useState<{ id: string; code: string; name_en: string }[]>([])
@@ -377,10 +385,10 @@ export default function BaoCom() {
 
         try {
             const { data: { user } } = await supabase.auth.getUser()
-            const payload = records.map((r) => ({
+            const payload = records.map((r, i) => ({
                 work_date: dateToISO(r.date),
-                department_name: r.area,
-                department_id: findDeptId(r.area),
+                department_name: getEffectiveArea(r, i),
+                department_id: getEffectiveDeptId(r, i),
                 shift: r.shift.replace(/[^1-3]/g, "") || "1",
                 official_present: r.officialPresent ?? 0,
                 official_absent: r.officialAbsent ?? 0,
@@ -636,7 +644,8 @@ export default function BaoCom() {
                                             </thead>
                                             <tbody className="divide-y">
                                                 {records.map((r, i) => {
-                                                    const deptId = findDeptId(r.area)
+                                                    const effArea = r.area.replace(/\s*\(.*?\)/g, "").trim()
+                                                    const deptId = findDeptId(effArea)
                                                     const linked = deptList.find((d) => d.id === deptId)
                                                     return (
                                                         <tr key={i} className="hover:bg-muted/30 transition-colors">
@@ -644,7 +653,7 @@ export default function BaoCom() {
                                                             <td className="px-3 py-2.5 font-mono text-xs whitespace-nowrap">
                                                                 {r.date || <span className="text-yellow-500">?</span>}
                                                             </td>
-                                                            <td className="px-3 py-2.5 font-medium whitespace-nowrap">{r.area}</td>
+                                                            <td className="px-3 py-2.5 font-medium whitespace-nowrap">{effArea}</td>
                                                             <td className="px-3 py-2.5 text-center">
                                                                 <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
                                                                     Ca {r.shift}
@@ -686,8 +695,20 @@ export default function BaoCom() {
                                                                         {linked.name_en}
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="text-xs text-muted-foreground">—</span>
-                                                                )}
+                                                                     <div className="flex flex-col gap-1 min-w-[150px]">
+                                                                         <span className="text-xs text-amber-600 font-semibold">⚠ Không rõ: &quot;{r.area}&quot;</span>
+                                                                         <select
+                                                                             className="text-xs border border-amber-300 rounded px-1 py-0.5 bg-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                                                             value={areaOverrides[i] ?? ""}
+                                                                             onChange={(e) => setAreaOverrides(prev => ({ ...prev, [i]: e.target.value }))}
+                                                                         >
+                                                                             <option value="">-- Chọn bộ phận --</option>
+                                                                             {deptList.map(d => (
+                                                                                 <option key={d.id} value={d.name_en}>{d.name_en}</option>
+                                                                             ))}
+                                                                         </select>
+                                                                     </div>
+                                                                 )}
                                                             </td>
                                                         </tr>
                                                     )
