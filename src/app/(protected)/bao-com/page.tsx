@@ -409,7 +409,7 @@ export default function BaoCom() {
                 .from("meal_headcount")
                 .select("*")
                 .eq("work_date", summaryDate)
-                .eq("shift", summaryShift)
+                .eq("shift", parseInt(summaryShift, 10))
                 .order("department_name")
             if (error) throw error
             // Dedup: if multiple rows for same department_id, keep only the latest
@@ -461,7 +461,7 @@ export default function BaoCom() {
             work_date: summaryDate,
             department_name: dept.name_en,
             department_id: dept.id,
-            shift: summaryShift,
+            shift: parseInt(summaryShift, 10),
             official_present: addRow.officialPresent,
             official_absent: 0,
             seasonal_present: addRow.seasonalPresent,
@@ -554,7 +554,7 @@ export default function BaoCom() {
                 work_date: dateToISO(r.date),
                 department_name: getEffectiveArea(r, i),
                 department_id: getEffectiveDeptId(r, i),
-                shift: r.shift.replace(/[^1-3]/g, "") || "1",
+                shift: parseInt(r.shift.replace(/[^1-3]/g, "") || "1", 10),
                 official_present: r.officialPresent ?? 0,
                 official_absent: r.officialAbsent ?? 0,
                 seasonal_present: r.seasonalPresent ?? 0,
