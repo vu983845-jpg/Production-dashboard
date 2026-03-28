@@ -855,10 +855,9 @@ export default function BaoCom() {
                                                     {format(parseISO(r.work_date), "dd/MM/yyyy")}
                                                 </td>
                                                 <td className="px-3 py-2 font-medium whitespace-nowrap">
-                                                    {r.department_name}
-                                                    {r.department_id && (
-                                                        <Database className="inline h-3 w-3 ml-1 text-emerald-500" />
-                                                    )}
+                                                    {r.department_id
+                                                        ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
+                                                        : r.department_name}
                                                 </td>
                                                 <td className="px-3 py-2 text-center">
                                                     <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
