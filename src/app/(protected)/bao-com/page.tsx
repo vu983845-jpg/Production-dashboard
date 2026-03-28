@@ -75,6 +75,10 @@ const DEPT_MAP: Record<string, string> = {
     "maintenance shelling": "MAINT_SHELL",
     "bảo trì shelling": "MAINT_SHELL",
     "bao tri shelling": "MAINT_SHELL",
+    "bảo trì máy cắt": "MAINT_SHELL",
+    "bao tri may cat": "MAINT_SHELL",
+    "bảo trì may cắt": "MAINT_SHELL",
+    "bao tri máy cắt": "MAINT_SHELL",
 }
 
 // ─────────────────────────────────────────────
