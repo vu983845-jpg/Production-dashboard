@@ -16,10 +16,21 @@ import {
     CalendarDays,
     Database,
     FileSpreadsheet,
+    BarChart3,
+    Bell,
+    MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns"
+
+// Ca → giờ bắt đầu (cho OT hint)
+const SHIFT_HOUR: Record<string, string> = { "1": "6h", "2": "14h", "3": "22h" }
+
+// Dỳ kiến các bộ phận cần báo cơm (lowercase name_en or Zalo name)
+const EXPECTED_DEPTS = [
+    "PEEL", "GRAD", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL"
+]
 
 // ─────────────────────────────────────────────
 // Types
@@ -311,6 +322,8 @@ export default function BaoCom() {
     const [activeTab, setActiveTab] = useState<"parse" | "history">("parse")
 
     const [areaOverrides, setAreaOverrides] = useState<Record<number, string>>({})
+    const [showSummary, setShowSummary] = useState(false)
+    const [copiedSummary, setCopiedSummary] = useState(false)
 
     // Helper: get effective area (overridden or parsed)
     const getEffectiveArea = (r: HeadcountRecord, i: number) => areaOverrides[i] ?? r.area
@@ -341,6 +354,52 @@ export default function BaoCom() {
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const canSave = ["admin", "hr", "HSE", "hse", "hse_admin"].includes(userRole)
+
+    // ─── Build summary text for kitchen ───
+    const buildSummaryText = (): string => {
+        // Group by date+shift
+        const groups = new Map<string, HeadcountRecord[]>()
+        records.forEach((r, i) => {
+            const area = getEffectiveArea(r, i)
+            const key = `${r.date}|||${r.shift}`
+            if (!groups.has(key)) groups.set(key, [])
+            groups.get(key)!.push({ ...r, area })
+        })
+        const lines: string[] = []
+        groups.forEach((recs, key) => {
+            const [date, shift] = key.split("|||")
+            const totalPresent = recs.reduce((s, r) => s + (r.officialPresent ?? 0) + (r.seasonalPresent ?? 0), 0)
+            const totalVeg = recs.reduce((s, r) => s + (r.vegetarian ?? 0), 0)
+            const totalOT = recs.reduce((s, r) => s + (parseInt(r.ot) || 0), 0)
+            const man = totalPresent - totalVeg
+            const shiftHour = SHIFT_HOUR[shift] ?? ""
+            let block = `Ngày ${date}\nCa ${shift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
+            if (totalOT > 0) block += `\n${totalOT} OT lúc ${shiftHour}`
+            lines.push(block)
+        })
+        return lines.join("\n\n")
+    }
+
+    // ─── Missing depts per shift ───
+    const getMissingDepts = (): { key: string; missing: string[] }[] => {
+        const groups = new Map<string, Set<string>>()
+        records.forEach((r, i) => {
+            const area = getEffectiveArea(r, i).toUpperCase()
+            const key = `${r.date}|||${r.shift}`
+            if (!groups.has(key)) groups.set(key, new Set())
+            // Find matching code from DEPT_MAP
+            const code = Object.entries(DEPT_MAP).find(([k]) =>
+                k.toLowerCase() === area.toLowerCase()
+            )?.[1] ?? area
+            groups.get(key)!.add(code)
+        })
+        const result: { key: string; missing: string[] }[] = []
+        groups.forEach((reported, key) => {
+            const missing = EXPECTED_DEPTS.filter(d => !reported.has(d))
+            if (missing.length > 0) result.push({ key, missing })
+        })
+        return result
+    }
 
     // ─── Parse handlers ───
     const handleParse = useCallback(() => {
@@ -566,11 +625,76 @@ export default function BaoCom() {
                                         {saving ? "Đang lưu..." : `💾 Lưu ${records.length} bản ghi vào DB`}
                                     </Button>
                                 )}
+                                <Button
+                                    size="sm"
+                                    onClick={() => setShowSummary(s => !s)}
+                                    className={`gap-2 ${showSummary ? "bg-orange-600 hover:bg-orange-700" : "bg-orange-500 hover:bg-orange-600"} text-white`}
+                                >
+                                    <BarChart3 className="h-4 w-4" />
+                                    Tổng hợp báo cơm
+                                </Button>
                                 <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
                                     <RefreshCw className="h-4 w-4" />
                                     Làm mới
                                 </Button>
                             </div>
+
+                            {/* Summary panel */}
+                            {showSummary && (() => {
+                                const summaryText = buildSummaryText()
+                                const missingList = getMissingDepts()
+                                return (
+                                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-4">
+                                        <div className="flex items-center gap-2 font-semibold text-orange-700">
+                                            <MessageSquare className="h-4 w-4" />
+                                            Tin nhắn báo cơm nhà ăn
+                                        </div>
+
+                                        {/* Formatted message */}
+                                        <div className="bg-white rounded-lg border border-orange-100 p-3 font-mono text-sm whitespace-pre-wrap text-gray-800">
+                                            {summaryText}
+                                        </div>
+
+                                        <Button
+                                            size="sm"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(summaryText)
+                                                setCopiedSummary(true)
+                                                setTimeout(() => setCopiedSummary(false), 2000)
+                                            }}
+                                            className="gap-2 bg-orange-600 hover:bg-orange-700 text-white"
+                                        >
+                                            {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                            {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
+                                        </Button>
+
+                                        {/* Missing depts */}
+                                        {missingList.length > 0 && (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
+                                                    <Bell className="h-4 w-4" />
+                                                    Bộ phận chưa báo cơm
+                                                </div>
+                                                {missingList.map(({ key, missing }) => {
+                                                    const [date, shift] = key.split("|||")
+                                                    return (
+                                                        <div key={key} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
+                                                            <span className="font-medium text-amber-800">Ca {shift} — {date}:</span>
+                                                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                                                {missing.map(d => (
+                                                                    <span key={d} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded-full font-medium">
+                                                                        {d}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })()}
 
                             {/* Save message */}
                             {saveMsg && (
