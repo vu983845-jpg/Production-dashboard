@@ -392,11 +392,18 @@ export default function BaoCom() {
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryData, setSummaryData] = useState<SavedRecord[] | null>(null)
     const [summaryError, setSummaryError] = useState<string | null>(null)
+    // Edit state
+    const [editingRowId, setEditingRowId] = useState<string | null>(null)
+    const [editFields, setEditFields] = useState<{ official_present: number; seasonal_present: number; vegetarian: number; ot_count: number }>({ official_present: 0, seasonal_present: 0, vegetarian: 0, ot_count: 0 })
+    // Add-row state
+    const [addRow, setAddRow] = useState<{ deptId: string; officialPresent: number; seasonalPresent: number; vegetarian: number; otCount: number } | null>(null)
 
     const fetchSummaryFromDB = async () => {
         setSummaryLoading(true)
         setSummaryError(null)
         setSummaryData(null)
+        setEditingRowId(null)
+        setAddRow(null)
         try {
             const { data, error } = await supabase
                 .from("meal_headcount")
@@ -405,12 +412,72 @@ export default function BaoCom() {
                 .eq("shift", summaryShift)
                 .order("department_name")
             if (error) throw error
-            setSummaryData(data ?? [])
+            // Dedup: if multiple rows for same department_id, keep only the latest
+            const seen = new Map<string, SavedRecord>()
+            ;(data ?? []).forEach(r => {
+                const key = r.department_id ?? r.department_name
+                if (!seen.has(key) || r.created_at > seen.get(key)!.created_at) seen.set(key, r)
+            })
+            setSummaryData([...seen.values()].sort((a, b) => a.department_name.localeCompare(b.department_name)))
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e)
             setSummaryError(msg || "Lỗi không xác định")
         } finally {
             setSummaryLoading(false)
+        }
+    }
+
+    const handleDeleteRow = async (id: string) => {
+        if (!confirm("Đồng ý xóa bản ghi này?")) return
+        const { error } = await supabase.from("meal_headcount").delete().eq("id", id)
+        if (!error) setSummaryData(prev => prev ? prev.filter(r => r.id !== id) : prev)
+    }
+
+    const handleStartEdit = (r: SavedRecord) => {
+        setEditingRowId(r.id)
+        setEditFields({ official_present: r.official_present ?? 0, seasonal_present: r.seasonal_present ?? 0, vegetarian: r.vegetarian ?? 0, ot_count: r.ot_count ?? 0 })
+    }
+
+    const handleSaveEdit = async (id: string) => {
+        const { error } = await supabase.from("meal_headcount").update({
+            official_present: editFields.official_present,
+            seasonal_present: editFields.seasonal_present,
+            vegetarian: editFields.vegetarian,
+            ot_count: editFields.ot_count,
+            updated_at: new Date().toISOString(),
+        }).eq("id", id)
+        if (!error) {
+            setSummaryData(prev => prev ? prev.map(r => r.id === id ? { ...r, ...editFields } : r) : prev)
+            setEditingRowId(null)
+        }
+    }
+
+    const handleAddRowSave = async () => {
+        if (!addRow || !addRow.deptId) return
+        const dept = deptList.find(d => d.id === addRow.deptId)
+        if (!dept) return
+        const { data: { user } } = await supabase.auth.getUser()
+        const payload = {
+            work_date: summaryDate,
+            department_name: dept.name_en,
+            department_id: dept.id,
+            shift: summaryShift,
+            official_present: addRow.officialPresent,
+            official_absent: 0,
+            seasonal_present: addRow.seasonalPresent,
+            seasonal_absent: 0,
+            ot_count: addRow.otCount,
+            vegetarian: addRow.vegetarian,
+            note: null,
+            created_by: user?.id,
+            updated_at: new Date().toISOString(),
+        }
+        const { error } = await supabase.from("meal_headcount").upsert(payload, { onConflict: "work_date,department_id,shift" })
+        if (!error) {
+            setAddRow(null)
+            await fetchSummaryFromDB()
+        } else {
+            alert("Lỗi lưu: " + error.message)
         }
     }
 
@@ -426,13 +493,18 @@ export default function BaoCom() {
         return msg
     }
 
-    const getDBMissingDepts = (rows: SavedRecord[]): string[] => {
+    const getDBMissingDepts = (rows: SavedRecord[]): { code: string; name: string }[] => {
         const reported = new Set(rows.map(r =>
             r.department_id
-                ? (deptList.find(d => d.id === r.department_id)?.code ?? r.department_name.toUpperCase())
-                : r.department_name.toUpperCase()
+                ? (deptList.find(d => d.id === r.department_id)?.code ?? "")
+                : ""
         ))
-        return EXPECTED_DEPTS.filter(d => !reported.has(d))
+        return EXPECTED_DEPTS
+            .filter(code => !reported.has(code))
+            .map(code => {
+                const dept = deptList.find(d => d.code === code)
+                return { code, name: dept?.name_en ?? code }
+            })
     }
 
     // ─── Parse handlers ───
@@ -690,43 +762,96 @@ export default function BaoCom() {
 
                                 {/* Per-dept breakdown */}
                                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                                    <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold">Chi tiết từng bộ phận</div>
+                                    <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b">
+                                        <span className="text-sm font-semibold">Chi tiết từng bộ phận</span>
+                                        <button
+                                            onClick={() => setAddRow({ deptId: "", officialPresent: 0, seasonalPresent: 0, vegetarian: 0, otCount: 0 })}
+                                            className="flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-900 bg-green-50 border border-green-200 px-2 py-1 rounded-lg transition-colors"
+                                        >
+                                            <span className="text-base leading-none">+</span> Thêm bộ phận
+                                        </button>
+                                    </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide text-left">
-                                                    <th className="px-4 py-2 font-semibold">Bộ phận</th>
-                                                    <th className="px-4 py-2 font-semibold text-right">CT HĐ</th>
-                                                    <th className="px-4 py-2 font-semibold text-right">TV HĐ</th>
-                                                    <th className="px-4 py-2 font-semibold text-right">Tổng</th>
-                                                    <th className="px-4 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
-                                                    <th className="px-4 py-2 font-semibold text-right">OT</th>
+                                                    <th className="px-3 py-2 font-semibold">Bộ phận</th>
+                                                    <th className="px-3 py-2 font-semibold text-right">CT HĐ</th>
+                                                    <th className="px-3 py-2 font-semibold text-right">TV HĐ</th>
+                                                    <th className="px-3 py-2 font-semibold text-right">Tổng</th>
+                                                    <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
+                                                    <th className="px-3 py-2 font-semibold text-right">OT</th>
+                                                    <th className="px-3 py-2"></th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y">
-                                                {summaryData.map(r => (
-                                                    <tr key={r.id} className="hover:bg-muted/30">
-                                                        <td className="px-4 py-2 font-medium">
-                                                            {r.department_id
-                                                                ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
-                                                                : r.department_name}
+                                                {summaryData.map(r => {
+                                                    const isEditing = editingRowId === r.id
+                                                    const deptName = r.department_id
+                                                        ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
+                                                        : r.department_name
+                                                    return (
+                                                        <tr key={r.id} className={isEditing ? "bg-blue-50" : "hover:bg-muted/30"}>
+                                                            <td className="px-3 py-2 font-medium whitespace-nowrap">{deptName}</td>
+                                                            {isEditing ? (<>
+                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={editFields.official_present} onChange={e => setEditFields(f => ({ ...f, official_present: +e.target.value }))} /></td>
+                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={editFields.seasonal_present} onChange={e => setEditFields(f => ({ ...f, seasonal_present: +e.target.value }))} /></td>
+                                                                <td className="px-3 py-2 text-right font-bold text-blue-600">{editFields.official_present + editFields.seasonal_present}</td>
+                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.vegetarian} onChange={e => setEditFields(f => ({ ...f, vegetarian: +e.target.value }))} /></td>
+                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={editFields.ot_count} onChange={e => setEditFields(f => ({ ...f, ot_count: +e.target.value }))} /></td>
+                                                                <td className="px-2 py-1 whitespace-nowrap">
+                                                                    <button onClick={() => handleSaveEdit(r.id)} className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 mr-1">Lưu</button>
+                                                                    <button onClick={() => setEditingRowId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded hover:bg-gray-300">Hủy</button>
+                                                                </td>
+                                                            </>) : (<>
+                                                                <td className="px-3 py-2 text-right font-semibold text-green-700">{r.official_present ?? 0}</td>
+                                                                <td className="px-3 py-2 text-right">{r.seasonal_present ?? 0}</td>
+                                                                <td className="px-3 py-2 text-right font-bold">{(r.official_present ?? 0) + (r.seasonal_present ?? 0)}</td>
+                                                                <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
+                                                                <td className="px-3 py-2 text-right">{r.ot_count ?? 0}</td>
+                                                                <td className="px-2 py-2 whitespace-nowrap">
+                                                                    <button onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">✏️ Sửa</button>
+                                                                    <button onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">🗑</button>
+                                                                </td>
+                                                            </>)}
+                                                        </tr>
+                                                    )
+                                                })}
+
+                                                {/* Add-row form */}
+                                                {addRow && (
+                                                    <tr className="bg-green-50 border-t-2 border-green-200">
+                                                        <td className="px-2 py-1">
+                                                            <select
+                                                                className="w-full border border-green-300 rounded px-1 py-0.5 text-sm bg-white"
+                                                                value={addRow.deptId}
+                                                                onChange={e => setAddRow(r => r ? { ...r, deptId: e.target.value } : r)}
+                                                            >
+                                                                <option value="">-- Chọn bộ phận --</option>
+                                                                {deptList.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+                                                            </select>
                                                         </td>
-                                                        <td className="px-4 py-2 text-right font-semibold text-green-700">{r.official_present ?? 0}</td>
-                                                        <td className="px-4 py-2 text-right">{r.seasonal_present ?? 0}</td>
-                                                        <td className="px-4 py-2 text-right font-bold">{(r.official_present ?? 0) + (r.seasonal_present ?? 0)}</td>
-                                                        <td className="px-4 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
-                                                        <td className="px-4 py-2 text-right">{r.ot_count ?? 0}</td>
+                                                        <td className="px-1 py-1"><input type="number" min={0} placeholder="CT" className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={addRow.officialPresent || ""} onChange={e => setAddRow(r => r ? { ...r, officialPresent: +e.target.value } : r)} /></td>
+                                                        <td className="px-1 py-1"><input type="number" min={0} placeholder="TV" className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={addRow.seasonalPresent || ""} onChange={e => setAddRow(r => r ? { ...r, seasonalPresent: +e.target.value } : r)} /></td>
+                                                        <td className="px-3 py-2 text-right text-muted-foreground text-sm">{(addRow.officialPresent || 0) + (addRow.seasonalPresent || 0)}</td>
+                                                        <td className="px-1 py-1"><input type="number" min={0} placeholder="Chay" className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={addRow.vegetarian || ""} onChange={e => setAddRow(r => r ? { ...r, vegetarian: +e.target.value } : r)} /></td>
+                                                        <td className="px-1 py-1"><input type="number" min={0} placeholder="OT" className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={addRow.otCount || ""} onChange={e => setAddRow(r => r ? { ...r, otCount: +e.target.value } : r)} /></td>
+                                                        <td className="px-2 py-1 whitespace-nowrap">
+                                                            <button onClick={handleAddRowSave} className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700 mr-1">Lưu</button>
+                                                            <button onClick={() => setAddRow(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Hủy</button>
+                                                        </td>
                                                     </tr>
-                                                ))}
+                                                )}
                                             </tbody>
                                             <tfoot>
                                                 <tr className="bg-muted/60 font-bold border-t-2 text-sm">
-                                                    <td className="px-4 py-2">TỔNG</td>
-                                                    <td className="px-4 py-2 text-right text-green-700">{summaryData.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
-                                                    <td className="px-4 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
-                                                    <td className="px-4 py-2 text-right">{summaryData.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}</td>
-                                                    <td className="px-4 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
-                                                    <td className="px-4 py-2 text-right">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0), 0)}</td>
+                                                    <td className="px-3 py-2">TỔNG</td>
+                                                    <td className="px-3 py-2 text-right text-green-700">{summaryData.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
+                                                    <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
+                                                    <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}</td>
+                                                    <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
+                                                    <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0), 0)}</td>
+                                                    <td />
                                                 </tr>
                                             </tfoot>
                                         </table>
@@ -742,7 +867,7 @@ export default function BaoCom() {
                                         </div>
                                         <div className="flex flex-wrap gap-2">
                                             {missingDepts.map(d => (
-                                                <span key={d} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2.5 py-1 rounded-full font-medium">{d}</span>
+                                                <span key={d.code} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2.5 py-1 rounded-full font-medium">{d.name}</span>
                                             ))}
                                         </div>
                                     </div>
@@ -945,7 +1070,7 @@ export default function BaoCom() {
                                                         </div>
                                                         <div className="flex flex-wrap gap-1.5">
                                                             {missingDepts.map(d => (
-                                                                <span key={d} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded-full font-medium">{d}</span>
+                                                                <span key={d.code} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded-full font-medium">{d.name}</span>
                                                             ))}
                                                         </div>
                                                     </div>
