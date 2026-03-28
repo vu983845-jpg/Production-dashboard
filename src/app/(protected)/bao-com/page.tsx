@@ -66,6 +66,14 @@ interface SavedRecord {
     created_at: string
 }
 
+interface MealStatRow {
+    work_date: string
+    department_id: string | null
+    department_name: string
+    official_present: number | null
+    seasonal_present: number | null
+}
+
 // Department mapping: Zalo name → DB department code
 const DEPT_MAP: Record<string, string> = {
     "peeling": "PEEL",
@@ -319,7 +327,7 @@ export default function BaoCom() {
     const [records, setRecords] = useState<HeadcountRecord[]>([])
     const [parsed, setParsed] = useState(false)
     const [copied, setCopied] = useState(false)
-    const [activeTab, setActiveTab] = useState<"parse" | "history" | "kitchen">("parse")
+    const [activeTab, setActiveTab] = useState<"parse" | "history" | "kitchen" | "monthly">("parse")
 
     const [areaOverrides, setAreaOverrides] = useState<Record<number, string>>({})
     const [showSummary, setShowSummary] = useState(false)
@@ -384,6 +392,55 @@ export default function BaoCom() {
     const hasDeptRule = (area: string): boolean => {
         const key = area.toLowerCase().trim()
         return Object.prototype.hasOwnProperty.call(DEPT_MAP, key)
+    }
+
+    // ─── Monthly stats state ───
+    const [statsMonth, setStatsMonth] = useState<string>(() => new Date().toISOString().slice(0, 7))
+    const [statsData, setStatsData] = useState<MealStatRow[] | null>(null)
+    const [statsLoading, setStatsLoading] = useState(false)
+    const [statsError, setStatsError] = useState<string | null>(null)
+
+    const fetchMonthStats = async () => {
+        setStatsLoading(true)
+        setStatsError(null)
+        setStatsData(null)
+        try {
+            const from = statsMonth + "-01"
+            const to = statsMonth + "-31"
+            const { data, error } = await supabase
+                .from("meal_headcount")
+                .select("work_date, department_id, department_name, official_present, seasonal_present")
+                .gte("work_date", from)
+                .lte("work_date", to)
+                .order("work_date")
+            if (error) throw error
+            setStatsData((data ?? []) as MealStatRow[])
+        } catch (e: unknown) {
+            setStatsError(e instanceof Error ? e.message : String(e))
+        } finally {
+            setStatsLoading(false)
+        }
+    }
+
+    // Build pivot from statsData
+    const buildMonthlyPivot = (rows: MealStatRow[]) => {
+        // Group: deptKey → { name, dayMap: { 'YYYY-MM-DD' → total } }
+        const deptMap = new Map<string, { name: string; days: Map<string, number> }>()
+        rows.forEach(r => {
+            const key = r.department_id ?? r.department_name
+            const name = r.department_id
+                ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
+                : r.department_name
+            if (!deptMap.has(key)) deptMap.set(key, { name, days: new Map() })
+            const entry = deptMap.get(key)!
+            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
+            entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + total)
+        })
+        // Unique sorted days
+        const days = [...new Set(rows.map(r => r.work_date))].sort()
+        // Sorted depts by name
+        const depts = [...deptMap.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name))
+        return { days, depts }
     }
 
     // ─── DB-based summary state ───
@@ -678,6 +735,17 @@ export default function BaoCom() {
                     <MessageSquare className="h-4 w-4" />
                     🍳 Báo cơm nhà ăn
                 </button>
+                <button
+                    onClick={() => setActiveTab("monthly")}
+                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                        activeTab === "monthly"
+                            ? "border-purple-500 text-purple-600"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                    <span className="text-base leading-none">📅</span>
+                    Theo tháng
+                </button>
             </div>
 
             {/* ═══════════════════════════════════════════ */}
@@ -872,6 +940,107 @@ export default function BaoCom() {
                                         </div>
                                     </div>
                                 )}
+                            </div>
+                        )
+                    })()}
+                </div>
+            )}
+
+            {/* ═════════════════════════════════════════════ */}
+            {/* TAB 4: MONTHLY STATS                          */}
+            {/* ═════════════════════════════════════════════ */}
+            {activeTab === "monthly" && (
+                <div className="space-y-5">
+                    <div className="flex items-center gap-2 font-semibold text-purple-700 text-lg">
+                        <span className="text-xl">📅</span>
+                        Thống kê suất cơm theo tháng
+                    </div>
+
+                    {/* Month picker + fetch */}
+                    <div className="flex flex-wrap items-end gap-3 bg-purple-50 border border-purple-200 rounded-xl p-4">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-purple-700">Tháng</label>
+                            <input
+                                type="month"
+                                value={statsMonth}
+                                onChange={e => setStatsMonth(e.target.value)}
+                                className="border rounded-lg px-3 py-1.5 text-sm bg-white"
+                            />
+                        </div>
+                        <button
+                            onClick={fetchMonthStats}
+                            disabled={statsLoading}
+                            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
+                        >
+                            {statsLoading ? (
+                                <span className="animate-spin text-base">↻</span>
+                            ) : (
+                                <span>🔍</span>
+                            )}
+                            Xem thống kê
+                        </button>
+                    </div>
+
+                    {statsError && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{statsError}</div>
+                    )}
+
+                    {statsData !== null && (() => {
+                        if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">Không có dữ liệu trong tháng này</div>
+                        const { days, depts } = buildMonthlyPivot(statsData)
+                        // day totals per dept
+                        const grandTotal = (depts: ReturnType<typeof buildMonthlyPivot>["depts"]) =>
+                            depts.reduce((s, [, d]) => s + [...d.days.values()].reduce((a, b) => a + b, 0), 0)
+
+                        return (
+                            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                                <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold">
+                                    Tháng {statsMonth} — tổng suất cơm (CT + TV, tất cả ca)
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="text-xs min-w-full">
+                                        <thead>
+                                            <tr className="bg-muted/40 text-muted-foreground">
+                                                <th className="px-3 py-2 font-semibold text-left sticky left-0 bg-muted/40 whitespace-nowrap z-10 min-w-[110px]">Bộ phận</th>
+                                                {days.map(d => (
+                                                    <th key={d} className="px-2 py-2 font-semibold text-center whitespace-nowrap">
+                                                        {parseInt(d.slice(8), 10)}
+                                                    </th>
+                                                ))}
+                                                <th className="px-3 py-2 font-bold text-right text-purple-700 whitespace-nowrap">TỔNG</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {depts.map(([key, dept]) => {
+                                                const rowTotal = [...dept.days.values()].reduce((a, b) => a + b, 0)
+                                                return (
+                                                    <tr key={key} className="hover:bg-muted/30">
+                                                        <td className="px-3 py-1.5 font-medium whitespace-nowrap sticky left-0 bg-white z-10">{dept.name}</td>
+                                                        {days.map(d => {
+                                                            const v = dept.days.get(d) ?? 0
+                                                            return (
+                                                                <td key={d} className={`px-2 py-1.5 text-center ${v > 0 ? "font-semibold text-foreground" : "text-muted-foreground/40"}`}>
+                                                                    {v > 0 ? v : "—"}
+                                                                </td>
+                                                            )
+                                                        })}
+                                                        <td className="px-3 py-1.5 text-right font-bold text-purple-700">{rowTotal}</td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="bg-muted/60 font-bold border-t-2">
+                                                <td className="px-3 py-2 sticky left-0 bg-muted/60 z-10">TỔNG NGÀY</td>
+                                                {days.map(d => {
+                                                    const daySum = depts.reduce((s, [, dept]) => s + (dept.days.get(d) ?? 0), 0)
+                                                    return <td key={d} className="px-2 py-2 text-center text-purple-700">{daySum > 0 ? daySum : ""}</td>
+                                                })}
+                                                <td className="px-3 py-2 text-right text-purple-700">{grandTotal(depts)}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
                             </div>
                         )
                     })()}
