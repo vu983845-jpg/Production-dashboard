@@ -370,6 +370,38 @@ function parseBlock(block: string): HeadcountRecord | null {
     }
 }
 
+/**
+ * Zalo Chrome extension exports each message in triple format:
+ * [CONTENT\nTIME] CONTENT\nTIME: CONTENT\nTIME
+ *
+ * This function strips the duplication to keep only the first copy.
+ * Also removes the leading [ from block starters.
+ */
+function cleanZaloExportTriple(raw: string): string {
+    let text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+    // Step 1: Collapse timestamped triples:
+    //   HH:MM] ...copy2... HH:MM: ...copy3... HH:MM  →  HH:MM
+    // Use lazy match; \1 anchors stops at the correct timestamp occurrence.
+    text = text.replace(
+        /(\d{1,2}:\d{2})\]([\s\S]+?)\1\s*:[\s\S]+?\1(?=\n|$)/g,
+        '$1'
+    )
+
+    // Step 2: Remove remaining "] SENDER" orphan endings (messages without timestamp in bracket)
+    //   Handles messages like: [MSG] MSG: MSG (single-line or short).
+    text = text.replace(/\]\s*[^\n\[]+(?=\n|$)/g, '')
+
+    // Step 3: Remove leading [ from each line that starts a message block
+    text = text.replace(/^\[(?!Hình ảnh|Sticker|Video|File)/gm, '')
+
+    // Step 4: Remove Zalo emoji/sticker reaction lines
+    text = text.replace(/^\/-[a-zA-Z]+\s*$/gm, '')
+    text = text.replace(/^[:\-]{0,2}[()><oOhH]+\s*$/gm, '').replace(/\n{3,}/g, '\n\n')
+
+    return text
+}
+
 function splitIntoBlocks(rawText: string): string[] {
     const text = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
     const doubleNewlineSections = text.split(/\n{2,}/)
@@ -438,8 +470,20 @@ function splitMultiShiftBlock(block: string): string[] {
     return subBlocks
 }
 
+/** Dedup records by (date + area + shift): last-wins (later message overrides earlier) */
+function deduplicateRecords(records: HeadcountRecord[]): HeadcountRecord[] {
+    const seen = new Map<string, HeadcountRecord>()
+    for (const rec of records) {
+        const key = `${rec.date}|${rec.area.toLowerCase().trim()}|${rec.shift}`
+        seen.set(key, rec)  // last occurrence wins
+    }
+    return Array.from(seen.values())
+}
+
 function parseZaloText(rawText: string): HeadcountRecord[] {
-    const blocks = splitIntoBlocks(rawText)
+    // Step 1: Strip Zalo extension triple-duplication format
+    const cleanText = cleanZaloExportTriple(rawText)
+    const blocks = splitIntoBlocks(cleanText)
     const records: HeadcountRecord[] = []
     for (const block of blocks) {
         // Expand multi-shift blocks (1 area, nhiều ca) thành records riêng
@@ -449,7 +493,8 @@ function parseZaloText(rawText: string): HeadcountRecord[] {
             if (record && (record.date || record.area !== "—")) records.push(record)
         }
     }
-    return records
+    // Step 2: Dedup by (date+area+shift), keeping last occurrence
+    return deduplicateRecords(records)
 }
 
 // ─────────────────────────────────────────────
@@ -917,7 +962,7 @@ export default function BaoCom() {
                 vegetarian:         r.vegetarian != null ? Number(r.vegetarian) : null,
                 raw:                r.raw ?? '',
             }))
-            setRecords(aiRecords)
+            setRecords(deduplicateRecords(aiRecords))
             setParsed(true)
             setSaveMsg(null)
             setAiTruncated(!!json.truncated)
