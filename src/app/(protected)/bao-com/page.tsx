@@ -2210,7 +2210,7 @@ export default function BaoCom() {
     )
 }
 
-// ─── Sub-component: TrainAITab ────────────────────────────────────────────────
+// ─── Sub-component: TrainAITab ───────────────────────────────────────────────
 type AIExample = {
     id: string
     title: string
@@ -2253,19 +2253,19 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('X�a v� dụ n�y?')) return
+        if (!confirm('Xóa ví dụ này?')) return
         await supabase.from('meal_ai_examples').delete().eq('id', id)
         setExamples(prev => prev.filter(e => e.id !== id))
     }
 
     const handleSubmit = async () => {
         setFormErr(null)
-        if (!formTitle.trim()) { setFormErr('Cần nhập ti�u đề'); return }
+        if (!formTitle.trim()) { setFormErr('Cần nhập tiêu đề'); return }
         if (!formInput.trim()) { setFormErr('Cần nhập text Zalo mẫu'); return }
         if (!formJson.trim()) { setFormErr('Cần nhập JSON kết quả mong muốn'); return }
         let parsedJson: unknown
         try { parsedJson = JSON.parse(formJson) }
-        catch { setFormErr('JSON kh�ng hợp lệ � kiểm tra lại c� ph�p'); return }
+        catch { setFormErr('JSON không hợp lệ — kiểm tra lại cú pháp'); return }
 
         setSaving(true)
         const { error } = await supabase.from('meal_ai_examples').insert({
@@ -2290,49 +2290,49 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h2 className="text-lg font-bold flex items-center gap-2">
-                        <span>��</span> Dạy AI � Few-shot Examples
+                        <span>🤖</span> Dạy AI — Few-shot Examples
                     </h2>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                        Th�m v� dụ thực tế để AI học c�ch parse đ�ng hơn cho nh� m�y của bạn.
-                        {' '}<span className="font-semibold text-violet-700">{activeCount} v� dụ đang được d�ng</span> trong mỗi lần AI ph�n t�ch.
+                        Thêm ví dụ thực tế để AI học cách parse đúng hơn cho nhà máy của bạn.
+                        {' '}<span className="font-semibold text-violet-700">{activeCount} ví dụ đang được dùng</span> trong mỗi lần AI phân tích.
                     </p>
                 </div>
                 <button
                     onClick={() => setShowForm(s => !s)}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors"
                 >
-                    <span>{showForm ? '✕ Đ�ng' : '+ Th�m v� dụ mới'}</span>
+                    <span>{showForm ? '✕ Đóng' : '+ Thêm ví dụ mới'}</span>
                 </button>
             </div>
 
             {/* Hướng dẫn */}
             <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 text-sm text-violet-800 space-y-1">
-                <p className="font-semibold">�� C�ch dạy AI:</p>
+                <p className="font-semibold">📌 Cách dạy AI:</p>
                 <ol className="list-decimal list-inside space-y-1 text-violet-700">
-                    <li>Copy đoạn text Zalo gốc bị AI parse sai v�o <strong>Input text</strong></li>
-                    <li>Viết kết quả đ�ng v�o <strong>JSON mong muốn</strong> (format giống AI trả về)</li>
-                    <li>Lưu lại � AI sẽ học từ v� dụ n�y trong lần ph�n t�ch tiếp theo</li>
+                    <li>Copy đoạn text Zalo gốc bị AI parse sai vào <strong>Input text</strong></li>
+                    <li>Viết kết quả đúng vào <strong>JSON mong muốn</strong> (format giống AI trả về)</li>
+                    <li>Lưu lại — AI sẽ học từ ví dụ này trong lần phân tích tiếp theo</li>
                 </ol>
-                <p className="text-xs text-violet-500 mt-2">�� Tối đa 10 v� dụ active. N�n chọn c�c trường hợp đặc th� của nh� m�y.</p>
+                <p className="text-xs text-violet-500 mt-2">💡 Tối đa 10 ví dụ active. Nên chọn các trường hợp đặc thù của nhà máy.</p>
             </div>
 
             {/* Add form */}
             {showForm && (
                 <div className="bg-card border rounded-xl p-5 space-y-4 shadow-sm">
-                    <h3 className="font-semibold text-sm">Th�m v� dụ huấn luyện mới</h3>
+                    <h3 className="font-semibold text-sm">Thêm ví dụ huấn luyện mới</h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Ti�u đề v� dụ *</label>
+                            <label className="text-xs font-medium text-muted-foreground">Tiêu đề ví dụ *</label>
                             <input
                                 value={formTitle}
                                 onChange={e => setFormTitle(e.target.value)}
-                                placeholder="VD: Ch�u MC Peeling Ca 2"
+                                placeholder="VD: Cháu MC Peeling Ca 2"
                                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Bộ phận li�n quan (gợi �)</label>
+                            <label className="text-xs font-medium text-muted-foreground">Bộ phận liên quan (gợi ý)</label>
                             <input
                                 value={formDept}
                                 onChange={e => setFormDept(e.target.value)}
@@ -2343,26 +2343,26 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">�� Input text (đoạn Zalo bị sai) *</label>
+                        <label className="text-xs font-medium text-muted-foreground">📋 Input text (đoạn Zalo bị sai) *</label>
                         <textarea
                             value={formInput}
                             onChange={e => setFormInput(e.target.value)}
                             rows={6}
-                            placeholder={`VD:\nCh�u MC Peeling\nDate: 26/03/2026\nKhu vực : Peeling mc\nCa: 2\nCh�nh thức hiện diện: 8\nCh�nh thức vắng: 1\nOT:`}
+                            placeholder={`VD:\nCháu MC Peeling\nDate: 26/03/2026\nKhu vực : Peeling mc\nCa: 2\nChính thức hiện diện: 8\nChính thức vắng: 1\nOT:`}
                             className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-400 resize-y"
                         />
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">✅ JSON kết quả đ�ng *</label>
+                        <label className="text-xs font-medium text-muted-foreground">✅ JSON kết quả đúng *</label>
                         <textarea
                             value={formJson}
                             onChange={e => setFormJson(e.target.value)}
                             rows={5}
-                            placeholder={`[{"senderHint":"Ch�u MC Peeling","date":"2026-03-26","area":"PEEL","shift":"2","officialPresent":8,"officialAbsent":1,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null}]`}
+                            placeholder={`[{"senderHint":"Cháu MC Peeling","date":"2026-03-26","area":"PEEL","shift":"2","officialPresent":8,"officialAbsent":1,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null}]`}
                             className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-400 resize-y"
                         />
-                        <p className="text-xs text-muted-foreground">Format: JSON array � giống kết quả AI trả về khi đ�ng</p>
+                        <p className="text-xs text-muted-foreground">Format: JSON array — giống kết quả AI trả về khi đúng</p>
                     </div>
 
                     {formErr && (
@@ -2375,7 +2375,7 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                             disabled={saving}
                             className="px-5 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50"
                         >
-                            {saving ? 'Đang lưu...' : '�� Lưu v� dụ'}
+                            {saving ? 'Đang lưu...' : '💾 Lưu ví dụ'}
                         </button>
                         <button
                             onClick={() => { setShowForm(false); setFormErr(null) }}
@@ -2385,84 +2385,104 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                 </div>
             )}
 
-            {/* Examples list */}
+            {/* Examples table */}
             {loading ? (
                 <div className="text-center py-10 text-muted-foreground">Đang tải...</div>
             ) : examples.length === 0 ? (
                 <div className="bg-muted/30 rounded-xl border p-10 text-center text-muted-foreground">
-                    <p className="text-3xl mb-3">��</p>
-                    <p className="font-medium">Chưa c� v� dụ n�o</p>
-                    <p className="text-sm mt-1">Bấm &quot;+ Th�m v� dụ mới&quot; để bắt đầu dạy AI</p>
+                    <p className="text-3xl mb-3">📭</p>
+                    <p className="font-medium">Chưa có ví dụ nào</p>
+                    <p className="text-sm mt-1">Bấm &quot;+ Thêm ví dụ mới&quot; để bắt đầu dạy AI</p>
                 </div>
             ) : (
-                <div className="space-y-3">
-                    {examples.map(ex => (
-                        <div key={ex.id} className={`rounded-xl border shadow-sm overflow-hidden transition-all ${ex.is_active ? 'border-violet-200 bg-violet-50/30' : 'border-muted bg-muted/20 opacity-60'}`}>
-                            {/* Row header */}
-                            <div className="flex items-center gap-3 px-4 py-3">
-                                {/* Active toggle */}
-                                <button
-                                    onClick={() => handleToggleActive(ex)}
-                                    title={ex.is_active ? 'Đang d�ng � bấm để tắt' : 'Đang tắt � bấm để bật'}
-                                    className={`flex-shrink-0 w-10 h-5 rounded-full transition-colors relative ${ex.is_active ? 'bg-violet-500' : 'bg-muted-foreground/30'}`}
-                                >
-                                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${ex.is_active ? 'left-5' : 'left-0.5'}`} />
-                                </button>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="font-semibold text-sm">{ex.title}</span>
-                                        {ex.dept_hint && (
-                                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono">{ex.dept_hint}</span>
+                <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-muted/60 text-left text-xs text-muted-foreground uppercase tracking-wide border-b">
+                                    <th className="px-3 py-2.5 font-semibold">Bật</th>
+                                    <th className="px-3 py-2.5 font-semibold">Tiêu đề</th>
+                                    <th className="px-3 py-2.5 font-semibold">Bộ phận</th>
+                                    <th className="px-3 py-2.5 font-semibold">Trạng thái</th>
+                                    <th className="px-3 py-2.5 font-semibold">Ngày tạo</th>
+                                    <th className="px-3 py-2.5 font-semibold text-center">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {examples.map(ex => (
+                                    <Fragment key={ex.id}>
+                                        <tr className={`hover:bg-muted/30 transition-colors ${!ex.is_active ? 'opacity-50' : ''}`}>
+                                            <td className="px-3 py-2.5">
+                                                <button
+                                                    onClick={() => handleToggleActive(ex)}
+                                                    title={ex.is_active ? 'Đang dùng — bấm để tắt' : 'Đang tắt — bấm để bật'}
+                                                    className={`flex-shrink-0 w-10 h-5 rounded-full transition-colors relative ${ex.is_active ? 'bg-violet-500' : 'bg-muted-foreground/30'}`}
+                                                >
+                                                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${ex.is_active ? 'left-5' : 'left-0.5'}`} />
+                                                </button>
+                                            </td>
+                                            <td className="px-3 py-2.5 font-medium">{ex.title}</td>
+                                            <td className="px-3 py-2.5">
+                                                {ex.dept_hint ? (
+                                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono">{ex.dept_hint}</span>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2.5">
+                                                {ex.is_active ? (
+                                                    <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-semibold">✓ Đang dùng</span>
+                                                ) : (
+                                                    <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Tắt</span>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                                                {new Date(ex.created_at).toLocaleDateString('vi-VN')}
+                                            </td>
+                                            <td className="px-3 py-2.5 text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => setExpandedId(expandedId === ex.id ? null : ex.id)}
+                                                        className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded border hover:bg-muted transition-colors"
+                                                    >
+                                                        {expandedId === ex.id ? '▲ Thu' : '▼ Xem'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(ex.id)}
+                                                        className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors"
+                                                    >🗑</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {expandedId === ex.id && (
+                                            <tr>
+                                                <td colSpan={6} className="bg-white px-4 py-4 border-t">
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <p className="text-xs font-semibold text-muted-foreground mb-1">📋 INPUT TEXT:</p>
+                                                            <pre className="text-xs bg-muted/30 rounded-lg p-3 whitespace-pre-wrap font-mono border">{ex.input_text}</pre>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-semibold text-muted-foreground mb-1">✅ EXPECTED JSON:</p>
+                                                            <pre className="text-xs bg-green-50 rounded-lg p-3 whitespace-pre-wrap font-mono border border-green-100 text-green-800 overflow-x-auto">
+                                                                {JSON.stringify(ex.expected_json, null, 2)}
+                                                            </pre>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         )}
-                                        {ex.is_active ? (
-                                            <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-semibold">✓ Đang d�ng</span>
-                                        ) : (
-                                            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Tắt</span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {new Date(ex.created_at).toLocaleDateString('vi-VN')}
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                    <button
-                                        onClick={() => setExpandedId(expandedId === ex.id ? null : ex.id)}
-                                        className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded border hover:bg-muted transition-colors"
-                                    >
-                                        {expandedId === ex.id ? '▲ Thu gọn' : '▼ Xem chi tiết'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(ex.id)}
-                                        className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors"
-                                    >��</button>
-                                </div>
-                            </div>
-
-                            {/* Expanded detail */}
-                            {expandedId === ex.id && (
-                                <div className="border-t bg-white px-4 py-4 space-y-3">
-                                    <div>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-1">�� INPUT TEXT:</p>
-                                        <pre className="text-xs bg-muted/30 rounded-lg p-3 whitespace-pre-wrap font-mono border">{ex.input_text}</pre>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-1">✅ EXPECTED JSON:</p>
-                                        <pre className="text-xs bg-green-50 rounded-lg p-3 whitespace-pre-wrap font-mono border border-green-100 text-green-800 overflow-x-auto">
-                                            {JSON.stringify(ex.expected_json, null, 2)}
-                                        </pre>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                                    </Fragment>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
             {activeCount >= 10 && (
                 <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                    ⚠️ Đ� c� {activeCount} v� dụ active. AI sẽ d�ng tối đa 10 v� dụ. Tắt bớt những v� dụ kh�ng cần thiết.
+                    ⚠️ Đã có {activeCount} ví dụ active. AI sẽ dùng tối đa 10 ví dụ. Tắt bớt những ví dụ không cần thiết.
                 </div>
             )}
         </div>
