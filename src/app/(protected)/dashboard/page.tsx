@@ -1600,7 +1600,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* DEPARTMENT MINI DASHBOARDS — exclude FGWH, STEAM (top), MAINT_SHELL (removed) */}
-                        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {departments.filter(d => d.code !== 'FGWH' && d.code !== 'STEAM' && d.code !== 'MAINT_SHELL').map(d => (
                                 <FadeIn key={d.id} className="h-full">
                                     {renderMiniDashboard(d.id, d.name_en)}
