@@ -1467,20 +1467,18 @@ export default function DashboardPage() {
                                     const isGood = co2Pct <= 100
                                     const barColor = isGood ? '#10b981' : '#e63121'
 
-                                    // kWh / T Hạt Cắt = Điện / (SHELL + PEEL_MC/0.22)
-                                    // SHELL: điện motor cắt; PEEL_MC/0.22: điện máy nén khí (quy đồng về hạt cắt)
-                                    const PEEL_RECOVERY = 0.22;
+                                    // kWh / T = Điện / (SHELL_actual + PEEL_MC_actual)
+                                    // Cả 2 đều có volume trực tiếp, shell 0.22 là recovery rate (không cần quy đổi)
                                     const shellDept = departments.find(d => d.code === 'SHELL');
                                     const peelDept = departments.find(d => d.code === 'PEEL_MC');
                                     const shellMtd = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalActual || 0) : 0;
                                     const peelMtd = peelDept ? (dashboardsData[peelDept.id]?.summary?.totalActual || 0) : 0;
-                                    const peelMtdEquiv = peelMtd / PEEL_RECOVERY; // quy về hạt cắt
-                                    const combinedTon = shellMtd + peelMtdEquiv;
+                                    const combinedTon = shellMtd + peelMtd;
                                     const elecPerCutCashew = combinedTon > 0 ? kpiSummary.elecActual / combinedTon : 0;
                                     // Target
                                     const shellPlan = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalPlan || 0) : 0;
                                     const peelPlan = peelDept ? (dashboardsData[peelDept.id]?.summary?.totalPlan || 0) : 0;
-                                    const combinedPlan = shellPlan + peelPlan / PEEL_RECOVERY;
+                                    const combinedPlan = shellPlan + peelPlan;
                                     const elecPerCutCashewTarget = combinedPlan > 0 ? kpiSummary.elecTarget / combinedPlan : 0;
                                     const isElecGood = elecPerCutCashewTarget <= 0 || elecPerCutCashew <= elecPerCutCashewTarget;
 
@@ -1544,7 +1542,7 @@ export default function DashboardPage() {
                                                         )}
                                                     </div>
                                                     <div className="text-[8px] text-slate-300">
-                                                        {(kpiSummary.elecActual/1000).toFixed(0)}MWh ÷ ({shellMtd.toFixed(0)}T + {peelMtdEquiv.toFixed(0)}T)
+                                                        {(kpiSummary.elecActual/1000).toFixed(0)}MWh ÷ ({shellMtd.toFixed(0)}T shell + {peelMtd.toFixed(0)}T peel)
                                                     </div>
                                                 </div>
                                             )}
