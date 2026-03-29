@@ -1925,106 +1925,156 @@ export default function InputPage() {
                                             {/* Data Entry Row */}
                                             {(() => {
                                                 const deptCode = departments.find(d => d.id === selectedDept)?.code || '';
-                                                // Sub-causes per dept code — prevents typos from fragmenting chart
+
+                                                // 14 standard downtime codes
+                                                const DT_CODES = [
+                                                    { code: 'BD', planned: false, label: 'Không kế hoạch – Hư hỏng sửa chữa – Breakdown' },
+                                                    { code: 'BL', planned: false, label: 'Không kế hoạch – Bị chặn – Blocked' },
+                                                    { code: 'BT', planned: true,  label: 'Có kế hoạch – Dừng nghỉ – Breaktime' },
+                                                    { code: 'CIL', planned: true, label: 'Có kế hoạch – Vệ sinh – Cleaning' },
+                                                    { code: 'LU', planned: false, label: 'Không kế hoạch – Thiếu nguồn lực – Lack of Utility' },
+                                                    { code: 'MP', planned: true,  label: 'Có kế hoạch – Bảo dưỡng – Maintenance Plan' },
+                                                    { code: 'MS', planned: false, label: 'Không kế hoạch – Lỗi dừng nhỏ – Minor Stop' },
+                                                    { code: 'PF', planned: false, label: 'Không kế hoạch – Lỗi quy trình – Process Failures' },
+                                                    { code: 'PT', planned: true,  label: 'Có kế hoạch – Pit Stop' },
+                                                    { code: 'PW', planned: true,  label: 'Có kế hoạch – Thực hiện dự án – Project Work' },
+                                                    { code: 'SP', planned: false, label: 'Không kế hoạch – Lấy mẫu – Sampling' },
+                                                    { code: 'TP', planned: true,  label: 'Có kế hoạch – Thử nghiệm – Trial Plan' },
+                                                    { code: 'TT', planned: true,  label: 'Có kế hoạch – Đào tạo – Training Time' },
+                                                    { code: 'WT', planned: false, label: 'Không kế hoạch – Chờ đợi – Waiting' },
+                                                ];
+
+                                                // Sub-causes per dept × code — only for codes that have specific sub-items
                                                 const subCauseMap: Record<string, Record<string, string[]>> = {
                                                     SHELL: {
-                                                        // BD — Breakdown (Hư hỏng thiết bị)
-                                                        'Thiết bị / Máy móc': [
-                                                            'BD – Hư hỏng cấp liệu',
-                                                            'BD – Hư hỏng đầu cắt',
-                                                            'BD – Hư hỏng sàng rung',
-                                                            'BD – Hư hỏng motor sàng rung',
-                                                            'BD – Hư hỏng motor ly tâm',
-                                                            'BD – Hư hỏng gàu tải',
-                                                            'BD – Hư hỏng ly tâm',
-                                                            'BD – Hư hỏng cụm phân trục',
-                                                            'BD – Hư hỏng hệ quạt thổi',
-                                                            'BD – Tuột ống vỏ',
+                                                        BD: [
+                                                            'Hư hỏng cấp liệu',
+                                                            'Hư hỏng đầu cắt',
+                                                            'Hư hỏng sàng rung',
+                                                            'Hư hỏng motor sàng rung',
+                                                            'Hư hỏng motor ly tâm',
+                                                            'Hư hỏng gàu tải',
+                                                            'Hư hỏng ly tâm',
+                                                            'Hư hỏng cụm phân trục',
+                                                            'Hư hỏng hệ quạt thổi',
+                                                            'Tuột ống vỏ',
                                                         ],
-                                                        // WT — Waiting / LU — Lack of material
-                                                        'Thiếu NLĐV': [
-                                                            'WT – Chờ hàng đạt ẩm',
-                                                            'WT – Chờ lấy vỏ ở silo vỏ',
-                                                            'LU – Không có nguyên liệu',
+                                                        WT: [
+                                                            'Chờ hàng đạt ẩm',
+                                                            'Chờ lấy vỏ ở silo vỏ',
                                                         ],
-                                                        'Sự cố điện/nước': ['Mất điện lưới', 'Điện áp bất ổn', 'Mất nước', 'Sự cố máy nén', 'Khác'],
-                                                        'Chất lượng': ['Lỗi kích thước hạt', 'Hạt ẩm', 'Tạp chất', 'Khác'],
-                                                        'Vệ sinh / Cài đặt': ['Vệ sinh định kỳ', 'Cài đặt lại máy', 'Thay ca / bàn giao', 'Khác'],
-                                                        'Thay đổi kế hoạch': ['Chờ lệnh sản xuất', 'Thay đổi loại hạt', 'Khác'],
-                                                        'Khác': ['Khác'],
+                                                        LU: [
+                                                            'Không có nguyên liệu',
+                                                        ],
                                                     },
                                                     PEEL_MC: {
-                                                        'Thiết bị / Máy móc': ['Máy nén khí hỏng', 'Áp suất khí thấp', 'Lưỡi bóc mòn', 'Băng tải hỏng', 'Bộ phận cơ khí hỏng', 'Khác'],
-                                                        'Thiếu NLĐV': ['Thiếu hạt cắt đầu vào', 'Thiếu nhân lực', 'Khác'],
-                                                        'Sự cố điện/nước': ['Mất điện lưới', 'Sự cố máy nén khí chính', 'Khác'],
-                                                        'Chất lượng': ['Nhân vỡ nhiều', 'Tỷ lệ unpeel cao', 'Khác'],
-                                                        'Vệ sinh / Cài đặt': ['Vệ sinh định kỳ', 'Cài đặt lại máy', 'Khác'],
-                                                        'Thay đổi kế hoạch': ['Chờ lệnh sản xuất', 'Khác'],
-                                                        'Khác': ['Khác'],
+                                                        BD: [
+                                                            'Máy nén khí hỏng',
+                                                            'Áp suất khí thấp',
+                                                            'Lưỡi bóc mòn',
+                                                            'Băng tải hỏng',
+                                                            'Bộ phận cơ khí hỏng',
+                                                        ],
+                                                        WT: [
+                                                            'Chờ hạt cắt đầu vào',
+                                                        ],
+                                                        LU: [
+                                                            'Thiếu nhân lực',
+                                                        ],
                                                     },
                                                 };
-                                                const defaultSubCauses: Record<string, string[]> = {
-                                                    'Thiết bị / Máy móc': ['Hỏng hóc cơ khí', 'Hỏng điện', 'Bảo trì định kỳ', 'Khác'],
-                                                    'Thiếu NLĐV': ['Thiếu nhân lực', 'Chờ nguyên liệu', 'Khác'],
-                                                    'Sự cố điện/nước': ['Mất điện lưới', 'Mất nước', 'Khác'],
-                                                    'Chất lượng': ['Lỗi chất lượng đầu vào', 'Lỗi thành phẩm', 'Khác'],
-                                                    'Vệ sinh / Cài đặt': ['Vệ sinh định kỳ', 'Cài đặt máy', 'Khác'],
-                                                    'Thay đổi kế hoạch': ['Thay đổi kế hoạch', 'Khác'],
-                                                    'Khác': ['Khác'],
-                                                };
-                                                const subCauses = (subCauseMap[deptCode] || defaultSubCauses)[dtCause] || [];
+
+                                                const subCauses: string[] = (subCauseMap[deptCode] || {})[dtCause] || [];
+                                                const hasSubList = subCauses.length > 0;
                                                 const isCustomMode = dtNote === DT_CUSTOM_SENTINEL;
+                                                const selectedCodeInfo = DT_CODES.find(c => c.code === dtCause);
+
                                                 return (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start bg-muted/30 p-4 rounded-lg border">
-                                                        <div className="sm:col-span-2 space-y-2">
-                                                            <Label>Số phút dừng</Label>
-                                                            <Input type="number" value={dtDuration} onChange={e => setDtDuration(e.target.value)} placeholder="0" className="bg-white" />
-                                                        </div>
-                                                        <div className="sm:col-span-3 space-y-2">
-                                                            <Label>Nguyên nhân</Label>
-                                                            <Select value={dtCause} onValueChange={v => { setDtCause(v); setDtNote(''); setDtCustomNote(''); }}>
-                                                                <SelectTrigger className="bg-white"><SelectValue placeholder="Chọn..." /></SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="Thiết bị / Máy móc">🔧 Thiết bị / Máy móc</SelectItem>
-                                                                    <SelectItem value="Thiếu NLĐV">📦 Thiếu NLĐV</SelectItem>
-                                                                    <SelectItem value="Sự cố điện/nước">⚡ Sự cố điện/nước</SelectItem>
-                                                                    <SelectItem value="Chất lượng">🔍 Chất lượng</SelectItem>
-                                                                    <SelectItem value="Thay đổi kế hoạch">📋 Thay đổi kế hoạch</SelectItem>
-                                                                    <SelectItem value="Vệ sinh / Cài đặt">🧹 Vệ sinh / Cài đặt</SelectItem>
-                                                                    <SelectItem value="Khác">❓ Khác</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                        <div className="sm:col-span-3 space-y-2">
-                                                            <Label>Lý do chi tiết</Label>
-                                                            <Select value={dtNote} onValueChange={v => { setDtNote(v); if (v !== DT_CUSTOM_SENTINEL) setDtCustomNote(''); }} disabled={!dtCause}>
-                                                                <SelectTrigger className="bg-white"><SelectValue placeholder={dtCause ? 'Chọn lý do...' : '— chọn nguyên nhân trước —'} /></SelectTrigger>
-                                                                <SelectContent>
-                                                                    {subCauses.map((s: string) => (
-                                                                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                                                                    ))}
-                                                                    <SelectItem value={DT_CUSTOM_SENTINEL}>✏️ Nhập lý do khác...</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                            {/* Show text input when custom is selected */}
-                                                            {isCustomMode && (
-                                                                <Input
-                                                                    autoFocus
-                                                                    value={dtCustomNote}
-                                                                    onChange={e => setDtCustomNote(e.target.value)}
-                                                                    placeholder="Nhập lý do cụ thể..."
-                                                                    className="bg-amber-50 border-amber-300 mt-1"
-                                                                />
-                                                            )}
-                                                        </div>
-                                                        <div className="sm:col-span-4 space-y-2 pt-7">
-                                                            <Button
-                                                                onClick={handleAddDowntime}
-                                                                disabled={isSaving || !dtDuration || !dtCause || (isCustomMode && !dtCustomNote.trim())}
-                                                                className="bg-red-600 hover:bg-red-700 w-full"
-                                                            >
-                                                                <Plus className="h-4 w-4 mr-1" /> Thêm sự cố
-                                                            </Button>
+                                                    <div className="space-y-3">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start bg-muted/30 p-4 rounded-lg border">
+                                                            {/* Col 1: Minutes */}
+                                                            <div className="sm:col-span-2 space-y-2">
+                                                                <Label>Số phút dừng</Label>
+                                                                <Input type="number" value={dtDuration} onChange={e => setDtDuration(e.target.value)} placeholder="0" className="bg-white" />
+                                                            </div>
+
+                                                            {/* Col 2: Code picker */}
+                                                            <div className="sm:col-span-3 space-y-2">
+                                                                <Label>Mã downtime</Label>
+                                                                <Select value={dtCause} onValueChange={v => { setDtCause(v); setDtNote(''); setDtCustomNote(''); }}>
+                                                                    <SelectTrigger className="bg-white font-mono">
+                                                                        <SelectValue placeholder="Chọn mã..." />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Không kế hoạch</div>
+                                                                        {DT_CODES.filter(c => !c.planned).map(c => (
+                                                                            <SelectItem key={c.code} value={c.code}>
+                                                                                <span className="font-mono font-bold text-red-600 mr-2">{c.code}</span>
+                                                                                <span className="text-xs">{c.code === 'BD' ? 'Hư hỏng / Breakdown' : c.code === 'BL' ? 'Bị chặn / Blocked' : c.code === 'LU' ? 'Thiếu nguồn lực / Lack Utility' : c.code === 'MS' ? 'Dừng nhỏ / Minor Stop' : c.code === 'PF' ? 'Lỗi quy trình / Process Fail' : c.code === 'SP' ? 'Lấy mẫu / Sampling' : c.code === 'WT' ? 'Chờ đợi / Waiting' : c.label}</span>
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                        <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1 border-t">Có kế hoạch</div>
+                                                                        {DT_CODES.filter(c => c.planned).map(c => (
+                                                                            <SelectItem key={c.code} value={c.code}>
+                                                                                <span className="font-mono font-bold text-blue-600 mr-2">{c.code}</span>
+                                                                                <span className="text-xs">{c.code === 'BT' ? 'Dừng nghỉ / Breaktime' : c.code === 'CIL' ? 'Vệ sinh / Cleaning' : c.code === 'MP' ? 'Bảo dưỡng / Maint Plan' : c.code === 'PT' ? 'Pit Stop' : c.code === 'PW' ? 'Dự án / Project Work' : c.code === 'TP' ? 'Thử nghiệm / Trial' : c.code === 'TT' ? 'Đào tạo / Training' : c.label}</span>
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                {/* Badge show planned/unplanned */}
+                                                                {selectedCodeInfo && (
+                                                                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-medium ${selectedCodeInfo.planned ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                                                                        {selectedCodeInfo.planned ? '📅 Có kế hoạch' : '🚨 Không kế hoạch'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Col 3: Sub-cause (only if this code has one for this dept) */}
+                                                            <div className="sm:col-span-4 space-y-2">
+                                                                <Label>
+                                                                    Lý do chi tiết
+                                                                    {!hasSubList && dtCause && <span className="text-[10px] text-muted-foreground ml-1">(tuỳ chọn)</span>}
+                                                                </Label>
+                                                                {hasSubList ? (
+                                                                    <>
+                                                                        <Select value={dtNote} onValueChange={v => { setDtNote(v); if (v !== DT_CUSTOM_SENTINEL) setDtCustomNote(''); }} disabled={!dtCause}>
+                                                                            <SelectTrigger className="bg-white"><SelectValue placeholder="Chọn lý do..." /></SelectTrigger>
+                                                                            <SelectContent>
+                                                                                {subCauses.map((s: string) => (
+                                                                                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                                                                                ))}
+                                                                                <SelectItem value={DT_CUSTOM_SENTINEL}>✏️ Nhập lý do mới...</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        {isCustomMode && (
+                                                                            <Input autoFocus value={dtCustomNote} onChange={e => setDtCustomNote(e.target.value)} placeholder="Nhập lý do cụ thể..." className="bg-amber-50 border-amber-300 mt-1" />
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    // No sub-list for this code: show optional free text + sentinel option
+                                                                    <div className="flex gap-2">
+                                                                        <Input
+                                                                            value={dtNote === DT_CUSTOM_SENTINEL ? dtCustomNote : dtNote}
+                                                                            onChange={e => setDtNote(e.target.value)}
+                                                                            placeholder={dtCause ? 'Ghi chú thêm (không bắt buộc)...' : '— chọn mã trước —'}
+                                                                            className="bg-white flex-1"
+                                                                            disabled={!dtCause}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Col 4: Submit */}
+                                                            <div className="sm:col-span-3 space-y-2 pt-7">
+                                                                <Button
+                                                                    onClick={handleAddDowntime}
+                                                                    disabled={isSaving || !dtDuration || !dtCause || (hasSubList && isCustomMode && !dtCustomNote.trim())}
+                                                                    className="bg-red-600 hover:bg-red-700 w-full"
+                                                                >
+                                                                    <Plus className="h-4 w-4 mr-1" /> Thêm sự cố
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
