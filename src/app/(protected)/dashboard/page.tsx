@@ -1467,13 +1467,21 @@ export default function DashboardPage() {
                                     const isGood = co2Pct <= 100
                                     const barColor = isGood ? '#10b981' : '#e63121'
 
-                                    // kWh / T Hạt Cắt: dùng SHELL actual làm mẫu số
+                                    // kWh / T Hạt Cắt = Điện / (SHELL + PEEL_MC/0.22)
+                                    // SHELL: điện motor cắt; PEEL_MC/0.22: điện máy nén khí (quy đồng về hạt cắt)
+                                    const PEEL_RECOVERY = 0.22;
                                     const shellDept = departments.find(d => d.code === 'SHELL');
+                                    const peelDept = departments.find(d => d.code === 'PEEL_MC');
                                     const shellMtd = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalActual || 0) : 0;
-                                    const elecPerCutCashew = shellMtd > 0 ? kpiSummary.elecActual / shellMtd : 0;
-                                    // Target: elecTarget / (shellDept plan MTD)
+                                    const peelMtd = peelDept ? (dashboardsData[peelDept.id]?.summary?.totalActual || 0) : 0;
+                                    const peelMtdEquiv = peelMtd / PEEL_RECOVERY; // quy về hạt cắt
+                                    const combinedTon = shellMtd + peelMtdEquiv;
+                                    const elecPerCutCashew = combinedTon > 0 ? kpiSummary.elecActual / combinedTon : 0;
+                                    // Target
                                     const shellPlan = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalPlan || 0) : 0;
-                                    const elecPerCutCashewTarget = shellPlan > 0 ? kpiSummary.elecTarget / shellPlan : 0;
+                                    const peelPlan = peelDept ? (dashboardsData[peelDept.id]?.summary?.totalPlan || 0) : 0;
+                                    const combinedPlan = shellPlan + peelPlan / PEEL_RECOVERY;
+                                    const elecPerCutCashewTarget = combinedPlan > 0 ? kpiSummary.elecTarget / combinedPlan : 0;
                                     const isElecGood = elecPerCutCashewTarget <= 0 || elecPerCutCashew <= elecPerCutCashewTarget;
 
                                     return (
@@ -1523,16 +1531,21 @@ export default function DashboardPage() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            {/* ⚡ Electricity per cut cashew */}
-                                            {shellMtd > 0 && (
-                                                <div className="flex items-center gap-2 pt-1.5 border-t border-slate-100 mt-0.5">
-                                                    <span className="text-[9px] text-slate-400 uppercase tracking-tight">⚡ kWh/T Hạt Cắt</span>
-                                                    <span className={`text-[11px] font-black tabular-nums ${isElecGood ? 'text-amber-600' : 'text-red-500'}`}>
-                                                        {elecPerCutCashew.toFixed(0)}
-                                                    </span>
-                                                    {elecPerCutCashewTarget > 0 && (
-                                                        <span className="text-[9px] text-slate-400 ml-auto">/ {elecPerCutCashewTarget.toFixed(0)} target</span>
-                                                    )}
+                                            {/* ⚡ Electricity per cut cashew: SHELL + PEEL_MC/0.22 */}
+                                            {combinedTon > 0 && (
+                                                <div className="flex flex-col gap-0.5 pt-1.5 border-t border-slate-100 mt-0.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] text-slate-400 uppercase tracking-tight">⚡ kWh/T (Shell+Peel)</span>
+                                                        <span className={`text-[11px] font-black tabular-nums ${isElecGood ? 'text-amber-600' : 'text-red-500'}`}>
+                                                            {elecPerCutCashew.toFixed(0)}
+                                                        </span>
+                                                        {elecPerCutCashewTarget > 0 && (
+                                                            <span className="text-[9px] text-slate-400 ml-auto">/ {elecPerCutCashewTarget.toFixed(0)}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-[8px] text-slate-300">
+                                                        {(kpiSummary.elecActual/1000).toFixed(0)}MWh ÷ ({shellMtd.toFixed(0)}T + {peelMtdEquiv.toFixed(0)}T)
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
