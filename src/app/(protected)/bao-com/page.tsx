@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, Fragment } from "react"
 import {
     ClipboardPaste,
     TableIcon,
@@ -88,8 +88,10 @@ interface MealStatRow {
     work_date: string
     department_id: string | null
     department_name: string
+    shift: string
     official_present: number | null
     seasonal_present: number | null
+    ot_count: number | null
 }
 
 // Department mapping: Zalo name hoặc tên Excel → DB department code
@@ -631,7 +633,7 @@ export default function BaoCom() {
             const { from, to } = getBillingCycle(statsMonth)
             const { data, error } = await supabase
                 .from("meal_headcount")
-                .select("work_date, department_id, department_name, official_present, seasonal_present")
+                .select("work_date, department_id, department_name, shift, official_present, seasonal_present, ot_count")
                 .gte("work_date", from)
                 .lte("work_date", to)
                 .order("work_date")
@@ -644,65 +646,86 @@ export default function BaoCom() {
         }
     }
 
-    // Build pivot from statsData
+    // Thứ tự bộ phận theo layout Excel
+    const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','PACK','BOILER','MAINT_HCA','QC','OFFICE']
+    const SHIFT_ORDER = ['1','2','3','OT']
+
+    // Tên hiển thị đẹp như trong Excel
+    const DEPT_DISPLAY: Record<string, string> = {
+        FGWH:       'Loading',
+        STEAM:      'Steaming',
+        SHELL:      'Shelling',
+        MAINT_SHELL:'Maint. Shelling',
+        BORMA:      'Borma',
+        PEEL:       'Peeling (Machine)',
+        CS:         'Machine Grading',
+        HPEEL:      'Hand Peeling',
+        PACK:       'Packing',
+        BOILER:     'Boiler',
+        MAINT_HCA:  'Maintenance',
+        QC:         'QC',
+        OFFICE:     'Office',
+    }
+
+    type ShiftEntry = { deptKey: string; deptName: string; deptCode: string; shift: string; days: Map<string, number> }
+    type DeptGroup  = { deptKey: string; name: string; code: string; shifts: ShiftEntry[] }
+
+    // Build pivot: group by dept + shift
     const buildMonthlyPivot = (rows: MealStatRow[]) => {
-        // Group: deptKey → { name, dayMap: { 'YYYY-MM-DD' → total } }
-        const deptMap = new Map<string, { name: string; days: Map<string, number> }>()
+        const shiftMap = new Map<string, ShiftEntry>()
         rows.forEach(r => {
-            const key = r.department_id ?? r.department_name
-            const name = r.department_id
+            const deptKey  = r.department_id ?? r.department_name
+            const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
+            const deptName = DEPT_DISPLAY[deptCode] ?? (r.department_id
                 ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
-                : r.department_name
-            if (!deptMap.has(key)) deptMap.set(key, { name, days: new Map() })
-            const entry = deptMap.get(key)!
-            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
-            entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + total)
+                : r.department_name)
+            const shift = r.shift ?? '1'
+            const mapKey = `${deptKey}|${shift}`
+            if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey, deptName, deptCode, shift, days: new Map() })
+            const entry = shiftMap.get(mapKey)!
+            const count = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
+            if (count > 0) entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + count)
         })
-        // Unique sorted days
         const days = [...new Set(rows.map(r => r.work_date))].sort()
-        // Sorted depts by name
-        const depts = [...deptMap.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name))
-        return { days, depts }
+        const deptGroupMap = new Map<string, DeptGroup>()
+        shiftMap.forEach(se => {
+            const displayName = DEPT_DISPLAY[se.deptCode] ?? se.deptName
+            if (!deptGroupMap.has(se.deptKey)) deptGroupMap.set(se.deptKey, { deptKey: se.deptKey, name: displayName, code: se.deptCode, shifts: [] })
+            deptGroupMap.get(se.deptKey)!.shifts.push(se)
+        })
+        deptGroupMap.forEach(dg => {
+            dg.shifts.sort((a, b) => {
+                const ai = SHIFT_ORDER.indexOf(a.shift); const bi = SHIFT_ORDER.indexOf(b.shift)
+                return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+            })
+        })
+        const deptGroups = [...deptGroupMap.values()].sort((a, b) => {
+            const ai = DEPT_ORDER.indexOf(a.code); const bi = DEPT_ORDER.indexOf(b.code)
+            if (ai < 0 && bi < 0) return a.name.localeCompare(b.name)
+            if (ai < 0) return 1; if (bi < 0) return -1
+            return ai - bi
+        })
+        return { days, deptGroups }
     }
 
     const exportMonthlyExcel = () => {
         if (!statsData || statsData.length === 0) return
-        const { days, depts } = buildMonthlyPivot(statsData)
-
-        // Header row: ['Bộ phận', day1, day2, ..., 'TỔNG']
-        const header = [
-            "Bộ phận",
-            ...days.map(d => parseInt(d.slice(8), 10)),
-            "TỔNG"
-        ]
-
-        // Data rows
-        const dataRows = depts.map(([, dept]) => {
-            const rowTotal = [...dept.days.values()].reduce((a, b) => a + b, 0)
-            return [
-                dept.name,
-                ...days.map(d => dept.days.get(d) ?? 0),
-                rowTotal
-            ]
+        const { days, deptGroups } = buildMonthlyPivot(statsData)
+        const header = ["Bộ phận", "Ca", ...days.map(d => parseInt(d.slice(8), 10)), "TỔNG"]
+        const dataRows: (string | number)[][] = []
+        deptGroups.forEach(dept => {
+            dept.shifts.forEach(sr => {
+                const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
+                if (rowTotal === 0) return
+                dataRows.push([dept.name, sr.shift === 'OT' ? 'OT' : `Ca ${sr.shift}`, ...days.map(d => sr.days.get(d) ?? 0), rowTotal])
+            })
         })
-
-        // Footer: TỔNG NGÀY
-        const footerRow = [
-            "TỔNG NGÀY",
-            ...days.map(d => depts.reduce((s, [, dept]) => s + (dept.days.get(d) ?? 0), 0)),
-            depts.reduce((s, [, dept]) => s + [...dept.days.values()].reduce((a, b) => a + b, 0), 0)
-        ]
-
+        const footerRow = ["TỔNG NGÀY", "", ...days.map(d =>
+            deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)
+        ), deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
         const wsData = [header, ...dataRows, footerRow]
         const ws = XLSX.utils.aoa_to_sheet(wsData)
-
-        // Column widths
-        ws["!cols"] = [
-            { wch: 20 },
-            ...days.map(() => ({ wch: 6 })),
-            { wch: 8 }
-        ]
-
+        ws["!cols"] = [{ wch: 20 }, { wch: 6 }, ...days.map(() => ({ wch: 5 })), { wch: 8 }]
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, `Cơm ${statsMonth}`)
         XLSX.writeFile(wb, `bao-com-${statsMonth}.xlsx`)
@@ -1298,63 +1321,67 @@ export default function BaoCom() {
 
                     {statsData !== null && (() => {
                         if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">Không có dữ liệu trong tháng này</div>
-                        const { days, depts } = buildMonthlyPivot(statsData)
-                        // day totals per dept
-                        const grandTotal = (depts: ReturnType<typeof buildMonthlyPivot>["depts"]) =>
-                            depts.reduce((s, [, d]) => s + [...d.days.values()].reduce((a, b) => a + b, 0), 0)
-
+                        const { days, deptGroups } = buildMonthlyPivot(statsData)
+                        const dayTotals = days.map(d =>
+                            deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)
+                        )
+                        const grandTotal = dayTotals.reduce((a, b) => a + b, 0)
                         return (
                             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                            <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
-                                <span>Tháng {statsMonth} &mdash; chu kỳ {getBillingCycle(statsMonth).label} &mdash; tổng suất cơm (CT + TV, tất cả ca)</span>
-                                <button
-                                    onClick={exportMonthlyExcel}
-                                    className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors"
-                                >
-                                    <FileSpreadsheet className="h-3.5 w-3.5" />
-                                    Xuất Excel
-                                </button>
-                            </div>
+                                <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
+                                    <span>Tháng {statsMonth} — chu kỳ {getBillingCycle(statsMonth).label}</span>
+                                    <button onClick={exportMonthlyExcel} className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                                        <FileSpreadsheet className="h-3.5 w-3.5" /> Xuất Excel
+                                    </button>
+                                </div>
                                 <div className="overflow-x-auto">
                                     <table className="text-xs min-w-full">
                                         <thead>
                                             <tr className="bg-muted/40 text-muted-foreground">
-                                                <th className="px-3 py-2 font-semibold text-left sticky left-0 bg-muted/40 whitespace-nowrap z-10 min-w-[110px]">Bộ phận</th>
-                                                {days.map(d => (
-                                                    <th key={d} className="px-2 py-2 font-semibold text-center whitespace-nowrap">
-                                                        {parseInt(d.slice(8), 10)}
-                                                    </th>
-                                                ))}
+                                                <th className="px-3 py-2 font-semibold text-left sticky left-0 bg-muted/40 z-10 min-w-[140px] whitespace-nowrap">Bộ phận / Ca</th>
+                                                {days.map(d => <th key={d} className="px-2 py-2 font-semibold text-center whitespace-nowrap">{parseInt(d.slice(8), 10)}</th>)}
                                                 <th className="px-3 py-2 font-bold text-right text-purple-700 whitespace-nowrap">TỔNG</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y">
-                                            {depts.map(([key, dept]) => {
-                                                const rowTotal = [...dept.days.values()].reduce((a, b) => a + b, 0)
-                                                return (
-                                                    <tr key={key} className="hover:bg-muted/30">
-                                                        <td className="px-3 py-1.5 font-medium whitespace-nowrap sticky left-0 bg-white z-10">{dept.name}</td>
-                                                        {days.map(d => {
-                                                            const v = dept.days.get(d) ?? 0
-                                                            return (
-                                                                <td key={d} className={`px-2 py-1.5 text-center ${v > 0 ? "font-semibold text-foreground" : "text-muted-foreground/40"}`}>
-                                                                    {v > 0 ? v : "—"}
-                                                                </td>
-                                                            )
-                                                        })}
-                                                        <td className="px-3 py-1.5 text-right font-bold text-purple-700">{rowTotal}</td>
+                                        <tbody>
+                                            {deptGroups.map(dept => (
+                                                <Fragment key={dept.deptKey}>
+                                                    {/* Dept header row */}
+                                                    <tr className="bg-purple-50 border-t-2 border-purple-200">
+                                                        <td colSpan={days.length + 2} className="px-3 py-1 font-bold text-purple-800 text-xs uppercase tracking-wide sticky left-0 bg-purple-50 z-10">
+                                                            {dept.name}
+                                                        </td>
                                                     </tr>
-                                                )
-                                            })}
+                                                    {/* Shift rows */}
+                                                    {dept.shifts.map(sr => {
+                                                        const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
+                                                        if (rowTotal === 0) return null
+                                                        const isOT = sr.shift === 'OT'
+                                                        return (
+                                                            <tr key={`${dept.deptKey}|${sr.shift}`} className={isOT ? "bg-orange-50/60" : "hover:bg-muted/30"}>
+                                                                <td className={`px-3 py-1.5 whitespace-nowrap sticky left-0 z-10 pl-6 font-medium ${isOT ? "bg-orange-50/60 text-orange-700" : "bg-white"}`}>
+                                                                    {isOT ? "⏱ OT" : `Ca ${sr.shift}`}
+                                                                </td>
+                                                                {days.map(d => {
+                                                                    const v = sr.days.get(d) ?? 0
+                                                                    return (
+                                                                        <td key={d} className={`px-2 py-1.5 text-center ${v > 0 ? (isOT ? "text-orange-600 font-semibold" : "font-semibold text-foreground") : "text-muted-foreground/30"}`}>
+                                                                            {v > 0 ? v : "—"}
+                                                                        </td>
+                                                                    )
+                                                                })}
+                                                                <td className={`px-3 py-1.5 text-right font-bold ${isOT ? "text-orange-600" : "text-purple-700"}`}>{rowTotal}</td>
+                                                            </tr>
+                                                        )
+                                                    })}
+                                                </Fragment>
+                                            ))}
                                         </tbody>
                                         <tfoot>
                                             <tr className="bg-muted/60 font-bold border-t-2">
                                                 <td className="px-3 py-2 sticky left-0 bg-muted/60 z-10">TỔNG NGÀY</td>
-                                                {days.map(d => {
-                                                    const daySum = depts.reduce((s, [, dept]) => s + (dept.days.get(d) ?? 0), 0)
-                                                    return <td key={d} className="px-2 py-2 text-center text-purple-700">{daySum > 0 ? daySum : ""}</td>
-                                                })}
-                                                <td className="px-3 py-2 text-right text-purple-700">{grandTotal(depts)}</td>
+                                                {dayTotals.map((v, i) => <td key={days[i]} className="px-2 py-2 text-center text-purple-700">{v > 0 ? v : ""}</td>)}
+                                                <td className="px-3 py-2 text-right text-purple-700">{grandTotal}</td>
                                             </tr>
                                         </tfoot>
                                     </table>
