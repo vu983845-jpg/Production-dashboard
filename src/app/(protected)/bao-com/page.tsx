@@ -298,6 +298,36 @@ function getField(text: string, labels: string[]): string {
     return ""
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HPEEL supervisor-name → sub-group detector
+// Call ONLY when area is generic HPEEL/handpeeling/manual peeling/grading.
+// Returns a DEPT_MAP key that already maps to the correct HPEEL_* sub-code,
+// or null if no supervisor name found.
+// ─────────────────────────────────────────────────────────────────────────────
+function detectHpeelSubgroup(blockText: string, hint: string): string | null {
+    // Combine block + senderHint for fuzzy matching
+    const raw = (blockText + ' ' + hint).toLowerCase()
+    // Ms Huệ → Manual Grading (Huệ)
+    if (/ms\.?\s*hu[eệ]|ch[aá]u\s+hu[eệ]|em\s+hu[eệ]|\bhu[eệ]\b/.test(raw)) {
+        return 'manual grading -shift 1 (ms huệ)'   // maps to HPEEL_GRADING
+    }
+    // Liên → HPEEL_LIEN
+    if (/\bli[êẻn]\b/.test(raw)) {
+        return 'manual peeling s1 - liên'            // maps to HPEEL_LIEN
+    }
+    // Dung → HPEEL_DUNG
+    if (/\bdung\b/.test(raw)) {
+        return 'manual peeling s1 - dung'                 // maps to HPEEL_DUNG
+    }
+    return null
+}
+
+// Generic HPEEL area keys that should be refined if a supervisor name is found
+const HPEEL_GENERIC_AREAS = new Set([
+    'hpeel', 'handpeeling', 'hand peeling',
+    'manual peeling', 'grading', 'gradin',
+])
+
 function parseBlock(block: string): HeadcountRecord | null {
     const text = block.trim()
     if (text.length < 10) return null
@@ -379,6 +409,14 @@ function parseBlock(block: string): HeadcountRecord | null {
                 break
             }
         }
+    }
+
+    // ── Refine generic HPEEL area using supervisor name (Huệ/Liên/Dung) ────────
+    const _areaKey = (area || '').toLowerCase().trim()
+    const _areaCode = DEPT_MAP[_areaKey]
+    if (!_areaCode || _areaCode === 'HPEEL' || HPEEL_GENERIC_AREAS.has(_areaKey)) {
+        const refined = detectHpeelSubgroup(text, senderHint)
+        if (refined) area = refined
     }
 
     return {
