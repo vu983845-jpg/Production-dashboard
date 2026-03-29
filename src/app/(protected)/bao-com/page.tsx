@@ -875,12 +875,55 @@ export default function BaoCom() {
     }
 
     // ─── Parse handlers ───
+    const [aiParsing, setAiParsing] = useState(false)
+    const [aiError, setAiError]     = useState<string | null>(null)
+
     const handleParse = useCallback(() => {
         if (!rawText.trim()) return
         const result = parseZaloText(rawText)
         setRecords(result)
         setParsed(true)
         setSaveMsg(null)
+        setAiError(null)
+    }, [rawText])
+
+    const handleAIParse = useCallback(async () => {
+        if (!rawText.trim()) return
+        setAiParsing(true)
+        setAiError(null)
+        try {
+            const res = await fetch('/api/parse-meal-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: rawText }),
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`)
+
+            // Map AI response → HeadcountRecord[]
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const aiRecords: HeadcountRecord[] = (json.records as any[]).map((r: any) => ({
+                senderHint:         r.senderHint ?? '',
+                date:               r.date ?? '',
+                area:               r.area ?? '',
+                shift:              String(r.shift ?? '1'),
+                officialPresent:    r.officialPresent != null ? Number(r.officialPresent) : null,
+                officialPresentNote: r.officialPresentNote ?? '',
+                officialAbsent:     r.officialAbsent != null ? Number(r.officialAbsent) : null,
+                seasonalPresent:    r.seasonalPresent != null ? Number(r.seasonalPresent) : null,
+                seasonalAbsent:     r.seasonalAbsent != null ? Number(r.seasonalAbsent) : null,
+                ot:                 String(r.ot ?? ''),
+                vegetarian:         r.vegetarian != null ? Number(r.vegetarian) : null,
+                raw:                r.raw ?? '',
+            }))
+            setRecords(aiRecords)
+            setParsed(true)
+            setSaveMsg(null)
+        } catch (e) {
+            setAiError(e instanceof Error ? e.message : String(e))
+        } finally {
+            setAiParsing(false)
+        }
     }, [rawText])
 
     const handleReset = () => {
@@ -1413,22 +1456,46 @@ export default function BaoCom() {
                                 className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400 resize-y"
                                 style={{ minHeight: "260px" }}
                             />
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
                                 <p className="text-xs text-muted-foreground">
                                     💡 Không cần xóa tên người gửi hay timestamp — hệ thống tự bỏ qua.
                                 </p>
-                                <Button
-                                    id="parse-btn"
-                                    onClick={handleParse}
-                                    disabled={!rawText.trim()}
-                                    className="gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6"
-                                >
-                                    <Sparkles className="h-4 w-4" />
-                                    Phân tích ngay
-                                </Button>
+                                <div className="flex gap-2">
+                                    {/* AI Parse button */}
+                                    <Button
+                                        id="ai-parse-btn"
+                                        onClick={handleAIParse}
+                                        disabled={!rawText.trim() || aiParsing}
+                                        className="gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5"
+                                    >
+                                        {aiParsing ? (
+                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Sparkles className="h-4 w-4" />
+                                        )}
+                                        {aiParsing ? "AI đang xử lý..." : "🤖 AI Phân tích"}
+                                    </Button>
+                                    {/* Manual parse button */}
+                                    <Button
+                                        id="parse-btn"
+                                        onClick={handleParse}
+                                        disabled={!rawText.trim()}
+                                        className="gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6"
+                                    >
+                                        <Sparkles className="h-4 w-4" />
+                                        Phân tích ngay
+                                    </Button>
+                                </div>
                             </div>
+                            {aiError && (
+                                <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">
+                                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                    <span>AI lỗi: {aiError}</span>
+                                </div>
+                            )}
                         </div>
                     )}
+
 
                     {/* Results */}
                     {parsed && (
