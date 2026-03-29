@@ -2189,7 +2189,7 @@ export default function BaoCom() {
                                                 </th>
                                             ))}
                                             <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">TỔNG</th>
-                                            {canSave && <th className="px-2 py-2 text-center font-semibold text-red-400 min-w-[44px]">Xóa</th>}
+                                            {canSave && <th className="px-2 py-2 text-center font-semibold text-muted-foreground min-w-[72px]">Sửa / Xóa</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
@@ -2216,20 +2216,41 @@ export default function BaoCom() {
                                                     <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || '—'}</td>
                                                     {canSave && (
                                                         <td className="px-2 py-2 text-center">
-                                                            <button
-                                                                onClick={async () => {
-                                                                    if (!confirm(`Xóa TẤT CẢ bản ghi của "${row.deptName}" Ca ${row.shift} trong khoảng ngày đã chọn?`)) return
-                                                                    const ids = historyRecords
-                                                                        .filter(r => (r.department_id ?? r.department_name) + '|' + r.shift === key)
-                                                                        .map(r => r.id)
-                                                                    await supabase.from('meal_headcount').delete().in('id', ids)
-                                                                    setHistoryRecords(prev => prev.filter(r => !ids.includes(r.id)))
-                                                                }}
-                                                                className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1.5 py-0.5 text-xs transition-colors"
-                                                                title="Xóa hàng này"
-                                                            >
-                                                                🗑
-                                                            </button>
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                {/* Edit: go to kitchen tab for the latest date of this row */}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        // Find the most recent date that has data for this row
+                                                                        const latestDay = [...row.days.entries()]
+                                                                            .filter(([, v]) => v.present > 0)
+                                                                            .sort(([a], [b]) => b.localeCompare(a))[0]?.[0]
+                                                                        if (latestDay) {
+                                                                            setSummaryDate(latestDay)
+                                                                            setSummaryShift(row.shift === 'OT' ? '1' : row.shift)
+                                                                        }
+                                                                        setActiveTab('kitchen')
+                                                                    }}
+                                                                    className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded px-1.5 py-0.5 text-xs transition-colors"
+                                                                    title="Sửa số liệu"
+                                                                >
+                                                                    ✏️
+                                                                </button>
+                                                                {/* Delete */}
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (!confirm(`Xóa TẤT CẢ bản ghi của "${row.deptName}" Ca ${row.shift} trong khoảng ngày đã chọn?`)) return
+                                                                        const ids = historyRecords
+                                                                            .filter(r => (r.department_id ?? r.department_name) + '|' + r.shift === key)
+                                                                            .map(r => r.id)
+                                                                        await supabase.from('meal_headcount').delete().in('id', ids)
+                                                                        setHistoryRecords(prev => prev.filter(r => !ids.includes(r.id)))
+                                                                    }}
+                                                                    className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1.5 py-0.5 text-xs transition-colors"
+                                                                    title="Xóa hàng này"
+                                                                >
+                                                                    🗑
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     )}
                                                 </tr>
