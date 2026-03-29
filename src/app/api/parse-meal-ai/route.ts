@@ -114,17 +114,32 @@ export async function POST(req: NextRequest) {
         }
 
         const groqData = await groqRes.json()
-        const rawContent: string = groqData.choices?.[0]?.message?.content ?? '[]'
+        const rawContent: string = groqData.choices?.[0]?.message?.content ?? ''
 
-        const jsonStr = rawContent
-            .replace(/```json\s*/gi, '')
-            .replace(/```\s*/g, '')
-            .trim()
+        // ── Robust JSON extraction: tìm [...] đầu tiên trong output ──────────
+        function extractJsonArray(text: string): unknown[] | null {
+            // 1. Strip markdown code blocks
+            let s = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+            // 2. Tìm vị trí '[' đầu tiên và ']' cuối cùng
+            const start = s.indexOf('[')
+            const end   = s.lastIndexOf(']')
+            if (start === -1 || end === -1 || end < start) return null
+            s = s.slice(start, end + 1)
+            try { return JSON.parse(s) }
+            catch { return null }
+        }
 
-        let parsed: unknown
-        try { parsed = JSON.parse(jsonStr) }
-        catch {
-            return NextResponse.json({ error: 'AI returned invalid JSON', raw: rawContent }, { status: 422 })
+        const parsed = extractJsonArray(rawContent)
+
+        if (!parsed) {
+            // Log raw để debug, trả về mảng rỗng thay vì hard error
+            console.error('[parse-meal-ai] Invalid JSON from AI:', rawContent.slice(0, 500))
+            return NextResponse.json({
+                records: [],
+                truncated,
+                warning: 'AI không trả về JSON hợp lệ — thử lại hoặc dùng nút "Phân tích ngay".',
+                raw: rawContent.slice(0, 300),
+            })
         }
 
         return NextResponse.json({ records: parsed, truncated })
@@ -133,3 +148,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: msg }, { status: 500 })
     }
 }
+

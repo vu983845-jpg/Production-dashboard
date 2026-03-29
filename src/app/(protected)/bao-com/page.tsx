@@ -921,6 +921,10 @@ export default function BaoCom() {
             setParsed(true)
             setSaveMsg(null)
             setAiTruncated(!!json.truncated)
+            // Nếu AI không parse được → hiện warning thay vì crash
+            if (json.warning) {
+                setAiError(json.warning)
+            }
         } catch (e) {
             setAiError(e instanceof Error ? e.message : String(e))
         } finally {
