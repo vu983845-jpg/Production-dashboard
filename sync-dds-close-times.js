@@ -9,13 +9,13 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const ddsClient = createClient(
-    'https://qktvbvyznxpugsxoxarx.supabase.co',
-    'sb_publishable_agrIIWuEfWaheajFAK2cKQ_NQgIiZsC'
+    process.env.DDS_SUPABASE_URL || 'https://qktvbvyznxpugsxoxarx.supabase.co',
+    process.env.DDS_SUPABASE_KEY // set env var before running
 );
 
 const mainClient = createClient(
-    'https://iekjajbmbkqrbalnjwit.supabase.co',
-    'sb_secret_24_1sa8YSfVRoIxjNYo1BQ_PTla80Ks'
+    process.env.SUPABASE_URL || 'https://iekjajbmbkqrbalnjwit.supabase.co',
+    process.env.SUPABASE_SERVICE_KEY // set env var before running
 );
 
 const EXT_TO_NATIVE = {

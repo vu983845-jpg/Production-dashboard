@@ -1,6 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
-const supabaseUrl = 'https://iekjajbmbkqrbalnjwit.supabase.co';
-const supabaseKey = 'sb_secret_24_1sa8YSfVRoIxjNYo1BQ_PTla80Ks';
+const supabaseUrl = process.env.SUPABASE_URL || 'https://iekjajbmbkqrbalnjwit.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY; // set env var before running
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function fixOpenEvents() {
