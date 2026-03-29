@@ -877,6 +877,7 @@ export default function BaoCom() {
     // ─── Parse handlers ───
     const [aiParsing, setAiParsing] = useState(false)
     const [aiError, setAiError]     = useState<string | null>(null)
+    const [aiTruncated, setAiTruncated] = useState(false)
 
     const handleParse = useCallback(() => {
         if (!rawText.trim()) return
@@ -919,6 +920,7 @@ export default function BaoCom() {
             setRecords(aiRecords)
             setParsed(true)
             setSaveMsg(null)
+            setAiTruncated(!!json.truncated)
         } catch (e) {
             setAiError(e instanceof Error ? e.message : String(e))
         } finally {
@@ -1491,6 +1493,12 @@ export default function BaoCom() {
                                 <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">
                                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                                     <span>AI lỗi: {aiError}</span>
+                                </div>
+                            )}
+                            {aiTruncated && (
+                                <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                    <span>⚠️ Text quá dài — AI chỉ đọc được phần đầu (~8000 ký tự). Kết quả có thể thiếu. Hãy paste từng ca riêng để đảm bảo đầy đủ.</span>
                                 </div>
                             )}
                         </div>

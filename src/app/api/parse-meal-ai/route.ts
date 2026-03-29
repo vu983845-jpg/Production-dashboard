@@ -1,104 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// ─── System Prompt: "Training" AI để hiểu format báo cơm nhà máy ───────────
-const SYSTEM_PROMPT = `Bạn là AI chuyên phân tích tin nhắn báo cơm nhà bếp của nhà máy Intersnack Cashew (VICC LA).
-Nhiệm vụ: Đọc các tin nhắn từ nhóm Zalo và trích xuất thông tin đăng ký bữa ăn thành JSON có cấu trúc.
+// llama-3.1-8b-instant: 20,000 TPM free tier (cao hơn 70b-versatile)
+const MODEL = 'llama-3.1-8b-instant'
 
-## CÁC BỘ PHẬN TRONG NHÀ MÁY (ánh xạ về code chuẩn)
+// System prompt ngắn gọn (~500 tokens)
+const SYSTEM_PROMPT = `You parse Vietnamese factory meal-registration messages from Zalo chat into JSON.
+Extract meal headcount records. Output ONLY a JSON array, no explanation, no markdown.
 
-| Tên trong tin nhắn (có thể viết tắt/sai) | Code chuẩn |
-|---|---|
-| Loading, WH, Warehouse, FGWH, RCN, kho | FGWH |
-| Steaming, Hấp | STEAM |
-| Shelling, Máy cắt | SHELL |
-| Maintenance Shelling, Maint Shelling, Bảo trì máy cắt, Bao tri may cat, Maint - Shelling | MAINT_SHELL |
-| Borma | BORMA |
-| Peeling, Peeling MC, Peeling Machine, Peeling mc, MC Peeling | PEEL |
-| Machine Grading, Color Sorter, Grading máy | CS |
-| Hand Peeling, Manual Grading, Manual Peeling, Grading (Ms Huệ), Grading thủ công, HPEEL, Grading | HPEEL |
-| Packing, Đóng gói | PACK |
-| Boiler, Lò hơi | BOILER |
-| Maintenance, Bảo trì, Maint HCA, Bảo trì HCA, Highcare Maint, Cleaning | MAINT_HCA |
-| QC, Quality | QC |
-| Office, Văn phòng, VP | OFFICE |
+DEPARTMENT CODE MAP (map any variant/abbreviation to the code):
+Loading/WH/Warehouse/FGWH/RCN → FGWH
+Steaming/Hấp → STEAM
+Shelling/Máy cắt → SHELL
+Maint Shelling/Bảo trì máy cắt/Maint-Shelling → MAINT_SHELL
+Borma → BORMA
+Peeling/Peeling MC/MC Peeling → PEEL
+Machine Grading/Color Sorter → CS
+Hand Peeling/Manual Grading/Manual Peeling/Grading/HPEEL → HPEEL
+Packing/Đóng gói → PACK
+Boiler/Lò hơi → BOILER
+Maintenance/Bảo trì/Maint HCA/Cleaning/Highcare → MAINT_HCA
+QC/Quality → QC
+Office/VP → OFFICE
 
-## ĐỊNH DẠNG TIN NHẮN ZA LO (ví dụ)
+EXTRACTION RULES:
+- shift: "Ca 1"→"1", "Ca 2"→"2", "Ca 3"→"3". If "Ca: 1.2.3" create 3 records with same counts.
+- officialPresent: from "Chính thức hiện diện", "CT hiện diện", number after shift/dept name
+- officialAbsent: from "Chính thức vắng"
+- seasonalPresent: from "Thời vụ hiện diện", "TV hiện diện"
+- seasonalAbsent: from "Thời vụ vắng"
+- ot: from "OT:" as string, "" if empty
+- vegetarian: from "chay" or "(N chay)", null if none
+- date: convert any format to "YYYY-MM-DD", default year 2026
+- area: return the CODE (e.g. BOILER, not "Boiler")
+- senderHint: sender name if visible, else ""
+- raw: the original text block for this record
+- Skip greetings, Zalo timestamps, irrelevant lines
+- If same date+dept+shift appears multiple times, keep last (override/supplement)
 
-Tin nhắn có thể lộn xộn, không nhất quán. Các ví dụ:
+OUTPUT FORMAT (JSON array only):
+[{"senderHint":"","date":"2026-03-28","area":"BOILER","shift":"1","officialPresent":3,"officialPresentNote":"","officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null,"raw":"..."}]`
 
-**Ví dụ 1 (format chuẩn):**
-28.3.2026
-Khu vực : Boiler
-Ca: 1.2.3
-Chính thức hiện diện: 3
-Chính thức vắng: 0
-2Thời vụ hiện diện:0
-Thời vụ vắng :0
-OT:
+// Lọc bỏ các dòng không liên quan để tiết kiệm token
+function preFilterText(text: string): string {
+    const lines = text.split('\n')
+    const relevant: string[] = []
+    // Từ khóa liên quan đến báo cơm
+    const mealKeywords = /ca|khu vực|chính thức|thời vụ|hiện diện|vắng|ot|chay|boiler|shelling|packing|peeling|borma|grading|loading|steam|maint|qc|office|ngày|date|\d{1,2}[./]\d{1,2}/i
+    // Bỏ qua dòng timestamp Zalo (chỉ có giờ: "14:30")
+    const timeOnly = /^\s*\d{1,2}:\d{2}\s*$/
+    // Bỏ qua dòng trống liên tiếp (giữ 1 dòng trống để phân tách block)
+    let lastWasBlank = false
+    for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed) {
+            if (!lastWasBlank) relevant.push('')
+            lastWasBlank = true
+            continue
+        }
+        lastWasBlank = false
+        if (timeOnly.test(trimmed)) continue
+        if (mealKeywords.test(trimmed) || /\d+/.test(trimmed)) {
+            relevant.push(line)
+        }
+    }
+    return relevant.join('\n').trim()
+}
 
-**Ví dụ 2 (nhiều ca riêng):**
-Date: 28/03/2026
-Khu vực : Peeling mc
-Ca: 1
-Chính thức hiện diện: 7
-Chính thức vắng: 0
-Thời vụ hiện diện:5
-Thời vụ vắng: 0
-OT: 0
-Chay: 0
-
-**Ví dụ 3 (ngắn gọn):**
-29/3
-Shelling ca 1: 35 (3 chay)
-Shelling ca 2: 20
-
-**Ví dụ 4 (có bổ sung):**
-Bổ sung Grading ca 2: 45
-
-**Ví dụ 5 (nhiều bộ phận):**
-Ngày 28/03/2026
-QC ca 1: 13, ca 2: 8, ca 3: 8
-Packing ca 1: 26 ca 2: 13 ca 3: 13
-
-## QUY TẮC TRÍCH XUẤT
-
-1. **Ca (shift)**: "Ca 1" → "1", "Ca 2" → "2", "Ca 3" → "3". Nếu "Ca: 1.2.3" hoặc "Ca: 1,2,3" → tạo 3 record riêng (1, 2, 3) với cùng số người (chia đều hoặc để nguyên số nếu không rõ).
-2. **Chính thức (CT)**: từ khóa "Chính thức hiện diện", "CT hiện diện", "CT:", số sau tên ca. Giá trị null nếu không có.
-3. **Thời vụ (TV)**: từ khóa "Thời vụ hiện diện", "TV hiện diện", "TV:". Giá trị null nếu không có.
-4. **OT**: từ khóa "OT:", số OT. Chuyển về string (ví dụ "5" hoặc "" nếu trống).
-5. **Chay (vegetarian)**: từ khóa "chay", "chay:", số trong ngoặc "(3 chay)". null nếu không có.
-6. **Ngày**: Chuyển mọi định dạng về "YYYY-MM-DD". Năm mặc định là 2026 nếu không rõ.
-7. **area**: Trả về CODE CHUẨN (FGWH, STEAM, SHELL, MAINT_SHELL, BORMA, PEEL, CS, HPEEL, PACK, BOILER, MAINT_HCA, QC, OFFICE).
-8. **senderHint**: Tên người gửi nếu có trong tin nhắn, nếu không để "".
-9. Bỏ qua các dòng chào hỏi, dấu thời gian Zalo, tên người gửi không liên quan.
-10. Nếu cùng một ngày và khu vực và ca xuất hiện nhiều lần → chỉ lấy record cuối (bổ sung).
-
-## ĐỊNH DẠNG OUTPUT
-
-Trả về **CHỈ JSON** (không có text khác), là một mảng các object:
-
-\`\`\`json
-[
-  {
-    "senderHint": "Nguyễn Văn A",
-    "date": "2026-03-28",
-    "area": "BOILER",
-    "shift": "1",
-    "officialPresent": 3,
-    "officialPresentNote": "",
-    "officialAbsent": 0,
-    "seasonalPresent": 0,
-    "seasonalAbsent": 0,
-    "ot": "",
-    "vegetarian": null,
-    "raw": "Khu vực : Boiler\\nCa: 1\\n..."
-  }
-]
-\`\`\`
-
-**QUAN TRỌNG:** Chỉ trả về JSON array, không giải thích, không markdown code block, không text nào khác.`
-
-// ─── POST handler ───────────────────────────────────────────────────────────
+// POST handler
 export async function POST(req: NextRequest) {
     const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
@@ -106,15 +74,20 @@ export async function POST(req: NextRequest) {
     }
 
     let body: { text?: string }
-    try {
-        body = await req.json()
-    } catch {
-        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-    }
+    try { body = await req.json() }
+    catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }
 
-    const text = body.text?.trim()
-    if (!text) {
-        return NextResponse.json({ error: 'No text provided' }, { status: 400 })
+    const rawInput = body.text?.trim()
+    if (!rawInput) return NextResponse.json({ error: 'No text provided' }, { status: 400 })
+
+    // Bước 1: lọc trước để bỏ dòng không cần thiết
+    let filtered = preFilterText(rawInput)
+
+    // Bước 2: hard cap 8000 ký tự (~2000 tokens) để không vượt TPM
+    const MAX_CHARS = 8000
+    const truncated = filtered.length > MAX_CHARS
+    if (truncated) {
+        filtered = filtered.slice(0, MAX_CHARS)
     }
 
     try {
@@ -125,13 +98,13 @@ export async function POST(req: NextRequest) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'llama-3.3-70b-versatile',
+                model: MODEL,
                 messages: [
                     { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: `Hãy phân tích đoạn chat Zalo báo cơm sau:\n\n${text}` },
+                    { role: 'user', content: filtered },
                 ],
                 temperature: 0.1,
-                max_tokens: 4096,
+                max_tokens: 3000,
             }),
         })
 
@@ -143,20 +116,18 @@ export async function POST(req: NextRequest) {
         const groqData = await groqRes.json()
         const rawContent: string = groqData.choices?.[0]?.message?.content ?? '[]'
 
-        // Lọc markdown code block nếu AI trả về dù đã dặn không làm vậy
         const jsonStr = rawContent
             .replace(/```json\s*/gi, '')
             .replace(/```\s*/g, '')
             .trim()
 
         let parsed: unknown
-        try {
-            parsed = JSON.parse(jsonStr)
-        } catch {
+        try { parsed = JSON.parse(jsonStr) }
+        catch {
             return NextResponse.json({ error: 'AI returned invalid JSON', raw: rawContent }, { status: 422 })
         }
 
-        return NextResponse.json({ records: parsed })
+        return NextResponse.json({ records: parsed, truncated })
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         return NextResponse.json({ error: msg }, { status: 500 })
