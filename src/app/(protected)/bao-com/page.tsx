@@ -2189,6 +2189,7 @@ export default function BaoCom() {
                                                 </th>
                                             ))}
                                             <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">TỔNG</th>
+                                            {canSave && <th className="px-2 py-2 text-center font-semibold text-red-400 min-w-[44px]">Xóa</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
@@ -2213,6 +2214,24 @@ export default function BaoCom() {
                                                         )
                                                     })}
                                                     <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || '—'}</td>
+                                                    {canSave && (
+                                                        <td className="px-2 py-2 text-center">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!confirm(`Xóa TẤT CẢ bản ghi của "${row.deptName}" Ca ${row.shift} trong khoảng ngày đã chọn?`)) return
+                                                                    const ids = historyRecords
+                                                                        .filter(r => (r.department_id ?? r.department_name) + '|' + r.shift === key)
+                                                                        .map(r => r.id)
+                                                                    await supabase.from('meal_headcount').delete().in('id', ids)
+                                                                    setHistoryRecords(prev => prev.filter(r => !ids.includes(r.id)))
+                                                                }}
+                                                                className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1.5 py-0.5 text-xs transition-colors"
+                                                                title="Xóa hàng này"
+                                                            >
+                                                                🗑
+                                                            </button>
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             )
                                         })}
@@ -2229,6 +2248,7 @@ export default function BaoCom() {
                                             <td className="px-2 py-2 text-center text-primary border-l">
                                                 {historyRecords.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}
                                             </td>
+                                            {canSave && <td />}
                                         </tr>
                                     </tfoot>
                                 </table>
