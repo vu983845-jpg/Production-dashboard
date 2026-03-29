@@ -1041,25 +1041,7 @@ export default function DashboardPage() {
                         </div>
                     )}
 
-                    {/* CO2e/T info line for STEAM card - no toggle needed */}
-                    {deptCode === "STEAM" && (() => {
-                        const steamMtdPlan = displayHistory.reduce((s: number, h: any) => s + (h.Plan || 0), 0);
-                        const steamMtdActual = displayHistory.reduce((s: number, h: any) => s + (h.Actual || 0), 0);
-                        const co2Target = steamMtdPlan > 0 ? (265 * 1000) / steamMtdPlan : 0;
-                        const co2Actual = steamMtdActual > 0
-                            ? displayHistory.reduce((s: number, h: any) => s + (h.Emission || 0), 0) * 1000 / steamMtdActual
-                            : 0;
-                        const isGoodCo2 = co2Actual <= co2Target;
-                        return (
-                            <div className="flex items-center gap-2 mb-1 mt-0.5 px-1 py-0.5 bg-slate-50 rounded-lg border border-slate-100">
-                                <span className="text-[9px] text-slate-400 uppercase tracking-tight">CO₂e/T Steam (MTD)</span>
-                                <span className={`text-[10px] font-black ${isGoodCo2 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                    {co2Actual.toFixed(1)} kg
-                                </span>
-                                <span className="text-[9px] text-slate-400">/ Target {co2Target.toFixed(1)}</span>
-                            </div>
-                        );
-                    })()}
+                    {/* CO2e/T info line for STEAM card - hidden */}
                     
                     {/* View Switching Logic */}
                     {!(isTotal || isFgwh) && deptViewModes[id] === 'details' ? (
@@ -1306,12 +1288,7 @@ export default function DashboardPage() {
                                             <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#e63121" dot={false} strokeWidth={2} name={t('legend.emission')} animationDuration={700} />
                                         </>
                                     )}
-                                    {deptCode === "STEAM" && (
-                                        <>
-                                            <YAxis yAxisId="co2right" orientation="right" tick={{ fontSize: 10, fill: '#10b981', fontWeight: 600 }} tickLine={false} axisLine={false} width={36} tickFormatter={(v) => v > 0 ? `${v.toFixed(0)}` : ''} />
-                                            <Line yAxisId="co2right" type="monotone" dataKey="CO2ePerTon" stroke="#10b981" dot={false} strokeWidth={2} name="CO₂e/T" animationDuration={700} strokeDasharray="5 3" />
-                                        </>
-                                    )}
+                                    {/* CO2e/T chart line for STEAM - hidden */}
                                     {(deptCode === "HAND" || deptCode === "SHELL" || deptCode === "PEEL_MC" || deptCode === "ALL" || deptCode === "STEAM" || isTotal || isFgwh) && (
                                         <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '4px', fontWeight: 600, color: '#64748b' }} iconType="plainline" />
                                     )}
