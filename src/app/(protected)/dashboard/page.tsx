@@ -1467,18 +1467,21 @@ export default function DashboardPage() {
                                     const isGood = co2Pct <= 100
                                     const barColor = isGood ? '#10b981' : '#e63121'
 
-                                    // kWh / T = Điện / (SHELL_actual + PEEL_MC_actual)
-                                    // Cả 2 đều có volume trực tiếp, shell 0.22 là recovery rate (không cần quy đổi)
+                                    // kWh / T = Điện / (SHELL_output + PEEL_MC_output)
+                                    // SHELL_actual = INPUT (RCN hấp), output hạt cắt = SHELL_actual × 0.22
+                                    // PEEL_MC_actual = OUTPUT trực tiếp (nhân bóc)
+                                    const SHELL_RECOVERY = 0.22;
                                     const shellDept = departments.find(d => d.code === 'SHELL');
                                     const peelDept = departments.find(d => d.code === 'PEEL_MC');
-                                    const shellMtd = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalActual || 0) : 0;
+                                    const shellInput = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalActual || 0) : 0;
+                                    const shellOutput = shellInput * SHELL_RECOVERY; // hạt cắt thực ra
                                     const peelMtd = peelDept ? (dashboardsData[peelDept.id]?.summary?.totalActual || 0) : 0;
-                                    const combinedTon = shellMtd + peelMtd;
+                                    const combinedTon = shellOutput + peelMtd; // cùng đơn vị output
                                     const elecPerCutCashew = combinedTon > 0 ? kpiSummary.elecActual / combinedTon : 0;
                                     // Target
-                                    const shellPlan = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalPlan || 0) : 0;
+                                    const shellInputPlan = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalPlan || 0) : 0;
                                     const peelPlan = peelDept ? (dashboardsData[peelDept.id]?.summary?.totalPlan || 0) : 0;
-                                    const combinedPlan = shellPlan + peelPlan;
+                                    const combinedPlan = shellInputPlan * SHELL_RECOVERY + peelPlan;
                                     const elecPerCutCashewTarget = combinedPlan > 0 ? kpiSummary.elecTarget / combinedPlan : 0;
                                     const isElecGood = elecPerCutCashewTarget <= 0 || elecPerCutCashew <= elecPerCutCashewTarget;
 
@@ -1542,7 +1545,7 @@ export default function DashboardPage() {
                                                         )}
                                                     </div>
                                                     <div className="text-[8px] text-slate-300">
-                                                        {(kpiSummary.elecActual/1000).toFixed(0)}MWh ÷ ({shellMtd.toFixed(0)}T shell + {peelMtd.toFixed(0)}T peel)
+                                                        {(kpiSummary.elecActual/1000).toFixed(0)}MWh ÷ ({shellOutput.toFixed(0)}T hạt cắt + {peelMtd.toFixed(0)}T nhân)
                                                     </div>
                                                 </div>
                                             )}
