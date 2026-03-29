@@ -1466,6 +1466,16 @@ export default function DashboardPage() {
                                         : 0
                                     const isGood = co2Pct <= 100
                                     const barColor = isGood ? '#10b981' : '#e63121'
+
+                                    // kWh / T Hạt Cắt: dùng SHELL actual làm mẫu số
+                                    const shellDept = departments.find(d => d.code === 'SHELL');
+                                    const shellMtd = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalActual || 0) : 0;
+                                    const elecPerCutCashew = shellMtd > 0 ? kpiSummary.elecActual / shellMtd : 0;
+                                    // Target: elecTarget / (shellDept plan MTD)
+                                    const shellPlan = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalPlan || 0) : 0;
+                                    const elecPerCutCashewTarget = shellPlan > 0 ? kpiSummary.elecTarget / shellPlan : 0;
+                                    const isElecGood = elecPerCutCashewTarget <= 0 || elecPerCutCashew <= elecPerCutCashewTarget;
+
                                     return (
                                         <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
                                             <div className="flex justify-between items-start">
@@ -1513,6 +1523,18 @@ export default function DashboardPage() {
                                                     </span>
                                                 </div>
                                             </div>
+                                            {/* ⚡ Electricity per cut cashew */}
+                                            {shellMtd > 0 && (
+                                                <div className="flex items-center gap-2 pt-1.5 border-t border-slate-100 mt-0.5">
+                                                    <span className="text-[9px] text-slate-400 uppercase tracking-tight">⚡ kWh/T Hạt Cắt</span>
+                                                    <span className={`text-[11px] font-black tabular-nums ${isElecGood ? 'text-amber-600' : 'text-red-500'}`}>
+                                                        {elecPerCutCashew.toFixed(0)}
+                                                    </span>
+                                                    {elecPerCutCashewTarget > 0 && (
+                                                        <span className="text-[9px] text-slate-400 ml-auto">/ {elecPerCutCashewTarget.toFixed(0)} target</span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     )
                                 })()}
