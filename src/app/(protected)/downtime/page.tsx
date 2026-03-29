@@ -49,24 +49,26 @@ const SHELLING_LINES = [
     { value: "Other", label: "Khác (Other)" },
 ]
 
-// Sub-causes per dept × reason code
-const SUB_CAUSES: Record<string, Record<string, string[]>> = {
-    SHELL: {
-        BD: [
-            'Hư hỏng cấp liệu',
-            'Hư hỏng đầu cắt',
-            'Hư hỏng sàng rung',
-            'Hư hỏng motor sàng rung',
-            'Hư hỏng motor ly tâm',
-            'Hư hỏng gàu tải',
-            'Hư hỏng ly tâm',
-            'Hư hỏng cụm phân trục',
-            'Hư hỏng hệ quạt thổi',
-            'Tuột ống vỏ',
-        ],
-        WT: ['Chờ hàng đạt ẩm', 'Chờ lấy vỏ ở silo vỏ'],
-        LU: ['Không có nguyên liệu'],
-    },
+// Sub-causes per reason code for Shelling dept
+const SHELLING_SUB_CAUSES: Record<string, string[]> = {
+    BD: [
+        'Hư hỏng cấp liệu',
+        'Hư hỏng đầu cắt',
+        'Hư hỏng sàng rung',
+        'Hư hỏng motor  sàn rung',
+        'Hư hỏng motor ly tâm',
+        'Hư hỏng gàu tải',
+        'Hư hỏng ly tâm',
+        'Hư hỏng cụm phân trục',
+        'Hư hỏng hệ quạt thổi ',
+        'Tuột ống vỏ',
+    ],
+    WT: ['Chờ hàng đạt ẩm', 'Chờ lấy vỏ ở silo vỏ'],
+    LU: ['Không có nguyên liệu'],
+}
+
+// Sub-causes per dept code × reason code (keep for other depts)
+const SUB_CAUSES_OTHER: Record<string, Record<string, string[]>> = {
     PEEL_MC: {
         BD: ['Máy nén khí hỏng', 'Áp suất khí thấp', 'Lưỡi bóc mòn', 'Băng tải hỏng', 'Bộ phận cơ khí hỏng'],
         WT: ['Chờ hạt cắt đầu vào'],
@@ -163,11 +165,22 @@ export default function DowntimePage() {
 
     const allowedDepts = useMemo(() => departments.filter(d => allowedDeptIds.includes(d.id)), [departments, allowedDeptIds])
 
-    // Detect if selected dept is Shelling
+    // Detect if selected dept is Shelling (support both 'SHELL' and 'SHELLING' codes)
     const isShelling = useMemo(() => {
         const d = departments.find(d => d.id === entryDeptId)
-        return d?.code === "SHELL"
+        return d?.code === "SHELL" || d?.code === "SHELLING"
     }, [entryDeptId, departments])
+
+    // Current dept code
+    const currentDeptCode = useMemo(() => {
+        return departments.find(d => d.id === entryDeptId)?.code || ''
+    }, [entryDeptId, departments])
+
+    // Sub-causes for current dept + reason code
+    const currentSubCauses = useMemo(() => {
+        if (isShelling) return SHELLING_SUB_CAUSES[reasonCode] || []
+        return (SUB_CAUSES_OTHER[currentDeptCode] || {})[reasonCode] || []
+    }, [isShelling, currentDeptCode, reasonCode])
 
     // Final machine area value
     const finalMachineArea = isShelling && machineArea === "Other" ? machineAreaOther : machineArea
@@ -607,33 +620,28 @@ export default function DowntimePage() {
                                         </optgroup>
                                     </select>
                                 </div>
-                                {/* Sub-cause — only when the selected code has sub-items for this dept */}
-                                {(() => {
-                                    const deptCode = departments.find(d => d.id === entryDeptId)?.code || ''
-                                    const subs = (SUB_CAUSES[deptCode] || {})[reasonCode] || []
-                                    if (!subs.length) return null
-                                    return (
-                                        <div className="flex flex-col gap-1 sm:col-span-2">
-                                            <label className="text-xs font-semibold text-muted-foreground uppercase">Lý do chi tiết *</label>
-                                            <select value={subCause} onChange={e => { setSubCause(e.target.value); if (e.target.value !== SUB_CAUSES_CUSTOM) setSubCauseOther('') }}
-                                                className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                                                <option value="">-- Chọn lý do chi tiết --</option>
-                                                {subs.map((s: string) => <option key={s} value={s}>{s}</option>)}
-                                                <option value={SUB_CAUSES_CUSTOM}>✏️ Nhập lý do mới...</option>
-                                            </select>
-                                            {subCause === SUB_CAUSES_CUSTOM && (
-                                                <input
-                                                    autoFocus
-                                                    type="text"
-                                                    value={subCauseOther}
-                                                    onChange={e => setSubCauseOther(e.target.value)}
-                                                    placeholder="Nhập lý do cụ thể..."
-                                                    className="h-9 rounded-md border border-amber-300 bg-amber-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 mt-1"
-                                                />
-                                            )}
-                                        </div>
-                                    )
-                                })()}
+                                {/* Sub-cause — only when selected code has sub-items for this dept */}
+                                {currentSubCauses.length > 0 && (
+                                    <div className="flex flex-col gap-1 sm:col-span-2">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase">Mô tả chi tiết *</label>
+                                        <select value={subCause} onChange={e => { setSubCause(e.target.value); if (e.target.value !== SUB_CAUSES_CUSTOM) setSubCauseOther('') }}
+                                            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                            <option value="">-- Chọn mô tả chi tiết --</option>
+                                            {currentSubCauses.map((s: string) => <option key={s} value={s}>{s}</option>)}
+                                            <option value={SUB_CAUSES_CUSTOM}>✏️ Nhập lý do mới...</option>
+                                        </select>
+                                        {subCause === SUB_CAUSES_CUSTOM && (
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                value={subCauseOther}
+                                                onChange={e => setSubCauseOther(e.target.value)}
+                                                placeholder="Nhập lý do cụ thể..."
+                                                className="h-9 rounded-md border border-amber-300 bg-amber-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 mt-1"
+                                            />
+                                        )}
+                                    </div>
+                                )}
                                 {/* Start time */}
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs font-semibold text-muted-foreground uppercase">Bắt đầu *</label>

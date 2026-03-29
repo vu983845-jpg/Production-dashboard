@@ -28,10 +28,27 @@ import * as XLSX from "xlsx"
 // Ca → giờ bắt đầu (cho OT hint)
 const SHIFT_HOUR: Record<string, string> = { "1": "6h", "2": "14h", "3": "22h" }
 
-// Dỳ kiến các bộ phận cần báo cơm (lowercase name_en or Zalo name)
+// Các bộ phận cần báo cơm theo code trong DB
 const EXPECTED_DEPTS = [
-    "PEEL", "GRAD", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA"
+    "PEEL", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA"
 ]
+
+// ─────────────────────────────────────────────
+// Billing cycle helper: chọn tháng M/YYYY → chu kỳ 26/(M-1) → 25/M
+// ─────────────────────────────────────────────
+function getBillingCycle(monthStr: string): { from: string; to: string; label: string } {
+    // monthStr = "YYYY-MM"
+    const [year, month] = monthStr.split("-").map(Number)
+    // Start: ngày 26 tháng trước
+    const prevMonth = month === 1 ? 12 : month - 1
+    const prevYear = month === 1 ? year - 1 : year
+    const from = `${prevYear}-${String(prevMonth).padStart(2, "0")}-26`
+    // End: ngày 25 tháng hiện tại
+    const to = `${year}-${String(month).padStart(2, "0")}-25`
+    // Human label: "26/MM-1/YYYY → 25/MM/YYYY"
+    const label = `26/${String(prevMonth).padStart(2, "0")}/${prevYear} → 25/${String(month).padStart(2, "0")}/${year}`
+    return { from, to, label }
+}
 
 // ─────────────────────────────────────────────
 // Types
@@ -75,31 +92,116 @@ interface MealStatRow {
     seasonal_present: number | null
 }
 
-// Department mapping: Zalo name → DB department code
+// Department mapping: Zalo name hoặc tên Excel → DB department code
+// Tên Excel chính xác từ file "Báo Cơm 2026" được giữ nguyên
 const DEPT_MAP: Record<string, string> = {
-    "peeling": "PEEL",
-    "peeling mc": "PEEL",
-    "mc peeling": "PEEL",
-    "grading": "GRAD",
-    "color sorter": "CS",
-    "steaming": "STEAM",
-    "packing": "PACK",
-    "borma": "BORMA",
-    "shelling": "SHELL",
-    "boiler": "BOILER",
-    "qc": "QC",
+    // ── LOADING / WH (làm việc tại FGWH và RCN) ──
+    "loading s1": "FGWH",
+    "loading s2": "FGWH",
+    "loading s3": "FGWH",
+    "loading": "FGWH",
     "warehouse": "FGWH",
-    "handpeeling": "HPEEL",
+    "wh": "FGWH",
+    "fgwh": "FGWH",
+    "rcn": "FGWH",
+    // ── STEAMING ──
+    "steaming s1": "STEAM",
+    "steaming s2": "STEAM",
+    "steaming s3": "STEAM",
+    "steaming": "STEAM",
+    // ── SHELLING ──
+    "shelling s1": "SHELL",
+    "shelling thời vụ s1": "SHELL",
+    "shelling s2": "SHELL",
+    "shelling thời vụ s2": "SHELL",
+    "shelling s3": "SHELL",
+    "shelling thời vụ s3": "SHELL",
+    "shelling": "SHELL",
+    // ── MAINTENANCE SHELLING ──
+    "maintenance shelling s1": "MAINT_SHELL",
+    "maintenance shelling s2": "MAINT_SHELL",
+    "maintenance shelling s3": "MAINT_SHELL",
+    "maintenance shelling": "MAINT_SHELL",
     "maint shelling": "MAINT_SHELL",
     "maint - shelling": "MAINT_SHELL",
-    "maintenance shelling": "MAINT_SHELL",
     "bảo trì shelling": "MAINT_SHELL",
     "bao tri shelling": "MAINT_SHELL",
     "bảo trì máy cắt": "MAINT_SHELL",
     "bao tri may cat": "MAINT_SHELL",
     "bảo trì may cắt": "MAINT_SHELL",
     "bao tri máy cắt": "MAINT_SHELL",
-    // Maint Highcare
+    // ── BORMA ──
+    "borma s1": "BORMA",
+    "borma thời vụ s1": "BORMA",
+    "borma s2": "BORMA",
+    "borma thời vụ s2": "BORMA",
+    "borma s3": "BORMA",
+    "borma thời vụ s3": "BORMA",
+    "borma": "BORMA",
+    // ── PEELING MACHINE (Peeling Mc) ──
+    "peeling s1": "PEEL",
+    "peeling thời vụ s1": "PEEL",
+    "peeling s2": "PEEL",
+    "peeling thời vụ s2": "PEEL",
+    "peeling s3": "PEEL",
+    "peeling thời vụ s3": "PEEL",
+    "peeling": "PEEL",
+    "peeling mc": "PEEL",
+    "mc peeling": "PEEL",
+    // ── COLOR SORTER (Machine Grading) ──
+    "machine grading - shift 1": "CS",
+    "machine grading  - thời vụ 1": "CS",
+    "machine grading  - shift 2": "CS",
+    "machine grading  thời vụ - shift 2": "CS",
+    "machine grading  - shift 3": "CS",
+    "machine grading  thời vụ- shift 3": "CS",
+    "machine grading": "CS",
+    "machine grading shift 1": "CS",
+    "machine grading shift 2": "CS",
+    "machine grading shift 3": "CS",
+    "color sorter": "CS",
+    // ── HANDPEELING (Manual Grading Ms Huệ + Manual Peeling Liên/Dung) ──
+    "manual grading -shift 1 (ms huệ)": "HPEEL",
+    "manual grading thời vụ -shift 1 (ms huệ)": "HPEEL",
+    "manual grading -shift 2 (ms huệ)": "HPEEL",
+    "manual grading thời vụ -shift 2 (ms huệ)": "HPEEL",
+    "manual grading -shift 3 (ms huệ)": "HPEEL",
+    "manual grading thời vụ -shift 3 (ms huệ)": "HPEEL",
+    "manual grading": "HPEEL",
+    "manual peeling s1 - liên": "HPEEL",
+    "manual peeling s1 thời vụ - liên": "HPEEL",
+    "manual peeling s1 - dung": "HPEEL",
+    "manual peeling s1 thời vụ - dung": "HPEEL",
+    "manual peeling s2 - liên": "HPEEL",
+    "manual peeling s2 thời vụ - liên": "HPEEL",
+    "manual peeling s2 - dung": "HPEEL",
+    "manual peeling s2 thời vụ - dung": "HPEEL",
+    "manual peeling s3 - liên": "HPEEL",
+    "manual peeling s3 thời vụ - liên": "HPEEL",
+    "manual peeling s3 - dung": "HPEEL",
+    "manual peeling s3 thời vụ - dung": "HPEEL",
+    "manual peeling": "HPEEL",
+    "handpeeling": "HPEEL",
+    // Zalo aliases (grading → handpeeling)
+    "grading": "HPEEL",
+    "gradin": "HPEEL",
+    // ── PACKING ──
+    "packing s1": "PACK",
+    "packing thời vụ s1": "PACK",
+    "packing s2": "PACK",
+    "packing thời vụ s2": "PACK",
+    "packing s3": "PACK",
+    "packing": "PACK",
+    // ── BOILER ──
+    "boiler worker s1": "BOILER",
+    "boiler worker s2": "BOILER",
+    "boiler worker s3": "BOILER",
+    "boiler worker": "BOILER",
+    "boiler": "BOILER",
+    // ── MAINTENANCE HIGHCARE ──
+    "maintenance s1": "MAINT_HCA",
+    "maintenance s2": "MAINT_HCA",
+    "maintenance s3": "MAINT_HCA",
     "maint hca": "MAINT_HCA",
     "maint highcare": "MAINT_HCA",
     "maintenance highcare": "MAINT_HCA",
@@ -111,6 +213,14 @@ const DEPT_MAP: Record<string, string> = {
     "bao tri hca": "MAINT_HCA",
     "highcare maint": "MAINT_HCA",
     "highcare maintenance": "MAINT_HCA",
+    // ── QC ──
+    "qc": "QC",
+    "qc s2": "QC",
+    "qc s3": "QC",
+    // ── CLEANING ──
+    "cleaning worker": "MAINT_HCA",
+    "cleaning worker s2": "MAINT_HCA",
+    "cleaning worker s3": "MAINT_HCA",
 }
 
 // ─────────────────────────────────────────────
@@ -517,8 +627,8 @@ export default function BaoCom() {
         setStatsError(null)
         setStatsData(null)
         try {
-            const from = statsMonth + "-01"
-            const to = statsMonth + "-31"
+            // Chu kỳ tiền cơm: 26 tháng trước → 25 tháng hiện tại
+            const { from, to } = getBillingCycle(statsMonth)
             const { data, error } = await supabase
                 .from("meal_headcount")
                 .select("work_date, department_id, department_name, official_present, seasonal_present")
@@ -784,10 +894,16 @@ export default function BaoCom() {
 
         try {
             const { data: { user } } = await supabase.auth.getUser()
-            const payload = records.map((r, i) => ({
+            const payload = records.map((r, i) => {
+                const deptId = getEffectiveDeptId(r, i)
+                // Use canonical name_en if dept resolved; otherwise keep raw area string
+                const canonicalName = deptId
+                    ? (deptList.find(d => d.id === deptId)?.name_en ?? getEffectiveArea(r, i))
+                    : getEffectiveArea(r, i)
+                return {
                 work_date: dateToISO(r.date),
-                department_name: getEffectiveArea(r, i),
-                department_id: getEffectiveDeptId(r, i),
+                department_name: canonicalName,
+                department_id: deptId,
                 shift: r.shift.replace(/[^1-3]/g, "") || "1",
                 official_present: r.officialPresent ?? 0,
                 official_absent: r.officialAbsent ?? 0,
@@ -798,7 +914,8 @@ export default function BaoCom() {
                 note: null,
                 created_by: user?.id,
                 updated_at: new Date().toISOString(),
-            }))
+                }
+            })
 
             const { error } = await supabase.from("meal_headcount").upsert(payload, {
                 onConflict: "work_date,department_name,shift",
@@ -1136,13 +1253,21 @@ export default function BaoCom() {
                     {/* Month picker + fetch */}
                     <div className="flex flex-wrap items-end gap-3 bg-purple-50 border border-purple-200 rounded-xl p-4">
                         <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-purple-700">Tháng</label>
+                            <label className="text-xs font-medium text-purple-700">Tháng thanh toán</label>
                             <input
                                 type="month"
                                 value={statsMonth}
                                 onChange={e => setStatsMonth(e.target.value)}
                                 className="border rounded-lg px-3 py-1.5 text-sm bg-white"
                             />
+                        </div>
+                        {/* Billing cycle badge */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-purple-700">Chu kỳ</label>
+                            <div className="flex items-center gap-1.5 bg-purple-100 border border-purple-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-purple-800">
+                                <CalendarDays className="h-3.5 w-3.5" />
+                                {getBillingCycle(statsMonth).label}
+                            </div>
                         </div>
                         <button
                             onClick={fetchMonthStats}
@@ -1181,7 +1306,7 @@ export default function BaoCom() {
                         return (
                             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                             <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
-                                <span>Tháng {statsMonth} — tổng suất cơm (CT + TV, tất cả ca)</span>
+                                <span>Tháng {statsMonth} &mdash; chu kỳ {getBillingCycle(statsMonth).label} &mdash; tổng suất cơm (CT + TV, tất cả ca)</span>
                                 <button
                                     onClick={exportMonthlyExcel}
                                     className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors"
