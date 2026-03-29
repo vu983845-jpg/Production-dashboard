@@ -244,16 +244,16 @@ const DEPT_MAP: Record<string, string> = {
     "maint-hca": "MAINT_HCA",
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 // HPEEL sub-group display names (used as department_name in DB)
 const HPEEL_SUBGROUP_DISPLAY: Record<string, string> = {
-    HPEEL_GRADING: 'Manual Grading (Ms Huệ)',
-    HPEEL_LIEN:    'Manual Peeling (Liên)',
+    HPEEL_GRADING: 'Manual Grading (Ms Hu\u1ec7)',
+    HPEEL_LIEN:    'Manual Peeling (Li\u00ean)',
     HPEEL_DUNG:    'Manual Peeling (Dung)',
 }
 // Virtual sub-group codes mapping to HPEEL department_id
 const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG"])
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Parse helpers
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -1036,13 +1036,14 @@ export default function BaoCom() {
         // 1. Try DEPT_MAP (display/alias text â†’ code)
         const code = DEPT_MAP[lower]
         if (code) {
-            // HPEEL sub-groups resolve to HPEEL dept_id
+            // HPEEL sub-groups all resolve to HPEEL dept_id
             const resolvedCode = HPEEL_SUBCODES.has(code) ? 'HPEEL' : code
             const dept = deptList.find((d) => d.code === resolvedCode)
             if (dept) return dept.id
             }
         // 2. Fallback: AI may return the DB code directly (e.g. "STEAM", "HPEEL", "MAINT_SHELL")
         const upperDirect = areaName.toUpperCase().trim()
+        if (HPEEL_SUBCODES.has(upperDirect)) { return deptList.find((d) => d.code === 'HPEEL')?.id || null }
         const deptDirect = deptList.find((d) => d.code === upperDirect)
         return deptDirect?.id || null
     }
