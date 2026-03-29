@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useCallback, useEffect, Fragment } from "react"
 import {
@@ -25,34 +25,34 @@ import { createClient } from "@/lib/supabase/client"
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns"
 import * as XLSX from "xlsx"
 
-// Ca â†’ giá» báº¯t Ä‘áº§u (cho OT hint)
+// Ca → giờ bắt đầu (cho OT hint)
 const SHIFT_HOUR: Record<string, string> = { "1": "6h", "2": "14h", "3": "22h" }
 
-// CÃ¡c bá»™ pháº­n cáº§n bÃ¡o cÆ¡m theo code trong DB
+// Các bộ phận cần báo cơm theo code trong DB
 const EXPECTED_DEPTS = [
     "PEEL", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA", "OFFICE"
 ]
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Billing cycle helper: chá»n thÃ¡ng M/YYYY â†’ chu ká»³ 26/(M-1) â†’ 25/M
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
+// Billing cycle helper: chọn tháng M/YYYY → chu kỳ 26/(M-1) → 25/M
+// ─────────────────────────────────────────────
 function getBillingCycle(monthStr: string): { from: string; to: string; label: string } {
     // monthStr = "YYYY-MM"
     const [year, month] = monthStr.split("-").map(Number)
-    // Start: ngÃ y 26 thÃ¡ng trÆ°á»›c
+    // Start: ngày 26 tháng trước
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
     const from = `${prevYear}-${String(prevMonth).padStart(2, "0")}-26`
-    // End: ngÃ y 25 thÃ¡ng hiá»‡n táº¡i
+    // End: ngày 25 tháng hiện tại
     const to = `${year}-${String(month).padStart(2, "0")}-25`
-    // Human label: "26/MM-1/YYYY â†’ 25/MM/YYYY"
-    const label = `26/${String(prevMonth).padStart(2, "0")}/${prevYear} â†’ 25/${String(month).padStart(2, "0")}/${year}`
+    // Human label: "26/MM-1/YYYY → 25/MM/YYYY"
+    const label = `26/${String(prevMonth).padStart(2, "0")}/${prevYear} → 25/${String(month).padStart(2, "0")}/${year}`
     return { from, to, label }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // Types
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 interface HeadcountRecord {
     senderHint: string
     date: string
@@ -94,10 +94,10 @@ interface MealStatRow {
     ot_count: number | null
 }
 
-// Department mapping: Zalo name hoáº·c tÃªn Excel â†’ DB department code
-// TÃªn Excel chÃ­nh xÃ¡c tá»« file "BÃ¡o CÆ¡m 2026" Ä‘Æ°á»£c giá»¯ nguyÃªn
+// Department mapping: Zalo name hoặc tên Excel → DB department code
+// Tên Excel chính xác từ file "Báo Cơm 2026" được giữ nguyên
 const DEPT_MAP: Record<string, string> = {
-    // â”€â”€ LOADING / WH (lÃ m viá»‡c táº¡i FGWH vÃ  RCN) â”€â”€
+    // ── LOADING / WH (làm việc tại FGWH và RCN) ──
     "loading s1": "FGWH",
     "loading s2": "FGWH",
     "loading s3": "FGWH",
@@ -106,101 +106,101 @@ const DEPT_MAP: Record<string, string> = {
     "wh": "FGWH",
     "fgwh": "FGWH",
     "rcn": "FGWH",
-    // â”€â”€ STEAMING â”€â”€
+    // ── STEAMING ──
     "steaming s1": "STEAM",
     "steaming s2": "STEAM",
     "steaming s3": "STEAM",
     "steaming": "STEAM",
-    // â”€â”€ SHELLING â”€â”€
+    // ── SHELLING ──
     "shelling s1": "SHELL",
-    "shelling thá»i vá»¥ s1": "SHELL",
+    "shelling thời vụ s1": "SHELL",
     "shelling s2": "SHELL",
-    "shelling thá»i vá»¥ s2": "SHELL",
+    "shelling thời vụ s2": "SHELL",
     "shelling s3": "SHELL",
-    "shelling thá»i vá»¥ s3": "SHELL",
+    "shelling thời vụ s3": "SHELL",
     "shelling": "SHELL",
-    // â”€â”€ MAINTENANCE SHELLING â”€â”€
+    // ── MAINTENANCE SHELLING ──
     "maintenance shelling s1": "MAINT_SHELL",
     "maintenance shelling s2": "MAINT_SHELL",
     "maintenance shelling s3": "MAINT_SHELL",
     "maintenance shelling": "MAINT_SHELL",
     "maint shelling": "MAINT_SHELL",
     "maint - shelling": "MAINT_SHELL",
-    "báº£o trÃ¬ shelling": "MAINT_SHELL",
+    "bảo trì shelling": "MAINT_SHELL",
     "bao tri shelling": "MAINT_SHELL",
-    "báº£o trÃ¬ mÃ¡y cáº¯t": "MAINT_SHELL",
+    "bảo trì máy cắt": "MAINT_SHELL",
     "bao tri may cat": "MAINT_SHELL",
-    "báº£o trÃ¬ may cáº¯t": "MAINT_SHELL",
-    "bao tri mÃ¡y cáº¯t": "MAINT_SHELL",
-    // â”€â”€ BORMA â”€â”€
+    "bảo trì may cắt": "MAINT_SHELL",
+    "bao tri máy cắt": "MAINT_SHELL",
+    // ── BORMA ──
     "borma s1": "BORMA",
-    "borma thá»i vá»¥ s1": "BORMA",
+    "borma thời vụ s1": "BORMA",
     "borma s2": "BORMA",
-    "borma thá»i vá»¥ s2": "BORMA",
+    "borma thời vụ s2": "BORMA",
     "borma s3": "BORMA",
-    "borma thá»i vá»¥ s3": "BORMA",
+    "borma thời vụ s3": "BORMA",
     "borma": "BORMA",
-    // â”€â”€ PEELING MACHINE (Peeling Mc) â”€â”€
+    // ── PEELING MACHINE (Peeling Mc) ──
     "peeling s1": "PEEL",
-    "peeling thá»i vá»¥ s1": "PEEL",
+    "peeling thời vụ s1": "PEEL",
     "peeling s2": "PEEL",
-    "peeling thá»i vá»¥ s2": "PEEL",
+    "peeling thời vụ s2": "PEEL",
     "peeling s3": "PEEL",
-    "peeling thá»i vá»¥ s3": "PEEL",
+    "peeling thời vụ s3": "PEEL",
     "peeling": "PEEL",
     "peeling mc": "PEEL",
     "mc peeling": "PEEL",
-    // â”€â”€ COLOR SORTER (Machine Grading) â”€â”€
+    // ── COLOR SORTER (Machine Grading) ──
     "machine grading - shift 1": "CS",
-    "machine grading  - thá»i vá»¥ 1": "CS",
+    "machine grading  - thời vụ 1": "CS",
     "machine grading  - shift 2": "CS",
-    "machine grading  thá»i vá»¥ - shift 2": "CS",
+    "machine grading  thời vụ - shift 2": "CS",
     "machine grading  - shift 3": "CS",
-    "machine grading  thá»i vá»¥- shift 3": "CS",
+    "machine grading  thời vụ- shift 3": "CS",
     "machine grading": "CS",
     "machine grading shift 1": "CS",
     "machine grading shift 2": "CS",
     "machine grading shift 3": "CS",
     "color sorter": "CS",
-    // â”€â”€ HANDPEELING (Manual Grading Ms Huá»‡ + Manual Peeling LiÃªn/Dung) â”€â”€
-    "manual grading -shift 1 (ms huá»‡)": "HPEEL_GRADING",
-    "manual grading thá»i vá»¥ -shift 1 (ms huá»‡)": "HPEEL_GRADING",
-    "manual grading -shift 2 (ms huá»‡)": "HPEEL_GRADING",
-    "manual grading thá»i vá»¥ -shift 2 (ms huá»‡)": "HPEEL_GRADING",
-    "manual grading -shift 3 (ms huá»‡)": "HPEEL_GRADING",
-    "manual grading thá»i vá»¥ -shift 3 (ms huá»‡)": "HPEEL_GRADING",
+    // ── HANDPEELING (Manual Grading Ms Huệ + Manual Peeling Liên/Dung) ──
+    "manual grading -shift 1 (ms huệ)": "HPEEL_GRADING",
+    "manual grading thời vụ -shift 1 (ms huệ)": "HPEEL_GRADING",
+    "manual grading -shift 2 (ms huệ)": "HPEEL_GRADING",
+    "manual grading thời vụ -shift 2 (ms huệ)": "HPEEL_GRADING",
+    "manual grading -shift 3 (ms huệ)": "HPEEL_GRADING",
+    "manual grading thời vụ -shift 3 (ms huệ)": "HPEEL_GRADING",
     "manual grading": "HPEEL_GRADING",
-    "manual peeling s1 - liÃªn": "HPEEL_LIEN",
-    "manual peeling s1 thá»i vá»¥ - liÃªn": "HPEEL_LIEN",
+    "manual peeling s1 - liên": "HPEEL_LIEN",
+    "manual peeling s1 thời vụ - liên": "HPEEL_LIEN",
     "manual peeling s1 - dung": "HPEEL_DUNG",
-    "manual peeling s1 thá»i vá»¥ - dung": "HPEEL_DUNG",
-    "manual peeling s2 - liÃªn": "HPEEL_LIEN",
-    "manual peeling s2 thá»i vá»¥ - liÃªn": "HPEEL_LIEN",
+    "manual peeling s1 thời vụ - dung": "HPEEL_DUNG",
+    "manual peeling s2 - liên": "HPEEL_LIEN",
+    "manual peeling s2 thời vụ - liên": "HPEEL_LIEN",
     "manual peeling s2 - dung": "HPEEL_DUNG",
-    "manual peeling s2 thá»i vá»¥ - dung": "HPEEL_DUNG",
-    "manual peeling s3 - liÃªn": "HPEEL_LIEN",
-    "manual peeling s3 thá»i vá»¥ - liÃªn": "HPEEL_LIEN",
+    "manual peeling s2 thời vụ - dung": "HPEEL_DUNG",
+    "manual peeling s3 - liên": "HPEEL_LIEN",
+    "manual peeling s3 thời vụ - liên": "HPEEL_LIEN",
     "manual peeling s3 - dung": "HPEEL_DUNG",
-    "manual peeling s3 thá»i vá»¥ - dung": "HPEEL_DUNG",
+    "manual peeling s3 thời vụ - dung": "HPEEL_DUNG",
     "manual peeling": "HPEEL",
     "handpeeling": "HPEEL",
-    // Zalo aliases (grading â†’ handpeeling)
+    // Zalo aliases (grading → handpeeling)
     "grading": "HPEEL_GRADING",
     "gradin": "HPEEL_GRADING",
-    // â”€â”€ PACKING â”€â”€
+    // ── PACKING ──
     "packing s1": "PACK",
-    "packing thá»i vá»¥ s1": "PACK",
+    "packing thời vụ s1": "PACK",
     "packing s2": "PACK",
-    "packing thá»i vá»¥ s2": "PACK",
+    "packing thời vụ s2": "PACK",
     "packing s3": "PACK",
     "packing": "PACK",
-    // â”€â”€ BOILER â”€â”€
+    // ── BOILER ──
     "boiler worker s1": "BOILER",
     "boiler worker s2": "BOILER",
     "boiler worker s3": "BOILER",
     "boiler worker": "BOILER",
     "boiler": "BOILER",
-    // â”€â”€ MAINTENANCE HIGHCARE â”€â”€
+    // ── MAINTENANCE HIGHCARE ──
     "maintenance s1": "MAINT_HCA",
     "maintenance s2": "MAINT_HCA",
     "maintenance s3": "MAINT_HCA",
@@ -209,28 +209,28 @@ const DEPT_MAP: Record<string, string> = {
     "maintenance highcare": "MAINT_HCA",
     "maint - highcare": "MAINT_HCA",
     "maint-highcare": "MAINT_HCA",
-    "báº£o trÃ¬ highcare": "MAINT_HCA",
+    "bảo trì highcare": "MAINT_HCA",
     "bao tri highcare": "MAINT_HCA",
-    "báº£o trÃ¬ hca": "MAINT_HCA",
+    "bảo trì hca": "MAINT_HCA",
     "bao tri hca": "MAINT_HCA",
     "highcare maint": "MAINT_HCA",
     "highcare maintenance": "MAINT_HCA",
-    // â”€â”€ QC â”€â”€
+    // ── QC ──
     "qc": "QC",
     "qc s2": "QC",
     "qc s3": "QC",
-    // â”€â”€ CLEANING â”€â”€
+    // ── CLEANING ──
     "cleaning worker": "MAINT_HCA",
     "cleaning worker s2": "MAINT_HCA",
     "cleaning worker s3": "MAINT_HCA",
-    // â”€â”€ OFFICE â”€â”€
+    // ── OFFICE ──
     "office": "OFFICE",
-    "vÄƒn phÃ²ng": "OFFICE",
+    "văn phòng": "OFFICE",
     "van phong": "OFFICE",
     "vp": "OFFICE",
     "office staff": "OFFICE",
     "staff": "OFFICE",
-    // â”€â”€ Fallback: AI may return the DB code directly (e.g. "STEAM", "PEEL", "HPEEL") â”€â”€
+    // ── Fallback: AI may return the DB code directly (e.g. "STEAM", "PEEL", "HPEEL") ──
     // Note: borma/boiler/qc/fgwh already defined above; only add new ones here
     "steam": "STEAM",
     "shell": "SHELL",
@@ -253,9 +253,9 @@ const HPEEL_SUBGROUP_DISPLAY: Record<string, string> = {
 // Virtual sub-group codes mapping to HPEEL department_id
 const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG"])
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // Parse helpers
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 
 function extractNumber(raw: string): { total: number | null; vegetarian: number | null; note: string } {
     if (!raw || raw.trim() === "" || raw.trim() === ":") return { total: null, vegetarian: null, note: "" }
@@ -302,17 +302,17 @@ function parseBlock(block: string): HeadcountRecord | null {
     const text = block.trim()
     if (text.length < 10) return null
 
-    const dateRaw = getField(text, ["date", "ngÃ y", "deate", "ngay"])
+    const dateRaw = getField(text, ["date", "ngày", "deate", "ngay"])
     let dateVal = normalizeDate(dateRaw)
     if (!dateVal) {
         const inlineDate = text.match(/\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b/)
         if (inlineDate) dateVal = normalizeDate(inlineDate[0])
     }
 
-    const hasKeyword = /khu\s*v[á»±u]c|chÃ­nh\s*th[á»©u]c|ca\s*:/i.test(text)
+    const hasKeyword = /khu\s*v[ựu]c|chính\s*th[ứu]c|ca\s*:/i.test(text)
     if (!dateVal && !hasKeyword) return null
 
-    let area = getField(text, ["khu vá»±c", "khu vuc", "bá»™ pháº­n", "bo phan", "bá»™pháº­n"])
+    let area = getField(text, ["khu vực", "khu vuc", "bộ phận", "bo phan", "bộphận"])
     area = area.replace(/\s*ca\s*:\s*\w+.*/i, "").trim()
     // Strip trailing parenthetical hints like "(Dung)", "(Linh)", etc.
     area = area.replace(/\s*\([^)]*\)\s*$/, "").trim()
@@ -320,48 +320,48 @@ function parseBlock(block: string): HeadcountRecord | null {
     area = area.replace(/[,;.]+$/, "").trim()
 
     let shift = getField(text, ["ca"])
-    const inlineShift = getField(text, ["khu vá»±c", "khu vuc"]).match(/ca\s*:\s*(\S+)/i)
+    const inlineShift = getField(text, ["khu vực", "khu vuc"]).match(/ca\s*:\s*(\S+)/i)
     if (inlineShift) shift = inlineShift[1]
     shift = shift.replace(/\./g, ", ").trim()
-    // Strip trailing descriptive text like "vÃ  HC", "vÃ  Highcare" after the shift number
-    shift = shift.replace(/\s+vÃ \s+.*/i, "").trim()
+    // Strip trailing descriptive text like "và HC", "và Highcare" after the shift number
+    shift = shift.replace(/\s+và\s+.*/i, "").trim()
     // Keep only leading digits/commas/spaces (shift number part)
     const shiftOnlyMatch = shift.match(/^[\d,\s]+/)
     if (shiftOnlyMatch) shift = shiftOnlyMatch[0].trim()
 
-    // Fuzzy match: ch[Ã­i]nh th[á»©u]c hi[eá»‡]n di[eá»‡]n (any diacritic mix)
-    const offPresentFuzzy = text.match(/ch[Ã­i]nh\s+th[á»©u]c\s+hi[eá»‡]n\s+di[eá»‡]n\s*:?\s*([^\n]*)/i)
+    // Fuzzy match: ch[íi]nh th[ứu]c hi[eệ]n di[eệ]n (any diacritic mix)
+    const offPresentFuzzy = text.match(/ch[íi]nh\s+th[ứu]c\s+hi[eệ]n\s+di[eệ]n\s*:?\s*([^\n]*)/i)
     let offPresentRaw = offPresentFuzzy ? offPresentFuzzy[1].trim() : getField(text, [
-        "chÃ­nh thá»©c hiá»‡n diá»‡n", "chÃ­nh thuc hiá»‡n diá»‡n", "chinh thuc hien dien",
+        "chính thức hiện diện", "chính thuc hiện diện", "chinh thuc hien dien",
     ])
-    // Fallback: bare "ChÃ­nh thá»©c N" without hiá»‡n diá»‡n
+    // Fallback: bare "Chính thức N" without hiện diện
     if (!offPresentRaw) {
-        const bareMatch = text.match(/ch[Ã­i]nh\s+th[á»©u]c\s*:?\s*(\d[^\n]*)/i)
+        const bareMatch = text.match(/ch[íi]nh\s+th[ứu]c\s*:?\s*(\d[^\n]*)/i)
         if (bareMatch) offPresentRaw = bareMatch[1].trim()
     }
     const { total: officialPresent, vegetarian, note: offNote } = extractNumber(offPresentRaw)
 
-    let offAbsentRaw = getField(text, ["chÃ­nh thá»©c váº¯ng", "chinh thuc vang"])
-    // Fallback: bare "Váº¯ng N" (without "chÃ­nh thá»©c" prefix) â€” only when no other vang label found
+    let offAbsentRaw = getField(text, ["chính thức vắng", "chinh thuc vang"])
+    // Fallback: bare "Vắng N" (without "chính thức" prefix) — only when no other vang label found
     if (!offAbsentRaw) {
-        // TÃ¬m dÃ²ng chá»©a "váº¯ng" khÃ´ng cÃ³ prefix thá»i vá»¥
-        const bareVangMatch = text.match(/(?<!thá»i\s+vá»¥\s+)váº¯ng\s*:?\s*(\d[^\n]*)/i)
+        // Tìm dòng chứa "vắng" không có prefix thời vụ
+        const bareVangMatch = text.match(/(?<!thời\s+vụ\s+)vắng\s*:?\s*(\d[^\n]*)/i)
         if (bareVangMatch) offAbsentRaw = bareVangMatch[1].trim()
     }
     const { total: officialAbsent } = extractNumber(offAbsentRaw)
 
-    const seasPresentRaw = getField(text, ["thá»i vá»¥ hiá»‡n diá»‡n", "2thá»i vá»¥ hiá»‡n diá»‡n", "thoi vu hien dien"])
+    const seasPresentRaw = getField(text, ["thời vụ hiện diện", "2thời vụ hiện diện", "thoi vu hien dien"])
     const { total: seasonalPresent } = extractNumber(seasPresentRaw)
 
-    const seasAbsentRaw = getField(text, ["thá»i vá»¥ váº¯ng", "thoi vu vang"])
+    const seasAbsentRaw = getField(text, ["thời vụ vắng", "thoi vu vang"])
     const { total: seasonalAbsent } = extractNumber(seasAbsentRaw)
 
     // OT: grab only the leading number/token (stop before any next keyword or whitespace-separated text)
     let otRaw = getField(text, ["ot"])
-    // Trim away anything after the first number + optional symbol (e.g. "0 Dá»± trÃ¹ ngÃ y ...")
-    const otNumMatch = otRaw.match(/^(\d+[h]?(?:\.\d+)?(?:\s*giá»|\s*h)?)/i)
-    let ot = otNumMatch ? otNumMatch[1].trim() : (otRaw.split(/\s{2,}|(?=d[á»±u]\s*tr[Ã¹u])|(?=ca\s*:)/i)[0] || otRaw).trim()
-    // Dá»± trÃ¹ (forecast) is intentionally ignored â€” trailing info after OT is skipped
+    // Trim away anything after the first number + optional symbol (e.g. "0 Dự trù ngày ...")
+    const otNumMatch = otRaw.match(/^(\d+[h]?(?:\.\d+)?(?:\s*giờ|\s*h)?)/i)
+    let ot = otNumMatch ? otNumMatch[1].trim() : (otRaw.split(/\s{2,}|(?=d[ựu]\s*tr[ùu])|(?=ca\s*:)/i)[0] || otRaw).trim()
+    // Dự trù (forecast) is intentionally ignored — trailing info after OT is skipped
 
     let vegTotal = vegetarian
     const vegInOT = ot.match(/(\d+)\s*[p]?\s*[(\[]?\s*(\d+)\s*chay/i)
@@ -373,7 +373,7 @@ function parseBlock(block: string): HeadcountRecord | null {
     let senderHint = ""
     for (const line of lines) {
         const l = line.trim()
-        if (l && !/khu\s*v[á»±u]c|ca\s*:|chÃ­nh|thá»i|date|ngÃ y|deate|ot:|dá»±/i.test(l)) {
+        if (l && !/khu\s*v[ựu]c|ca\s*:|chính|thời|date|ngày|deate|ot:|dự/i.test(l)) {
             if (!/^\d{1,2}[./]/.test(l) && l.length < 60) {
                 senderHint = l
                 break
@@ -384,8 +384,8 @@ function parseBlock(block: string): HeadcountRecord | null {
     return {
         senderHint,
         date: dateVal,
-        area: area || "â€”",
-        shift: shift || "â€”",
+        area: area || "—",
+        shift: shift || "—",
         officialPresent,
         officialPresentNote: offNote,
         officialAbsent,
@@ -409,7 +409,7 @@ function cleanZaloExportTriple(raw: string): string {
     let text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 
     // Step 1: Collapse timestamped triples:
-    //   HH:MM] ...copy2... HH:MM: ...copy3... HH:MM  â†’  HH:MM
+    //   HH:MM] ...copy2... HH:MM: ...copy3... HH:MM  →  HH:MM
     // Use lazy match; \1 anchors stops at the correct timestamp occurrence.
     text = text.replace(
         /(\d{1,2}:\d{2})\]([\s\S]+?)\1\s*:[\s\S]+?\1(?=\n|$)/g,
@@ -421,7 +421,7 @@ function cleanZaloExportTriple(raw: string): string {
     text = text.replace(/\]\s*[^\n\[]+(?=\n|$)/g, '')
 
     // Step 3: Remove leading [ from each line that starts a message block
-    text = text.replace(/^\[(?!HÃ¬nh áº£nh|Sticker|Video|File)/gm, '')
+    text = text.replace(/^\[(?!Hình ảnh|Sticker|Video|File)/gm, '')
 
     // Step 4: Remove Zalo emoji/sticker reaction lines
     text = text.replace(/^\/-[a-zA-Z]+\s*$/gm, '')
@@ -438,7 +438,7 @@ function splitIntoBlocks(rawText: string): string[] {
         const trimmed = section.trim()
         if (!trimmed) continue
         const hasDate = /\b\d{1,2}[./]\d{1,2}[./]\d{4}\b/.test(trimmed)
-        const hasArea = /khu\s*v[á»±u]c/i.test(trimmed)
+        const hasArea = /khu\s*v[ựu]c/i.test(trimmed)
         if (hasDate || hasArea) blocks.push(trimmed)
     }
     if (blocks.length === 0) {
@@ -459,13 +459,13 @@ function splitIntoBlocks(rawText: string): string[] {
 }
 
 // Detect/split a single area block that contains multiple "Ca N" sub-sections
-// e.g. "Ca 1\nChÃ­nh thá»©c 8\nCa 2\nChÃ­nh thá»©c 1" â†’ 2 sub-blocks each with inherited date+area
+// e.g. "Ca 1\nChính thức 8\nCa 2\nChính thức 1" → 2 sub-blocks each with inherited date+area
 function splitMultiShiftBlock(block: string): string[] {
     const lines = block.split("\n")
     // Regex to detect a bare "Ca N" line (shift marker, N = 1/2/3)
-    const IS_SHIFT_LINE = /^ca\s+([1-3])(?:\s|$|v[Ã a])/i
+    const IS_SHIFT_LINE = /^ca\s+([1-3])(?:\s|$|v[àa])/i
 
-    // Collect header lines (date, area) â€” before first bare Ca line
+    // Collect header lines (date, area) — before first bare Ca line
     const headerLines: string[] = []
     let firstCaIdx = -1
     for (let i = 0; i < lines.length; i++) {
@@ -514,22 +514,22 @@ function parseZaloText(rawText: string): HeadcountRecord[] {
     const blocks = splitIntoBlocks(cleanText)
     const records: HeadcountRecord[] = []
     for (const block of blocks) {
-        // Expand multi-shift blocks (1 area, nhiá»u ca) thÃ nh records riÃªng
+        // Expand multi-shift blocks (1 area, nhiều ca) thành records riêng
         const subBlocks = splitMultiShiftBlock(block)
         for (const sub of subBlocks) {
             const record = parseBlock(sub)
-            if (record && (record.date || record.area !== "â€”")) records.push(record)
+            if (record && (record.date || record.area !== "—")) records.push(record)
         }
     }
     // Step 2: Dedup by (date+area+shift), keeping last occurrence
     return deduplicateRecords(records)
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // CSV Export
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function exportCSV(records: HeadcountRecord[]) {
-    const headers = ["NgÃ y", "Khu vá»±c", "Ca", "CT Hiá»‡n diá»‡n", "CT Váº¯ng", "TV Hiá»‡n diá»‡n", "TV Váº¯ng", "OT", "Chay"]
+    const headers = ["Ngày", "Khu vực", "Ca", "CT Hiện diện", "CT Vắng", "TV Hiện diện", "TV Vắng", "OT", "Chay"]
     const rows = records.map((r) => [
         r.date, r.area, r.shift,
         r.officialPresent ?? "", r.officialAbsent ?? "",
@@ -550,7 +550,7 @@ function exportCSV(records: HeadcountRecord[]) {
 }
 
 function exportHistoryCSV(records: SavedRecord[]) {
-    const headers = ["NgÃ y", "Bá»™ pháº­n", "Ca", "CT Hiá»‡n diá»‡n", "CT Váº¯ng", "TV Hiá»‡n diá»‡n", "TV Váº¯ng", "OT", "Chay", "Ghi chÃº"]
+    const headers = ["Ngày", "Bộ phận", "Ca", "CT Hiện diện", "CT Vắng", "TV Hiện diện", "TV Vắng", "OT", "Chay", "Ghi chú"]
     const rows = records.map((r) => [
         r.work_date, r.department_name, `Ca ${r.shift}`,
         r.official_present, r.official_absent,
@@ -569,16 +569,16 @@ function exportHistoryCSV(records: SavedRecord[]) {
     URL.revokeObjectURL(url)
 }
 
-// Convert DD/MM/YYYY â†’ YYYY-MM-DD for DB
+// Convert DD/MM/YYYY → YYYY-MM-DD for DB
 function dateToISO(ddmmyyyy: string): string {
     const parts = ddmmyyyy.split("/")
     if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`
     return ddmmyyyy
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // Component
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 export default function BaoCom() {
     const supabase = createClient()
     const [rawText, setRawText] = useState("")
@@ -597,7 +597,7 @@ export default function BaoCom() {
     const [saving, setSaving] = useState(false)
     const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
     const [deptList, setDeptList] = useState<{ id: string; code: string; name_en: string }[]>([])
-    // "Lưu làm ví dụ dạy AI" state
+    // "Lưu l�m v� dụ dạy AI" state
     const [showSaveExample, setShowSaveExample] = useState(false)
     const [exampleTitle, setExampleTitle] = useState('')
     const [savingExample, setSavingExample] = useState(false)
@@ -617,7 +617,7 @@ export default function BaoCom() {
         seasonal_present: number; seasonal_absent: number;
         ot_count: number; vegetarian: number
     }>({ official_present: 0, official_absent: 0, seasonal_present: 0, seasonal_absent: 0, ot_count: 0, vegetarian: 0 })
-    // Refresh key: tÄƒng lÃªn má»—i khi kitchen tab thay Ä‘á»•i data â†’ trigger re-fetch history
+    // Refresh key: tăng lên mỗi khi kitchen tab thay đổi data → trigger re-fetch history
     const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
 
     // Load departments + user role on mount
@@ -636,7 +636,7 @@ export default function BaoCom() {
 
     const canSave = ["admin", "hr", "HSE", "hse", "hse_admin"].includes(userRole)
 
-    // â”€â”€â”€ Build summary text for kitchen â”€â”€â”€
+    // ─── Build summary text for kitchen ───
     const buildSummaryText = (): string => {
         // Group by date+shift
         const groups = new Map<string, HeadcountRecord[]>()
@@ -654,20 +654,20 @@ export default function BaoCom() {
             const totalOT = recs.reduce((s, r) => s + (parseInt(r.ot) || 0), 0)
             const man = totalPresent - totalVeg
             const shiftHour = SHIFT_HOUR[shift] ?? ""
-            let block = `NgÃ y ${date}\nCa ${shift}: tá»•ng cá»™ng ${man} pháº§n máº·n (chay: ${totalVeg} pháº§n)`
-            if (totalOT > 0) block += `\n${totalOT} OT lÃºc ${shiftHour}`
+            let block = `Ngày ${date}\nCa ${shift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
+            if (totalOT > 0) block += `\n${totalOT} OT lúc ${shiftHour}`
             lines.push(block)
         })
         return lines.join("\n\n")
     }
 
-    // â”€â”€â”€ Check if area has a DEPT_MAP rule â”€â”€â”€
+    // ─── Check if area has a DEPT_MAP rule ───
     const hasDeptRule = (area: string): boolean => {
         const key = area.toLowerCase().trim()
         return Object.prototype.hasOwnProperty.call(DEPT_MAP, key)
     }
 
-    // â”€â”€â”€ History edit / delete handlers â”€â”€â”€
+    // ─── History edit / delete handlers ───
     const handleHistSave = async (id: string) => {
         const { error } = await supabase
             .from("meal_headcount")
@@ -680,9 +680,9 @@ export default function BaoCom() {
                 vegetarian: histEditFields.vegetarian,
             })
             .eq("id", id)
-        if (error) { alert("Lá»—i: " + error.message); return }
+        if (error) { alert("Lỗi: " + error.message); return }
         setHistoryRecords(prev => prev.map(r => r.id === id ? { ...r, ...histEditFields } : r))
-        // Cáº­p nháº­t luÃ´n summaryData náº¿u Ä‘ang hiá»ƒn
+        // Cập nhật luôn summaryData nếu đang hiển
         setSummaryData(prev => prev ? prev.map(r =>
             r.id === id ? { ...r, ...histEditFields } : r
         ) : prev)
@@ -690,15 +690,15 @@ export default function BaoCom() {
     }
 
     const handleHistDelete = async (id: string) => {
-        if (!confirm("XÃ³a báº£n ghi nÃ y?")) return
+        if (!confirm("Xóa bản ghi này?")) return
         const { error } = await supabase.from("meal_headcount").delete().eq("id", id)
-        if (error) { alert("Lá»—i: " + error.message); return }
+        if (error) { alert("Lỗi: " + error.message); return }
         setHistoryRecords(prev => prev.filter(r => r.id !== id))
-        // Cáº­p nháº­t luÃ´n summaryData náº¿u Ä‘ang hiá»ƒn
+        // Cập nhật luôn summaryData nếu đang hiển
         setSummaryData(prev => prev ? prev.filter(r => r.id !== id) : prev)
     }
 
-    // â”€â”€â”€ Monthly stats state â”€â”€â”€
+    // ─── Monthly stats state ───
     const [statsMonth, setStatsMonth] = useState<string>(() => new Date().toISOString().slice(0, 7))
     const [statsData, setStatsData] = useState<MealStatRow[] | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
@@ -709,7 +709,7 @@ export default function BaoCom() {
         setStatsError(null)
         setStatsData(null)
         try {
-            // Chu ká»³ tiá»n cÆ¡m: 26 thÃ¡ng trÆ°á»›c â†’ 25 thÃ¡ng hiá»‡n táº¡i
+            // Chu kỳ tiền cơm: 26 tháng trước → 25 tháng hiện tại
             const { from, to } = getBillingCycle(statsMonth)
             const { data, error } = await supabase
                 .from("meal_headcount")
@@ -726,11 +726,11 @@ export default function BaoCom() {
         }
     }
 
-    // Thá»© tá»± bá»™ pháº­n theo layout Excel
+    // Thứ tự bộ phận theo layout Excel
     const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','PACK','BOILER','MAINT_HCA','QC','OFFICE']
     const SHIFT_ORDER = ['1','2','3','OT']
 
-    // TÃªn hiá»ƒn thá»‹ Ä‘áº¹p nhÆ° trong Excel
+    // Tên hiển thị đẹp như trong Excel
     const DEPT_DISPLAY: Record<string, string> = {
         FGWH:       'Loading',
         STEAM:      'Steaming',
@@ -791,7 +791,7 @@ export default function BaoCom() {
     const exportMonthlyExcel = () => {
         if (!statsData || statsData.length === 0) return
         const { days, deptGroups } = buildMonthlyPivot(statsData)
-        const header = ["Bá»™ pháº­n", "Ca", ...days.map(d => parseInt(d.slice(8), 10)), "Tá»”NG"]
+        const header = ["Bộ phận", "Ca", ...days.map(d => parseInt(d.slice(8), 10)), "TỔNG"]
         const dataRows: (string | number)[][] = []
         deptGroups.forEach(dept => {
             dept.shifts.forEach(sr => {
@@ -800,18 +800,18 @@ export default function BaoCom() {
                 dataRows.push([dept.name, sr.shift === 'OT' ? 'OT' : `Ca ${sr.shift}`, ...days.map(d => sr.days.get(d) ?? 0), rowTotal])
             })
         })
-        const footerRow = ["Tá»”NG NGÃ€Y", "", ...days.map(d =>
+        const footerRow = ["TỔNG NGÀY", "", ...days.map(d =>
             deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)
         ), deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
         const wsData = [header, ...dataRows, footerRow]
         const ws = XLSX.utils.aoa_to_sheet(wsData)
         ws["!cols"] = [{ wch: 20 }, { wch: 6 }, ...days.map(() => ({ wch: 5 })), { wch: 8 }]
         const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, `CÆ¡m ${statsMonth}`)
+        XLSX.utils.book_append_sheet(wb, ws, `Cơm ${statsMonth}`)
         XLSX.writeFile(wb, `bao-com-${statsMonth}.xlsx`)
     }
 
-    // â”€â”€â”€ DB-based summary state â”€â”€â”€
+    // ─── DB-based summary state ───
     const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
     const [summaryShift, setSummaryShift] = useState<string>("2")
     const [summaryLoading, setSummaryLoading] = useState(false)
@@ -846,23 +846,23 @@ export default function BaoCom() {
             setSummaryData([...seen.values()].sort((a, b) => a.department_name.localeCompare(b.department_name)))
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e)
-            setSummaryError(msg || "Lá»—i khÃ´ng xÃ¡c Ä‘á»‹nh")
+            setSummaryError(msg || "Lỗi không xác định")
         } finally {
             setSummaryLoading(false)
         }
     }
 
     const handleDeleteRow = async (id: string) => {
-        if (!confirm("Äá»“ng Ã½ xÃ³a báº£n ghi nÃ y?")) return
+        if (!confirm("Đồng ý xóa bản ghi này?")) return
         const { error } = await supabase.from("meal_headcount").delete().eq("id", id)
         if (error) {
-            alert("Lá»—i xÃ³a: " + error.message)
+            alert("Lỗi xóa: " + error.message)
             return
         }
-        // XÃ³a luÃ´n trong historyRecords (state local)
+        // Xóa luôn trong historyRecords (state local)
         setHistoryRecords(prev => prev.filter(r => r.id !== id))
         setHistoryRefreshKey(k => k + 1)
-        // Re-fetch tá»« DB Ä‘á»ƒ Ä‘áº£m báº£o khÃ´ng cÃ³ báº£n ghi trÃ¹ng cÅ© hiá»‡n láº¡i
+        // Re-fetch từ DB để đảm bảo không có bản ghi trùng cũ hiện lại
         await fetchSummaryFromDB()
     }
 
@@ -881,7 +881,7 @@ export default function BaoCom() {
         }).eq("id", id)
         if (!error) {
             setSummaryData(prev => prev ? prev.map(r => r.id === id ? { ...r, ...editFields } : r) : prev)
-            // Äá»“ng bá»™: cáº­p nháº­t luÃ´n trong historyRecords náº¿u Ä‘ang giá»¯ record Ä‘Ã³
+            // Đồng bộ: cập nhật luôn trong historyRecords nếu đang giữ record đó
             setHistoryRecords(prev => prev.map(r =>
                 r.id === id
                     ? { ...r,
@@ -921,10 +921,10 @@ export default function BaoCom() {
         if (!error) {
             setAddRow(null)
             await fetchSummaryFromDB()
-            // Äá»“ng bá»™: Ä‘Ã¡nh dáº¥u Ä‘á»ƒ re-fetch lá»‹ch sá»­ khi chuyá»ƒn tab
+            // Đồng bộ: đánh dấu để re-fetch lịch sử khi chuyển tab
             setHistoryRefreshKey(k => k + 1)
         } else {
-            alert("Lá»—i lÆ°u: " + error.message)
+            alert("Lỗi lưu: " + error.message)
         }
     }
 
@@ -935,8 +935,8 @@ export default function BaoCom() {
         const man = totalPresent - totalVeg
         const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
         const shiftHour = SHIFT_HOUR[summaryShift] ?? ""
-        let msg = `NgÃ y ${dateDisplay}\nCa ${summaryShift}: tá»•ng cá»™ng ${man} pháº§n máº·n (chay: ${totalVeg} pháº§n)`
-        if (totalOT > 0) msg += `\n${totalOT} OT lÃºc ${shiftHour}`
+        let msg = `Ngày ${dateDisplay}\nCa ${summaryShift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
+        if (totalOT > 0) msg += `\n${totalOT} OT lúc ${shiftHour}`
         return msg
     }
 
@@ -954,7 +954,7 @@ export default function BaoCom() {
             })
     }
 
-    // â”€â”€â”€ Parse handlers â”€â”€â”€
+    // ─── Parse handlers ───
     const [aiParsing, setAiParsing] = useState(false)
     const [aiError, setAiError]     = useState<string | null>(null)
     const [aiTruncated, setAiTruncated] = useState(false)
@@ -981,7 +981,7 @@ export default function BaoCom() {
             const json = await res.json()
             if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`)
 
-            // Map AI response â†’ HeadcountRecord[]
+            // Map AI response → HeadcountRecord[]
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const aiRecords: HeadcountRecord[] = (json.records as any[]).map((r: any) => ({
                 senderHint:         r.senderHint ?? '',
@@ -1001,7 +1001,7 @@ export default function BaoCom() {
             setParsed(true)
             setSaveMsg(null)
             setAiTruncated(!!json.truncated)
-            // Náº¿u AI khÃ´ng parse Ä‘Æ°á»£c â†’ hiá»‡n warning thay vÃ¬ crash
+            // Nếu AI không parse được → hiện warning thay vì crash
             if (json.warning) {
                 setAiError(json.warning)
             }
@@ -1021,7 +1021,7 @@ export default function BaoCom() {
 
     const handleCopyTable = () => {
         if (records.length === 0) return
-        const headers = ["NgÃ y", "Khu vá»±c", "Ca", "CT Hiá»‡n diá»‡n", "CT Váº¯ng", "TV Hiá»‡n diá»‡n", "TV Váº¯ng", "OT", "Chay"]
+        const headers = ["Ngày", "Khu vực", "Ca", "CT Hiện diện", "CT Vắng", "TV Hiện diện", "TV Vắng", "OT", "Chay"]
         const rows = records.map((r) =>
             [r.date, r.area, r.shift, r.officialPresent ?? "", r.officialAbsent ?? "", r.seasonalPresent ?? "", r.seasonalAbsent ?? "", r.ot, r.vegetarian ?? ""].join("\t")
         )
@@ -1030,10 +1030,10 @@ export default function BaoCom() {
         setTimeout(() => setCopied(false), 2000)
     }
 
-    // â”€â”€â”€ Save to DB â”€â”€â”€
+    // ─── Save to DB ───
     const findDeptId = (areaName: string): string | null => {
         const lower = areaName.toLowerCase().trim()
-        // 1. Try DEPT_MAP (display/alias text â†’ code)
+        // 1. Try DEPT_MAP (display/alias text → code)
         const code = DEPT_MAP[lower]
         if (code) {
             // HPEEL sub-groups all resolve to HPEEL dept_id
@@ -1087,16 +1087,16 @@ export default function BaoCom() {
             })
 
             if (error) throw error
-            setSaveMsg({ type: "ok", text: `âœ… ÄÃ£ lÆ°u ${payload.length} báº£n ghi thÃ nh cÃ´ng!` })
+            setSaveMsg({ type: "ok", text: `✅ Đã lưu ${payload.length} bản ghi thành công!` })
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : "Lá»—i khÃ´ng xÃ¡c Ä‘á»‹nh"
-            setSaveMsg({ type: "err", text: `âŒ Lá»—i: ${message}` })
+            const message = err instanceof Error ? err.message : "Lỗi không xác định"
+            setSaveMsg({ type: "err", text: `❌ Lỗi: ${message}` })
         } finally {
             setSaving(false)
         }
     }
 
-    // â”€â”€â”€ History â”€â”€â”€
+    // ─── History ───
     const fetchHistory = async () => {
         setHistoryLoading(true)
         const { data, error } = await supabase
@@ -1151,9 +1151,9 @@ export default function BaoCom() {
                         <UtensilsCrossed className="h-6 w-6 text-orange-600" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">BÃ¡o CÆ¡m â€” Headcount Tracker</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Báo Cơm — Headcount Tracker</h1>
                         <p className="text-sm text-muted-foreground">
-                            Paste Zalo â†’ PhÃ¢n tÃ­ch â†’ LÆ°u DB â†’ Xem lá»‹ch sá»­
+                            Paste Zalo → Phân tích → Lưu DB → Xem lịch sử
                         </p>
                     </div>
                 </div>
@@ -1170,7 +1170,7 @@ export default function BaoCom() {
                     }`}
                 >
                     <ClipboardPaste className="h-4 w-4" />
-                    Nháº­p & PhÃ¢n tÃ­ch
+                    Nhập & Phân tích
                 </button>
                 <button
                     onClick={() => setActiveTab("history")}
@@ -1181,7 +1181,7 @@ export default function BaoCom() {
                     }`}
                 >
                     <History className="h-4 w-4" />
-                    Lá»‹ch sá»­ Ä‘Ã£ lÆ°u
+                    Lịch sử đã lưu
                 </button>
                 <button
                     onClick={() => setActiveTab("kitchen")}
@@ -1192,7 +1192,7 @@ export default function BaoCom() {
                     }`}
                 >
                     <MessageSquare className="h-4 w-4" />
-                    ðŸ³ BÃ¡o cÆ¡m nhÃ  Äƒn
+                    🍳 Báo cơm nhà ăn
                 </button>
                 <button
                     onClick={() => setActiveTab("monthly")}
@@ -1202,8 +1202,8 @@ export default function BaoCom() {
                             : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                 >
-                    <span className="text-base leading-none">ðŸ“…</span>
-                    Theo thÃ¡ng
+                    <span className="text-base leading-none">📅</span>
+                    Theo tháng
                 </button>
                 {canSave && (
                     <button
@@ -1214,26 +1214,26 @@ export default function BaoCom() {
                                 : "border-transparent text-muted-foreground hover:text-foreground"
                         }`}
                     >
-                        <span className="text-base leading-none">🧠</span>
+                        <span className="text-base leading-none">��</span>
                         Dạy AI
                     </button>
                 )}
             </div>
 
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-            {/* TAB 3: KITCHEN / BÃO CÆ M NHÃ€ Ä‚N               */}
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            {/* ═══════════════════════════════════════════ */}
+            {/* TAB 3: KITCHEN / BÁO CƠM NHÀ ĂN               */}
+            {/* ═══════════════════════════════════════════ */}
             {activeTab === "kitchen" && (
                 <div className="space-y-5">
                     <div className="flex items-center gap-2 font-semibold text-green-700 text-lg">
                         <MessageSquare className="h-5 w-5" />
-                        Tá»•ng há»£p bÃ¡o cÆ¡m nhÃ  Äƒn
+                        Tổng hợp báo cơm nhà ăn
                     </div>
 
                     {/* Date + Shift selectors */}
                     <div className="flex flex-wrap items-end gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
                         <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-green-700">NgÃ y</label>
+                            <label className="text-xs font-medium text-green-700">Ngày</label>
                             <input
                                 type="date"
                                 value={summaryDate}
@@ -1263,7 +1263,7 @@ export default function BaoCom() {
                             className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
                         >
                             <BarChart3 className="h-4 w-4" />
-                            {summaryLoading ? "Äang táº£i..." : "Tá»•ng há»£p"}
+                            {summaryLoading ? "Đang tải..." : "Tổng hợp"}
                         </button>
                     </div>
 
@@ -1274,7 +1274,7 @@ export default function BaoCom() {
                     {summaryData !== null && (() => {
                         if (summaryData.length === 0) return (
                             <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                                âš ï¸ KhÃ´ng cÃ³ dá»¯ liá»‡u cho ngÃ y nÃ y â€” cÃ³ thá»ƒ chÆ°a lÆ°u hoáº·c chÆ°a bÃ¡o Ä‘á»§.
+                                ⚠️ Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
                             </div>
                         )
                         const msgText = buildDBSummaryText(summaryData)
@@ -1283,7 +1283,7 @@ export default function BaoCom() {
                             <div className="space-y-4">
                                 {/* Kitchen message box */}
                                 <div className="bg-white rounded-xl border-2 border-green-200 shadow-sm p-4">
-                                    <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">Tin nháº¯n gá»­i nhÃ  Äƒn</div>
+                                    <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">Tin nhắn gửi nhà ăn</div>
                                     <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">{msgText}</pre>
                                     <button
                                         onClick={() => {
@@ -1296,30 +1296,30 @@ export default function BaoCom() {
                                         }`}
                                     >
                                         {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                        {copiedSummary ? "ÄÃ£ copy!" : "Copy tin nháº¯n"}
+                                        {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
                                     </button>
                                 </div>
 
                                 {/* Per-dept breakdown */}
                                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                                     <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b">
-                                        <span className="text-sm font-semibold">Chi tiáº¿t tá»«ng bá»™ pháº­n</span>
+                                        <span className="text-sm font-semibold">Chi tiết từng bộ phận</span>
                                         <button
                                             onClick={() => setAddRow({ deptId: "", officialPresent: 0, seasonalPresent: 0, vegetarian: 0, otCount: 0 })}
                                             className="flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-900 bg-green-50 border border-green-200 px-2 py-1 rounded-lg transition-colors"
                                         >
-                                            <span className="text-base leading-none">+</span> ThÃªm bá»™ pháº­n
+                                            <span className="text-base leading-none">+</span> Thêm bộ phận
                                         </button>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide text-left">
-                                                    <th className="px-3 py-2 font-semibold">Bá»™ pháº­n</th>
-                                                    <th className="px-3 py-2 font-semibold text-right">CT HÄ</th>
-                                                    <th className="px-3 py-2 font-semibold text-right">TV HÄ</th>
-                                                    <th className="px-3 py-2 font-semibold text-right">Tá»•ng</th>
-                                                    <th className="px-3 py-2 font-semibold text-right text-emerald-600">ðŸ¥¦ Chay</th>
+                                                    <th className="px-3 py-2 font-semibold">Bộ phận</th>
+                                                    <th className="px-3 py-2 font-semibold text-right">CT HĐ</th>
+                                                    <th className="px-3 py-2 font-semibold text-right">TV HĐ</th>
+                                                    <th className="px-3 py-2 font-semibold text-right">Tổng</th>
+                                                    <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
                                                     <th className="px-3 py-2 font-semibold text-right">OT</th>
                                                     <th className="px-3 py-2"></th>
                                                 </tr>
@@ -1340,8 +1340,8 @@ export default function BaoCom() {
                                                                 <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.vegetarian} onChange={e => setEditFields(f => ({ ...f, vegetarian: +e.target.value }))} /></td>
                                                                 <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={editFields.ot_count} onChange={e => setEditFields(f => ({ ...f, ot_count: +e.target.value }))} /></td>
                                                                 <td className="px-2 py-1 whitespace-nowrap">
-                                                                    <button onClick={() => handleSaveEdit(r.id)} className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 mr-1">LÆ°u</button>
-                                                                    <button onClick={() => setEditingRowId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded hover:bg-gray-300">Há»§y</button>
+                                                                    <button onClick={() => handleSaveEdit(r.id)} className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 mr-1">Lưu</button>
+                                                                    <button onClick={() => setEditingRowId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded hover:bg-gray-300">Hủy</button>
                                                                 </td>
                                                             </>) : (<>
                                                                 <td className="px-3 py-2 text-right font-semibold text-green-700">{r.official_present ?? 0}</td>
@@ -1350,8 +1350,8 @@ export default function BaoCom() {
                                                                 <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
                                                                 <td className="px-3 py-2 text-right">{r.ot_count ?? 0}</td>
                                                                 <td className="px-2 py-2 whitespace-nowrap">
-                                                                    <button onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">âœï¸ Sá»­a</button>
-                                                                    <button onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">ðŸ—‘</button>
+                                                                    <button onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">✏️ Sửa</button>
+                                                                    <button onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">🗑</button>
                                                                 </td>
                                                             </>)}
                                                         </tr>
@@ -1367,7 +1367,7 @@ export default function BaoCom() {
                                                                 value={addRow.deptId}
                                                                 onChange={e => setAddRow(r => r ? { ...r, deptId: e.target.value } : r)}
                                                             >
-                                                                <option value="">-- Chá»n bá»™ pháº­n --</option>
+                                                                <option value="">-- Chọn bộ phận --</option>
                                                                 {deptList.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
                                                             </select>
                                                         </td>
@@ -1377,15 +1377,15 @@ export default function BaoCom() {
                                                         <td className="px-1 py-1"><input type="number" min={0} placeholder="Chay" className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={addRow.vegetarian || ""} onChange={e => setAddRow(r => r ? { ...r, vegetarian: +e.target.value } : r)} /></td>
                                                         <td className="px-1 py-1"><input type="number" min={0} placeholder="OT" className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={addRow.otCount || ""} onChange={e => setAddRow(r => r ? { ...r, otCount: +e.target.value } : r)} /></td>
                                                         <td className="px-2 py-1 whitespace-nowrap">
-                                                            <button onClick={handleAddRowSave} className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700 mr-1">LÆ°u</button>
-                                                            <button onClick={() => setAddRow(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Há»§y</button>
+                                                            <button onClick={handleAddRowSave} className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700 mr-1">Lưu</button>
+                                                            <button onClick={() => setAddRow(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Hủy</button>
                                                         </td>
                                                     </tr>
                                                 )}
                                             </tbody>
                                             <tfoot>
                                                 <tr className="bg-muted/60 font-bold border-t-2 text-sm">
-                                                    <td className="px-3 py-2">Tá»”NG</td>
+                                                    <td className="px-3 py-2">TỔNG</td>
                                                     <td className="px-3 py-2 text-right text-green-700">{summaryData.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}</td>
@@ -1403,7 +1403,7 @@ export default function BaoCom() {
                                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
                                         <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
                                             <Bell className="h-4 w-4" />
-                                            ChÆ°a cÃ³ dá»¯ liá»‡u tá»«:
+                                            Chưa có dữ liệu từ:
                                         </div>
                                         <div className="flex flex-wrap gap-2">
                                             {missingDepts.map(d => (
@@ -1418,20 +1418,20 @@ export default function BaoCom() {
                 </div>
             )}
 
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            {/* ═════════════════════════════════════════════ */}
             {/* TAB 4: MONTHLY STATS                          */}
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            {/* ═════════════════════════════════════════════ */}
             {activeTab === "monthly" && (
                 <div className="space-y-5">
                     <div className="flex items-center gap-2 font-semibold text-purple-700 text-lg">
-                        <span className="text-xl">ðŸ“…</span>
-                        Thá»‘ng kÃª suáº¥t cÆ¡m theo thÃ¡ng
+                        <span className="text-xl">📅</span>
+                        Thống kê suất cơm theo tháng
                     </div>
 
                     {/* Month picker + fetch */}
                     <div className="flex flex-wrap items-end gap-3 bg-purple-50 border border-purple-200 rounded-xl p-4">
                         <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-purple-700">ThÃ¡ng thanh toÃ¡n</label>
+                            <label className="text-xs font-medium text-purple-700">Tháng thanh toán</label>
                             <input
                                 type="month"
                                 value={statsMonth}
@@ -1441,7 +1441,7 @@ export default function BaoCom() {
                         </div>
                         {/* Billing cycle badge */}
                         <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-purple-700">Chu ká»³</label>
+                            <label className="text-xs font-medium text-purple-700">Chu kỳ</label>
                             <div className="flex items-center gap-1.5 bg-purple-100 border border-purple-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-purple-800">
                                 <CalendarDays className="h-3.5 w-3.5" />
                                 {getBillingCycle(statsMonth).label}
@@ -1453,11 +1453,11 @@ export default function BaoCom() {
                             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
                         >
                             {statsLoading ? (
-                                <span className="animate-spin text-base">â†»</span>
+                                <span className="animate-spin text-base">↻</span>
                             ) : (
-                                <span>ðŸ”</span>
+                                <span>🔍</span>
                             )}
-                            Xem thá»‘ng kÃª
+                            Xem thống kê
                         </button>
                         {statsData && statsData.length > 0 && (
                             <button
@@ -1465,7 +1465,7 @@ export default function BaoCom() {
                                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
                             >
                                 <FileSpreadsheet className="h-4 w-4" />
-                                Xuáº¥t Excel
+                                Xuất Excel
                             </button>
                         )}
                     </div>
@@ -1475,7 +1475,7 @@ export default function BaoCom() {
                     )}
 
                     {statsData !== null && (() => {
-                        if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">KhÃ´ng cÃ³ dá»¯ liá»‡u trong thÃ¡ng nÃ y</div>
+                        if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">Không có dữ liệu trong tháng này</div>
                         const { days, deptGroups } = buildMonthlyPivot(statsData)
                         const dayTotals = days.map(d =>
                             deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)
@@ -1484,18 +1484,18 @@ export default function BaoCom() {
                         return (
                             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                                 <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
-                                    <span>ThÃ¡ng {statsMonth} â€” chu ká»³ {getBillingCycle(statsMonth).label}</span>
+                                    <span>Tháng {statsMonth} — chu kỳ {getBillingCycle(statsMonth).label}</span>
                                     <button onClick={exportMonthlyExcel} className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-                                        <FileSpreadsheet className="h-3.5 w-3.5" /> Xuáº¥t Excel
+                                        <FileSpreadsheet className="h-3.5 w-3.5" /> Xuất Excel
                                     </button>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="text-xs min-w-full">
                                         <thead>
                                             <tr className="bg-muted/40 text-muted-foreground">
-                                                <th className="px-3 py-2 font-semibold text-left sticky left-0 bg-muted/40 z-10 min-w-[140px] whitespace-nowrap">Bá»™ pháº­n / Ca</th>
+                                                <th className="px-3 py-2 font-semibold text-left sticky left-0 bg-muted/40 z-10 min-w-[140px] whitespace-nowrap">Bộ phận / Ca</th>
                                                 {days.map(d => <th key={d} className="px-2 py-2 font-semibold text-center whitespace-nowrap">{parseInt(d.slice(8), 10)}</th>)}
-                                                <th className="px-3 py-2 font-bold text-right text-purple-700 whitespace-nowrap">Tá»”NG</th>
+                                                <th className="px-3 py-2 font-bold text-right text-purple-700 whitespace-nowrap">TỔNG</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1515,13 +1515,13 @@ export default function BaoCom() {
                                                         return (
                                                             <tr key={`${dept.deptKey}|${sr.shift}`} className={isOT ? "bg-orange-50/60" : "hover:bg-muted/30"}>
                                                                 <td className={`px-3 py-1.5 whitespace-nowrap sticky left-0 z-10 pl-6 font-medium ${isOT ? "bg-orange-50/60 text-orange-700" : "bg-white"}`}>
-                                                                    {isOT ? "â± OT" : `Ca ${sr.shift}`}
+                                                                    {isOT ? "⏱ OT" : `Ca ${sr.shift}`}
                                                                 </td>
                                                                 {days.map(d => {
                                                                     const v = sr.days.get(d) ?? 0
                                                                     return (
                                                                         <td key={d} className={`px-2 py-1.5 text-center ${v > 0 ? (isOT ? "text-orange-600 font-semibold" : "font-semibold text-foreground") : "text-muted-foreground/30"}`}>
-                                                                            {v > 0 ? v : "â€”"}
+                                                                            {v > 0 ? v : "—"}
                                                                         </td>
                                                                     )
                                                                 })}
@@ -1534,7 +1534,7 @@ export default function BaoCom() {
                                         </tbody>
                                         <tfoot>
                                             <tr className="bg-muted/60 font-bold border-t-2">
-                                                <td className="px-3 py-2 sticky left-0 bg-muted/60 z-10">Tá»”NG NGÃ€Y</td>
+                                                <td className="px-3 py-2 sticky left-0 bg-muted/60 z-10">TỔNG NGÀY</td>
                                                 {dayTotals.map((v, i) => <td key={days[i]} className="px-2 py-2 text-center text-purple-700">{v > 0 ? v : ""}</td>)}
                                                 <td className="px-3 py-2 text-right text-purple-700">{grandTotal}</td>
                                             </tr>
@@ -1547,9 +1547,9 @@ export default function BaoCom() {
                 </div>
             )}
 
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            {/* ═══════════════════════════════════════════ */}
             {/* TAB 1: PARSE & SAVE                        */}
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            {/* ═══════════════════════════════════════════ */}
             {activeTab === "parse" && (
                 <>
                     {/* Paste area */}
@@ -1557,20 +1557,20 @@ export default function BaoCom() {
                         <div className="bg-card rounded-xl border shadow-sm p-4 space-y-4">
                             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                                 <ClipboardPaste className="h-4 w-4" />
-                                Paste ná»™i dung chat Zalo vÃ o Ä‘Ã¢y (copy táº¥t cáº£ cÃ¡c tin nháº¯n bÃ¡o cÆ¡m cá»§a ngÃ y)
+                                Paste nội dung chat Zalo vào đây (copy tất cả các tin nhắn báo cơm của ngày)
                             </div>
                             <textarea
                                 id="zalo-paste-area"
                                 value={rawText}
                                 onChange={(e) => setRawText(e.target.value)}
-                                placeholder={`VÃ­ dá»¥:\n28.3.2026\nKhu vá»±c : Boiler\nCa: 1.2.3\nChÃ­nh thá»©c hiá»‡n diá»‡n: 3\nChÃ­nh thá»©c váº¯ng: 0\n2Thá»i vá»¥ hiá»‡n diá»‡n:0\nThá»i vá»¥ váº¯ng :0\nOT:\n\nDate: 28/03/2026\nKhu vá»±c : Peeling mc\nCa: 1\nChÃ­nh thá»©c hiá»‡n diá»‡n: 7\n...`}
+                                placeholder={`Ví dụ:\n28.3.2026\nKhu vực : Boiler\nCa: 1.2.3\nChính thức hiện diện: 3\nChính thức vắng: 0\n2Thời vụ hiện diện:0\nThời vụ vắng :0\nOT:\n\nDate: 28/03/2026\nKhu vực : Peeling mc\nCa: 1\nChính thức hiện diện: 7\n...`}
                                 rows={16}
                                 className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400 resize-y"
                                 style={{ minHeight: "260px" }}
                             />
                             <div className="flex items-center justify-between gap-2 flex-wrap">
                                 <p className="text-xs text-muted-foreground">
-                                    ðŸ’¡ KhÃ´ng cáº§n xÃ³a tÃªn ngÆ°á»i gá»­i hay timestamp â€” há»‡ thá»‘ng tá»± bá» qua.
+                                    💡 Không cần xóa tên người gửi hay timestamp — hệ thống tự bỏ qua.
                                 </p>
                                 <div className="flex gap-2">
                                     {/* AI Parse button */}
@@ -1585,7 +1585,7 @@ export default function BaoCom() {
                                         ) : (
                                             <Sparkles className="h-4 w-4" />
                                         )}
-                                        {aiParsing ? "AI Ä‘ang xá»­ lÃ½..." : "ðŸ¤– AI PhÃ¢n tÃ­ch"}
+                                        {aiParsing ? "AI đang xử lý..." : "🤖 AI Phân tích"}
                                     </Button>
                                     {/* Manual parse button */}
                                     <Button
@@ -1595,20 +1595,20 @@ export default function BaoCom() {
                                         className="gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6"
                                     >
                                         <Sparkles className="h-4 w-4" />
-                                        PhÃ¢n tÃ­ch ngay
+                                        Phân tích ngay
                                     </Button>
                                 </div>
                             </div>
                             {aiError && (
                                 <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">
                                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                    <span>AI lá»—i: {aiError}</span>
+                                    <span>AI lỗi: {aiError}</span>
                                 </div>
                             )}
                             {aiTruncated && (
                                 <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
                                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                    <span>âš ï¸ Text quÃ¡ dÃ i â€” AI chá»‰ Ä‘á»c Ä‘Æ°á»£c pháº§n Ä‘áº§u (~8000 kÃ½ tá»±). Káº¿t quáº£ cÃ³ thá»ƒ thiáº¿u. HÃ£y paste tá»«ng ca riÃªng Ä‘á»ƒ Ä‘áº£m báº£o Ä‘áº§y Ä‘á»§.</span>
+                                    <span>⚠️ Text quá dài — AI chỉ đọc được phần đầu (~8000 ký tự). Kết quả có thể thiếu. Hãy paste từng ca riêng để đảm bảo đầy đủ.</span>
                                 </div>
                             )}
                         </div>
@@ -1622,11 +1622,11 @@ export default function BaoCom() {
                             <div className="flex flex-wrap gap-2">
                                 <Button variant="outline" size="sm" onClick={handleCopyTable} className="gap-2">
                                     {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                    {copied ? "ÄÃ£ copy!" : "Copy báº£ng"}
+                                    {copied ? "Đã copy!" : "Copy bảng"}
                                 </Button>
                                 <Button size="sm" onClick={() => exportCSV(records)} className="gap-2 bg-green-600 hover:bg-green-700 text-white">
                                     <Download className="h-4 w-4" />
-                                    Xuáº¥t Excel (.csv)
+                                    Xuất Excel (.csv)
                                 </Button>
                                 {canSave && records.length > 0 && (
                                     <Button
@@ -1636,7 +1636,7 @@ export default function BaoCom() {
                                         className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                                     >
                                         <Save className="h-4 w-4" />
-                                        {saving ? "Äang lÆ°u..." : `ðŸ’¾ LÆ°u ${records.length} báº£n ghi vÃ o DB`}
+                                        {saving ? "Đang lưu..." : `💾 Lưu ${records.length} bản ghi vào DB`}
                                     </Button>
                                 )}
                                 {canSave && records.length > 0 && (
@@ -1655,11 +1655,11 @@ export default function BaoCom() {
                                     className={`gap-2 ${showSummary ? "bg-orange-600 hover:bg-orange-700" : "bg-orange-500 hover:bg-orange-600"} text-white`}
                                 >
                                     <BarChart3 className="h-4 w-4" />
-                                    Tá»•ng há»£p bÃ¡o cÆ¡m
+                                    Tổng hợp báo cơm
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
                                     <RefreshCw className="h-4 w-4" />
-                                    LÃ m má»›i
+                                    Làm mới
                                 </Button>
                             </div>
 
@@ -1737,13 +1737,13 @@ export default function BaoCom() {
                                 <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-4">
                                     <div className="flex items-center gap-2 font-semibold text-orange-700">
                                         <MessageSquare className="h-4 w-4" />
-                                        Tá»•ng há»£p bÃ¡o cÆ¡m nhÃ  Äƒn
+                                        Tổng hợp báo cơm nhà ăn
                                     </div>
 
                                     {/* Date + Shift selectors */}
                                     <div className="flex flex-wrap items-end gap-3">
                                         <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-orange-700">NgÃ y</label>
+                                            <label className="text-xs font-medium text-orange-700">Ngày</label>
                                             <input
                                                 type="date"
                                                 value={summaryDate}
@@ -1773,7 +1773,7 @@ export default function BaoCom() {
                                             className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors disabled:opacity-50"
                                         >
                                             <BarChart3 className="h-4 w-4" />
-                                            {summaryLoading ? "Äang táº£i..." : "Tá»•ng há»£p"}
+                                            {summaryLoading ? "Đang tải..." : "Tổng hợp"}
                                         </button>
                                     </div>
 
@@ -1784,7 +1784,7 @@ export default function BaoCom() {
                                     {summaryData !== null && (() => {
                                         if (summaryData.length === 0) return (
                                             <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                                KhÃ´ng cÃ³ dá»¯ liá»‡u cho ngÃ y nÃ y â€” cÃ³ thá»ƒ chÆ°a lÆ°u hoáº·c chÆ°a bÃ¡o Ä‘á»§.
+                                                Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
                                             </div>
                                         )
                                         const msgText = buildDBSummaryText(summaryData)
@@ -1806,7 +1806,7 @@ export default function BaoCom() {
                                                     }`}
                                                 >
                                                     {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                                    {copiedSummary ? "ÄÃ£ copy!" : "Copy tin nháº¯n"}
+                                                    {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
                                                 </button>
 
                                                 {/* Per-dept breakdown */}
@@ -1814,9 +1814,9 @@ export default function BaoCom() {
                                                     <table className="w-full text-xs border rounded-lg overflow-hidden">
                                                         <thead>
                                                             <tr className="bg-orange-100 text-orange-700 text-left">
-                                                                <th className="px-2 py-1.5 font-semibold">Bá»™ pháº­n</th>
-                                                                <th className="px-2 py-1.5 font-semibold text-right">CT HÄ</th>
-                                                                <th className="px-2 py-1.5 font-semibold text-right">TV HÄ</th>
+                                                                <th className="px-2 py-1.5 font-semibold">Bộ phận</th>
+                                                                <th className="px-2 py-1.5 font-semibold text-right">CT HĐ</th>
+                                                                <th className="px-2 py-1.5 font-semibold text-right">TV HĐ</th>
                                                                 <th className="px-2 py-1.5 font-semibold text-right">Chay</th>
                                                                 <th className="px-2 py-1.5 font-semibold text-right">OT</th>
                                                             </tr>
@@ -1844,7 +1844,7 @@ export default function BaoCom() {
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
                                                             <Bell className="h-4 w-4" />
-                                                            ChÆ°a cÃ³ dá»¯ liá»‡u tá»« cÃ¡c bá»™ pháº­n:
+                                                            Chưa có dữ liệu từ các bộ phận:
                                                         </div>
                                                         <div className="flex flex-wrap gap-1.5">
                                                             {missingDepts.map(d => (
@@ -1873,11 +1873,11 @@ export default function BaoCom() {
                             {/* Summary cards */}
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                 {[
-                                    { label: "Bá»™ pháº­n", value: records.length, unit: "KV", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
-                                    { label: "CT Hiá»‡n diá»‡n", value: summary.totalOfficial, unit: "ngÆ°á»i", bg: "bg-green-50", text: "text-green-600", border: "border-green-200" },
-                                    { label: "CT Váº¯ng", value: summary.totalAbsent, unit: "ngÆ°á»i", bg: "bg-red-50", text: "text-red-600", border: "border-red-200" },
-                                    { label: "TV Hiá»‡n diá»‡n", value: summary.totalSeasonal, unit: "ngÆ°á»i", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
-                                    { label: "Chay hÃ´m nay", value: summary.totalVeg || "â€”", unit: summary.totalVeg ? "suáº¥t" : "", bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-200" },
+                                    { label: "Bộ phận", value: records.length, unit: "KV", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
+                                    { label: "CT Hiện diện", value: summary.totalOfficial, unit: "người", bg: "bg-green-50", text: "text-green-600", border: "border-green-200" },
+                                    { label: "CT Vắng", value: summary.totalAbsent, unit: "người", bg: "bg-red-50", text: "text-red-600", border: "border-red-200" },
+                                    { label: "TV Hiện diện", value: summary.totalSeasonal, unit: "người", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
+                                    { label: "Chay hôm nay", value: summary.totalVeg || "—", unit: summary.totalVeg ? "suất" : "", bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-200" },
                                 ].map((s) => (
                                     <div key={s.label} className={`rounded-xl border p-4 shadow-sm ${s.bg} ${s.border}`}>
                                         <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -1890,12 +1890,12 @@ export default function BaoCom() {
                             {records.length === 0 ? (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center space-y-2">
                                     <AlertCircle className="h-8 w-8 text-yellow-500 mx-auto" />
-                                    <p className="font-semibold text-yellow-800">KhÃ´ng tÃ¬m tháº¥y dá»¯ liá»‡u há»£p lá»‡</p>
+                                    <p className="font-semibold text-yellow-800">Không tìm thấy dữ liệu hợp lệ</p>
                                     <p className="text-sm text-yellow-700">
-                                        Há»‡ thá»‘ng cáº§n tÃ¬m tháº¥y cÃ¡c tá»« khÃ³a nhÆ° &quot;Khu vá»±c&quot;, &quot;ChÃ­nh thá»©c hiá»‡n diá»‡n&quot;, cÃ¹ng vá»›i ngÃ y thÃ¡ng.
+                                        Hệ thống cần tìm thấy các từ khóa như &quot;Khu vực&quot;, &quot;Chính thức hiện diện&quot;, cùng với ngày tháng.
                                     </p>
                                     <Button variant="outline" size="sm" onClick={handleReset} className="mt-2 gap-2">
-                                        <RefreshCw className="h-4 w-4" /> Thá»­ láº¡i
+                                        <RefreshCw className="h-4 w-4" /> Thử lại
                                     </Button>
                                 </div>
                             ) : (
@@ -1904,11 +1904,11 @@ export default function BaoCom() {
                                         <div className="flex items-center gap-2">
                                             <TableIcon className="h-4 w-4 text-muted-foreground" />
                                             <span className="font-semibold text-sm">
-                                                Káº¿t quáº£ â€” {uniqueDates.join(", ")} &nbsp;|&nbsp; {records.length} khu vá»±c
+                                                Kết quả — {uniqueDates.join(", ")} &nbsp;|&nbsp; {records.length} khu vực
                                             </span>
                                         </div>
                                         <span className="text-xs text-muted-foreground">
-                                            CT = ChÃ­nh thá»©c &nbsp;Â·&nbsp; TV = Thá»i vá»¥
+                                            CT = Chính thức &nbsp;·&nbsp; TV = Thời vụ
                                         </span>
                                     </div>
 
@@ -1917,15 +1917,15 @@ export default function BaoCom() {
                                             <thead>
                                                 <tr className="bg-muted/60 text-left text-xs text-muted-foreground uppercase tracking-wide">
                                                     <th className="px-3 py-2.5 font-semibold">#</th>
-                                                    <th className="px-3 py-2.5 font-semibold">NgÃ y</th>
-                                                    <th className="px-3 py-2.5 font-semibold">Khu vá»±c</th>
+                                                    <th className="px-3 py-2.5 font-semibold">Ngày</th>
+                                                    <th className="px-3 py-2.5 font-semibold">Khu vực</th>
                                                     <th className="px-3 py-2.5 font-semibold">Ca</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">CT HÄ</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">CT Váº¯ng</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">TV HÄ</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">TV Váº¯ng</th>
+                                                    <th className="px-3 py-2.5 font-semibold text-right">CT HĐ</th>
+                                                    <th className="px-3 py-2.5 font-semibold text-right">CT Vắng</th>
+                                                    <th className="px-3 py-2.5 font-semibold text-right">TV HĐ</th>
+                                                    <th className="px-3 py-2.5 font-semibold text-right">TV Vắng</th>
                                                     <th className="px-3 py-2.5 font-semibold text-right">OT</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">ðŸ¥¦ Chay</th>
+                                                    <th className="px-3 py-2.5 font-semibold text-right">🥦 Chay</th>
                                                     <th className="px-3 py-2.5 font-semibold">DB Link</th>
                                                 </tr>
                                             </thead>
@@ -1955,26 +1955,26 @@ export default function BaoCom() {
                                                                             <span className="text-xs font-normal text-muted-foreground ml-1">{r.officialPresentNote}</span>
                                                                         )}
                                                                     </span>
-                                                                ) : <span className="text-muted-foreground">â€”</span>}
+                                                                ) : <span className="text-muted-foreground">—</span>}
                                                             </td>
                                                             <td className="px-3 py-2.5 text-right">
                                                                 {r.officialAbsent != null ? (
                                                                     <span className={r.officialAbsent > 0 ? "font-bold text-red-600" : "text-muted-foreground"}>
                                                                         {r.officialAbsent}
                                                                     </span>
-                                                                ) : <span className="text-muted-foreground">â€”</span>}
+                                                                ) : <span className="text-muted-foreground">—</span>}
                                                             </td>
                                                             <td className="px-3 py-2.5 text-right">
-                                                                {r.seasonalPresent != null ? r.seasonalPresent : <span className="text-muted-foreground">â€”</span>}
+                                                                {r.seasonalPresent != null ? r.seasonalPresent : <span className="text-muted-foreground">—</span>}
                                                             </td>
                                                             <td className="px-3 py-2.5 text-right">
-                                                                {r.seasonalAbsent != null ? r.seasonalAbsent : <span className="text-muted-foreground">â€”</span>}
+                                                                {r.seasonalAbsent != null ? r.seasonalAbsent : <span className="text-muted-foreground">—</span>}
                                                             </td>
                                                             <td className="px-3 py-2.5 text-right text-xs">{r.ot || "0"}</td>
                                                             <td className="px-3 py-2.5 text-right">
                                                                 {r.vegetarian != null && r.vegetarian > 0 ? (
                                                                     <span className="font-semibold text-emerald-600">{r.vegetarian}</span>
-                                                                ) : <span className="text-muted-foreground">â€”</span>}
+                                                                ) : <span className="text-muted-foreground">—</span>}
                                                             </td>
                                                             <td className="px-3 py-2.5">
                                                                 {linked ? (
@@ -1984,20 +1984,20 @@ export default function BaoCom() {
                                                                     </span>
                                                                 ) : isUnknown ? (
                                                                     <div className="flex flex-col gap-1 min-w-[150px]">
-                                                                        <span className="text-xs text-amber-600 font-semibold">âš  KhÃ´ng rÃµ: &quot;{effArea}&quot;</span>
+                                                                        <span className="text-xs text-amber-600 font-semibold">⚠ Không rõ: &quot;{effArea}&quot;</span>
                                                                          <select
                                                                              className="text-xs border border-amber-300 rounded px-1 py-0.5 bg-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                                                              value={areaOverrides[i] ?? ""}
                                                                              onChange={(e) => setAreaOverrides(prev => ({ ...prev, [i]: e.target.value }))}
                                                                          >
-                                                                             <option value="">-- Chá»n bá»™ pháº­n --</option>
+                                                                             <option value="">-- Chọn bộ phận --</option>
                                                                              {deptList.map(d => (
                                                                                  <option key={d.id} value={d.name_en}>{d.name_en}</option>
                                                                              ))}
                                                                          </select>
                                                                      </div>
                                                                  ) : (
-                                                                     <span className="text-xs text-muted-foreground">â€”</span>
+                                                                     <span className="text-xs text-muted-foreground">—</span>
                                                                  )}
                                                              </td>
                                                         </tr>
@@ -2007,15 +2007,15 @@ export default function BaoCom() {
                                             <tfoot>
                                                 <tr className="bg-muted/60 font-bold border-t-2 text-sm">
                                                     <td className="px-3 py-2.5" colSpan={4}>
-                                                        Tá»”NG ({records.length} khu vá»±c)
+                                                        TỔNG ({records.length} khu vực)
                                                     </td>
                                                     <td className="px-3 py-2.5 text-right text-green-700">{summary.totalOfficial}</td>
                                                     <td className="px-3 py-2.5 text-right text-red-600">{summary.totalAbsent}</td>
                                                     <td className="px-3 py-2.5 text-right">{summary.totalSeasonal}</td>
-                                                    <td className="px-3 py-2.5 text-right">â€”</td>
-                                                    <td className="px-3 py-2.5 text-right">â€”</td>
+                                                    <td className="px-3 py-2.5 text-right">—</td>
+                                                    <td className="px-3 py-2.5 text-right">—</td>
                                                     <td className="px-3 py-2.5 text-right text-emerald-600">
-                                                        {summary.totalVeg > 0 ? summary.totalVeg : "â€”"}
+                                                        {summary.totalVeg > 0 ? summary.totalVeg : "—"}
                                                     </td>
                                                     <td />
                                                 </tr>
@@ -2028,7 +2028,7 @@ export default function BaoCom() {
                             {/* Back button */}
                             <div className="flex justify-start">
                                 <Button variant="ghost" size="sm" onClick={handleReset} className="gap-2 text-muted-foreground">
-                                    <RefreshCw className="h-3 w-3" /> Paste dá»¯ liá»‡u má»›i
+                                    <RefreshCw className="h-3 w-3" /> Paste dữ liệu mới
                                 </Button>
                             </div>
                         </>
@@ -2036,12 +2036,12 @@ export default function BaoCom() {
                 </>
             )}
 
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            {/* ═══════════════════════════════════════════ */}
             {/* TAB 2: HISTORY                              */}
-            {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            {/* ═══════════════════════════════════════════ */}
             {activeTab === "history" && (() => {
                 // Build pivot from historyRecords
-                // rows: deptÃ—shift, cols: dates
+                // rows: dept×shift, cols: dates
                 const pivotDays = [...new Set(historyRecords.map(r => r.work_date))].sort()
                 type PivotKey = string // `${dept_id|dept_name}|${shift}`
                 const pivotMap = new Map<PivotKey, { deptCode: string; deptName: string; shift: string; days: Map<string, { present: number; ot: number; veg: number }> }>()
@@ -2070,13 +2070,13 @@ export default function BaoCom() {
                     <div className="bg-card rounded-xl border shadow-sm p-4">
                         <div className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground block mb-1">Tá»« ngÃ y</label>
+                                <label className="text-xs font-semibold text-muted-foreground block mb-1">Từ ngày</label>
                                 <input type="date" value={historyFrom}
                                     onChange={e => setHistoryFrom(e.target.value)}
                                     className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-muted-foreground block mb-1">Äáº¿n ngÃ y</label>
+                                <label className="text-xs font-semibold text-muted-foreground block mb-1">Đến ngày</label>
                                 <input type="date" value={historyTo}
                                     onChange={e => setHistoryTo(e.target.value)}
                                     className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
@@ -2084,9 +2084,9 @@ export default function BaoCom() {
                             {/* Quick-pick buttons */}
                             <div className="flex gap-1.5" style={{paddingBottom:'0px'}}>
                                 {([
-                                    { label: '7 ngÃ y', days: 6 },
-                                    { label: '14 ngÃ y', days: 13 },
-                                    { label: '30 ngÃ y', days: 29 },
+                                    { label: '7 ngày', days: 6 },
+                                    { label: '14 ngày', days: 13 },
+                                    { label: '30 ngày', days: 29 },
                                 ] as { label: string; days: number }[]).map(opt => {
                                     const to = new Date().toISOString().slice(0, 10)
                                     const from = (() => { const d = new Date(); d.setDate(d.getDate() - opt.days); return d.toISOString().slice(0, 10) })()
@@ -2104,13 +2104,13 @@ export default function BaoCom() {
                             </div>
                             <Button onClick={fetchHistory} disabled={historyLoading} className="gap-2">
                                 <CalendarDays className="h-4 w-4" />
-                                {historyLoading ? 'Äang táº£i...' : 'Xem dá»¯ liá»‡u'}
+                                {historyLoading ? 'Đang tải...' : 'Xem dữ liệu'}
                             </Button>
                             {historyRecords.length > 0 && (
                                 <Button variant="outline" onClick={() => exportHistoryCSV(historyRecords)}
                                     className="gap-2 text-green-700 border-green-300 hover:bg-green-50">
                                     <FileSpreadsheet className="h-4 w-4" />
-                                    Xuáº¥t CSV
+                                    Xuất CSV
                                 </Button>
                             )}
                         </div>
@@ -2120,13 +2120,13 @@ export default function BaoCom() {
                     {historyLoading ? (
                         <div className="text-center py-12 text-muted-foreground">
                             <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3" />
-                            Äang táº£i dá»¯ liá»‡u...
+                            Đang tải dữ liệu...
                         </div>
                     ) : historyRecords.length === 0 ? (
                         <div className="bg-muted/30 rounded-xl border p-8 text-center text-muted-foreground">
                             <Database className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                            <p className="font-medium">ChÆ°a cÃ³ dá»¯ liá»‡u trong khoáº£ng thá»i gian nÃ y</p>
-                            <p className="text-sm mt-1">Paste dá»¯ liá»‡u Zalo á»Ÿ tab &quot;Nháº­p &amp; PhÃ¢n tÃ­ch&quot; rá»“i báº¥m LÆ°u vÃ o DB</p>
+                            <p className="font-medium">Chưa có dữ liệu trong khoảng thời gian này</p>
+                            <p className="text-sm mt-1">Paste dữ liệu Zalo ở tab &quot;Nhập &amp; Phân tích&quot; rồi bấm Lưu vào DB</p>
                         </div>
                     ) : (
                         <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
@@ -2134,23 +2134,23 @@ export default function BaoCom() {
                                 <div className="flex items-center gap-2">
                                     <History className="h-4 w-4 text-muted-foreground" />
                                     <span className="font-semibold text-sm">
-                                        Lá»‹ch sá»­ â€” {pivotDays.length} ngÃ y Â· {pivotRows.length} bá»™ pháº­n/ca
+                                        Lịch sử — {pivotDays.length} ngày · {pivotRows.length} bộ phận/ca
                                     </span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">Sá»‘ liá»‡u: CT + TV hiá»‡n diá»‡n</span>
+                                <span className="text-xs text-muted-foreground">Số liệu: CT + TV hiện diện</span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="text-xs min-w-full">
                                     <thead>
                                         <tr className="bg-muted/60 text-muted-foreground">
-                                            <th className="px-3 py-2 text-left font-semibold sticky left-0 bg-muted/60 min-w-[120px]">Bá»™ pháº­n</th>
+                                            <th className="px-3 py-2 text-left font-semibold sticky left-0 bg-muted/60 min-w-[120px]">Bộ phận</th>
                                             <th className="px-2 py-2 text-center font-semibold sticky left-[120px] bg-muted/60 min-w-[44px]">Ca</th>
                                             {pivotDays.map(d => (
                                                 <th key={d} className="px-2 py-2 text-center font-semibold min-w-[42px] whitespace-nowrap">
                                                     {parseInt(d.slice(8), 10)}/{parseInt(d.slice(5,7), 10)}
                                                 </th>
                                             ))}
-                                            <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">Tá»”NG</th>
+                                            <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">TỔNG</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
@@ -2170,23 +2170,23 @@ export default function BaoCom() {
                                                             <td key={d} className="px-2 py-2 text-center">
                                                                 {n > 0 ? (
                                                                     <span className="font-bold text-green-700">{n}</span>
-                                                                ) : <span className="text-muted-foreground/40">â€”</span>}
+                                                                ) : <span className="text-muted-foreground/40">—</span>}
                                                             </td>
                                                         )
                                                     })}
-                                                    <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || 'â€”'}</td>
+                                                    <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || '—'}</td>
                                                 </tr>
                                             )
                                         })}
                                     </tbody>
                                     <tfoot>
                                         <tr className="bg-muted/60 font-bold border-t-2">
-                                            <td colSpan={2} className="px-3 py-2 sticky left-0 bg-muted/60">Tá»”NG NGÃ€Y</td>
+                                            <td colSpan={2} className="px-3 py-2 sticky left-0 bg-muted/60">TỔNG NGÀY</td>
                                             {pivotDays.map(d => {
                                                 const total = historyRecords
                                                     .filter(r => r.work_date === d)
                                                     .reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
-                                                return <td key={d} className="px-2 py-2 text-center text-primary">{total || 'â€”'}</td>
+                                                return <td key={d} className="px-2 py-2 text-center text-primary">{total || '—'}</td>
                                             })}
                                             <td className="px-2 py-2 text-center text-primary border-l">
                                                 {historyRecords.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}
@@ -2253,19 +2253,19 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Xóa ví dụ này?')) return
+        if (!confirm('X�a v� dụ n�y?')) return
         await supabase.from('meal_ai_examples').delete().eq('id', id)
         setExamples(prev => prev.filter(e => e.id !== id))
     }
 
     const handleSubmit = async () => {
         setFormErr(null)
-        if (!formTitle.trim()) { setFormErr('Cần nhập tiêu đề'); return }
+        if (!formTitle.trim()) { setFormErr('Cần nhập ti�u đề'); return }
         if (!formInput.trim()) { setFormErr('Cần nhập text Zalo mẫu'); return }
         if (!formJson.trim()) { setFormErr('Cần nhập JSON kết quả mong muốn'); return }
         let parsedJson: unknown
         try { parsedJson = JSON.parse(formJson) }
-        catch { setFormErr('JSON không hợp lệ — kiểm tra lại cú pháp'); return }
+        catch { setFormErr('JSON kh�ng hợp lệ � kiểm tra lại c� ph�p'); return }
 
         setSaving(true)
         const { error } = await supabase.from('meal_ai_examples').insert({
@@ -2290,49 +2290,49 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h2 className="text-lg font-bold flex items-center gap-2">
-                        <span>🧠</span> Dạy AI – Few-shot Examples
+                        <span>��</span> Dạy AI � Few-shot Examples
                     </h2>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                        Thêm ví dụ thực tế để AI học cách parse đúng hơn cho nhà máy của bạn.
-                        {' '}<span className="font-semibold text-violet-700">{activeCount} ví dụ đang được dùng</span> trong mỗi lần AI phân tích.
+                        Th�m v� dụ thực tế để AI học c�ch parse đ�ng hơn cho nh� m�y của bạn.
+                        {' '}<span className="font-semibold text-violet-700">{activeCount} v� dụ đang được d�ng</span> trong mỗi lần AI ph�n t�ch.
                     </p>
                 </div>
                 <button
                     onClick={() => setShowForm(s => !s)}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors"
                 >
-                    <span>{showForm ? '✕ Đóng' : '+ Thêm ví dụ mới'}</span>
+                    <span>{showForm ? '✕ Đ�ng' : '+ Th�m v� dụ mới'}</span>
                 </button>
             </div>
 
             {/* Hướng dẫn */}
             <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 text-sm text-violet-800 space-y-1">
-                <p className="font-semibold">📌 Cách dạy AI:</p>
+                <p className="font-semibold">�� C�ch dạy AI:</p>
                 <ol className="list-decimal list-inside space-y-1 text-violet-700">
-                    <li>Copy đoạn text Zalo gốc bị AI parse sai vào <strong>Input text</strong></li>
-                    <li>Viết kết quả đúng vào <strong>JSON mong muốn</strong> (format giống AI trả về)</li>
-                    <li>Lưu lại — AI sẽ học từ ví dụ này trong lần phân tích tiếp theo</li>
+                    <li>Copy đoạn text Zalo gốc bị AI parse sai v�o <strong>Input text</strong></li>
+                    <li>Viết kết quả đ�ng v�o <strong>JSON mong muốn</strong> (format giống AI trả về)</li>
+                    <li>Lưu lại � AI sẽ học từ v� dụ n�y trong lần ph�n t�ch tiếp theo</li>
                 </ol>
-                <p className="text-xs text-violet-500 mt-2">💡 Tối đa 10 ví dụ active. Nên chọn các trường hợp đặc thù của nhà máy.</p>
+                <p className="text-xs text-violet-500 mt-2">�� Tối đa 10 v� dụ active. N�n chọn c�c trường hợp đặc th� của nh� m�y.</p>
             </div>
 
             {/* Add form */}
             {showForm && (
                 <div className="bg-card border rounded-xl p-5 space-y-4 shadow-sm">
-                    <h3 className="font-semibold text-sm">Thêm ví dụ huấn luyện mới</h3>
+                    <h3 className="font-semibold text-sm">Th�m v� dụ huấn luyện mới</h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Tiêu đề ví dụ *</label>
+                            <label className="text-xs font-medium text-muted-foreground">Ti�u đề v� dụ *</label>
                             <input
                                 value={formTitle}
                                 onChange={e => setFormTitle(e.target.value)}
-                                placeholder="VD: Châu MC Peeling Ca 2"
+                                placeholder="VD: Ch�u MC Peeling Ca 2"
                                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Bộ phận liên quan (gợi ý)</label>
+                            <label className="text-xs font-medium text-muted-foreground">Bộ phận li�n quan (gợi �)</label>
                             <input
                                 value={formDept}
                                 onChange={e => setFormDept(e.target.value)}
@@ -2343,26 +2343,26 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">📝 Input text (đoạn Zalo bị sai) *</label>
+                        <label className="text-xs font-medium text-muted-foreground">�� Input text (đoạn Zalo bị sai) *</label>
                         <textarea
                             value={formInput}
                             onChange={e => setFormInput(e.target.value)}
                             rows={6}
-                            placeholder={`VD:\nChâu MC Peeling\nDate: 26/03/2026\nKhu vực : Peeling mc\nCa: 2\nChính thức hiện diện: 8\nChính thức vắng: 1\nOT:`}
+                            placeholder={`VD:\nCh�u MC Peeling\nDate: 26/03/2026\nKhu vực : Peeling mc\nCa: 2\nCh�nh thức hiện diện: 8\nCh�nh thức vắng: 1\nOT:`}
                             className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-400 resize-y"
                         />
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">✅ JSON kết quả đúng *</label>
+                        <label className="text-xs font-medium text-muted-foreground">✅ JSON kết quả đ�ng *</label>
                         <textarea
                             value={formJson}
                             onChange={e => setFormJson(e.target.value)}
                             rows={5}
-                            placeholder={`[{"senderHint":"Châu MC Peeling","date":"2026-03-26","area":"PEEL","shift":"2","officialPresent":8,"officialAbsent":1,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null}]`}
+                            placeholder={`[{"senderHint":"Ch�u MC Peeling","date":"2026-03-26","area":"PEEL","shift":"2","officialPresent":8,"officialAbsent":1,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null}]`}
                             className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-400 resize-y"
                         />
-                        <p className="text-xs text-muted-foreground">Format: JSON array – giống kết quả AI trả về khi đúng</p>
+                        <p className="text-xs text-muted-foreground">Format: JSON array � giống kết quả AI trả về khi đ�ng</p>
                     </div>
 
                     {formErr && (
@@ -2375,7 +2375,7 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                             disabled={saving}
                             className="px-5 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50"
                         >
-                            {saving ? 'Đang lưu...' : '💾 Lưu ví dụ'}
+                            {saving ? 'Đang lưu...' : '�� Lưu v� dụ'}
                         </button>
                         <button
                             onClick={() => { setShowForm(false); setFormErr(null) }}
@@ -2390,9 +2390,9 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                 <div className="text-center py-10 text-muted-foreground">Đang tải...</div>
             ) : examples.length === 0 ? (
                 <div className="bg-muted/30 rounded-xl border p-10 text-center text-muted-foreground">
-                    <p className="text-3xl mb-3">🧠</p>
-                    <p className="font-medium">Chưa có ví dụ nào</p>
-                    <p className="text-sm mt-1">Bấm &quot;+ Thêm ví dụ mới&quot; để bắt đầu dạy AI</p>
+                    <p className="text-3xl mb-3">��</p>
+                    <p className="font-medium">Chưa c� v� dụ n�o</p>
+                    <p className="text-sm mt-1">Bấm &quot;+ Th�m v� dụ mới&quot; để bắt đầu dạy AI</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -2403,7 +2403,7 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                                 {/* Active toggle */}
                                 <button
                                     onClick={() => handleToggleActive(ex)}
-                                    title={ex.is_active ? 'Đang dùng — bấm để tắt' : 'Đang tắt — bấm để bật'}
+                                    title={ex.is_active ? 'Đang d�ng � bấm để tắt' : 'Đang tắt � bấm để bật'}
                                     className={`flex-shrink-0 w-10 h-5 rounded-full transition-colors relative ${ex.is_active ? 'bg-violet-500' : 'bg-muted-foreground/30'}`}
                                 >
                                     <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${ex.is_active ? 'left-5' : 'left-0.5'}`} />
@@ -2416,7 +2416,7 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                                             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono">{ex.dept_hint}</span>
                                         )}
                                         {ex.is_active ? (
-                                            <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-semibold">✓ Đang dùng</span>
+                                            <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-semibold">✓ Đang d�ng</span>
                                         ) : (
                                             <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Tắt</span>
                                         )}
@@ -2436,7 +2436,7 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                                     <button
                                         onClick={() => handleDelete(ex.id)}
                                         className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors"
-                                    >🗑</button>
+                                    >��</button>
                                 </div>
                             </div>
 
@@ -2444,7 +2444,7 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
                             {expandedId === ex.id && (
                                 <div className="border-t bg-white px-4 py-4 space-y-3">
                                     <div>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-1">📝 INPUT TEXT:</p>
+                                        <p className="text-xs font-semibold text-muted-foreground mb-1">�� INPUT TEXT:</p>
                                         <pre className="text-xs bg-muted/30 rounded-lg p-3 whitespace-pre-wrap font-mono border">{ex.input_text}</pre>
                                     </div>
                                     <div>
@@ -2462,7 +2462,7 @@ function TrainAITab({ supabase }: { supabase: ReturnType<typeof import('@/lib/su
 
             {activeCount >= 10 && (
                 <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                    ⚠️ Đã có {activeCount} ví dụ active. AI sẽ dùng tối đa 10 ví dụ. Tắt bớt những ví dụ không cần thiết.
+                    ⚠️ Đ� c� {activeCount} v� dụ active. AI sẽ d�ng tối đa 10 v� dụ. Tắt bớt những v� dụ kh�ng cần thiết.
                 </div>
             )}
         </div>
