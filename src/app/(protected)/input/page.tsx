@@ -1928,8 +1928,25 @@ export default function InputPage() {
                                                 // Sub-causes per dept code — prevents typos from fragmenting chart
                                                 const subCauseMap: Record<string, Record<string, string[]>> = {
                                                     SHELL: {
-                                                        'Thiết bị / Máy móc': ['Silo đầy vỏ', 'Dao cắt mòn', 'Băng tải hỏng', 'Động cơ lỗi', 'Màng lọc tắc', 'Bộ phận cơ khí hỏng', 'Khác'],
-                                                        'Thiếu NLĐV': ['Thiếu hạt đầu vào', 'Thiếu nhân lực', 'Chờ nguyên liệu', 'Khác'],
+                                                        // BD — Breakdown (Hư hỏng thiết bị)
+                                                        'Thiết bị / Máy móc': [
+                                                            'BD – Hư hỏng cấp liệu',
+                                                            'BD – Hư hỏng đầu cắt',
+                                                            'BD – Hư hỏng sàng rung',
+                                                            'BD – Hư hỏng motor sàng rung',
+                                                            'BD – Hư hỏng motor ly tâm',
+                                                            'BD – Hư hỏng gàu tải',
+                                                            'BD – Hư hỏng ly tâm',
+                                                            'BD – Hư hỏng cụm phân trục',
+                                                            'BD – Hư hỏng hệ quạt thổi',
+                                                            'BD – Tuột ống vỏ',
+                                                        ],
+                                                        // WT — Waiting / LU — Lack of material
+                                                        'Thiếu NLĐV': [
+                                                            'WT – Chờ hàng đạt ẩm',
+                                                            'WT – Chờ lấy vỏ ở silo vỏ',
+                                                            'LU – Không có nguyên liệu',
+                                                        ],
                                                         'Sự cố điện/nước': ['Mất điện lưới', 'Điện áp bất ổn', 'Mất nước', 'Sự cố máy nén', 'Khác'],
                                                         'Chất lượng': ['Lỗi kích thước hạt', 'Hạt ẩm', 'Tạp chất', 'Khác'],
                                                         'Vệ sinh / Cài đặt': ['Vệ sinh định kỳ', 'Cài đặt lại máy', 'Thay ca / bàn giao', 'Khác'],
