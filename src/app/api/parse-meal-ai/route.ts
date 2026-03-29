@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 // llama-3.1-8b-instant: 20,000 TPM free tier (cao hơn 70b-versatile)
 const MODEL = 'llama-3.1-8b-instant'
 
 // System prompt ngắn gọn (~500 tokens)
-const SYSTEM_PROMPT = `You parse Vietnamese factory meal-registration messages from Zalo chat into JSON.
+const BASE_SYSTEM_PROMPT = `You parse Vietnamese factory meal-registration messages from Zalo chat into JSON.
 Extract meal headcount records. Output ONLY a JSON array, no explanation, no markdown.
 
 DEPARTMENT CODE MAP (map any variant/abbreviation to the code):
@@ -44,11 +45,8 @@ OUTPUT FORMAT (JSON array only):
 function preFilterText(text: string): string {
     const lines = text.split('\n')
     const relevant: string[] = []
-    // Từ khóa liên quan đến báo cơm
     const mealKeywords = /ca|khu vực|chính thức|thời vụ|hiện diện|vắng|ot|chay|boiler|shelling|packing|peeling|borma|grading|loading|steam|maint|qc|office|ngày|date|\d{1,2}[./]\d{1,2}/i
-    // Bỏ qua dòng timestamp Zalo (chỉ có giờ: "14:30")
     const timeOnly = /^\s*\d{1,2}:\d{2}\s*$/
-    // Bỏ qua dòng trống liên tiếp (giữ 1 dòng trống để phân tách block)
     let lastWasBlank = false
     for (const line of lines) {
         const trimmed = line.trim()
@@ -64,6 +62,33 @@ function preFilterText(text: string): string {
         }
     }
     return relevant.join('\n').trim()
+}
+
+// Load training examples từ Supabase và build few-shot section
+async function buildFewShotSection(): Promise<string> {
+    try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        if (!supabaseUrl || !supabaseKey) return ''
+
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        const { data, error } = await supabase
+            .from('meal_ai_examples')
+            .select('title, input_text, expected_json')
+            .eq('is_active', true)
+            .order('created_at', { ascending: true })
+            .limit(10) // Giới hạn 10 ví dụ để không vượt token
+
+        if (error || !data || data.length === 0) return ''
+
+        const examples = data.map((ex, i) =>
+            `EXAMPLE ${i + 1} – ${ex.title}:\nINPUT:\n${ex.input_text}\nOUTPUT: ${JSON.stringify(ex.expected_json)}`
+        ).join('\n\n')
+
+        return `\n\nFEW-SHOT EXAMPLES (learn these patterns):\n${examples}\n\nNow parse the following input using same logic:`
+    } catch {
+        return '' // Nếu lỗi đọc DB → bỏ qua, dùng prompt gốc
+    }
 }
 
 // POST handler
@@ -83,12 +108,16 @@ export async function POST(req: NextRequest) {
     // Bước 1: lọc trước để bỏ dòng không cần thiết
     let filtered = preFilterText(rawInput)
 
-    // Bước 2: hard cap 8000 ký tự (~2000 tokens) để không vượt TPM
-    const MAX_CHARS = 8000
+    // Bước 2: hard cap 6000 ký tự để nhường chỗ cho few-shot examples
+    const MAX_CHARS = 6000
     const truncated = filtered.length > MAX_CHARS
     if (truncated) {
         filtered = filtered.slice(0, MAX_CHARS)
     }
+
+    // Bước 3: Load few-shot examples từ DB
+    const fewShotSection = await buildFewShotSection()
+    const systemPrompt = BASE_SYSTEM_PROMPT + fewShotSection
 
     try {
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -100,7 +129,7 @@ export async function POST(req: NextRequest) {
             body: JSON.stringify({
                 model: MODEL,
                 messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
+                    { role: 'system', content: systemPrompt },
                     { role: 'user', content: filtered },
                 ],
                 temperature: 0.1,
@@ -116,11 +145,9 @@ export async function POST(req: NextRequest) {
         const groqData = await groqRes.json()
         const rawContent: string = groqData.choices?.[0]?.message?.content ?? ''
 
-        // ── Robust JSON extraction: tìm [...] đầu tiên trong output ──────────
+        // ── Robust JSON extraction ──────────────────────────────────────────────
         function extractJsonArray(text: string): unknown[] | null {
-            // 1. Strip markdown code blocks
             let s = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-            // 2. Tìm vị trí '[' đầu tiên và ']' cuối cùng
             const start = s.indexOf('[')
             const end   = s.lastIndexOf(']')
             if (start === -1 || end === -1 || end < start) return null
@@ -132,7 +159,6 @@ export async function POST(req: NextRequest) {
         const parsed = extractJsonArray(rawContent)
 
         if (!parsed) {
-            // Log raw để debug, trả về mảng rỗng thay vì hard error
             console.error('[parse-meal-ai] Invalid JSON from AI:', rawContent.slice(0, 500))
             return NextResponse.json({
                 records: [],
@@ -142,10 +168,9 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        return NextResponse.json({ records: parsed, truncated })
+        return NextResponse.json({ records: parsed, truncated, examplesUsed: fewShotSection.length > 0 })
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         return NextResponse.json({ error: msg }, { status: 500 })
     }
 }
-
