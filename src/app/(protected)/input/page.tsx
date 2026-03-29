@@ -1917,36 +1917,83 @@ export default function InputPage() {
                                     <div className="rounded-xl border bg-card text-card-foreground shadow p-6 max-w-2xl">
                                         <div className="flex flex-col gap-6">
                                             {/* Data Entry Row */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end bg-muted/30 p-4 rounded-lg border">
-                                                <div className="sm:col-span-1 space-y-2">
-                                                    <Label>Số phút dừng</Label>
-                                                    <Input type="number" value={dtDuration} onChange={e => setDtDuration(e.target.value)} placeholder="0" className="bg-white" />
-                                                </div>
-                                                <div className="sm:col-span-1 space-y-2">
-                                                    <Label>Nguyên nhân</Label>
-                                                    <Select value={dtCause} onValueChange={setDtCause}>
-                                                        <SelectTrigger className="bg-white"><SelectValue placeholder="Chọn..." /></SelectTrigger>
-                                                        <SelectContent>
-                                                          <SelectItem value="Thiết bị / Máy móc">Thiết bị / Máy móc</SelectItem>
-                                                          <SelectItem value="Thiếu NLĐV">Thiếu NLĐV</SelectItem>
-                                                          <SelectItem value="Sự cố điện/nước">Sự cố điện/nước</SelectItem>
-                                                          <SelectItem value="Chất lượng">Chất lượng</SelectItem>
-                                                          <SelectItem value="Thay đổi kế hoạch">Thay đổi kế hoạch</SelectItem>
-                                                          <SelectItem value="Vệ sinh / Cài đặt">Vệ sinh / Cài đặt</SelectItem>
-                                                          <SelectItem value="Khác">Khác</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="sm:col-span-2 space-y-2">
-                                                    <Label>Ghi chú chi tiết</Label>
-                                                    <div className="flex gap-2">
-                                                        <Input value={dtNote} onChange={e => setDtNote(e.target.value)} placeholder="Vd: Mất điện lưới kéo dài..." className="bg-white flex-1" />
-                                                        <Button onClick={handleAddDowntime} disabled={isSaving || !dtDuration || !dtCause} className="bg-red-600 hover:bg-red-700">
-                                                            <Plus className="h-4 w-4 mr-1" /> Thêm
-                                                        </Button>
+                                            {(() => {
+                                                const deptCode = departments.find(d => d.id === selectedDept)?.code || '';
+                                                // Sub-causes per dept code — prevents typos from fragmenting chart
+                                                const subCauseMap: Record<string, Record<string, string[]>> = {
+                                                    SHELL: {
+                                                        'Thiết bị / Máy móc': ['Silo đầy vỏ', 'Dao cắt mòn', 'Băng tải hỏng', 'Động cơ lỗi', 'Màng lọc tắc', 'Bộ phận cơ khí hỏng', 'Khác'],
+                                                        'Thiếu NLĐV': ['Thiếu hạt đầu vào', 'Thiếu nhân lực', 'Chờ nguyên liệu', 'Khác'],
+                                                        'Sự cố điện/nước': ['Mất điện lưới', 'Điện áp bất ổn', 'Mất nước', 'Sự cố máy nén', 'Khác'],
+                                                        'Chất lượng': ['Lỗi kích thước hạt', 'Hạt ẩm', 'Tạp chất', 'Khác'],
+                                                        'Vệ sinh / Cài đặt': ['Vệ sinh định kỳ', 'Cài đặt lại máy', 'Thay ca / bàn giao', 'Khác'],
+                                                        'Thay đổi kế hoạch': ['Chờ lệnh sản xuất', 'Thay đổi loại hạt', 'Khác'],
+                                                        'Khác': ['Khác'],
+                                                    },
+                                                    PEEL_MC: {
+                                                        'Thiết bị / Máy móc': ['Máy nén khí hỏng', 'Áp suất khí thấp', 'Lưỡi bóc mòn', 'Băng tải hỏng', 'Bộ phận cơ khí hỏng', 'Khác'],
+                                                        'Thiếu NLĐV': ['Thiếu hạt cắt đầu vào', 'Thiếu nhân lực', 'Khác'],
+                                                        'Sự cố điện/nước': ['Mất điện lưới', 'Sự cố máy nén khí chính', 'Khác'],
+                                                        'Chất lượng': ['Nhân vỡ nhiều', 'Tỷ lệ unpeel cao', 'Khác'],
+                                                        'Vệ sinh / Cài đặt': ['Vệ sinh định kỳ', 'Cài đặt lại máy', 'Khác'],
+                                                        'Thay đổi kế hoạch': ['Chờ lệnh sản xuất', 'Khác'],
+                                                        'Khác': ['Khác'],
+                                                    },
+                                                };
+                                                const defaultSubCauses: Record<string, string[]> = {
+                                                    'Thiết bị / Máy móc': ['Hỏng hóc cơ khí', 'Hỏng điện', 'Bảo trì định kỳ', 'Khác'],
+                                                    'Thiếu NLĐV': ['Thiếu nhân lực', 'Chờ nguyên liệu', 'Khác'],
+                                                    'Sự cố điện/nước': ['Mất điện lưới', 'Mất nước', 'Khác'],
+                                                    'Chất lượng': ['Lỗi chất lượng đầu vào', 'Lỗi thành phẩm', 'Khác'],
+                                                    'Vệ sinh / Cài đặt': ['Vệ sinh định kỳ', 'Cài đặt máy', 'Khác'],
+                                                    'Thay đổi kế hoạch': ['Thay đổi kế hoạch', 'Khác'],
+                                                    'Khác': ['Khác'],
+                                                };
+                                                const subCauses = (subCauseMap[deptCode] || defaultSubCauses)[dtCause] || [];
+                                                return (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-muted/30 p-4 rounded-lg border">
+                                                        <div className="sm:col-span-2 space-y-2">
+                                                            <Label>Số phút dừng</Label>
+                                                            <Input type="number" value={dtDuration} onChange={e => setDtDuration(e.target.value)} placeholder="0" className="bg-white" />
+                                                        </div>
+                                                        <div className="sm:col-span-3 space-y-2">
+                                                            <Label>Nguyên nhân</Label>
+                                                            <Select value={dtCause} onValueChange={v => { setDtCause(v); setDtNote(''); }}>
+                                                                <SelectTrigger className="bg-white"><SelectValue placeholder="Chọn..." /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="Thiết bị / Máy móc">🔧 Thiết bị / Máy móc</SelectItem>
+                                                                    <SelectItem value="Thiếu NLĐV">📦 Thiếu NLĐV</SelectItem>
+                                                                    <SelectItem value="Sự cố điện/nước">⚡ Sự cố điện/nước</SelectItem>
+                                                                    <SelectItem value="Chất lượng">🔍 Chất lượng</SelectItem>
+                                                                    <SelectItem value="Thay đổi kế hoạch">📋 Thay đổi kế hoạch</SelectItem>
+                                                                    <SelectItem value="Vệ sinh / Cài đặt">🧹 Vệ sinh / Cài đặt</SelectItem>
+                                                                    <SelectItem value="Khác">❓ Khác</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="sm:col-span-3 space-y-2">
+                                                            <Label>Lý do chi tiết</Label>
+                                                            <Select value={dtNote} onValueChange={setDtNote} disabled={!dtCause}>
+                                                                <SelectTrigger className="bg-white"><SelectValue placeholder={dtCause ? 'Chọn lý do...' : '— chọn nguyên nhân trước —'} /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    {subCauses.map((s: string) => (
+                                                                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="sm:col-span-4 space-y-2">
+                                                            <Label className="text-muted-foreground text-xs">Ghi chú thêm (tuỳ chọn)</Label>
+                                                            <div className="flex gap-2">
+                                                                <Input value={dtNote === 'Khác' || !subCauses.includes(dtNote) ? dtNote : ''} onChange={e => setDtNote(e.target.value)} placeholder="Chi tiết thêm..." className="bg-white flex-1" disabled={subCauses.length > 0 && dtNote !== 'Khác' && subCauses.includes(dtNote)} />
+                                                                <Button onClick={handleAddDowntime} disabled={isSaving || !dtDuration || !dtCause} className="bg-red-600 hover:bg-red-700">
+                                                                    <Plus className="h-4 w-4 mr-1" /> Thêm
+                                                                </Button>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </div>
+                                                );
+                                            })()}
 
                                             {/* Data Table */}
                                             <div className="border rounded-md overflow-hidden">
