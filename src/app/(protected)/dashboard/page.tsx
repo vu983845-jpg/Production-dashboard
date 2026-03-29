@@ -991,8 +991,8 @@ export default function DashboardPage() {
                         </div>
                     )}
 
-                    {/* CO2e Intensity toggle for ALL card */}
-                    {deptCode === "ALL" && (
+                    {/* CO2e Intensity toggle for STEAM card */}
+                    {deptCode === "STEAM" && (
                         <div className="flex items-center gap-1.5 mb-2 mt-1">
                             <span className="text-[10px] text-muted-foreground">Xem:</span>
                             <button onClick={() => setShowCo2Intensity(false)}
@@ -1001,7 +1001,7 @@ export default function DashboardPage() {
                             </button>
                             <button onClick={() => setShowCo2Intensity(true)}
                                 className={`text-[10px] px-2 py-0.5 rounded-full border transition-all flex items-center gap-1 ${showCo2Intensity ? 'bg-emerald-600 text-white border-emerald-600 font-semibold' : 'border-gray-300 text-muted-foreground hover:border-emerald-500'}`}>
-                                🌿 CO₂e / Tấn
+                                🌿 CO₂e / T Steam
                             </button>
                         </div>
                     )}
@@ -1187,26 +1187,21 @@ export default function DashboardPage() {
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </ChartWrapper>
-                    ) : deptCode === "ALL" && showCo2Intensity ? (
+                    ) : deptCode === "STEAM" && showCo2Intensity ? (
                         <div className="h-36 w-full mt-auto border-t pt-2">
                             {(() => {
-                                // Use Steaming daily actual as denominator
-                                const steamDeptId = departments.find(d => d.code === 'STEAM')?.id || '';
-                                const steamHistory: any[] = steamDeptId ? (dashboardsData[steamDeptId]?.history || []) : [];
-                                const steamByDate: Record<string, number> = {};
-                                steamHistory.forEach((h: any) => { steamByDate[h.name] = h.Actual || 0; });
-                                const steamMtdActual = steamHistory.reduce((s: number, h: any) => s + (h.Actual || 0), 0);
-                                const steamMtdPlan = steamHistory.reduce((s: number, h: any) => s + (h.Plan || 0), 0);
+                                // displayHistory IS the steam data when deptCode === 'STEAM'
+                                const steamMtdPlan = displayHistory.reduce((s: number, h: any) => s + (h.Plan || 0), 0);
+                                const steamMtdActual = displayHistory.reduce((s: number, h: any) => s + (h.Actual || 0), 0);
                                 const co2TargetKgPerTon = steamMtdPlan > 0 ? (265 * 1000) / steamMtdPlan : 0;
                                 const co2Data = displayHistory.map((d: any) => ({
                                     ...d,
-                                    SteamActual: steamByDate[d.name] || 0,
-                                    CO2ePerTon: (steamByDate[d.name] || 0) > 0 ? Number(((d.Emission || 0) * 1000 / steamByDate[d.name]).toFixed(2)) : 0,
+                                    CO2ePerTon: (d.Actual || 0) > 0 ? Number(((d.Emission || 0) * 1000 / d.Actual).toFixed(2)) : 0,
                                     Target: Number(co2TargetKgPerTon.toFixed(2))
                                 }));
                                 return (
                                     <>
-                                        <p className="text-[9px] text-muted-foreground text-right pr-1">CO₂e/T Steaming — Target: {co2TargetKgPerTon.toFixed(1)} kg &nbsp;|&nbsp; Steam MTD: {steamMtdActual.toFixed(0)} T</p>
+                                        <p className="text-[9px] text-muted-foreground text-right pr-1">CO₂e/T Steaming — Target: {co2TargetKgPerTon.toFixed(1)} kg&nbsp;|&nbsp;MTD: {steamMtdActual.toFixed(0)} T</p>
                                         <ResponsiveContainer width="100%" height="88%">
                                             <ComposedChart data={co2Data} margin={{ top: 2, right: 0, left: 0, bottom: 20 }}>
                                                 <defs>
@@ -1216,10 +1211,8 @@ export default function DashboardPage() {
 <XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={25} minTickGap={10} tickMargin={5} />
                                                 <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} trigger="hover"
                                                     formatter={(val: any, name?: string) => [
-                                                        name === 'CO2ePerTon' ? `${Number(val).toFixed(2)} kg CO₂e/T Steam` :
-                                                        name === 'SteamActual' ? `${Number(val).toFixed(1)} T` :
-                                                        `${Number(val).toFixed(2)} kg`,
-                                                        name === 'CO2ePerTon' ? 'CO₂e/T Steam' : name === 'SteamActual' ? 'Steaming' : 'Mục tiêu'
+                                                        name === 'CO2ePerTon' ? `${Number(val).toFixed(2)} kg CO₂e/T` : `${Number(val).toFixed(2)} kg`,
+                                                        name === 'CO2ePerTon' ? 'CO₂e/T Steam' : 'Mục tiêu'
                                                     ]} />
                                                 <Bar dataKey="CO2ePerTon" name="CO₂e/T Steam" radius={[2, 2, 0, 0]}>
                                                     {co2Data.map((entry: any, index: number) => (
@@ -1552,11 +1545,8 @@ export default function DashboardPage() {
 
                 <TabsContent value="stations" className="mt-0 pt-2">
                     <FadeInStagger faster>
-                        <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-3">
-                            {/* Total Factory Card */}
-                            <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard("all", t('all_factory_card'), true)}</FadeIn>
-
-                            {/* Steaming Card - highlighted */}
+                        <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-2">
+                            {/* Steaming Card - primary card */}
                             {(() => {
                                 const steamDept = departments.find(d => d.code === 'STEAM');
                                 return steamDept ? (
@@ -1568,9 +1558,9 @@ export default function DashboardPage() {
                             <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard("virtual-container", "Container")}</FadeIn>
                         </div>
 
-                        {/* DEPARTMENT MINI DASHBOARDS (DENSE BENTO GRID) — exclude FGWH and STEAM (already shown above) */}
+                        {/* DEPARTMENT MINI DASHBOARDS — exclude FGWH, STEAM (top), MAINT_SHELL (removed) */}
                         <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                            {departments.filter(d => d.code !== 'FGWH' && d.code !== 'STEAM').map(d => (
+                            {departments.filter(d => d.code !== 'FGWH' && d.code !== 'STEAM' && d.code !== 'MAINT_SHELL').map(d => (
                                 <FadeIn key={d.id} className="h-full">
                                     {renderMiniDashboard(d.id, d.name_en)}
                                 </FadeIn>
