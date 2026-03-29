@@ -103,6 +103,7 @@ export default function DashboardPage() {
     const [showCo2Intensity, setShowCo2Intensity] = useState(false);
 
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
+    const [dailyElecVsProd, setDailyElecVsProd] = useState<any[]>([]) // kWh/T daily breakdown
     const [kpiSummary, setKpiSummary] = useState({
         steamActual: 0, steamTarget: 0,
         fgwhActual: 0, fgwhTarget: 0,
@@ -413,6 +414,39 @@ export default function DashboardPage() {
                 dData.forEach((curr: any) => {
                     curr.downtime_min = nativeDownTimeSum[`${curr.department_id}_${curr.work_date}`] || 0;
                 });
+
+                // --- Build dailyElecVsProd chart data ---
+                // Index SHELL and PEEL_MC daily actuals by work_date
+                const shellDeptObj = departments.find((d: any) => d.code === 'SHELL');
+                const peelDeptObj = departments.find((d: any) => d.code === 'PEEL_MC');
+                const SHELL_RECOVERY_FETCH = 0.22;
+                const shellByDate: Record<string, number> = {};
+                const peelByDate: Record<string, number> = {};
+                dData.forEach((r: any) => {
+                    if (shellDeptObj && r.department_id === shellDeptObj.id) {
+                        shellByDate[r.work_date] = (shellByDate[r.work_date] || 0) + Number(r.actual_ton || 0);
+                    }
+                    if (peelDeptObj && r.department_id === peelDeptObj.id) {
+                        peelByDate[r.work_date] = (peelByDate[r.work_date] || 0) + Number(r.actual_ton || 0);
+                    }
+                });
+                if (eData) {
+                    const elecVsProd = eData.map(r => {
+                        const elec = Number(r.electricity_kwh || 0);
+                        const shellInput = shellByDate[r.work_date] || 0;
+                        const shellOut = shellInput * SHELL_RECOVERY_FETCH;
+                        const peel = peelByDate[r.work_date] || 0;
+                        const combined = shellOut + peel;
+                        return {
+                            name: format(new Date(r.work_date), 'dd/MM'),
+                            ShellOut: Number(shellOut.toFixed(2)),
+                            PeelOut: Number(peel.toFixed(2)),
+                            ElecKwh: elec,
+                            KwhPerT: combined > 0 ? Number((elec / combined).toFixed(1)) : 0,
+                        };
+                    });
+                    setDailyElecVsProd(elecVsProd);
+                }
 
                 // Determine regions mapping
                 // Map RCN: RCN
@@ -1555,6 +1589,51 @@ export default function DashboardPage() {
                             </FadeIn>
                         </div>
                     </FadeInStagger>
+                )}
+
+                {/* ⚡ Daily Electricity Intensity vs Shell+Peel Output */}
+                {dailyElecVsProd.length > 0 && (
+                    <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 md:p-5 mb-3 md:mb-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">⚡ Phát thải điện vs Sản lượng (Shell + Peeling)</span>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Cột: Sản lượng output (T) · Đường: kWh/T · Shell output = Input × 0.22</p>
+                            </div>
+                        </div>
+                        <ChartWrapper className="w-full">
+                            <ResponsiveContainer width="100%" height={200}>
+                                <ComposedChart data={dailyElecVsProd} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={32} unit="T" />
+                                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#f59e0b' }} axisLine={false} tickLine={false} width={44} unit=" k/T" />
+                                    <Tooltip
+                                        content={({ active, payload, label }) => {
+                                            if (!active || !payload?.length) return null;
+                                            return (
+                                                <div className="bg-white/98 border border-slate-100 rounded-xl shadow-xl p-3 text-xs min-w-[180px]">
+                                                    <p className="font-black text-slate-700 mb-2 border-b border-slate-100 pb-1">{label}</p>
+                                                    {payload.map((p: any, i: number) => (
+                                                        <div key={i} className="flex justify-between gap-6 py-0.5">
+                                                            <span className="flex items-center gap-1.5 text-slate-500">
+                                                                <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: p.color }} />
+                                                                {p.name}
+                                                            </span>
+                                                            <span className="font-bold text-slate-800 tabular-nums">{Number(p.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}{p.name === 'kWh/T' ? '' : ' T'}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }}
+                                    />
+                                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, color: '#94a3b8' }} />
+                                    <Bar yAxisId="left" dataKey="ShellOut" name="Shell output (×0.22)" stackId="prod" fill="#6366f1" opacity={0.85} radius={[0, 0, 0, 0]} maxBarSize={28} />
+                                    <Bar yAxisId="left" dataKey="PeelOut" name="Peel output" stackId="prod" fill="#22d3ee" opacity={0.85} radius={[3, 3, 0, 0]} maxBarSize={28} />
+                                    <Line yAxisId="right" type="monotone" dataKey="KwhPerT" name="kWh/T" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </ChartWrapper>
+                    </div>
                 )}
 
                 <TabsContent value="stations" className="mt-0 pt-2">
