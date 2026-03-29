@@ -49,6 +49,32 @@ const SHELLING_LINES = [
     { value: "Other", label: "Khác (Other)" },
 ]
 
+// Sub-causes per dept × reason code
+const SUB_CAUSES: Record<string, Record<string, string[]>> = {
+    SHELL: {
+        BD: [
+            'Hư hỏng cấp liệu',
+            'Hư hỏng đầu cắt',
+            'Hư hỏng sàng rung',
+            'Hư hỏng motor sàng rung',
+            'Hư hỏng motor ly tâm',
+            'Hư hỏng gàu tải',
+            'Hư hỏng ly tâm',
+            'Hư hỏng cụm phân trục',
+            'Hư hỏng hệ quạt thổi',
+            'Tuột ống vỏ',
+        ],
+        WT: ['Chờ hàng đạt ẩm', 'Chờ lấy vỏ ở silo vỏ'],
+        LU: ['Không có nguyên liệu'],
+    },
+    PEEL_MC: {
+        BD: ['Máy nén khí hỏng', 'Áp suất khí thấp', 'Lưỡi bóc mòn', 'Băng tải hỏng', 'Bộ phận cơ khí hỏng'],
+        WT: ['Chờ hạt cắt đầu vào'],
+        LU: ['Thiếu nhân lực'],
+    },
+}
+const SUB_CAUSES_CUSTOM = '__CUSTOM__'
+
 function calcDuration(start: string, end: string): number {
     try {
         const s = parseISO(start)
@@ -70,6 +96,8 @@ export default function DowntimePage() {
     const [machineAreaOther, setMachineAreaOther] = useState("")
     const [severity, setSeverity] = useState("Trung bình")
     const [reasonCode, setReasonCode] = useState("BD")
+    const [subCause, setSubCause] = useState("")
+    const [subCauseOther, setSubCauseOther] = useState("")
     const [description, setDescription] = useState("")
     const [startTime, setStartTime] = useState(now())
     const [endTime, setEndTime] = useState("")
@@ -183,6 +211,13 @@ export default function DowntimePage() {
             status = "Closed"
         }
 
+        // Build final sub-cause label
+        const resolvedSubCause = subCause === SUB_CAUSES_CUSTOM ? subCauseOther.trim() : subCause
+        // Prepend sub-cause to description if present
+        const finalDescription = resolvedSubCause
+            ? (description ? `${resolvedSubCause} — ${description}` : resolvedSubCause)
+            : description
+
         const { error } = await supabase.from("downtime_events").insert({
             department_id: entryDeptId,
             work_date: startTime.split("T")[0],
@@ -192,7 +227,7 @@ export default function DowntimePage() {
             root_cause: reasonCode,
             machine_area: finalMachineArea || null,
             severity: severity,
-            description: description || null,
+            description: finalDescription || null,
             note: detailNote || null,
             is_ongoing: isOngoing,
             exclude_downtime: excludeDowntime,
@@ -204,7 +239,7 @@ export default function DowntimePage() {
             setSaveMsg("❌ Lỗi: " + error.message)
         } else {
             setSaveMsg("✅ Đã ghi nhận sự cố!")
-            setMachineArea(""); setMachineAreaOther(""); setDescription(""); setDetailNote(""); setStartTime(now()); setEndTime(""); setIsOngoing(false); setExcludeDowntime(false)
+            setMachineArea(""); setMachineAreaOther(""); setDescription(""); setDetailNote(""); setStartTime(now()); setEndTime(""); setIsOngoing(false); setExcludeDowntime(false); setSubCause(""); setSubCauseOther("")
             fetchEvents()
         }
         setTimeout(() => setSaveMsg(""), 3000)
@@ -558,7 +593,7 @@ export default function DowntimePage() {
                                 {/* Reason code */}
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs font-semibold text-muted-foreground uppercase">Mã Lý do *</label>
-                                    <select value={reasonCode} onChange={e => setReasonCode(e.target.value)}
+                                    <select value={reasonCode} onChange={e => { setReasonCode(e.target.value); setSubCause(""); setSubCauseOther("") }}
                                         className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                                         <optgroup label="🔴 Không có kế hoạch">
                                             {REASON_CODES.filter(r => !r.planned).map(r => (
@@ -572,6 +607,33 @@ export default function DowntimePage() {
                                         </optgroup>
                                     </select>
                                 </div>
+                                {/* Sub-cause — only when the selected code has sub-items for this dept */}
+                                {(() => {
+                                    const deptCode = departments.find(d => d.id === entryDeptId)?.code || ''
+                                    const subs = (SUB_CAUSES[deptCode] || {})[reasonCode] || []
+                                    if (!subs.length) return null
+                                    return (
+                                        <div className="flex flex-col gap-1 sm:col-span-2">
+                                            <label className="text-xs font-semibold text-muted-foreground uppercase">Lý do chi tiết *</label>
+                                            <select value={subCause} onChange={e => { setSubCause(e.target.value); if (e.target.value !== SUB_CAUSES_CUSTOM) setSubCauseOther('') }}
+                                                className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                                <option value="">-- Chọn lý do chi tiết --</option>
+                                                {subs.map((s: string) => <option key={s} value={s}>{s}</option>)}
+                                                <option value={SUB_CAUSES_CUSTOM}>✏️ Nhập lý do mới...</option>
+                                            </select>
+                                            {subCause === SUB_CAUSES_CUSTOM && (
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    value={subCauseOther}
+                                                    onChange={e => setSubCauseOther(e.target.value)}
+                                                    placeholder="Nhập lý do cụ thể..."
+                                                    className="h-9 rounded-md border border-amber-300 bg-amber-50 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 mt-1"
+                                                />
+                                            )}
+                                        </div>
+                                    )
+                                })()}
                                 {/* Start time */}
                                 <div className="flex flex-col gap-1">
                                     <label className="text-xs font-semibold text-muted-foreground uppercase">Bắt đầu *</label>
