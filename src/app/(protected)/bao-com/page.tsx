@@ -223,6 +223,18 @@ const DEPT_MAP: Record<string, string> = {
     "cleaning worker": "MAINT_HCA",
     "cleaning worker s2": "MAINT_HCA",
     "cleaning worker s3": "MAINT_HCA",
+    // ── Fallback: AI may return the DB code directly (e.g. "STEAM", "PEEL", "HPEEL") ──
+    // Note: borma/boiler/qc/fgwh already defined above; only add new ones here
+    "steam": "STEAM",
+    "shell": "SHELL",
+    "peel": "PEEL",
+    "hpeel": "HPEEL",
+    "pack": "PACK",
+    "cs": "CS",
+    "maint_shell": "MAINT_SHELL",
+    "maint_hca": "MAINT_HCA",
+    "maint-shell": "MAINT_SHELL",
+    "maint-hca": "MAINT_HCA",
 }
 
 // ─────────────────────────────────────────────
@@ -998,10 +1010,16 @@ export default function BaoCom() {
     // ─── Save to DB ───
     const findDeptId = (areaName: string): string | null => {
         const lower = areaName.toLowerCase().trim()
+        // 1. Try DEPT_MAP (display/alias text → code)
         const code = DEPT_MAP[lower]
-        if (!code) return null
-        const dept = deptList.find((d) => d.code === code)
-        return dept?.id || null
+        if (code) {
+            const dept = deptList.find((d) => d.code === code)
+            if (dept) return dept.id
+        }
+        // 2. Fallback: AI may return the DB code directly (e.g. "STEAM", "HPEEL", "MAINT_SHELL")
+        const upperDirect = areaName.toUpperCase().trim()
+        const deptDirect = deptList.find((d) => d.code === upperDirect)
+        return deptDirect?.id || null
     }
 
     const handleSaveToDB = async () => {
