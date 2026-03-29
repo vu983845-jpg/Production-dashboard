@@ -30,7 +30,7 @@ const SHIFT_HOUR: Record<string, string> = { "1": "6h", "2": "14h", "3": "22h" }
 
 // Các bộ phận cần báo cơm theo code trong DB
 const EXPECTED_DEPTS = [
-    "PEEL", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA"
+    "PEEL", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA", "OFFICE"
 ]
 
 // ─────────────────────────────────────────────
@@ -223,6 +223,13 @@ const DEPT_MAP: Record<string, string> = {
     "cleaning worker": "MAINT_HCA",
     "cleaning worker s2": "MAINT_HCA",
     "cleaning worker s3": "MAINT_HCA",
+    // ── OFFICE ──
+    "office": "OFFICE",
+    "văn phòng": "OFFICE",
+    "van phong": "OFFICE",
+    "vp": "OFFICE",
+    "office staff": "OFFICE",
+    "staff": "OFFICE",
     // ── Fallback: AI may return the DB code directly (e.g. "STEAM", "PEEL", "HPEEL") ──
     // Note: borma/boiler/qc/fgwh already defined above; only add new ones here
     "steam": "STEAM",
