@@ -710,17 +710,29 @@ export default function DashboardPage() {
         const isReachTonnage = summary.totalActual >= summary.totalPlan && summary.totalPlan > 0;
         const isReached = isReachTonnage;
 
-        const displayHistory = history.map((h: any) => ({
-            ...h,
-            DailyNeeded: id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && h.Plan > 0 ? Number(dailyNeeded) : undefined
-        }));
+        const deptCode = id === 'all' ? 'ALL' : (id.startsWith('region-') ? id.replace('region-', '') : (id === 'virtual-container' ? 'CONT' : (departments.find(d => d.id === id)?.code || "ALL")));
+
+        const displayHistory = history.map((h: any) => {
+            // For STEAM card: inject Emission data from the all card's history
+            let emission = h.Emission;
+            if (!emission && deptCode === 'STEAM') {
+                const allHistory = dashboardsData['all']?.history || [];
+                const allEntry = allHistory.find((a: any) => a.name === h.name);
+                emission = allEntry?.Emission || 0;
+            }
+            return {
+                ...h,
+                Emission: emission,
+                CO2ePerTon: deptCode === 'STEAM' && (h.Actual || 0) > 0 ? Number(((emission || 0) * 1000 / h.Actual).toFixed(2)) : undefined,
+                DailyNeeded: id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && h.Plan > 0 ? Number(dailyNeeded) : undefined
+            };
+        });
 
         const actualNum = summary.totalActual;
         const planNum = summary.totalPlan;
         const unit = id === 'virtual-container' ? "Cont" : "T";
         const variance = actualNum - planNum;
 
-        const deptCode = id === 'all' ? 'ALL' : (id.startsWith('region-') ? id.replace('region-', '') : (id === 'virtual-container' ? 'CONT' : (departments.find(d => d.id === id)?.code || "ALL")));
 
         if (deptCode === 'PEEL_MC') {
             console.log("PEEL_MC Dashboard Summary:", summary);
@@ -991,20 +1003,25 @@ export default function DashboardPage() {
                         </div>
                     )}
 
-                    {/* CO2e Intensity toggle for STEAM card */}
-                    {deptCode === "STEAM" && (
-                        <div className="flex items-center gap-1.5 mb-2 mt-1">
-                            <span className="text-[10px] text-muted-foreground">Xem:</span>
-                            <button onClick={() => setShowCo2Intensity(false)}
-                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${!showCo2Intensity ? 'bg-primary text-white border-primary font-semibold' : 'border-gray-300 text-muted-foreground hover:border-primary'}`}>
-                                {language === 'vi' ? 'Sản lượng' : 'Production'}
-                            </button>
-                            <button onClick={() => setShowCo2Intensity(true)}
-                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all flex items-center gap-1 ${showCo2Intensity ? 'bg-emerald-600 text-white border-emerald-600 font-semibold' : 'border-gray-300 text-muted-foreground hover:border-emerald-500'}`}>
-                                🌿 CO₂e / T Steam
-                            </button>
-                        </div>
-                    )}
+                    {/* CO2e/T info line for STEAM card - no toggle needed */}
+                    {deptCode === "STEAM" && (() => {
+                        const steamMtdPlan = displayHistory.reduce((s: number, h: any) => s + (h.Plan || 0), 0);
+                        const steamMtdActual = displayHistory.reduce((s: number, h: any) => s + (h.Actual || 0), 0);
+                        const co2Target = steamMtdPlan > 0 ? (265 * 1000) / steamMtdPlan : 0;
+                        const co2Actual = steamMtdActual > 0
+                            ? displayHistory.reduce((s: number, h: any) => s + (h.Emission || 0), 0) * 1000 / steamMtdActual
+                            : 0;
+                        const isGoodCo2 = co2Actual <= co2Target;
+                        return (
+                            <div className="flex items-center gap-2 mb-1 mt-0.5 px-1 py-0.5 bg-slate-50 rounded-lg border border-slate-100">
+                                <span className="text-[9px] text-slate-400 uppercase tracking-tight">CO₂e/T Steam (MTD)</span>
+                                <span className={`text-[10px] font-black ${isGoodCo2 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                    {co2Actual.toFixed(1)} kg
+                                </span>
+                                <span className="text-[9px] text-slate-400">/ Target {co2Target.toFixed(1)}</span>
+                            </div>
+                        );
+                    })()}
                     
                     {/* View Switching Logic */}
                     {!(isTotal || isFgwh) && deptViewModes[id] === 'details' ? (
@@ -1187,51 +1204,6 @@ export default function DashboardPage() {
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </ChartWrapper>
-                    ) : deptCode === "STEAM" && showCo2Intensity ? (
-                        <div className="h-36 w-full mt-auto border-t pt-2">
-                            {(() => {
-                                // displayHistory IS the steam data when deptCode === 'STEAM'
-                                const steamMtdPlan = displayHistory.reduce((s: number, h: any) => s + (h.Plan || 0), 0);
-                                const steamMtdActual = displayHistory.reduce((s: number, h: any) => s + (h.Actual || 0), 0);
-                                const co2TargetKgPerTon = steamMtdPlan > 0 ? (265 * 1000) / steamMtdPlan : 0;
-                                const co2Data = displayHistory.map((d: any) => ({
-                                    ...d,
-                                    CO2ePerTon: (d.Actual || 0) > 0 ? Number(((d.Emission || 0) * 1000 / d.Actual).toFixed(2)) : 0,
-                                    Target: Number(co2TargetKgPerTon.toFixed(2))
-                                }));
-                                return (
-                                    <>
-                                        <p className="text-[9px] text-muted-foreground text-right pr-1">CO₂e/T Steaming — Target: {co2TargetKgPerTon.toFixed(1)} kg&nbsp;|&nbsp;MTD: {steamMtdActual.toFixed(0)} T</p>
-                                        <ResponsiveContainer width="100%" height="88%">
-                                            <ComposedChart data={co2Data} margin={{ top: 2, right: 0, left: 0, bottom: 20 }}>
-                                                <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
-</defs>
-<XAxis dataKey="name" tick={{ fontSize: 10, dy: 5 }} tickLine={false} axisLine={false} height={25} minTickGap={10} tickMargin={5} />
-                                                <Tooltip contentStyle={{ fontSize: '10px', padding: '2px 4px' }} cursor={{ fill: 'rgba(0,0,0,0.05)' }} trigger="hover"
-                                                    formatter={(val: any, name?: string) => [
-                                                        name === 'CO2ePerTon' ? `${Number(val).toFixed(2)} kg CO₂e/T` : `${Number(val).toFixed(2)} kg`,
-                                                        name === 'CO2ePerTon' ? 'CO₂e/T Steam' : 'Mục tiêu'
-                                                    ]} />
-                                                <Bar dataKey="CO2ePerTon" name="CO₂e/T Steam" radius={[2, 2, 0, 0]}>
-                                                    {co2Data.map((entry: any, index: number) => (
-                                                        <Cell key={`co2-${index}`} fill={entry.CO2ePerTon > co2TargetKgPerTon ? "url(#actualRedGrad)" : "url(#actualGreenGrad)"} />
-                                                    ))}
-                                                </Bar>
-                                                <Line type="step" dataKey="Target" stroke="#f59e0b" strokeDasharray="4 2" dot={false} strokeWidth={1.5} name="Mục tiêu" />
-                                                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '9px', paddingTop: '2px' }} />
-                                            </ComposedChart>
-                                        </ResponsiveContainer>
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    ) : deptCode === 'MAINT_SHELL' ? (
-                        <div className="flex flex-col items-center justify-center h-[120px] text-center gap-2 opacity-60">
-                            <span className="text-3xl">🔧</span>
-                            <span className="text-xs text-muted-foreground font-medium">{language === 'vi' ? 'Không có dữ liệu sản lượng' : 'No production data'}</span>
-                        </div>
                     ) : (
                     <ChartWrapper className={`w-full rounded-xl border-t h-[220px] md:h-[260px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                         <ResponsiveContainer width="100%" height="100%">
@@ -1296,7 +1268,13 @@ export default function DashboardPage() {
                                             <Line yAxisId="emission" type="monotone" dataKey="Emission" stroke="#e63121" dot={false} strokeWidth={2} name={t('legend.emission')} animationDuration={700} />
                                         </>
                                     )}
-                                    {(deptCode === "HAND" || deptCode === "SHELL" || deptCode === "PEEL_MC" || deptCode === "ALL" || isTotal || isFgwh) && (
+                                    {deptCode === "STEAM" && (
+                                        <>
+                                            <YAxis yAxisId="co2right" orientation="right" tick={{ fontSize: 10, fill: '#10b981', fontWeight: 600 }} tickLine={false} axisLine={false} width={36} tickFormatter={(v) => v > 0 ? `${v.toFixed(0)}` : ''} />
+                                            <Line yAxisId="co2right" type="monotone" dataKey="CO2ePerTon" stroke="#10b981" dot={false} strokeWidth={2} name="CO₂e/T" animationDuration={700} strokeDasharray="5 3" />
+                                        </>
+                                    )}
+                                    {(deptCode === "HAND" || deptCode === "SHELL" || deptCode === "PEEL_MC" || deptCode === "ALL" || deptCode === "STEAM" || isTotal || isFgwh) && (
                                         <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '4px', fontWeight: 600, color: '#64748b' }} iconType="plainline" />
                                     )}
                             </ComposedChart>
