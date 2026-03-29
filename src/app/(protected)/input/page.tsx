@@ -183,6 +183,8 @@ export default function InputPage() {
     const [dtDuration, setDtDuration] = useState("")
     const [dtCause, setDtCause] = useState("")
     const [dtNote, setDtNote] = useState("")
+    const [dtCustomNote, setDtCustomNote] = useState("") // shown when user picks 'Nhập lý do khác...'
+    const DT_CUSTOM_SENTINEL = "__CUSTOM__"
 
     // Shelling Monthly Energy State
     const [shellingMonthlyEnergyData, setShellingMonthlyEnergyData] = useState<ShellingMonthlyEnergyRecord[]>([])
@@ -864,6 +866,9 @@ export default function InputPage() {
 
     async function handleAddDowntime() {
         if (!selectedDept || !dtDuration || !dtCause) return;
+        // Resolve the actual note: if user chose "Nhập lý do khác..." use their typed text
+        const resolvedNote = dtNote === DT_CUSTOM_SENTINEL ? dtCustomNote.trim() : dtNote;
+        if (dtNote === DT_CUSTOM_SENTINEL && !resolvedNote) return; // guard: must type something
         setIsSaving(true);
         const formattedDate = format(date, "yyyy-MM-dd");
         const { data, error } = await supabase.from('downtime_events').insert({
@@ -871,7 +876,7 @@ export default function InputPage() {
             work_date: formattedDate,
             duration_mins: parseInt(dtDuration),
             root_cause: dtCause,
-            note: dtNote,
+            note: resolvedNote,
             created_by: userId
         }).select().single();
 
@@ -883,6 +888,7 @@ export default function InputPage() {
             setDtDuration("");
             setDtCause("");
             setDtNote("");
+            setDtCustomNote("");
             // Update the KPI downtime_min logic if they want to sum it up dynamically
             const newTotal = downtimes.reduce((s, r) => s + Number(r.duration_mins), 0) + data.duration_mins;
             formKpi.setValue("downtime_min", newTotal);
@@ -1950,15 +1956,16 @@ export default function InputPage() {
                                                     'Khác': ['Khác'],
                                                 };
                                                 const subCauses = (subCauseMap[deptCode] || defaultSubCauses)[dtCause] || [];
+                                                const isCustomMode = dtNote === DT_CUSTOM_SENTINEL;
                                                 return (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-muted/30 p-4 rounded-lg border">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start bg-muted/30 p-4 rounded-lg border">
                                                         <div className="sm:col-span-2 space-y-2">
                                                             <Label>Số phút dừng</Label>
                                                             <Input type="number" value={dtDuration} onChange={e => setDtDuration(e.target.value)} placeholder="0" className="bg-white" />
                                                         </div>
                                                         <div className="sm:col-span-3 space-y-2">
                                                             <Label>Nguyên nhân</Label>
-                                                            <Select value={dtCause} onValueChange={v => { setDtCause(v); setDtNote(''); }}>
+                                                            <Select value={dtCause} onValueChange={v => { setDtCause(v); setDtNote(''); setDtCustomNote(''); }}>
                                                                 <SelectTrigger className="bg-white"><SelectValue placeholder="Chọn..." /></SelectTrigger>
                                                                 <SelectContent>
                                                                     <SelectItem value="Thiết bị / Máy móc">🔧 Thiết bị / Máy móc</SelectItem>
@@ -1973,23 +1980,34 @@ export default function InputPage() {
                                                         </div>
                                                         <div className="sm:col-span-3 space-y-2">
                                                             <Label>Lý do chi tiết</Label>
-                                                            <Select value={dtNote} onValueChange={setDtNote} disabled={!dtCause}>
+                                                            <Select value={dtNote} onValueChange={v => { setDtNote(v); if (v !== DT_CUSTOM_SENTINEL) setDtCustomNote(''); }} disabled={!dtCause}>
                                                                 <SelectTrigger className="bg-white"><SelectValue placeholder={dtCause ? 'Chọn lý do...' : '— chọn nguyên nhân trước —'} /></SelectTrigger>
                                                                 <SelectContent>
                                                                     {subCauses.map((s: string) => (
                                                                         <SelectItem key={s} value={s}>{s}</SelectItem>
                                                                     ))}
+                                                                    <SelectItem value={DT_CUSTOM_SENTINEL}>✏️ Nhập lý do khác...</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
+                                                            {/* Show text input when custom is selected */}
+                                                            {isCustomMode && (
+                                                                <Input
+                                                                    autoFocus
+                                                                    value={dtCustomNote}
+                                                                    onChange={e => setDtCustomNote(e.target.value)}
+                                                                    placeholder="Nhập lý do cụ thể..."
+                                                                    className="bg-amber-50 border-amber-300 mt-1"
+                                                                />
+                                                            )}
                                                         </div>
-                                                        <div className="sm:col-span-4 space-y-2">
-                                                            <Label className="text-muted-foreground text-xs">Ghi chú thêm (tuỳ chọn)</Label>
-                                                            <div className="flex gap-2">
-                                                                <Input value={dtNote === 'Khác' || !subCauses.includes(dtNote) ? dtNote : ''} onChange={e => setDtNote(e.target.value)} placeholder="Chi tiết thêm..." className="bg-white flex-1" disabled={subCauses.length > 0 && dtNote !== 'Khác' && subCauses.includes(dtNote)} />
-                                                                <Button onClick={handleAddDowntime} disabled={isSaving || !dtDuration || !dtCause} className="bg-red-600 hover:bg-red-700">
-                                                                    <Plus className="h-4 w-4 mr-1" /> Thêm
-                                                                </Button>
-                                                            </div>
+                                                        <div className="sm:col-span-4 space-y-2 pt-7">
+                                                            <Button
+                                                                onClick={handleAddDowntime}
+                                                                disabled={isSaving || !dtDuration || !dtCause || (isCustomMode && !dtCustomNote.trim())}
+                                                                className="bg-red-600 hover:bg-red-700 w-full"
+                                                            >
+                                                                <Plus className="h-4 w-4 mr-1" /> Thêm sự cố
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 );
