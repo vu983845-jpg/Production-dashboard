@@ -163,30 +163,30 @@ const DEPT_MAP: Record<string, string> = {
     "machine grading shift 3": "CS",
     "color sorter": "CS",
     // â”€â”€ HANDPEELING (Manual Grading Ms Huá»‡ + Manual Peeling LiÃªn/Dung) â”€â”€
-    "manual grading -shift 1 (ms huá»‡)": "HPEEL",
-    "manual grading thá»i vá»¥ -shift 1 (ms huá»‡)": "HPEEL",
-    "manual grading -shift 2 (ms huá»‡)": "HPEEL",
-    "manual grading thá»i vá»¥ -shift 2 (ms huá»‡)": "HPEEL",
-    "manual grading -shift 3 (ms huá»‡)": "HPEEL",
-    "manual grading thá»i vá»¥ -shift 3 (ms huá»‡)": "HPEEL",
-    "manual grading": "HPEEL",
-    "manual peeling s1 - liÃªn": "HPEEL",
-    "manual peeling s1 thá»i vá»¥ - liÃªn": "HPEEL",
-    "manual peeling s1 - dung": "HPEEL",
-    "manual peeling s1 thá»i vá»¥ - dung": "HPEEL",
-    "manual peeling s2 - liÃªn": "HPEEL",
-    "manual peeling s2 thá»i vá»¥ - liÃªn": "HPEEL",
-    "manual peeling s2 - dung": "HPEEL",
-    "manual peeling s2 thá»i vá»¥ - dung": "HPEEL",
-    "manual peeling s3 - liÃªn": "HPEEL",
-    "manual peeling s3 thá»i vá»¥ - liÃªn": "HPEEL",
-    "manual peeling s3 - dung": "HPEEL",
-    "manual peeling s3 thá»i vá»¥ - dung": "HPEEL",
+    "manual grading -shift 1 (ms huá»‡)": "HPEEL_GRADING",
+    "manual grading thá»i vá»¥ -shift 1 (ms huá»‡)": "HPEEL_GRADING",
+    "manual grading -shift 2 (ms huá»‡)": "HPEEL_GRADING",
+    "manual grading thá»i vá»¥ -shift 2 (ms huá»‡)": "HPEEL_GRADING",
+    "manual grading -shift 3 (ms huá»‡)": "HPEEL_GRADING",
+    "manual grading thá»i vá»¥ -shift 3 (ms huá»‡)": "HPEEL_GRADING",
+    "manual grading": "HPEEL_GRADING",
+    "manual peeling s1 - liÃªn": "HPEEL_LIEN",
+    "manual peeling s1 thá»i vá»¥ - liÃªn": "HPEEL_LIEN",
+    "manual peeling s1 - dung": "HPEEL_DUNG",
+    "manual peeling s1 thá»i vá»¥ - dung": "HPEEL_DUNG",
+    "manual peeling s2 - liÃªn": "HPEEL_LIEN",
+    "manual peeling s2 thá»i vá»¥ - liÃªn": "HPEEL_LIEN",
+    "manual peeling s2 - dung": "HPEEL_DUNG",
+    "manual peeling s2 thá»i vá»¥ - dung": "HPEEL_DUNG",
+    "manual peeling s3 - liÃªn": "HPEEL_LIEN",
+    "manual peeling s3 thá»i vá»¥ - liÃªn": "HPEEL_LIEN",
+    "manual peeling s3 - dung": "HPEEL_DUNG",
+    "manual peeling s3 thá»i vá»¥ - dung": "HPEEL_DUNG",
     "manual peeling": "HPEEL",
     "handpeeling": "HPEEL",
     // Zalo aliases (grading â†’ handpeeling)
-    "grading": "HPEEL",
-    "gradin": "HPEEL",
+    "grading": "HPEEL_GRADING",
+    "gradin": "HPEEL_GRADING",
     // â”€â”€ PACKING â”€â”€
     "packing s1": "PACK",
     "packing thá»i vá»¥ s1": "PACK",
@@ -245,6 +245,15 @@ const DEPT_MAP: Record<string, string> = {
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// HPEEL sub-group display names (used as department_name in DB)
+const HPEEL_SUBGROUP_DISPLAY: Record<string, string> = {
+    HPEEL_GRADING: 'Manual Grading (Ms Huệ)',
+    HPEEL_LIEN:    'Manual Peeling (Liên)',
+    HPEEL_DUNG:    'Manual Peeling (Dung)',
+}
+// Virtual sub-group codes mapping to HPEEL department_id
+const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG"])
 // Parse helpers
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -1027,9 +1036,11 @@ export default function BaoCom() {
         // 1. Try DEPT_MAP (display/alias text â†’ code)
         const code = DEPT_MAP[lower]
         if (code) {
-            const dept = deptList.find((d) => d.code === code)
+            // HPEEL sub-groups resolve to HPEEL dept_id
+            const resolvedCode = HPEEL_SUBCODES.has(code) ? 'HPEEL' : code
+            const dept = deptList.find((d) => d.code === resolvedCode)
             if (dept) return dept.id
-        }
+            }
         // 2. Fallback: AI may return the DB code directly (e.g. "STEAM", "HPEEL", "MAINT_SHELL")
         const upperDirect = areaName.toUpperCase().trim()
         const deptDirect = deptList.find((d) => d.code === upperDirect)
@@ -1046,9 +1057,13 @@ export default function BaoCom() {
             const payload = records.map((r, i) => {
                 const deptId = getEffectiveDeptId(r, i)
                 // Use canonical name_en if dept resolved; otherwise keep raw area string
-                const canonicalName = deptId
-                    ? (deptList.find(d => d.id === deptId)?.name_en ?? getEffectiveArea(r, i))
-                    : getEffectiveArea(r, i)
+                const _area = getEffectiveArea(r, i)
+                const _mc = DEPT_MAP[_area.toLowerCase().trim()]
+                const canonicalName = (_mc && HPEEL_SUBCODES.has(_mc))
+                    ? (HPEEL_SUBGROUP_DISPLAY[_mc] ?? _area)
+                    : deptId
+                        ? (deptList.find(d => d.id === deptId)?.name_en ?? _area)
+                        : _area
                 return {
                 work_date: dateToISO(r.date),
                 department_name: canonicalName,
