@@ -416,9 +416,13 @@ export default function DashboardPage() {
                 });
 
                 // --- Build dailyElecVsProd chart data ---
-                // Index SHELL and PEEL_MC daily actuals by work_date
-                const shellDeptObj = departments.find((d: any) => d.code === 'SHELL');
-                const peelDeptObj = departments.find((d: any) => d.code === 'PEEL_MC');
+                // Fetch dept IDs inline to avoid race condition with departments state
+                const { data: deptRows } = await supabase
+                    .from('departments')
+                    .select('id, code')
+                    .in('code', ['SHELL', 'PEEL_MC']);
+                const shellDeptObj = deptRows?.find((d: any) => d.code === 'SHELL');
+                const peelDeptObj = deptRows?.find((d: any) => d.code === 'PEEL_MC');
                 const SHELL_RECOVERY_FETCH = 0.22;
                 const shellByDate: Record<string, number> = {};
                 const peelByDate: Record<string, number> = {};
