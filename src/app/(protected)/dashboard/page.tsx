@@ -1505,23 +1505,6 @@ export default function DashboardPage() {
                                     const isGood = co2Pct <= 100
                                     const barColor = isGood ? '#10b981' : '#e63121'
 
-                                    // kWh / T = Điện / (SHELL_output + PEEL_MC_output)
-                                    // SHELL_actual = INPUT (RCN hấp), output hạt cắt = SHELL_actual × 0.22
-                                    // PEEL_MC_actual = OUTPUT trực tiếp (nhân bóc)
-                                    const SHELL_RECOVERY = 0.22;
-                                    const shellDept = departments.find(d => d.code === 'SHELL');
-                                    const peelDept = departments.find(d => d.code === 'PEEL_MC');
-                                    const shellInput = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalActual || 0) : 0;
-                                    const shellOutput = shellInput * SHELL_RECOVERY; // hạt cắt thực ra
-                                    const peelMtd = peelDept ? (dashboardsData[peelDept.id]?.summary?.totalActual || 0) : 0;
-                                    const combinedTon = shellOutput + peelMtd; // cùng đơn vị output
-                                    const elecPerCutCashew = combinedTon > 0 ? kpiSummary.elecActual / combinedTon : 0;
-                                    // Target
-                                    const shellInputPlan = shellDept ? (dashboardsData[shellDept.id]?.summary?.totalPlan || 0) : 0;
-                                    const peelPlan = peelDept ? (dashboardsData[peelDept.id]?.summary?.totalPlan || 0) : 0;
-                                    const combinedPlan = shellInputPlan * SHELL_RECOVERY + peelPlan;
-                                    const elecPerCutCashewTarget = combinedPlan > 0 ? kpiSummary.elecTarget / combinedPlan : 0;
-                                    const isElecGood = elecPerCutCashewTarget <= 0 || elecPerCutCashew <= elecPerCutCashewTarget;
 
                                     return (
                                         <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
@@ -1570,23 +1553,7 @@ export default function DashboardPage() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            {/* ⚡ Electricity per cut cashew: SHELL + PEEL_MC/0.22 */}
-                                            {combinedTon > 0 && (
-                                                <div className="flex flex-col gap-0.5 pt-1.5 border-t border-slate-100 mt-0.5">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] text-slate-400 uppercase tracking-tight">⚡ kWh/T (Shell+Peel)</span>
-                                                        <span className={`text-[11px] font-black tabular-nums ${isElecGood ? 'text-amber-600' : 'text-red-500'}`}>
-                                                            {elecPerCutCashew.toFixed(0)}
-                                                        </span>
-                                                        {elecPerCutCashewTarget > 0 && (
-                                                            <span className="text-[9px] text-slate-400 ml-auto">/ {elecPerCutCashewTarget.toFixed(0)}</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-[8px] text-slate-300">
-                                                        {(kpiSummary.elecActual/1000).toFixed(0)}MWh ÷ ({shellOutput.toFixed(0)}T hạt cắt + {peelMtd.toFixed(0)}T nhân)
-                                                    </div>
-                                                </div>
-                                            )}
+
                                         </div>
                                     )
                                 })()}
