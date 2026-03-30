@@ -968,6 +968,28 @@ export default function ReportPage() {
                                                     ...shiftElems
                                                 ]
                                             })}
+                                            {/* ── GRAND TOTAL ROW ── */}
+                                            {(() => {
+                                                const allTons     = filteredShellingLines.reduce((s, r) => s + Number(r.actual_ton   || 0), 0)
+                                                const allHours    = filteredShellingLines.reduce((s, r) => s + Number(r.run_hours    || 0), 0)
+                                                const allManpower = filteredShellingLines.reduce((s, r) => s + Number(r.manpower     || 0), 0)
+                                                const allEff      = allHours    > 0 ? allTons / allHours    : 0
+                                                const allMpEff    = allManpower > 0 ? allTons / allManpower : 0
+                                                if (allTons === 0 && allHours === 0) return null
+                                                return (
+                                                    <tr className="border-t-2 border-slate-400 bg-slate-100">
+                                                        <td className="p-2 text-sm font-black text-slate-800 uppercase tracking-wide">
+                                                            🏭 {language === 'vi' ? 'TỔNG TẤT CẢ LINE' : 'ALL LINES TOTAL'}
+                                                        </td>
+                                                        <td className="p-2 text-right text-base font-black text-slate-900">{allTons.toFixed(2)}</td>
+                                                        <td className="p-2 text-right font-bold text-slate-700">{allHours.toFixed(1)}</td>
+                                                        <td className="p-2 text-right font-black text-emerald-800">{allEff > 0 ? allEff.toFixed(3) : '—'}</td>
+                                                        <td className="p-2 text-right font-bold text-amber-700">{allManpower}</td>
+                                                        <td className="p-2 text-right font-black text-blue-800">{allMpEff > 0 ? allMpEff.toFixed(3) : '—'}</td>
+                                                        <td className="p-2 text-right font-bold text-slate-600">100%</td>
+                                                    </tr>
+                                                )
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>
