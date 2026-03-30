@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
 // llama-3.1-8b-instant: 20,000 TPM free tier (cao hơn 70b-versatile)
 const MODEL = 'llama-3.1-8b-instant'
@@ -116,33 +115,6 @@ function preFilterText(text: string): string {
     return relevant.join('\n').trim()
 }
 
-// Load training examples từ Supabase và build few-shot section
-async function buildFewShotSection(): Promise<string> {
-    try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        if (!supabaseUrl || !supabaseKey) return ''
-
-        const supabase = createClient(supabaseUrl, supabaseKey)
-        const { data, error } = await supabase
-            .from('meal_ai_examples')
-            .select('title, input_text, expected_json')
-            .eq('is_active', true)
-            .order('created_at', { ascending: true })
-            .limit(10) // Giới hạn 10 ví dụ để không vượt token
-
-        if (error || !data || data.length === 0) return ''
-
-        const examples = data.map((ex, i) =>
-            `EXAMPLE ${i + 1} – ${ex.title}:\nINPUT:\n${ex.input_text}\nOUTPUT: ${JSON.stringify(ex.expected_json)}`
-        ).join('\n\n')
-
-        return `\n\nFEW-SHOT EXAMPLES (learn these patterns):\n${examples}\n\nNow parse the following input using same logic:`
-    } catch {
-        return '' // Nếu lỗi đọc DB → bỏ qua, dùng prompt gốc
-    }
-}
-
 // POST handler
 export async function POST(req: NextRequest) {
     const apiKey = process.env.GROQ_API_KEY
@@ -160,16 +132,14 @@ export async function POST(req: NextRequest) {
     // Bước 1: lọc trước để bỏ dòng không cần thiết
     let filtered = preFilterText(rawInput)
 
-    // Bước 2: hard cap 6000 ký tự để nhường chỗ cho few-shot examples
-    const MAX_CHARS = 6000
+    // Bước 2: hard cap 8000 ký tự
+    const MAX_CHARS = 8000
     const truncated = filtered.length > MAX_CHARS
     if (truncated) {
         filtered = filtered.slice(0, MAX_CHARS)
     }
 
-    // Bước 3: Load few-shot examples từ DB
-    const fewShotSection = await buildFewShotSection()
-    const systemPrompt = BASE_SYSTEM_PROMPT + fewShotSection
+    const systemPrompt = BASE_SYSTEM_PROMPT
 
     try {
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -220,7 +190,7 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        return NextResponse.json({ records: parsed, truncated, examplesUsed: fewShotSection.length > 0 })
+        return NextResponse.json({ records: parsed, truncated })
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         return NextResponse.json({ error: msg }, { status: 500 })
