@@ -871,7 +871,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     
                     <CardContent className="flex-1 flex flex-col justify-start p-2 pt-3 md:p-4 md:pt-4 relative z-10">
-                        <div className="w-full bg-white/70 rounded-2xl h-[260px] md:h-[300px] p-2 border border-red-50 shadow-inner">
+                        <div className="w-full bg-white/70 rounded-2xl flex-1 min-h-[220px] p-2 border border-red-50 shadow-inner">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <defs>
@@ -1012,7 +1012,7 @@ export default function DashboardPage() {
                         )}
                     </div>
                 </CardHeader>
-                <CardContent className={`flex flex-col gap-1 ${(isTotal || isFgwh) ? 'p-2 pt-1 md:p-3 md:pt-2' : 'p-1.5 pt-1'}`}>
+                <CardContent className={`flex flex-col gap-1 ${deptCode === 'STEAM' ? 'flex-1' : ''} ${(isTotal || isFgwh) ? 'p-2 pt-1 md:p-3 md:pt-2' : 'p-1.5 pt-1'}`}>
 
 
                     {/* Fixed-height toggle row — always present so charts align across all cards */}
@@ -1229,7 +1229,7 @@ export default function DashboardPage() {
                             </ResponsiveContainer>
                         </ChartWrapper>
                     ) : (
-                    <ChartWrapper className={`w-full rounded-xl border-t ${deptCode === 'STEAM' ? 'h-[260px] md:h-[300px]' : 'h-[140px] md:h-[160px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                    <ChartWrapper className={`w-full rounded-xl border-t ${deptCode === 'STEAM' ? 'flex-1 min-h-[220px]' : 'h-[140px] md:h-[160px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: -10, bottom: 5 }}>
                                 <defs>
