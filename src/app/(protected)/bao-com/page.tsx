@@ -221,10 +221,11 @@ const DEPT_MAP: Record<string, string> = {
     "qc": "QC",
     "qc s2": "QC",
     "qc s3": "QC",
-    // ── CLEANING ──
-    "cleaning worker": "MAINT_HCA",
-    "cleaning worker s2": "MAINT_HCA",
-    "cleaning worker s3": "MAINT_HCA",
+    // ── TẬ P VỤ (Cleaning) ──
+    "tập vụ": "CLEAN", "tạp vụ": "CLEAN", "tap vu": "CLEAN", "cleaning": "CLEAN",
+    // Handpeeling + supervisor name aliases (shift resolved at save time)
+    "handpeeling (dung)": "HPEEL_DUNG",
+    "handpeeling (liên)": "HPEEL_LIEN", "handpeeling (lien)": "HPEEL_LIEN",
     // ── OFFICE ──
     "office": "OFFICE",
     "văn phòng": "OFFICE",
@@ -681,7 +682,38 @@ export default function BaoCom() {
 
     // Helper: get effective area (overridden or parsed)
     const getEffectiveArea = (r: HeadcountRecord, i: number) => areaOverrides[i] ?? r.area
-    const getEffectiveDeptId = (r: HeadcountRecord, i: number) => findDeptId(getEffectiveArea(r, i))
+    const getEffectiveDeptId = (r: HeadcountRecord, i: number): string | null => {
+        const area = getEffectiveArea(r, i)
+        const lower = area.toLowerCase().trim()
+        const shift = r.shift?.replace(/[^1-3]/g, '') || ''
+        const s = /^[123]$/.test(shift) ? shift : '1'
+
+        // Handpeeling with supervisor → shift-specific dept in DB
+        const isDung = /dung/i.test(lower)
+        const isLien = /li[ênế]n/i.test(lower)
+        const isHue = /hu[ệê]/i.test(lower)
+        if ((isDung || isLien) && (lower.includes('handpeeling') || lower.includes('manual peeling') || lower.includes('peeling'))) {
+            const sup = isDung ? 'Dung' : 'Liên'
+            const dept = deptList.find(d =>
+                d.name_en.toLowerCase().includes(`s${s}`) &&
+                d.name_en.toLowerCase().includes(sup.toLowerCase()) &&
+                d.name_en.toLowerCase().includes('peeling')
+            )
+            return dept?.id ?? deptList.find(d => d.code === 'HPEEL')?.id ?? null
+        }
+        if (isHue && (lower.includes('grading') || lower.includes('manual'))) {
+            const dept = deptList.find(d =>
+                /grading/i.test(d.name_en) && new RegExp(`shift\\s*${s}`, 'i').test(d.name_en)
+            )
+            return dept?.id ?? deptList.find(d => d.code === 'HPEEL')?.id ?? null
+        }
+        // Tập vụ → Cleaning dept by name
+        if (/t[ạḥâ]p\s*v[ụu]/i.test(area)) {
+            const dept = deptList.find(d => /clean/i.test(d.name_en) || /t[ạâ]p\s*v[ụu]/i.test(d.name_en))
+            if (dept) return dept.id
+        }
+        return findDeptId(area)
+    }
     const [saving, setSaving] = useState(false)
     const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
     const [deptList, setDeptList] = useState<{ id: string; code: string; name_en: string }[]>([])
@@ -1069,10 +1101,7 @@ export default function BaoCom() {
             const { data: { user } } = await supabase.auth.getUser()
             const deptId = getEffectiveDeptId(r, i)
             const _area = getEffectiveArea(r, i)
-            const _mc = DEPT_MAP[_area.toLowerCase().trim()]
-            const canonicalName = (_mc && HPEEL_SUBCODES.has(_mc))
-                ? (HPEEL_SUBGROUP_DISPLAY[_mc] ?? _area)
-                : deptId ? (deptList.find(d => d.id === deptId)?.name_en ?? _area) : _area
+            const canonicalName = getCanonicalDeptName(r, i, deptId)
             const payload = {
                 work_date: dateToISO(r.date),
                 department_name: canonicalName,
@@ -1192,6 +1221,33 @@ export default function BaoCom() {
         return deptDirect?.id || null
     }
 
+    // ─── Shift-aware canonical department name for DB ───
+    const getCanonicalDeptName = (r: HeadcountRecord, i: number, deptId: string | null): string => {
+        const _area = getEffectiveArea(r, i)
+        const lower = _area.toLowerCase().trim()
+        const shift = r.shift?.replace(/[^1-3]/g, '') || '1'
+        const s = /^[123]$/.test(shift) ? shift : '1'
+        const isDung = /dung/i.test(lower)
+        const isLien = /li[ênế]n/i.test(lower)
+        const isHue = /hu[ệê]/i.test(lower)
+        // Handpeeling/Manual peeling with supervisor → shift-specific name
+        if ((isDung || isLien) && (lower.includes('handpeeling') || lower.includes('manual peeling') || lower.includes('peeling'))) {
+            return `Manual peeling S${s} - ${isDung ? 'Dung' : 'Liên'}`
+        }
+        if (isHue && (lower.includes('grading') || lower.includes('manual'))) {
+            return `Manual Grading -Shift ${s} (Ms Huệ)`
+        }
+        // Tập vụ
+        if (/t[ạḥâ]p\s*v[ụu]/i.test(_area)) {
+            return deptId ? (deptList.find(d => d.id === deptId)?.name_en ?? 'Cleaning') : 'Cleaning'
+        }
+        // HPEEL sub-groups
+        const _mc = DEPT_MAP[lower]
+        if (_mc && HPEEL_SUBCODES.has(_mc)) return HPEEL_SUBGROUP_DISPLAY[_mc] ?? _area
+        // Default: DB name_en
+        return deptId ? (deptList.find(d => d.id === deptId)?.name_en ?? _area) : _area
+    }
+
     const handleSaveToDB = async () => {
         if (!canSave || records.length === 0) return
         setSaving(true)
@@ -1203,12 +1259,7 @@ export default function BaoCom() {
                 const deptId = getEffectiveDeptId(r, i)
                 // Use canonical name_en if dept resolved; otherwise keep raw area string
                 const _area = getEffectiveArea(r, i)
-                const _mc = DEPT_MAP[_area.toLowerCase().trim()]
-                const canonicalName = (_mc && HPEEL_SUBCODES.has(_mc))
-                    ? (HPEEL_SUBGROUP_DISPLAY[_mc] ?? _area)
-                    : deptId
-                        ? (deptList.find(d => d.id === deptId)?.name_en ?? _area)
-                        : _area
+                const canonicalName = getCanonicalDeptName(r, i, deptId)
                 return {
                 work_date: dateToISO(r.date),
                 department_name: canonicalName,
