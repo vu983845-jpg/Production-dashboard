@@ -27,6 +27,8 @@ import * as XLSX from "xlsx"
 
 // Ca → giờ bắt đầu (cho OT hint)
 const SHIFT_HOUR: Record<string, string> = { "1": "6h", "2": "14h", "3": "22h" }
+// OT meal time: Ca 1 OT → ăn 14h · Ca 2 OT → ăn 18h
+const OT_HOUR: Record<string, string> = { "1": "14h", "2": "18h", "3": "6h" }
 
 // Các bộ phận cần báo cơm theo code trong DB
 const EXPECTED_DEPTS = [
@@ -468,6 +470,51 @@ function cleanZaloExportTriple(raw: string): string {
     return text
 }
 
+// ─── QC Compact format parser ─────────────────────────────────────────────
+// Handles: "Bộ phận: QC\nCa1: 12 (1 chay) OT: 3\nCa2: 6 (2 chay)\nCa3: 4 OT: 2"
+function parseQCCompact(block: string): HeadcountRecord[] {
+    const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
+    const COMPACT_CA = /^[Cc]a\s*([1-3])\s*:\s*(\d+)/
+    if (!lines.some(l => COMPACT_CA.test(l))) return []
+
+    let dateVal = ''
+    let area = ''
+    for (const l of lines) {
+        const dm = l.match(/(\d{1,2})[./](\d{1,2})[./](\d{4})/)
+        if (dm && !dateVal) dateVal = normalizeDate(dm[0])
+        if (/date\s*:/i.test(l) && !dateVal) dateVal = normalizeDate(l.replace(/date\s*:/i, '').trim())
+        const am = l.match(/(?:b[ộo]\s*ph[aậ]n|b[ộo]ph[aậ]n|khu\s*v[ựu]c)\s*:?\s*(.+)/i)
+        if (am && !area) area = am[1].replace(/[,;.]+$/, '').trim()
+    }
+
+    const records: HeadcountRecord[] = []
+    for (const l of lines) {
+        const m = l.match(/^[Cc]a\s*([1-3])\s*:\s*(.+)/)
+        if (!m) continue
+        const shift = m[1]
+        const rest = m[2].trim()
+        // "12 (1 chay) OT: 3" | "6 (2 chay)" | "4 OT: 2"
+        const parsed = rest.match(/^(\d+)\s*(?:\(\s*(\d+)\s*chay\s*\))?\s*(?:OT\s*:?\s*(\d+))?/i)
+        if (!parsed) continue
+        const p = parseInt(parsed[1])
+        records.push({
+            senderHint: '',
+            date: dateVal,
+            area: area || 'QC',
+            shift,
+            officialPresent: isNaN(p) ? null : p,
+            officialPresentNote: '',
+            officialAbsent: null,
+            seasonalPresent: null,
+            seasonalAbsent: null,
+            ot: parsed[3] ?? '',
+            vegetarian: parsed[2] ? parseInt(parsed[2]) : null,
+            raw: block,
+        })
+    }
+    return records
+}
+
 function splitIntoBlocks(rawText: string): string[] {
     const text = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
     const doubleNewlineSections = text.split(/\n{2,}/)
@@ -552,6 +599,9 @@ function parseZaloText(rawText: string): HeadcountRecord[] {
     const blocks = splitIntoBlocks(cleanText)
     const records: HeadcountRecord[] = []
     for (const block of blocks) {
+        // Try QC compact format first (Ca1: 12 (1 chay) OT: 3)
+        const qcRecs = parseQCCompact(block)
+        if (qcRecs.length > 0) { records.push(...qcRecs); continue }
         // Expand multi-shift blocks (1 area, nhiều ca) thành records riêng
         const subBlocks = splitMultiShiftBlock(block)
         for (const sub of subBlocks) {
@@ -686,9 +736,9 @@ export default function BaoCom() {
             const totalVeg = recs.reduce((s, r) => s + (r.vegetarian ?? 0), 0)
             const totalOT = recs.reduce((s, r) => s + (parseInt(r.ot) || 0), 0)
             const man = totalPresent - totalVeg
-            const shiftHour = SHIFT_HOUR[shift] ?? ""
+            const otHour = OT_HOUR[shift] ?? ""
             let block = `Ngày ${date}\nCa ${shift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
-            if (totalOT > 0) block += `\n${totalOT} OT lúc ${shiftHour}`
+            if (totalOT > 0) block += `\n${totalOT} OT (ăn lúc ${otHour})`
             lines.push(block)
         })
         return lines.join("\n\n")
@@ -967,9 +1017,9 @@ export default function BaoCom() {
         const totalOT = rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)
         const man = totalPresent - totalVeg
         const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
-        const shiftHour = SHIFT_HOUR[summaryShift] ?? ""
+        const otHour = OT_HOUR[summaryShift] ?? ""
         let msg = `Ngày ${dateDisplay}\nCa ${summaryShift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
-        if (totalOT > 0) msg += `\n${totalOT} OT lúc ${shiftHour}`
+        if (totalOT > 0) msg += `\n${totalOT} OT (ăn lúc ${otHour})`
         return msg
     }
 
@@ -995,9 +1045,21 @@ export default function BaoCom() {
     const [expandedSource, setExpandedSource] = useState<Set<number>>(new Set())
     const [confirmingRow, setConfirmingRow] = useState<number | null>(null)
     const [confirmMsg, setConfirmMsg] = useState<Record<number, { type: 'ok'|'err'; text: string }>>({})
+    // Inline editing state
+    const [editingCell, setEditingCell] = useState<{ row: number; field: string } | null>(null)
+    const [editDraft, setEditDraft] = useState('')
 
     const toggleSource = (i: number) =>
         setExpandedSource(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s })
+
+    const updateRecord = (row: number, field: string, val: number | string | null) =>
+        setRecords(prev => prev.map((r, idx) => idx === row ? { ...r, [field]: val } : r))
+
+    const commitEdit = (row: number, field: string) => {
+        if (field === 'ot') updateRecord(row, 'ot', editDraft)
+        else updateRecord(row, field, editDraft === '' ? null : Number(editDraft))
+        setEditingCell(null)
+    }
 
     const handleConfirmOne = async (i: number) => {
         if (!canSave) return
@@ -1945,34 +2007,100 @@ export default function BaoCom() {
                                                                     Ca {r.shift}
                                                                 </span>
                                                             </td>
+                                                            {/* CT HĐ — editable */}
                                                             <td className="px-3 py-2.5 text-right">
-                                                                {r.officialPresent != null ? (
-                                                                    <span className="font-bold text-green-700">
-                                                                        {r.officialPresent}
-                                                                        {r.officialPresentNote && (
-                                                                            <span className="text-xs font-normal text-muted-foreground ml-1">{r.officialPresentNote}</span>
-                                                                        )}
+                                                                {editingCell?.row === i && editingCell?.field === 'officialPresent' ? (
+                                                                    <input autoFocus type="number" value={editDraft}
+                                                                        onChange={e => setEditDraft(e.target.value)}
+                                                                        onBlur={() => commitEdit(i, 'officialPresent')}
+                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                ) : (
+                                                                    <span className="font-bold text-green-700 cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click để sửa"
+                                                                        onClick={() => { setEditingCell({ row: i, field: 'officialPresent' }); setEditDraft(String(r.officialPresent ?? '')) }}>
+                                                                        {r.officialPresent ?? <span className="text-muted-foreground font-normal">—</span>}
+                                                                        {r.officialPresentNote && <span className="text-xs font-normal text-muted-foreground ml-1">{r.officialPresentNote}</span>}
                                                                     </span>
-                                                                ) : <span className="text-muted-foreground">—</span>}
+                                                                )}
                                                             </td>
+                                                            {/* CT Vắng — editable */}
                                                             <td className="px-3 py-2.5 text-right">
-                                                                {r.officialAbsent != null ? (
-                                                                    <span className={r.officialAbsent > 0 ? "font-bold text-red-600" : "text-muted-foreground"}>
-                                                                        {r.officialAbsent}
+                                                                {editingCell?.row === i && editingCell?.field === 'officialAbsent' ? (
+                                                                    <input autoFocus type="number" value={editDraft}
+                                                                        onChange={e => setEditDraft(e.target.value)}
+                                                                        onBlur={() => commitEdit(i, 'officialAbsent')}
+                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                ) : (
+                                                                    <span className={`cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 ${r.officialAbsent != null && r.officialAbsent > 0 ? 'font-bold text-red-600' : 'text-muted-foreground'}`}
+                                                                        title="Click để sửa"
+                                                                        onClick={() => { setEditingCell({ row: i, field: 'officialAbsent' }); setEditDraft(String(r.officialAbsent ?? '')) }}>
+                                                                        {r.officialAbsent ?? '—'}
                                                                     </span>
-                                                                ) : <span className="text-muted-foreground">—</span>}
+                                                                )}
                                                             </td>
+                                                            {/* TV HĐ — editable */}
                                                             <td className="px-3 py-2.5 text-right">
-                                                                {r.seasonalPresent != null ? r.seasonalPresent : <span className="text-muted-foreground">—</span>}
+                                                                {editingCell?.row === i && editingCell?.field === 'seasonalPresent' ? (
+                                                                    <input autoFocus type="number" value={editDraft}
+                                                                        onChange={e => setEditDraft(e.target.value)}
+                                                                        onBlur={() => commitEdit(i, 'seasonalPresent')}
+                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                ) : (
+                                                                    <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click để sửa"
+                                                                        onClick={() => { setEditingCell({ row: i, field: 'seasonalPresent' }); setEditDraft(String(r.seasonalPresent ?? '')) }}>
+                                                                        {r.seasonalPresent ?? '—'}
+                                                                    </span>
+                                                                )}
                                                             </td>
+                                                            {/* TV Vắng — editable */}
                                                             <td className="px-3 py-2.5 text-right">
-                                                                {r.seasonalAbsent != null ? r.seasonalAbsent : <span className="text-muted-foreground">—</span>}
+                                                                {editingCell?.row === i && editingCell?.field === 'seasonalAbsent' ? (
+                                                                    <input autoFocus type="number" value={editDraft}
+                                                                        onChange={e => setEditDraft(e.target.value)}
+                                                                        onBlur={() => commitEdit(i, 'seasonalAbsent')}
+                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                ) : (
+                                                                    <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click để sửa"
+                                                                        onClick={() => { setEditingCell({ row: i, field: 'seasonalAbsent' }); setEditDraft(String(r.seasonalAbsent ?? '')) }}>
+                                                                        {r.seasonalAbsent ?? '—'}
+                                                                    </span>
+                                                                )}
                                                             </td>
-                                                            <td className="px-3 py-2.5 text-right text-xs">{r.ot || "0"}</td>
+                                                            {/* OT — editable + shift timing label */}
+                                                            <td className="px-3 py-2.5 text-right text-xs">
+                                                                {editingCell?.row === i && editingCell?.field === 'ot' ? (
+                                                                    <input autoFocus type="text" value={editDraft}
+                                                                        onChange={e => setEditDraft(e.target.value)}
+                                                                        onBlur={() => commitEdit(i, 'ot')}
+                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                ) : (
+                                                                    <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click để sửa"
+                                                                        onClick={() => { setEditingCell({ row: i, field: 'ot' }); setEditDraft(r.ot) }}>
+                                                                        {r.ot && r.ot !== '0' && r.ot !== '' ? (
+                                                                            <>{r.ot}<span className="text-muted-foreground ml-0.5">({OT_HOUR[r.shift] ?? ''})</span></>
+                                                                        ) : <span className="text-muted-foreground">—</span>}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            {/* Chay — editable */}
                                                             <td className="px-3 py-2.5 text-right">
-                                                                {r.vegetarian != null && r.vegetarian > 0 ? (
-                                                                    <span className="font-semibold text-emerald-600">{r.vegetarian}</span>
-                                                                ) : <span className="text-muted-foreground">—</span>}
+                                                                {editingCell?.row === i && editingCell?.field === 'vegetarian' ? (
+                                                                    <input autoFocus type="number" value={editDraft}
+                                                                        onChange={e => setEditDraft(e.target.value)}
+                                                                        onBlur={() => commitEdit(i, 'vegetarian')}
+                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                ) : (
+                                                                    <span className={`cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 ${r.vegetarian != null && r.vegetarian > 0 ? 'font-semibold text-emerald-600' : 'text-muted-foreground'}`}
+                                                                        title="Click để sửa"
+                                                                        onClick={() => { setEditingCell({ row: i, field: 'vegetarian' }); setEditDraft(String(r.vegetarian ?? '')) }}>
+                                                                        {r.vegetarian != null && r.vegetarian > 0 ? r.vegetarian : '—'}
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                             <td className="px-3 py-2.5">
                                                                 {linked ? (

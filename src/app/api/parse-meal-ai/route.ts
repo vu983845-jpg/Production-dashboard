@@ -29,7 +29,8 @@ Tập vụ/tạp vụ → "Tập vụ"
 QC/Quality → "QC"
 
 ## NUMBER RULES
-"10p"→10 | "13(9chay)"→present=13,veg=9 | "11+10chay"→present=21,veg=10 | "23+19chay=42"→present=42,veg=19 | "8( 5 chay)"→8 | blank/"o"/"O"→null
+"10p"→10 | "13(9chay)"→present=13,veg=9 | "12 (1 chay)"→present=12,veg=1 | "8( 5 chay)"→present=8,veg=5 | "11+10chay"→present=21,veg=10 | blank/"o"/"O"→null
+CRITICAL: (N chay) / (N p chay) ALWAYS means vegetarian=N. NEVER put it in seasonalPresent.
 
 ## OT RULES (string output)
 "OT:5"→"5" | "OT:12p(9chay)"→"12" | "OT:3 /18h"→"3" | "OT:2p 14h"→"2" | "OT:3+2"→"5"
@@ -42,7 +43,7 @@ QC/Quality → "QC"
 ## SPECIAL FORMATS
 1. Ca 1.2.3 (Boiler): the headcount number is the TOTAL across all shifts. Divide equally per shift. E.g. Ca 1.2.3 + CT HD:3 → 3 shifts × 1 person each → officialPresent=1 each. Create 3 records shift="1","2","3" with the divided value.
 2. Maint HCA block "Ca 1 và HC / Ca 2 / Ca 3": each Ca = separate record, same date+area.
-3. QC inline "Ca1: 11 (2 chay) OT: 7" → shift=1, present=11, veg=2, ot="7"
+3. QC compact "Ca1: 11 (2 chay) OT: 7" → shift=1, officialPresent=11, vegetarian=2 (NOT seasonalPresent – always null), ot="7". Space before paren does not change meaning.
 4. Tập vụ "Ca: 1:8(5chay)0T" → shift=1, present=8, ot="" ("0T" = no OT)
 5. Supplement OT short msg "Shelling OT 5p ăn 14h" → date=null, shift=null, ot="5"
 6. Handpeeling: detect supervisor from leading name or "(Dung)"/"(Liên)" in area line.
