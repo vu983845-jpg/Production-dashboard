@@ -20,6 +20,27 @@ const CORE_VALUES = [
     { img: "/cv-acting.svg",   bg: "#7C3AED", title: "Excellence & Passion",      desc: "Xuất sắc trong công việc với niềm đam mê" },
 ];
 
+function getAuthErrorMessage(message: string): string {
+    const msg = message.toLowerCase();
+    if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
+        return "Incorrect password — please try again.\nMật khẩu không đúng — vui lòng thử lại.";
+    }
+    if (msg.includes("email not confirmed")) {
+        return "Email not verified. Please check your inbox.\nEmail chưa được xác minh. Vui lòng kiểm tra hộp thư.";
+    }
+    if (msg.includes("too many requests") || msg.includes("rate limit")) {
+        return "Too many failed attempts. Please wait and try again.\nQuá nhiều lần thử. Vui lòng đợi và thử lại sau.";
+    }
+    if (msg.includes("user not found")) {
+        return "Account not found. Please check your email.\nKhông tìm thấy tài khoản. Vui lòng kiểm tra email.";
+    }
+    if (msg.includes("captcha")) {
+        return "CAPTCHA verification failed. Please try again.\nXác minh CAPTCHA thất bại. Vui lòng thử lại.";
+    }
+    // Fallback: show original
+    return message;
+}
+
 export default function LoginPage() {
     const [email, setEmail]           = useState("");
     const [password, setPassword]     = useState("");
@@ -48,7 +69,7 @@ export default function LoginPage() {
             email, password, options: { captchaToken },
         });
         if (error) {
-            toast.error(error.message);
+            toast.error(getAuthErrorMessage(error.message), { duration: 5000, style: { whiteSpace: "pre-line" } });
             setLoading(false);
             captchaRef.current?.resetCaptcha();
             setCaptchaToken("");
