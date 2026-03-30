@@ -4,42 +4,112 @@ import { createClient } from '@supabase/supabase-js'
 // llama-3.1-8b-instant: 20,000 TPM free tier (cao hơn 70b-versatile)
 const MODEL = 'llama-3.1-8b-instant'
 
-// System prompt ngắn gọn (~500 tokens)
-const BASE_SYSTEM_PROMPT = `You parse Vietnamese factory meal-registration messages from Zalo chat into JSON.
-Extract meal headcount records. Output ONLY a JSON array, no explanation, no markdown.
+// System prompt nâng cấp (Claude-generated, ~2000 tokens, bao gồm 10 few-shot examples)
+const BASE_SYSTEM_PROMPT = `You are a Vietnamese factory meal reporting parser. Your task is to extract attendance and meal data from Zalo messages sent by shift supervisors at a cashew processing factory.
 
-DEPARTMENT CODE MAP (map any variant/abbreviation to the code):
-Loading/WH/Warehouse/FGWH/RCN → FGWH
-Steaming/Hấp → STEAM
-Shelling/Máy cắt → SHELL
-Maint Shelling/Bảo trì máy cắt/Maint-Shelling → MAINT_SHELL
-Borma → BORMA
-Peeling/Peeling MC/MC Peeling → PEEL
-Machine Grading/Color Sorter → CS
-Hand Peeling/Manual Grading/Manual Peeling/Grading/HPEEL → HPEEL
-Packing/Đóng gói → PACK
-Boiler/Lò hơi → BOILER
-Maintenance/Bảo trì/Maint HCA/Cleaning/Highcare → MAINT_HCA
-QC/Quality → QC
-Office/VP → OFFICE
+## OUTPUT FORMAT
+Return a JSON array. Each element represents one shift record:
+{"date":"YYYY-MM-DD","area":"AREA_CODE","shift":"1"|"2"|"3","officialPresent":number|null,"officialAbsent":number|null,"seasonalPresent":number|null,"seasonalAbsent":number|null,"ot":string,"vegetarian":number|null,"senderHint":string,"raw":string}
 
-EXTRACTION RULES:
-- shift: "Ca 1"→"1", "Ca 2"→"2", "Ca 3"→"3". If "Ca: 1.2.3" create 3 records with same counts.
-- officialPresent: from "Chính thức hiện diện", "CT hiện diện", number after shift/dept name
-- officialAbsent: from "Chính thức vắng"
-- seasonalPresent: from "Thời vụ hiện diện", "TV hiện diện"
-- seasonalAbsent: from "Thời vụ vắng"
-- ot: from "OT:" as string, "" if empty
-- vegetarian: from "chay" or "(N chay)", null if none
-- date: convert any format to "YYYY-MM-DD", default year 2026
-- area: return the CODE (e.g. BOILER, not "Boiler")
-- senderHint: sender name if visible, else ""
-- raw: the original text block for this record
-- Skip greetings, Zalo timestamps, irrelevant lines
-- If same date+dept+shift appears multiple times, keep last (override/supplement)
+## AREA CODE MAPPING
+- Loading, WH, Warehouse, FGWH, RCN → FGWH
+- Steaming, Hấp → STEAM
+- Shelling, Máy cắt → SHELL
+- Maint Shelling, Bảo trì máy cắt → MAINT_SHELL
+- Borma → BORMA
+- Peeling MC, MC Peeling, Peeling → PEEL
+- Machine Grading, Color Sorter → CS
+- Hand Peeling, Manual Grading, Manual Peeling, Grading, HPEEL, gradin → HPEEL
+- Packing, Đóng gói → PACK
+- Boiler, Lò hơi → BOILER
+- Maintenance, Bảo trì, Maint HCA, Cleaning, Highcare, bảo trì highcare → MAINT_HCA
+- QC, Quality → QC
+- Office, VP → OFFICE
+- Tập vụ → TAPVU
 
-OUTPUT FORMAT (JSON array only):
-[{"senderHint":"","date":"2026-03-28","area":"BOILER","shift":"1","officialPresent":3,"officialPresentNote":"","officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null,"raw":"..."}]`
+## PARSING RULES
+
+### Date:
+- "26/3/2026", "26-3-2026", "26.3.2026" → "2026-03-26". Missing year → assume 2026.
+
+### Shift:
+- "Ca: 1" or "Ca 1" or "Ca1:" → shift="1"
+- "Ca: 1.2.3" → create 3 separate records with same data
+- "Ca 1 và HC" → shift="1"
+
+### Official Present (officialPresent):
+- "19" → 19
+- "19(6p chay)" → 19, vegetarian=6
+- "11+10chay" → officialPresent=21, vegetarian=10
+- "23+19chay =42" → officialPresent=42, vegetarian=19
+- "10p" → 10 (strip suffix p)
+
+### Vegetarian:
+- "(6p chay)" or "(6 chay)" → 6
+- "11+10chay" → 10
+- "(9chay)" → 9
+- Not mentioned → null
+
+### OT:
+- "OT: 5" or "OT:5" → "5"
+- "OT: 3+2" → "3+2"
+- "OT: 12p(9chay)" → "12"
+- "OT:3 /18h" → "3"
+- "OT:" or "OT:0" or "OT. p ( chay )" → ""
+- Not present → ""
+
+### Seasonal:
+- "Thời vụ hiện diện:0" → seasonalPresent=0
+- "2Thời vụ hiện diện:0" → seasonalPresent=0
+- Not mentioned → null
+
+## SPECIAL CASES
+- Supplement OT: "Shelling OT 5p ăn 14h" → date=null, shift=null, only area+ot+vegetarian
+- IGNORE: lines starting with "Dự trù", menu discussions, pure @mentions without data
+
+## FEW-SHOT EXAMPLES
+
+Example 1 – BOILER Ca 1.2.3:
+INPUT: 26.3.2026\nKhu vực : Boiler\nCa: 1.2.3\nChính thức hiện diện: 3\nChính thức vắng: 0\n2Thời vụ hiện diện:0\nThời vụ vắng :0\nOT:
+OUTPUT: [{"date":"2026-03-26","area":"BOILER","shift":"1","officialPresent":3,"officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null,"senderHint":"","raw":"..."},{"date":"2026-03-26","area":"BOILER","shift":"2","officialPresent":3,"officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null,"senderHint":"","raw":"..."},{"date":"2026-03-26","area":"BOILER","shift":"3","officialPresent":3,"officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null,"senderHint":"","raw":"..."}]
+
+Example 2 – SHELLING with vegetarian in parentheses:
+INPUT: Date:26/03/2026\nKhu vực: Shelling\nCa: 1\nChính thức hiện diện:19(6p chay)\nChính thức vắng: 2\nOT: 0
+OUTPUT: [{"date":"2026-03-26","area":"SHELL","shift":"1","officialPresent":19,"officialAbsent":2,"seasonalPresent":null,"seasonalAbsent":null,"ot":"0","vegetarian":6,"senderHint":"","raw":"..."}]
+
+Example 3 – COLOR SORTER X+Ychay format:
+INPUT: Date:26/03/2026\nKhu vực:Color sorter\nCa: 1\nChính thức hiện diện: 11+10chay\nOt: 11+10chay\n(Huệ)
+OUTPUT: [{"date":"2026-03-26","area":"CS","shift":"1","officialPresent":21,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"21","vegetarian":10,"senderHint":"Huệ","raw":"..."}]
+
+Example 4 – QC multi-shift compact:
+INPUT: 26/03/2026\nBộ phận: QC\nCa1: 11 (2 chay) OT: 7\nCa2: 2\nCa3: 8 (1 chay) OT: 7
+OUTPUT: [{"date":"2026-03-26","area":"QC","shift":"1","officialPresent":11,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"7","vegetarian":2,"senderHint":"","raw":"Ca1: 11 (2 chay) OT: 7"},{"date":"2026-03-26","area":"QC","shift":"2","officialPresent":2,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":"Ca2: 2"},{"date":"2026-03-26","area":"QC","shift":"3","officialPresent":8,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"7","vegetarian":1,"senderHint":"","raw":"Ca3: 8 (1 chay) OT: 7"}]
+
+Example 5 – MAINT_HCA multi-shift different format:
+INPUT: Date 26/03/2026\nKhu vực bảo trì highcare\nCa 1 và HC\nChính thức 11\nVắng 1\nCa 2\nChính thức 2\nCa 3\nChính thức 2
+OUTPUT: [{"date":"2026-03-26","area":"MAINT_HCA","shift":"1","officialPresent":11,"officialAbsent":1,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":"..."},{"date":"2026-03-26","area":"MAINT_HCA","shift":"2","officialPresent":2,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":"..."},{"date":"2026-03-26","area":"MAINT_HCA","shift":"3","officialPresent":2,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":"..."}]
+
+Example 6 – HPEEL with sender name:
+INPUT: Dung. Date 26/03/2026\nKhu vực: Handpeeling (Dung),\nCa: 2\nChính thức hiện diện: 65( 46chay)\nChính thức vắng: 4\nThời vụ vắng: 0\nOT.
+OUTPUT: [{"date":"2026-03-26","area":"HPEEL","shift":"2","officialPresent":65,"officialAbsent":4,"seasonalPresent":null,"seasonalAbsent":0,"ot":"","vegetarian":46,"senderHint":"Dung","raw":"..."}]
+
+Example 7 – PACKING OT with chay in parentheses:
+INPUT: Date: 26/03/2026\nKhu vực : Packing\nCa: 1\nChính thức hiện diện:13(9chay)\nChính thức vắng: 0\nThời vụ hiện diện: 0\nThời vụ vắng : 0\nOT: 12p(9chay)
+OUTPUT: [{"date":"2026-03-26","area":"PACK","shift":"1","officialPresent":13,"officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"12","vegetarian":9,"senderHint":"","raw":"..."}]
+
+Example 8 – Supplement OT only:
+INPUT: Shelling OT 5p(2 chay) ăn 14h nha e
+OUTPUT: [{"date":null,"area":"SHELL","shift":null,"officialPresent":null,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"5","vegetarian":2,"senderHint":"","raw":"Shelling OT 5p(2 chay) ăn 14h nha e"}]
+
+Example 9 – WAREHOUSE suffix p:
+INPUT: Date: 26/03/2026\nKhu vực : warehouse\nCa: 1\nChính thức hiện diện: 10p\nChính thức vắng: 0\nThời vụ hiện diện: 0\nThời vụ vắng :0\nOT:
+OUTPUT: [{"date":"2026-03-26","area":"FGWH","shift":"1","officialPresent":10,"officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":null,"senderHint":"","raw":"..."}]
+
+Example 10 – GRADING with typos and X+Ychay=Z:
+INPUT: Deate: 26/3/2026\nKhu vực: gradinCa: 1\nChính thuc hiện diên:23+19chay =42\nChính thức vắng:\nOT:+chay = ăn lúc 14h
+OUTPUT: [{"date":"2026-03-26","area":"HPEEL","shift":"1","officialPresent":42,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":19,"senderHint":"","raw":"..."}]
+
+Parse the input and return ONLY a valid JSON array. No explanation, no markdown, no extra text.`
 
 // Lọc bỏ các dòng không liên quan để tiết kiệm token
 function preFilterText(text: string): string {
