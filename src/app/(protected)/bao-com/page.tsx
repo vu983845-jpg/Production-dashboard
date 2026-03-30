@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useCallback, useEffect, Fragment } from "react"
 import {
@@ -996,6 +996,51 @@ export default function BaoCom() {
     const [aiParsing, setAiParsing] = useState(false)
     const [aiError, setAiError]     = useState<string | null>(null)
     const [aiTruncated, setAiTruncated] = useState(false)
+    const [confirmedRows, setConfirmedRows] = useState<Set<number>>(new Set())
+    const [expandedSource, setExpandedSource] = useState<Set<number>>(new Set())
+    const [confirmingRow, setConfirmingRow] = useState<number | null>(null)
+    const [confirmMsg, setConfirmMsg] = useState<Record<number, { type: 'ok'|'err'; text: string }>>({})
+
+    const toggleSource = (i: number) =>
+        setExpandedSource(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s })
+
+    const handleConfirmOne = async (i: number) => {
+        if (!canSave) return
+        const r = records[i]
+        setConfirmingRow(i)
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            const deptId = getEffectiveDeptId(r, i)
+            const _area = getEffectiveArea(r, i)
+            const _mc = DEPT_MAP[_area.toLowerCase().trim()]
+            const canonicalName = (_mc && HPEEL_SUBCODES.has(_mc))
+                ? (HPEEL_SUBGROUP_DISPLAY[_mc] ?? _area)
+                : deptId ? (deptList.find(d => d.id === deptId)?.name_en ?? _area) : _area
+            const payload = {
+                work_date: dateToISO(r.date),
+                department_name: canonicalName,
+                department_id: deptId,
+                shift: r.shift.replace(/[^1-3]/g, '') || '1',
+                official_present: r.officialPresent ?? 0,
+                official_absent: r.officialAbsent ?? 0,
+                seasonal_present: r.seasonalPresent ?? 0,
+                seasonal_absent: r.seasonalAbsent ?? 0,
+                ot_count: parseInt(r.ot) || 0,
+                vegetarian: r.vegetarian ?? 0,
+                note: null,
+                created_by: user?.id,
+                updated_at: new Date().toISOString(),
+            }
+            const { error } = await supabase.from('meal_headcount').upsert([payload], { onConflict: 'work_date,department_name,shift' })
+            if (error) throw error
+            setConfirmedRows(prev => new Set([...prev, i]))
+            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: '✓ Đã lưu' } }))
+        } catch (e) {
+            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '❌ ' + (e instanceof Error ? e.message : String(e)) } }))
+        } finally {
+            setConfirmingRow(null)
+        }
+    }
 
     const handleParse = useCallback(() => {
         if (!rawText.trim()) return
@@ -1055,6 +1100,9 @@ export default function BaoCom() {
         setRecords([])
         setParsed(false)
         setSaveMsg(null)
+        setConfirmedRows(new Set())
+        setExpandedSource(new Set())
+        setConfirmMsg({})
     }
 
     const handleCopyTable = () => {
@@ -1429,6 +1477,10 @@ export default function BaoCom() {
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0), 0)}</td>
+                                                    <td />
+                                                    <td />
+                                                    <td />
+                                                    <td />
                                                     <td />
                                                 </tr>
                                             </tfoot>
@@ -1965,7 +2017,9 @@ export default function BaoCom() {
                                                     <th className="px-3 py-2.5 font-semibold text-right">OT</th>
                                                     <th className="px-3 py-2.5 font-semibold text-right">🥦 Chay</th>
                                                     <th className="px-3 py-2.5 font-semibold">DB Link</th>
-                                                </tr>
+                                                     <th className="px-3 py-2.5 font-semibold text-center">Nguồn</th>
+                                                     <th className="px-3 py-2.5 font-semibold text-center w-24">Confirm</th>
+                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y">
                                                 {records.map((r, i) => {
@@ -1974,7 +2028,8 @@ export default function BaoCom() {
                                                     const linked = deptList.find((d) => d.id === deptId)
                                                     const isUnknown = !linked && !hasDeptRule(effArea)
                                                     return (
-                                                        <tr key={i} className="hover:bg-muted/30 transition-colors">
+                                                        <>
+                                                        <tr className="hover:bg-muted/30 transition-colors">
                                                             <td className="px-3 py-2.5 text-muted-foreground">{i + 1}</td>
                                                             <td className="px-3 py-2.5 font-mono text-xs whitespace-nowrap">
                                                                 {r.date || <span className="text-yellow-500">?</span>}
@@ -2038,7 +2093,58 @@ export default function BaoCom() {
                                                                      <span className="text-xs text-muted-foreground">—</span>
                                                                  )}
                                                              </td>
+                                                             {/* Source toggle */}
+                                                             <td className="px-2 py-2 text-center">
+                                                                 {r.raw ? (
+                                                                     <button
+                                                                         onClick={() => toggleSource(i)}
+                                                                         title="Xem nguồn"
+                                                                         className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
+                                                                             expandedSource.has(i)
+                                                                                 ? 'bg-slate-200 border-slate-400 text-slate-700'
+                                                                                 : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                                                                         }`}
+                                                                     >
+                                                                         {expandedSource.has(i) ? '▲ Ẩn' : '▼ Xem'}
+                                                                     </button>
+                                                                 ) : <span className="text-muted-foreground text-xs">—</span>}
+                                                             </td>
+                                                             {/* Per-row confirm */}
+                                                             <td className="px-2 py-2 text-center">
+                                                                 {canSave && (
+                                                                     confirmedRows.has(i) ? (
+                                                                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                                                             <CheckCircle2 className="h-3 w-3" /> Đã lưu
+                                                                         </span>
+                                                                     ) : (
+                                                                         <button
+                                                                             onClick={() => handleConfirmOne(i)}
+                                                                             disabled={confirmingRow === i}
+                                                                             className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50"
+                                                                         >
+                                                                             {confirmingRow === i ? '...' : '✓ Lưu'}
+                                                                         </button>
+                                                                     )
+                                                                 )}
+                                                                 {confirmMsg[i] && !confirmedRows.has(i) && (
+                                                                     <div className={`text-[10px] mt-0.5 ${
+                                                                         confirmMsg[i].type === 'ok' ? 'text-emerald-600' : 'text-red-500'
+                                                                     }`}>{confirmMsg[i].text}</div>
+                                                                 )}
+                                                             </td>
                                                         </tr>
+                                                        {/* Expandable source row */}
+                                                        {expandedSource.has(i) && r.raw && (
+                                                            <tr className="bg-slate-50 border-b border-slate-100">
+                                                                <td colSpan={13} className="px-4 py-2">
+                                                                    <div className="flex items-start gap-2">
+                                                                        <span className="text-[10px] font-bold uppercase text-slate-400 mt-0.5 shrink-0">Nguồn:</span>
+                                                                        <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded-lg px-3 py-2 flex-1 leading-relaxed">{r.raw}</pre>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                        </>
                                                     )
                                                 })}
                                             </tbody>
