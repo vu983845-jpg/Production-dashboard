@@ -1033,8 +1033,35 @@ export default function BaoCom() {
             }
             const { error } = await supabase.from('meal_headcount').upsert([payload], { onConflict: 'work_date,department_name,shift' })
             if (error) throw error
+
+            // Auto-save to meal_ai_examples if source raw text exists
+            if (r.raw && r.raw.trim()) {
+                const exampleRecord = {
+                    senderHint: r.senderHint ?? '',
+                    date: r.date,
+                    area: getEffectiveArea(r, i),
+                    shift: r.shift.replace(/[^1-3]/g, '') || '1',
+                    officialPresent: r.officialPresent ?? 0,
+                    officialPresentNote: r.officialPresentNote ?? '',
+                    officialAbsent: r.officialAbsent ?? 0,
+                    seasonalPresent: r.seasonalPresent ?? 0,
+                    seasonalAbsent: r.seasonalAbsent ?? 0,
+                    ot: r.ot ?? '',
+                    vegetarian: r.vegetarian ?? null,
+                }
+                const autoTitle = [Auto]  Ca  — 
+                await supabase.from('meal_ai_examples').insert({
+                    title: autoTitle,
+                    input_text: r.raw.trim(),
+                    expected_json: [exampleRecord],
+                    dept_hint: canonicalName || null,
+                    is_active: true,
+                })
+                // Note: We intentionally ignore insert errors here to not block the main save
+            }
+
             setConfirmedRows(prev => new Set([...prev, i]))
-            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: '✓ Đã lưu' } }))
+            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: '✓ Đã lưu + dạy AI' } }))
         } catch (e) {
             setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '❌ ' + (e instanceof Error ? e.message : String(e)) } }))
         } finally {
