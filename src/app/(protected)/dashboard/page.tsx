@@ -1229,7 +1229,7 @@ export default function DashboardPage() {
                             </ResponsiveContainer>
                         </ChartWrapper>
                     ) : (
-                    <ChartWrapper className={`w-full rounded-xl border-t h-[140px] md:h-[160px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                    <ChartWrapper className={`w-full rounded-xl border-t ${deptCode === 'STEAM' ? 'h-[260px] md:h-[300px]' : 'h-[140px] md:h-[160px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: -10, bottom: 5 }}>
                                 <defs>
