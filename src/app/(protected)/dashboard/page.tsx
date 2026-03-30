@@ -1015,28 +1015,32 @@ export default function DashboardPage() {
                 <CardContent className={`flex flex-col gap-1 ${(isTotal || isFgwh) ? 'p-2 pt-1 md:p-3 md:pt-2' : 'p-1.5 pt-1'}`}>
 
 
-                    {/* Sub-view Toggles for Standard Cards */}
-                    {!(isTotal || isFgwh) && (["PEEL_MC", "SHELL", "HAND", "BORMA", "CS"].includes(deptCode)) && (
-                        <div className="flex items-center gap-1 my-1 justify-center bg-slate-100/50 rounded-md p-0.5">
-                            <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'chart'}))}
-                                className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${(!deptViewModes[id] || deptViewModes[id] === 'chart') ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
-                                Chart
-                            </button>
-                            <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'details'}))}
-                                className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'details' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
-                                Details
-                            </button>
-                            {deptCode === 'SHELL' && (
-                                <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'lines'}))}
-                                    className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'lines' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
-                                    By Line
-                                </button>
-                            )}
-                            {['CS', 'HAND'].includes(deptCode) && (
-                                <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'isp'}))}
-                                    className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'isp' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
-                                    ISP
-                                </button>
+                    {/* Fixed-height toggle row — always present so charts align across all cards */}
+                    {!(isTotal || isFgwh) && (
+                        <div className="h-7 flex items-center">
+                            {(["PEEL_MC", "SHELL", "HAND", "BORMA", "CS"].includes(deptCode)) && (
+                                <div className="flex items-center gap-1 w-full justify-center bg-slate-100/50 rounded-md p-0.5">
+                                    <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'chart'}))}
+                                        className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${(!deptViewModes[id] || deptViewModes[id] === 'chart') ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
+                                        Chart
+                                    </button>
+                                    <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'details'}))}
+                                        className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'details' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
+                                        Details
+                                    </button>
+                                    {deptCode === 'SHELL' && (
+                                        <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'lines'}))}
+                                            className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'lines' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
+                                            By Line
+                                        </button>
+                                    )}
+                                    {['CS', 'HAND'].includes(deptCode) && (
+                                        <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'isp'}))}
+                                            className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'isp' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
+                                            ISP
+                                        </button>
+                                    )}
+                                </div>
                             )}
                         </div>
                     )}
