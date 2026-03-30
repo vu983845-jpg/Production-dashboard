@@ -603,6 +603,30 @@ export default function ReportPage() {
         })).sort((a,b) => a.name.localeCompare(b.name));
     })();
 
+    // All-lines daily broken % overview (weighted by ton)
+    const allLineBrokenData = (() => {
+        if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
+        const map = new Map<string, { weightedBroken: number; totalTon: number }>();
+        filteredShellingLines.forEach(r => {
+            const dateStr = format(parseISO(r.work_date), 'dd/MM');
+            if (!map.has(dateStr)) map.set(dateStr, { weightedBroken: 0, totalTon: 0 });
+            const curr = map.get(dateStr)!;
+            const ton = Number(r.actual_ton || 0);
+            const brk = Number(r.broken_pct || 0);
+            curr.totalTon += ton;
+            if (brk > 0) curr.weightedBroken += brk * ton;
+        });
+        return Array.from(map.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([name, d]) => ({
+                name,
+                broken: d.totalTon > 0 && d.weightedBroken > 0
+                    ? Number((d.weightedBroken / d.totalTon).toFixed(2))
+                    : null,
+                totalTon: Number(d.totalTon.toFixed(2))
+            }));
+    })();
+
     const lineSizePerfChartData = (() => {
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
         const map = new Map<string, { line: string, size: string, totalTon: number, totalRunHours: number }>();
@@ -1160,6 +1184,52 @@ export default function ReportPage() {
                                             </div>
                                         </CardContent>
                                     </Card>
+
+                                    {/* All-Lines Broken Rate Overview */}
+                                    {allLineBrokenData.some(d => d.broken !== null) && (
+                                    <Card className="col-span-1 lg:col-span-3 shadow-sm border-rose-100">
+                                        <CardHeader className="pb-2 bg-rose-50/30 border-b border-rose-50">
+                                            <div className="flex flex-col gap-1">
+                                                <CardTitle className="text-sm font-bold text-rose-800 flex items-center gap-2">
+                                                    <TrendingDown className="h-4 w-4" />
+                                                    {language === 'vi' ? 'Tỷ lệ Bể Tổng thể — Tất cả Line (Theo ngày)' : 'Overall Broken Rate — All Lines (Daily)'}
+                                                </CardTitle>
+                                                <CardDescription className="text-xs text-rose-700 leading-relaxed">
+                                                    {language === 'vi'
+                                                        ? 'Đường đỏ = tỷ lệ bể trung bình có trọng số tấn của tất cả 5 line trong ngày. Cột nhạt = tổng sản lượng ngày (trục trái). Đường đứt nét = ngưỡng cảnh báo 4.5%. Ngày nào đường đỏ vượt ngưỡng → cần điều tra ngay.'
+                                                        : 'Red line = tonnage-weighted average broken rate across all 5 lines per day. Bars = total daily production (left axis). Dashed line = 4.5% alert threshold. Days where the red line exceeds threshold need immediate investigation.'}
+                                                </CardDescription>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="pt-4">
+                                            <div className="h-72 w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <ComposedChart data={allLineBrokenData} margin={{ top: 5, right: 30, left: -10, bottom: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                                                        <YAxis yAxisId="left" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}T`} />
+                                                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} domain={[0, 'auto']} />
+                                                        <Tooltip contentStyle={{ fontSize: '11px', borderRadius: '8px' }}
+                                                            formatter={(v: any, name?: string) =>
+                                                                name === (language === 'vi' ? 'Sản lượng (T)' : 'Production (T)')
+                                                                    ? [`${v} T`, name]
+                                                                    : [`${v}%`, name]
+                                                            } />
+                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
+                                                        <Bar yAxisId="left" dataKey="totalTon" name={language === 'vi' ? 'Sản lượng (T)' : 'Production (T)'} fill="#fca5a5" opacity={0.4} radius={[2, 2, 0, 0]} maxBarSize={40} />
+                                                        <Line yAxisId="right" type="monotone" dataKey="broken" name={language === 'vi' ? 'Tỷ lệ Bể TB (%)' : 'Avg Broken Rate (%)'} stroke="#e11d48" strokeWidth={2.5} dot={(props: any) => {
+                                                            if (props.payload.broken === null) return <g key={props.key} />;
+                                                            const isBad = props.payload.broken > THRESHOLD_BROKEN;
+                                                            return <circle key={props.key} cx={props.cx} cy={props.cy} r={isBad ? 5 : 3} fill={isBad ? '#b91c1c' : '#e11d48'} stroke={isBad ? '#fff' : 'none'} strokeWidth={1.5} />;
+                                                        }} connectNulls />
+                                                        <ReferenceLine yAxisId="right" y={THRESHOLD_BROKEN} stroke="#dc2626" strokeDasharray="5 3" opacity={0.8}
+                                                            label={{ position: 'insideTopRight', value: `⚠ ${THRESHOLD_BROKEN}%`, fill: '#dc2626', fontSize: 9, fontWeight: 'bold' }} />
+                                                    </ComposedChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                    )}
                                 </div>
                             </div>
 
