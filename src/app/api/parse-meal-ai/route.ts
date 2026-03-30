@@ -41,7 +41,7 @@ QC/Quality → "QC"
 - @mention-only messages with no numbers, thực đơn/menu discussions
 
 ## SPECIAL FORMATS
-1. Ca 1.2.3 (Boiler): create 3 records shift="1","2","3" with the SAME values (each shift has that many people).
+1. Ca 1.2.3 (Boiler): the headcount number is the TOTAL across all shifts. Divide equally per shift. E.g. Ca 1.2.3 + CT HD:3 → 3 shifts × 1 person each → officialPresent=1 each. Create 3 records shift="1","2","3" with the divided value.
 2. Maint HCA block "Ca 1 và HC / Ca 2 / Ca 3": each Ca = separate record, same date+area.
 3. QC inline "Ca1: 11 (2 chay) OT: 7" → shift=1, present=11, veg=2, ot="7"
 4. Tập vụ "Ca: 1:8(5chay)0T" → shift=1, present=8, ot="" ("0T" = no OT)
@@ -51,9 +51,9 @@ QC/Quality → "QC"
 
 ## EXAMPLES
 
-Ex1 Boiler Ca 1.2.3 (same CT HD per shift — each shift has that many people):
+Ex1 Boiler Ca 1.2.3 (headcount is TOTAL, divide equally by number of shifts):
 IN: 26.3.2026\nKhu vực : Boiler\nCa: 1.2.3\nChính thức hiện diện: 3\n2Thời vụ hiện diện:0\nOT:
-OUT: [{"date":"26/03/2026","area":"Boiler","shift":"1","officialPresent":3,"officialAbsent":null,"seasonalPresent":0,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":""},{"date":"26/03/2026","area":"Boiler","shift":"2","officialPresent":3,"officialAbsent":null,"seasonalPresent":0,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":""},{"date":"26/03/2026","area":"Boiler","shift":"3","officialPresent":3,"officialAbsent":null,"seasonalPresent":0,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":""}]
+OUT: [{"date":"26/03/2026","area":"Boiler","shift":"1","officialPresent":1,"officialAbsent":null,"seasonalPresent":0,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":""},{"date":"26/03/2026","area":"Boiler","shift":"2","officialPresent":1,"officialAbsent":null,"seasonalPresent":0,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":""},{"date":"26/03/2026","area":"Boiler","shift":"3","officialPresent":1,"officialAbsent":null,"seasonalPresent":0,"seasonalAbsent":null,"ot":"","vegetarian":null,"senderHint":"","raw":""}]
 
 Ex2 Shelling + appended Dự trù (ignore Dự trù part):
 IN: Date :26/03/2026\nKhu vực : Shelling\nCa : 1\nChính thức hiện diện:19(6p chay)\nChính thức vắng : 2\nOT : 0\nDự trù ngày :27/3/2026\n- Ca : 1
