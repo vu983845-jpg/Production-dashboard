@@ -1012,7 +1012,7 @@ export default function DashboardPage() {
                         )}
                     </div>
                 </CardHeader>
-                <CardContent className={`flex flex-col gap-2 ${(isTotal || isFgwh) ? 'p-3 pt-2 md:p-4 md:pt-3' : 'p-2 pt-2'}`}>
+                <CardContent className={`flex flex-col gap-1 ${(isTotal || isFgwh) ? 'p-2 pt-1 md:p-3 md:pt-2' : 'p-1.5 pt-1'}`}>
 
 
                     {/* Sub-view Toggles for Standard Cards */}
@@ -1225,7 +1225,7 @@ export default function DashboardPage() {
                             </ResponsiveContainer>
                         </ChartWrapper>
                     ) : (
-                    <ChartWrapper className={`w-full rounded-xl border-t h-[220px] md:h-[260px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                    <ChartWrapper className={`w-full rounded-xl border-t h-[140px] md:h-[160px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: -10, bottom: 5 }}>
                                 <defs>
@@ -1600,7 +1600,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* DEPARTMENT MINI DASHBOARDS — exclude FGWH, STEAM (top), MAINT_SHELL (removed) */}
-                        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {departments.filter(d => d.code !== 'FGWH' && d.code !== 'STEAM' && d.code !== 'MAINT_SHELL').map(d => (
                                 <FadeIn key={d.id} className="h-full">
                                     {renderMiniDashboard(d.id, d.name_en)}
