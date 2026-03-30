@@ -78,9 +78,9 @@ Ex7 Handpeeling Dung Ca2:
 IN: Dung. Date 26/03/2026\nKhu vực: Handpeeling (Dung),\nCa: 2\nChính thức hiện diện: 65( 46chay)\nChính thức vắng: 4\nOT.
 OUT: [{"date":"26/03/2026","area":"Handpeeling (Dung)","shift":"2","officialPresent":65,"officialAbsent":4,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":46,"senderHint":"Dung","raw":""}]
 
-Ex8 Packing with OT:
-IN: Date: 26/03/2026\nKhu vực : Packing\nCa: 1\nChính thức hiện diện:13(9chay)\nOT: 12p(9chay)
-OUT: [{"date":"26/03/2026","area":"Packing","shift":"1","officialPresent":13,"officialAbsent":null,"seasonalPresent":null,"seasonalAbsent":null,"ot":"12","vegetarian":9,"senderHint":"","raw":""}]
+Ex8 Packing with seasonal zeros + Dự trù at end (ignore from Dự trù onward; "Chay : Np" = standalone vegetarian line):
+IN: Date: 30/03/2026\nKhu vực : Packing\nCa: 2\nChính thức hiện diện:13(9chay)\nChính thức vắng: 0\nThời vụ hiện diện: 0\nThời vụ vắng: 0\nOT:\nDự trù : 31/03/2026(ca 2)\nChay : 9p
+OUT: [{"date":"30/03/2026","area":"Packing","shift":"2","officialPresent":13,"officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":9,"senderHint":"","raw":""}]
 
 Ex9 Supplement OT short message:
 IN: Shelling OT 5p(2 chay) ăn 14h nha e

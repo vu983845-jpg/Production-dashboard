@@ -1074,7 +1074,7 @@ export default function BaoCom() {
                 seasonalAbsent:     r.seasonalAbsent != null ? Number(r.seasonalAbsent) : null,
                 ot:                 String(r.ot ?? ''),
                 vegetarian:         r.vegetarian != null ? Number(r.vegetarian) : null,
-                raw:                r.raw ?? '',
+                raw:                rawText,   // Always show full pasted text as source
             }))
             setRecords(deduplicateRecords(aiRecords))
             setParsed(true)
@@ -1712,16 +1712,6 @@ export default function BaoCom() {
                                         {saving ? "Đang lưu..." : `💾 Lưu ${records.length} bản ghi vào DB`}
                                     </Button>
                                 )}
-                                {canSave && records.length > 0 && (
-                                    <Button
-                                        size="sm"
-                                        onClick={() => { setShowSaveExample(s => !s); setSaveExampleMsg(null) }}
-                                        className="gap-2 bg-violet-600 hover:bg-violet-700 text-white"
-                                    >
-                                        <span>&#x1F9E0;</span>
-                                        L&#x01B0;u l&#xE0;m v&#xED; d&#x1EE5; d&#x1EA1;y AI
-                                    </Button>
-                                )}
                                 <Button
                                     size="sm"
                                     onClick={() => setShowSummary(s => !s)}
@@ -1736,74 +1726,6 @@ export default function BaoCom() {
                                 </Button>
                             </div>
 
-                            {/* Mini form: luu lam vi du day AI */}
-                            {showSaveExample && (
-                                <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 space-y-3">
-                                    <p className="text-sm font-semibold text-violet-700">&#x1F9E0; L&#x01B0;u k&#x1EBF;t qu&#x1EA3; n&#xE0;y l&#xE0;m v&#xED; d&#x1EE5; d&#x1EA1;y AI</p>
-                                    <p className="text-xs text-violet-600">
-                                        H&#x1EC7; th&#x1ED1;ng s&#x1EBD; t&#x1EF1; l&#x01B0;u &#x0111;o&#x1EA1;n Zalo b&#x1EA1;n &#x0111;&#xE3; paste + b&#x1EA3;ng hi&#x1EC7;n t&#x1EA1;i (sau khi b&#x1EA1;n ch&#x1EC9;nh s&#x1EED;a) l&#xE0;m v&#xED; d&#x1EE5; hu&#x1EA5;n luy&#x1EC7;n. Kh&#xF4;ng c&#x1EA7;n nh&#x1EAD;p JSON th&#x1EE7; c&#xF4;ng.
-                                    </p>
-                                    <div className="flex gap-2 items-center flex-wrap">
-                                        <input
-                                            value={exampleTitle}
-                                            onChange={e => setExampleTitle(e.target.value)}
-                                            placeholder="&#x0110;&#x1EB7;t t&#xEA;n v&#xED; d&#x1EE5; (VD: Ch&#xE2;u MC Peeling Ca 2)"
-                                            className="flex-1 min-w-[200px] border border-violet-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
-                                        />
-                                        <button
-                                            disabled={savingExample || !exampleTitle.trim()}
-                                            onClick={async () => {
-                                                setSavingExample(true)
-                                                setSaveExampleMsg(null)
-                                                const expectedJson = records.map((r, i) => ({
-                                                    senderHint: r.senderHint ?? ``,
-                                                    date: r.date,
-                                                    area: getEffectiveArea(r, i),
-                                                    shift: r.shift,
-                                                    officialPresent: r.officialPresent ?? 0,
-                                                    officialPresentNote: r.officialPresentNote ?? ``,
-                                                    officialAbsent: r.officialAbsent ?? 0,
-                                                    seasonalPresent: r.seasonalPresent ?? 0,
-                                                    seasonalAbsent: r.seasonalAbsent ?? 0,
-                                                    ot: r.ot ?? ``,
-                                                    vegetarian: r.vegetarian ?? null,
-                                                }))
-                                                const areas = [...new Set(expectedJson.map(r => r.area))]
-                                                const deptHint = areas.length === 1 ? areas[0] : areas.join(`,`)
-                                                const { error } = await supabase.from(`meal_ai_examples`).insert({
-                                                    title: exampleTitle.trim(),
-                                                    input_text: rawText.trim(),
-                                                    expected_json: expectedJson,
-                                                    dept_hint: deptHint || null,
-                                                    is_active: true,
-                                                })
-                                                setSavingExample(false)
-                                                if (error) {
-                                                    setSaveExampleMsg({ type: `err`, text: `L&#x1ED7;i l&#x01B0;u: ` + error.message })
-                                                } else {
-                                                    setSaveExampleMsg({ type: `ok`, text: `&#x2705; &#x0110;&#xE3; l&#x01B0;u v&#xED; d&#x1EE5;! AI s&#x1EBD; h&#x1ECD;c t&#x1EEB; v&#xED; d&#x1EE5; n&#xE0;y l&#x1EA7;n sau.` })
-                                                    setExampleTitle(``)
-                                                    setTimeout(() => setShowSaveExample(false), 2500)
-                                                }
-                                            }}
-                                            className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
-                                        >
-                                            {savingExample ? `&#x0110;ang l&#x01B0;u...` : `&#x1F4BE; L&#x01B0;u ngay`}
-                                        </button>
-                                        <button
-                                            onClick={() => setShowSaveExample(false)}
-                                            className="px-3 py-2 rounded-lg border text-sm text-muted-foreground hover:bg-muted"
-                                        >H&#x1EE7;y</button>
-                                    </div>
-                                    {saveExampleMsg && (
-                                        <div className={`text-sm px-3 py-2 rounded-lg border ${
-                                            saveExampleMsg.type === `ok`
-                                                ? `bg-green-50 text-green-700 border-green-200`
-                                                : `bg-red-50 text-red-700 border-red-200`
-                                        }`}>{saveExampleMsg.text}</div>
-                                    )}
-                                </div>
-                            )}
 
                             {/* Summary panel */}
                             {showSummary && (
