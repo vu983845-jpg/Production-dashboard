@@ -797,8 +797,15 @@ export default function BaoCom() {
         async function init() {
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
+                // Try profiles table first; fallback to JWT user_metadata (for hse_admin, qa_qc created via SQL)
                 const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-                if (profile) setUserRole(profile.role)
+                if (profile?.role) {
+                    setUserRole(profile.role)
+                } else {
+                    // Fallback: read role from JWT user metadata
+                    const metaRole = user.user_metadata?.role as string | undefined
+                    if (metaRole) setUserRole(metaRole)
+                }
             }
             const { data: depts } = await supabase.from("departments").select("id, code, name_en").order("sort_order")
             if (depts) setDeptList(depts)
