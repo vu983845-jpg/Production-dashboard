@@ -104,10 +104,12 @@ export default function ReportPage() {
     const MEAL_CODE_MAP: Record<string, string> = { PEEL_MC: 'PEEL' }
     const getMealCode = (code: string) => MEAL_CODE_MAP[code] ?? code
 
-    // Only show departments that have production plans + output tracked (exclude support/admin depts)
+    // Priority order for department dropdown
+    const DEPT_PRIORITY = ['SHELL', 'STEAM', 'PEEL_MC', 'HPEEL', 'CS', 'BORMA', 'PACK', 'FGWH', 'BOILER', 'QC', 'HAND', 'OFFICE']
+
+    // Only show departments that have production plans + output tracked (exclude MAINT)
     const PRODUCTION_DEPT_CODES = new Set([
         'STEAM', 'SHELL', 'BORMA', 'PEEL_MC', 'CS', 'HAND', 'PACK', 'FGWH',
-        'MAINT_SHELL', 'MAINT_HCA',
     ])
 
     // Load departments from DB (same as dashboard)
@@ -115,7 +117,13 @@ export default function ReportPage() {
         supabase.from("departments").select("id, code, name_vi, name_en").order("sort_order")
             .then(({ data }) => {
                 if (data && data.length > 0) {
-                    const productionDepts = data.filter(d => PRODUCTION_DEPT_CODES.has(d.code))
+                    const productionDepts = data
+                        .filter(d => PRODUCTION_DEPT_CODES.has(d.code))
+                        .sort((a, b) => {
+                            const ai = DEPT_PRIORITY.indexOf(a.code)
+                            const bi = DEPT_PRIORITY.indexOf(b.code)
+                            return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+                        })
                     setDepartments(productionDepts)
                     setSelectedDept(productionDepts[0]?.code ?? data[0].code)
                 }
@@ -1014,6 +1022,8 @@ export default function ReportPage() {
                                     shellingLineMP:    lineMP,
                                     gap:               tot > 0 && lineMP > 0 ? tot - lineMP : 0,
                                     noProductionData:  !r || ton === 0,
+                                    // Mark Monday (day of week === 1) → week separator
+                                    isWeekStart:       parseISO(date).getDay() === 1,
                                 }
                             })
                             .filter(d => d.totalHC > 0 || d.output > 0)
@@ -1132,6 +1142,13 @@ export default function ReportPage() {
                                                         }}
                                                     />
                                                     <Legend wrapperStyle={{ fontSize: '9px', paddingTop: '6px' }} />
+                                                    {/* Week separators — dashed line before each Monday */}
+                                                    {dailyMpData.filter(d => d.isWeekStart).map(d => (
+                                                        <ReferenceLine key={`w-${d.name}`} yAxisId="hc" x={d.name}
+                                                            stroke="#475569" strokeWidth={1.5} strokeDasharray="4 3"
+                                                            label={{ value: 'W', position: 'insideTopLeft', fontSize: 8, fill: '#475569' }}
+                                                        />
+                                                    ))}
                                                     {/* Stacked headcount bars */}
                                                     <Bar yAxisId="hc" dataKey="official"  name="CT (người)" stackId="hc" fill="#818cf8" opacity={0.75} radius={[0,0,0,0]} />
                                                     <Bar yAxisId="hc" dataKey="seasonal"  name="TV (người)" stackId="hc" fill="#c4b5fd" opacity={0.65} radius={[2,2,0,0]} />
