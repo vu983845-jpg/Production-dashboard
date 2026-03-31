@@ -1152,8 +1152,7 @@ export default function BaoCom() {
         const man = totalPresent - totalVeg
         const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
         const otHour = OT_HOUR[summaryShift] ?? ""
-        let msg = `Ngày ${dateDisplay}\nCa ${summaryShift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
-        if (totalOT > 0) msg += `\n${totalOT} OT (ăn lúc ${otHour})`
+        const msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}; số phần OT là ${totalOT} (ăn lúc ${otHour})`
         return msg
     }
 
