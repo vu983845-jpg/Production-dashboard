@@ -446,6 +446,21 @@ export default function ReportPage() {
         }
     }, [uniqueLeaders, selectedDeepDiveLeader]);
 
+    // ── General: daily actual vs plan chart (all depts) ─────────────────────
+    const dailyOutputChartData = (() => {
+        if (!records || records.length === 0) return []
+        return records
+            .filter(r => r.actual_ton > 0 || r.plan_ton > 0)
+            .map(r => ({
+                name: format(parseISO(r.work_date), 'dd/MM'),
+                date: r.work_date,
+                Actual: Number(Number(r.actual_ton).toFixed(2)),
+                Plan:   Number(Number(r.plan_ton  ).toFixed(2)),
+                Gap:    Number((r.actual_ton - r.plan_ton).toFixed(2)),
+                isMon:  parseISO(r.work_date).getDay() === 1,
+            }))
+    })()
+
     const perfChartData = (() => {
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
         const lines = filteredShellingLines.filter(r => r.line_code === selectedShellLine);
@@ -945,6 +960,68 @@ export default function ReportPage() {
                         <KPICard label="Total Downtime" value={`${summary.totalDowntime} mins`}
                             sub={`~${(summary.totalDowntime/60).toFixed(1)} hrs`} />
                     </div>
+
+                    {/* ── SECTION 1: Daily Output vs Plan ──────────────────── */}
+                    {dailyOutputChartData.length > 0 && (
+                        <Card className="border-emerald-100">
+                            <CardHeader className="pb-2 border-b bg-emerald-50/40">
+                                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                    📊 Daily Production — Actual vs Plan
+                                    <span className="text-xs font-normal text-muted-foreground">({summary.daysWithData} working days)</span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-3">
+                                <div className="h-52 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={dailyOutputChartData} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0fdf4" />
+                                            <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                                            <YAxis tick={{ fontSize: 9, fill: '#64748b' }} tickLine={false} axisLine={false}
+                                                label={{ value: 'Tons', angle: -90, position: 'insideLeft', style: { fontSize: 9, fill: '#94a3b8' }, offset: 12 }} />
+                                            <Tooltip
+                                                content={({ active, payload, label }: any) => {
+                                                    if (!active || !payload?.length) return null
+                                                    const row = dailyOutputChartData.find(d => d.name === label)
+                                                    const gap = row ? row.Gap : 0
+                                                    return (
+                                                        <div className="bg-white/95 border border-slate-200 rounded-lg shadow-xl p-2.5 text-[11px] min-w-[150px]">
+                                                            <p className="font-bold text-slate-700 border-b pb-1 mb-1.5">{label}</p>
+                                                            {payload.map((e: any, i: number) => (
+                                                                <div key={i} className="flex justify-between gap-4">
+                                                                    <span style={{ color: e.color }}>{e.name}</span>
+                                                                    <span className="font-bold">{Number(e.value).toFixed(2)} T</span>
+                                                                </div>
+                                                            ))}
+                                                            <div className={`flex justify-between gap-4 mt-1 pt-1 border-t font-semibold ${gap >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                                <span>Variance</span>
+                                                                <span>{gap >= 0 ? '+' : ''}{gap.toFixed(2)} T</span>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                }}
+                                            />
+                                            <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }} />
+                                            {/* Week separators on Mondays */}
+                                            {dailyOutputChartData.filter(d => d.isMon).map(d => (
+                                                <ReferenceLine key={`w-${d.name}`} x={d.name}
+                                                    stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3"
+                                                />
+                                            ))}
+                                            <Bar dataKey="Actual" name="Actual (T)" fill="#10b981" radius={[3,3,0,0]} barSize={14}
+                                                label={false}
+                                            >
+                                                {dailyOutputChartData.map((d, i) => (
+                                                    <Cell key={i} fill={d.Gap >= 0 ? '#10b981' : '#f43f5e'} />
+                                                ))}
+                                            </Bar>
+                                            <Bar dataKey="Plan" name="Plan (T)" fill="#94a3b8" opacity={0.4} radius={[3,3,0,0]} barSize={14} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <p className="text-[10px] text-center text-muted-foreground mt-1">🟢 Green = above plan &nbsp;·&nbsp; 🔴 Red = below plan &nbsp;·&nbsp; Dashed lines = week start (Monday)</p>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Quality KPIs */}
                     {(summary.avgBroken > 0 || summary.avgUnpeel > 0) && (
