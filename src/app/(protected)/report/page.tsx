@@ -965,6 +965,14 @@ export default function ReportPage() {
                         const mpEfficiency      = avgDailyHC > 0 ? summary.totalActual / avgDailyHC : null
 
                         // ── Build daily combined dataset ──────────────────────────────
+                        // Dùng UNION của dates từ records VÀ headcountDaily
+                        // → đảm bảo không bỏ sót ngày nào có báo cơm dù không có row trong v_dashboard_daily
+                        const recordsMap = new Map(records.map(r => [r.work_date, r]))
+                        const allDates = new Set([
+                            ...records.map(r => r.work_date),
+                            ...Object.keys(headcountDaily)
+                        ])
+
                         const dailyMpData: {
                             name: string
                             date: string
@@ -972,35 +980,40 @@ export default function ReportPage() {
                             official: number
                             seasonal: number
                             totalHC: number
-                            effPerPerson: number | null   // T / người
+                            effPerPerson: number | null   // T / người (null nếu output=0 hoặc HC=0)
                             effPerOfficial: number | null // T / CT
                             shellingLineMP: number        // sum of on-line manpower (SHELL only)
                             gap: number                   // dept HC – line HC
-                        }[] = records
-                            .filter(r => r.actual_ton > 0 || headcountDaily[r.work_date])
-                            .map(r => {
-                                const hc   = headcountDaily[r.work_date]
+                            noProductionData: boolean     // true nếu ko có row trong records
+                        }[] = Array.from(allDates)
+                            .sort()
+                            .map(date => {
+                                const r    = recordsMap.get(date)
+                                const hc   = headcountDaily[date]
                                 const off  = hc?.official  ?? 0
                                 const seas = hc?.seasonal  ?? 0
                                 const tot  = off + seas
+                                const ton  = r ? Number(r.actual_ton ?? 0) : 0
 
                                 // SHELL: sum on-line manpower for the same date
                                 const lineMP = selectedDept === 'SHELL'
-                                    ? shellingLines.filter(sl => sl.work_date === r.work_date)
+                                    ? shellingLines.filter(sl => sl.work_date === date)
                                                    .reduce((s, sl) => s + Number(sl.manpower || 0), 0)
                                     : 0
 
                                 return {
-                                    name:            format(parseISO(r.work_date), 'dd/MM'),
-                                    date:            r.work_date,
-                                    output:          Number(r.actual_ton.toFixed(2)),
-                                    official:        off,
-                                    seasonal:        seas,
-                                    totalHC:         tot,
-                                    effPerPerson:    tot > 0  ? Number((r.actual_ton / tot).toFixed(3))  : null,
-                                    effPerOfficial:  off > 0  ? Number((r.actual_ton / off).toFixed(3))  : null,
-                                    shellingLineMP:  lineMP,
-                                    gap:             tot > 0 && lineMP > 0 ? tot - lineMP : 0,
+                                    name:              format(parseISO(date), 'dd/MM'),
+                                    date,
+                                    output:            Number(ton.toFixed(2)),
+                                    official:          off,
+                                    seasonal:          seas,
+                                    totalHC:           tot,
+                                    // null khi không có output (không làm đường eff xuống 0 sai)
+                                    effPerPerson:      tot > 0 && ton > 0 ? Number((ton / tot).toFixed(3)) : null,
+                                    effPerOfficial:    off > 0 && ton > 0 ? Number((ton / off).toFixed(3)) : null,
+                                    shellingLineMP:    lineMP,
+                                    gap:               tot > 0 && lineMP > 0 ? tot - lineMP : 0,
+                                    noProductionData:  !r || ton === 0,
                                 }
                             })
                             .filter(d => d.totalHC > 0 || d.output > 0)
