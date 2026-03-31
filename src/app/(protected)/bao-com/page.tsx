@@ -352,6 +352,19 @@ function parseBlock(block: string): HeadcountRecord | null {
     area = area.replace(/\s*\([^)]*\)\s*$/, "").trim()
     // Strip trailing comma or punctuation
     area = area.replace(/[,;.]+$/, "").trim()
+    // Fallback: if no "Khu vực:" label found, use the first non-date non-keyword line
+    // e.g. "Machine Grading - ca2" as first line → area="Machine Grading", shift="2"
+    if (!area) {
+        const firstMeaningfulLine = text.split('\n').find(l => {
+            const t = l.trim()
+            return t.length > 2 && !/^(date|ngày|ngay|chính|thời|ot:|dự|trong đó)/i.test(t) && !/^\d{1,2}[./]/.test(t)
+        })
+        if (firstMeaningfulLine) {
+            // Strip " - caN" or " caN" suffix to get clean area
+            area = firstMeaningfulLine.trim().replace(/\s*[-–]\s*ca\s*\d+/i, "").trim()
+        }
+    }
+
 
     let shift = getField(text, ["ca"])
     const inlineShift = getField(text, ["khu vực", "khu vuc"]).match(/ca\s*:\s*(\S+)/i)
@@ -362,6 +375,12 @@ function parseBlock(block: string): HeadcountRecord | null {
     // Keep only leading digits/commas/spaces (shift number part)
     const shiftOnlyMatch = shift.match(/^[\d,\s]+/)
     if (shiftOnlyMatch) shift = shiftOnlyMatch[0].trim()
+    // Fallback: extract shift from "Dept - caN" on first line (e.g. "Machine Grading - ca2")
+    if (!shift) {
+        const firstLineShift = text.split('\n')[0]?.match(/[-–]\s*ca\s*(\d+)/i)
+        if (firstLineShift) shift = firstLineShift[1]
+    }
+
 
     // Fuzzy match: ch[íi]nh th[ứu]c hi[eệ]n di[eệ]n (any diacritic mix)
     const offPresentFuzzy = text.match(/ch[íi]nh\s+th[ứu]c\s+hi[eệ]n\s+di[eệ]n\s*:?\s*([^\n]*)/i)
