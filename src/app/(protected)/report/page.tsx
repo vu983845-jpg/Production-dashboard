@@ -96,6 +96,13 @@ export default function ReportPage() {
     const [showShiftDetails, setShowShiftDetails] = useState(false)
     const [compressorMonthly, setCompressorMonthly] = useState<{work_date: string; total_kwh: number}[]>([])
     const [shellingEnergyMonthly, setShellingEnergyMonthly] = useState<{work_date: string; kwh: number}[]>([])
+    // Headcount từ báo cơm: { work_date → { official, seasonal } }
+    const [headcountDaily, setHeadcountDaily] = useState<Record<string, { official: number; seasonal: number; shifts: number }>>({}) 
+
+    // Báo cơm dept code (meal_headcount.department_id lookup) may differ from report code
+    // PEEL_MC in report = PEEL in meal_headcount
+    const MEAL_CODE_MAP: Record<string, string> = { PEEL_MC: 'PEEL' }
+    const getMealCode = (code: string) => MEAL_CODE_MAP[code] ?? code
 
     // Only show departments that have production plans + output tracked (exclude support/admin depts)
     const PRODUCTION_DEPT_CODES = new Set([
@@ -279,9 +286,36 @@ export default function ReportPage() {
             setCompressorMonthly([]);
         }
 
+        // ── Fetch headcount từ meal_headcount ──────────────────────────────────
+        const mealCode = getMealCode(selectedDept)
+        const { data: mealDeptRow } = await supabase
+            .from('departments').select('id').eq('code', mealCode).single()
+        if (mealDeptRow?.id) {
+            const { data: hcRows } = await supabase
+                .from('meal_headcount')
+                .select('work_date, shift, official_present, seasonal_present')
+                .eq('department_id', mealDeptRow.id)
+                .gte('work_date', start)
+                .lte('work_date', end)
+                .neq('shift', 'OT')   // bỏ OT khỏi nhân sự chính thức
+
+            const hcMap: Record<string, { official: number; seasonal: number; shifts: number }> = {}
+            ;(hcRows ?? []).forEach((r: any) => {
+                const d = r.work_date
+                if (!hcMap[d]) hcMap[d] = { official: 0, seasonal: 0, shifts: 0 }
+                hcMap[d].official  += Number(r.official_present  ?? 0)
+                hcMap[d].seasonal  += Number(r.seasonal_present  ?? 0)
+                hcMap[d].shifts    += 1
+            })
+            setHeadcountDaily(hcMap)
+        } else {
+            setHeadcountDaily({})
+        }
+
         setLoading(false)
         setHasData(true)
     }, [selectedYear, selectedMonth, selectedDept, supabase])
+
 
     // ── Excel Export ─────────────────────────────────────────────────────────
     const exportExcel = () => {
@@ -915,6 +949,57 @@ export default function ReportPage() {
                             )}
                         </div>
                     )}
+
+                    {/* ── Manpower Efficiency (from Báo Cơm) ── */}
+                    {(() => {
+                        const hcEntries = Object.entries(headcountDaily)
+                        if (hcEntries.length === 0) return null
+                        const totalOfficialMTD = hcEntries.reduce((s, [, v]) => s + v.official, 0)
+                        const totalSeasonalMTD = hcEntries.reduce((s, [, v]) => s + v.seasonal, 0)
+                        const totalHeadcountMTD = totalOfficialMTD + totalSeasonalMTD
+                        const totalShiftsMTD = hcEntries.reduce((s, [, v]) => s + v.shifts, 0)
+                        // Avg daily headcount = total / số ngày có báo cơm
+                        const avgDailyHC = hcEntries.length > 0 ? totalHeadcountMTD / hcEntries.length : 0
+                        // Manpower Efficiency (T/người) = tổng sản lượng / avg daily headcount
+                        const mpEfficiency = avgDailyHC > 0 ? summary.totalActual / avgDailyHC : null
+                        // Labor Productivity (T/người/ca) cần biết số ca/ngày
+                        const avgShiftsPerDay = hcEntries.length > 0 ? totalShiftsMTD / hcEntries.length : 1
+                        const laborProductivity = avgDailyHC > 0 && avgShiftsPerDay > 0
+                            ? summary.totalActual / totalShiftsMTD * (1 / (avgDailyHC / avgShiftsPerDay))
+                            : null
+
+                        return (
+                            <div className="space-y-2">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                                    👥 Manpower (từ Báo Cơm)
+                                </p>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <KPICard
+                                        label="Avg Daily Headcount"
+                                        value={`${Math.round(avgDailyHC)} người`}
+                                        sub={`CT: ${Math.round(totalOfficialMTD / hcEntries.length)} | TV: ${Math.round(totalSeasonalMTD / hcEntries.length)}`}
+                                    />
+                                    <KPICard
+                                        label="Manpower Efficiency"
+                                        value={mpEfficiency !== null ? `${mpEfficiency.toFixed(3)} T/người` : '—'}
+                                        sub="= Sản lượng MTD ÷ Nhân sự TB"
+                                        color="text-blue-600"
+                                    />
+                                    <KPICard
+                                        label="Ngày có Báo Cơm"
+                                        value={`${hcEntries.length} ngày`}
+                                        sub={`/ ${summary.daysWithData} ngày có SL`}
+                                    />
+                                    <KPICard
+                                        label="Total Headcount MTD"
+                                        value={`${totalHeadcountMTD.toLocaleString()} người-ca`}
+                                        sub={`CT: ${totalOfficialMTD} | TV: ${totalSeasonalMTD}`}
+                                    />
+                                </div>
+                            </div>
+                        )
+                    })()}
+
 
                     {/* Shelling Lines Summary */}
                     {selectedDept === "SHELL" && (
