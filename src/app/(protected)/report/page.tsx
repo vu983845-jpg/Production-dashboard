@@ -950,53 +950,239 @@ export default function ReportPage() {
                         </div>
                     )}
 
-                    {/* ── Manpower Efficiency (from Báo Cơm) ── */}
+                    {/* ── Manpower Efficiency Deep-Dive (from Báo Cơm) ── */}
                     {(() => {
-                        const hcEntries = Object.entries(headcountDaily)
+                        const hcEntries = Object.entries(headcountDaily).sort(([a], [b]) => a.localeCompare(b))
                         if (hcEntries.length === 0) return null
-                        const totalOfficialMTD = hcEntries.reduce((s, [, v]) => s + v.official, 0)
-                        const totalSeasonalMTD = hcEntries.reduce((s, [, v]) => s + v.seasonal, 0)
+
+                        // MTD totals
+                        const totalOfficialMTD  = hcEntries.reduce((s, [, v]) => s + v.official, 0)
+                        const totalSeasonalMTD  = hcEntries.reduce((s, [, v]) => s + v.seasonal, 0)
                         const totalHeadcountMTD = totalOfficialMTD + totalSeasonalMTD
-                        const totalShiftsMTD = hcEntries.reduce((s, [, v]) => s + v.shifts, 0)
-                        // Avg daily headcount = total / số ngày có báo cơm
-                        const avgDailyHC = hcEntries.length > 0 ? totalHeadcountMTD / hcEntries.length : 0
-                        // Manpower Efficiency (T/người) = tổng sản lượng / avg daily headcount
-                        const mpEfficiency = avgDailyHC > 0 ? summary.totalActual / avgDailyHC : null
-                        // Labor Productivity (T/người/ca) cần biết số ca/ngày
-                        const avgShiftsPerDay = hcEntries.length > 0 ? totalShiftsMTD / hcEntries.length : 1
-                        const laborProductivity = avgDailyHC > 0 && avgShiftsPerDay > 0
-                            ? summary.totalActual / totalShiftsMTD * (1 / (avgDailyHC / avgShiftsPerDay))
-                            : null
+                        const avgDailyHC        = totalHeadcountMTD / hcEntries.length
+                        const avgOfficial       = totalOfficialMTD  / hcEntries.length
+                        const avgSeasonal       = totalSeasonalMTD  / hcEntries.length
+                        const mpEfficiency      = avgDailyHC > 0 ? summary.totalActual / avgDailyHC : null
+
+                        // ── Build daily combined dataset ──────────────────────────────
+                        const dailyMpData: {
+                            name: string
+                            date: string
+                            output: number
+                            official: number
+                            seasonal: number
+                            totalHC: number
+                            effPerPerson: number | null   // T / người
+                            effPerOfficial: number | null // T / CT
+                            shellingLineMP: number        // sum of on-line manpower (SHELL only)
+                            gap: number                   // dept HC – line HC
+                        }[] = records
+                            .filter(r => r.actual_ton > 0 || headcountDaily[r.work_date])
+                            .map(r => {
+                                const hc   = headcountDaily[r.work_date]
+                                const off  = hc?.official  ?? 0
+                                const seas = hc?.seasonal  ?? 0
+                                const tot  = off + seas
+
+                                // SHELL: sum on-line manpower for the same date
+                                const lineMP = selectedDept === 'SHELL'
+                                    ? shellingLines.filter(sl => sl.work_date === r.work_date)
+                                                   .reduce((s, sl) => s + Number(sl.manpower || 0), 0)
+                                    : 0
+
+                                return {
+                                    name:            format(parseISO(r.work_date), 'dd/MM'),
+                                    date:            r.work_date,
+                                    output:          Number(r.actual_ton.toFixed(2)),
+                                    official:        off,
+                                    seasonal:        seas,
+                                    totalHC:         tot,
+                                    effPerPerson:    tot > 0  ? Number((r.actual_ton / tot).toFixed(3))  : null,
+                                    effPerOfficial:  off > 0  ? Number((r.actual_ton / off).toFixed(3))  : null,
+                                    shellingLineMP:  lineMP,
+                                    gap:             tot > 0 && lineMP > 0 ? tot - lineMP : 0,
+                                }
+                            })
+                            .filter(d => d.totalHC > 0 || d.output > 0)
+
+                        // ── Auto Insights ─────────────────────────────────────────────
+                        const withEff = dailyMpData.filter(d => d.effPerPerson !== null && d.output > 0)
+                        const bestDay  = withEff.length > 0 ? withEff.reduce((a, b) => (b.effPerPerson! > a.effPerPerson! ? b : a)) : null
+                        const worstDay = withEff.length > 0 ? withEff.reduce((a, b) => (b.effPerPerson! < a.effPerPerson! ? b : a)) : null
+
+                        // Trend: compare first-half avg vs second-half avg efficiency
+                        const half = Math.floor(withEff.length / 2)
+                        const firstHalfEff  = half > 0 ? withEff.slice(0, half).reduce((s, d)  => s + d.effPerPerson!, 0) / half : null
+                        const secondHalfEff = half > 0 ? withEff.slice(half).reduce((s, d) => s + d.effPerPerson!, 0) / (withEff.length - half) : null
+                        const trendPct = firstHalfEff && secondHalfEff && firstHalfEff > 0
+                            ? ((secondHalfEff - firstHalfEff) / firstHalfEff) * 100 : null
+
+                        // TV ratio correlation with efficiency (simple: high TV → eff change)
+                        const avgTVRatio   = avgDailyHC > 0 ? avgSeasonal / avgDailyHC : 0
+                        const highTVDays   = withEff.filter(d => d.totalHC > 0 && d.seasonal / d.totalHC > avgTVRatio)
+                        const lowTVDays    = withEff.filter(d => d.totalHC > 0 && d.seasonal / d.totalHC <= avgTVRatio)
+                        const avgEffHighTV = highTVDays.length > 0 ? highTVDays.reduce((s, d) => s + d.effPerPerson!, 0) / highTVDays.length : null
+                        const avgEffLowTV  = lowTVDays.length  > 0 ? lowTVDays.reduce((s, d)  => s + d.effPerPerson!, 0) / lowTVDays.length  : null
+
+                        // SHELL gap avg
+                        const shellGapDays = dailyMpData.filter(d => d.gap > 0)
+                        const avgGap = shellGapDays.length > 0 ? shellGapDays.reduce((s, d) => s + d.gap, 0) / shellGapDays.length : 0
+
+                        const insights: { icon: string; text: string; color: string }[] = []
+                        if (bestDay)  insights.push({ icon: '🏆', text: `Ngày năng suất cao nhất: ${bestDay.name} — ${bestDay.effPerPerson!.toFixed(3)} T/người (${bestDay.output} T, ${bestDay.totalHC} người)`, color: 'text-emerald-700' })
+                        if (worstDay) insights.push({ icon: '⚠️', text: `Ngày năng suất thấp nhất: ${worstDay.name} — ${worstDay.effPerPerson!.toFixed(3)} T/người (${worstDay.output} T, ${worstDay.totalHC} người)`, color: 'text-red-700' })
+                        if (trendPct !== null) insights.push({
+                            icon: trendPct >= 0 ? '📈' : '📉',
+                            text: `Xu hướng nửa tháng sau ${trendPct >= 0 ? 'tốt hơn' : 'thấp hơn'} nửa đầu ${Math.abs(trendPct).toFixed(1)}% (${firstHalfEff?.toFixed(3)} → ${secondHalfEff?.toFixed(3)} T/người)`,
+                            color: trendPct >= 0 ? 'text-blue-700' : 'text-amber-700'
+                        })
+                        if (avgEffHighTV !== null && avgEffLowTV !== null && Math.abs(avgEffHighTV - avgEffLowTV) > 0.005) insights.push({
+                            icon: '👷',
+                            text: `Ngày nhiều thời vụ: ${avgEffHighTV.toFixed(3)} T/người — ngày ít thời vụ: ${avgEffLowTV.toFixed(3)} T/người (${avgEffHighTV > avgEffLowTV ? 'TV giúp tăng năng suất' : 'CT hiệu quả hơn TV'})`,
+                            color: 'text-purple-700'
+                        })
+                        if (selectedDept === 'SHELL' && avgGap > 0) insights.push({
+                            icon: '🔧',
+                            text: `Nhân sự hỗ trợ Shelling (không tại line) TB: ${avgGap.toFixed(0)} người/ngày (${((avgGap / avgDailyHC) * 100).toFixed(0)}% tổng BP)`,
+                            color: 'text-orange-700'
+                        })
 
                         return (
-                            <div className="space-y-2">
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
-                                    👥 Manpower (từ Báo Cơm)
-                                </p>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <KPICard
-                                        label="Avg Daily Headcount"
-                                        value={`${Math.round(avgDailyHC)} người`}
-                                        sub={`CT: ${Math.round(totalOfficialMTD / hcEntries.length)} | TV: ${Math.round(totalSeasonalMTD / hcEntries.length)}`}
-                                    />
-                                    <KPICard
-                                        label="Manpower Efficiency"
-                                        value={mpEfficiency !== null ? `${mpEfficiency.toFixed(3)} T/người` : '—'}
-                                        sub="= Sản lượng MTD ÷ Nhân sự TB"
-                                        color="text-blue-600"
-                                    />
-                                    <KPICard
-                                        label="Ngày có Báo Cơm"
-                                        value={`${hcEntries.length} ngày`}
-                                        sub={`/ ${summary.daysWithData} ngày có SL`}
-                                    />
-                                    <KPICard
-                                        label="Total Headcount MTD"
-                                        value={`${totalHeadcountMTD.toLocaleString()} người-ca`}
-                                        sub={`CT: ${totalOfficialMTD} | TV: ${totalSeasonalMTD}`}
-                                    />
-                                </div>
-                            </div>
+                            <Card className="border-blue-100">
+                                <CardHeader className="pb-3 border-b">
+                                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                        👥 Manpower Efficiency — Phân Tích Theo Ngày
+                                        <span className="text-xs font-normal text-muted-foreground">(nguồn: Báo Cơm)</span>
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        Nhân sự toàn bộ phận (chính thức + thời vụ) từ báo cơm hằng ngày
+                                        {selectedDept === 'SHELL' && ' — bao gồm cả người hỗ trợ, không chỉ tại line'}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="pt-4 space-y-5">
+
+                                    {/* KPI Summary Row */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <KPICard
+                                            label="Nhân Sự TB / Ngày"
+                                            value={`${Math.round(avgDailyHC)} người`}
+                                            sub={`CT: ${Math.round(avgOfficial)} | TV: ${Math.round(avgSeasonal)}`}
+                                        />
+                                        <KPICard
+                                            label="Hiệu Suất Nhân Sự"
+                                            value={mpEfficiency !== null ? `${mpEfficiency.toFixed(3)} T/người` : '—'}
+                                            sub="Tổng SL ÷ Nhân sự TB"
+                                            color="text-blue-600"
+                                        />
+                                        <KPICard
+                                            label="Ngày có Báo Cơm"
+                                            value={`${hcEntries.length} ngày`}
+                                            sub={`/ ${summary.daysWithData} ngày có SL`}
+                                        />
+                                        <KPICard
+                                            label="Tổng Người-Ca MTD"
+                                            value={`${totalHeadcountMTD.toLocaleString()}`}
+                                            sub={`CT: ${totalOfficialMTD} | TV: ${totalSeasonalMTD}`}
+                                        />
+                                    </div>
+
+                                    {/* Main Combo Chart */}
+                                    {dailyMpData.length > 0 && (
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                                📊 Sản lượng · Nhân sự · Hiệu suất T/người theo ngày
+                                            </p>
+                                            <ResponsiveContainer width="100%" height={260}>
+                                                <ComposedChart data={dailyMpData} margin={{ top: 4, right: 40, left: -10, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                                                    <YAxis yAxisId="ton" orientation="left"  tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} label={{ value: 'Tấn', angle: -90, position: 'insideLeft', style: { fontSize: 9, fill: '#94a3b8' }, offset: 10 }} />
+                                                    <YAxis yAxisId="hc"  orientation="right" tick={{ fontSize: 9, fill: '#6366f1' }} tickLine={false} axisLine={false} label={{ value: 'Người', angle: 90, position: 'insideRight', style: { fontSize: 9, fill: '#6366f1' }, offset: 10 }} />
+                                                    <YAxis yAxisId="eff" orientation="right" hide />
+                                                    <Tooltip
+                                                        content={({ active, payload, label }: any) => {
+                                                            if (!active || !payload?.length) return null
+                                                            return (
+                                                                <div className="bg-white/95 border border-slate-200 rounded-lg shadow-xl p-2.5 text-[10px] z-50 min-w-[160px]">
+                                                                    <p className="font-bold text-slate-700 mb-1.5 border-b pb-1">{label}</p>
+                                                                    {payload.map((e: any, i: number) => (
+                                                                        <div key={i} className="flex justify-between gap-4 py-0.5">
+                                                                            <span className="text-slate-500 flex items-center gap-1">
+                                                                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: e.color }} />
+                                                                                {e.name}
+                                                                            </span>
+                                                                            <span className="font-black text-slate-800">{e.value !== null && e.value !== undefined ? Number(e.value).toLocaleString('vi-VN', { maximumFractionDigits: 3 }) : '—'}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )
+                                                        }}
+                                                    />
+                                                    <Legend wrapperStyle={{ fontSize: '9px', paddingTop: '6px' }} />
+                                                    {/* Stacked headcount bars */}
+                                                    <Bar yAxisId="hc" dataKey="official"  name="CT (người)" stackId="hc" fill="#818cf8" opacity={0.75} radius={[0,0,0,0]} />
+                                                    <Bar yAxisId="hc" dataKey="seasonal"  name="TV (người)" stackId="hc" fill="#c4b5fd" opacity={0.65} radius={[2,2,0,0]} />
+                                                    {/* Output line */}
+                                                    <Line yAxisId="ton" type="monotone" dataKey="output" name="Output (T)" stroke="#E30613" strokeWidth={2} dot={{ r: 3, fill: '#E30613' }} activeDot={{ r: 5 }} />
+                                                    {/* Efficiency line */}
+                                                    <Line yAxisId="eff" type="monotone" dataKey="effPerPerson" name="T/người" stroke="#059669" strokeWidth={2} strokeDasharray="4 2" dot={false} connectNulls />
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    )}
+
+                                    {/* SHELL: Gap chart — Dept HC vs Line Manpower */}
+                                    {selectedDept === 'SHELL' && dailyMpData.some(d => d.shellingLineMP > 0) && (
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                                🔧 Shelling: Tổng BP vs Nhân sự tại Line theo ngày
+                                                <span className="ml-1 text-[10px] font-normal text-slate-400">(vùng xám = người hỗ trợ, điều phối, vệ sinh...)</span>
+                                            </p>
+                                            <ResponsiveContainer width="100%" height={180}>
+                                                <ComposedChart data={dailyMpData.filter(d => d.shellingLineMP > 0)} margin={{ top: 4, right: 12, left: -10, bottom: 0 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                                                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                                                    <Tooltip
+                                                        content={({ active, payload, label }: any) => {
+                                                            if (!active || !payload?.length) return null
+                                                            const d = dailyMpData.find(x => x.name === label)
+                                                            return (
+                                                                <div className="bg-white/95 border border-slate-200 rounded-lg shadow-xl p-2.5 text-[10px] z-50">
+                                                                    <p className="font-bold text-slate-700 mb-1 border-b pb-1">{label}</p>
+                                                                    <div className="flex justify-between gap-4"><span className="text-blue-500">Tại line</span><span className="font-black">{d?.shellingLineMP} người</span></div>
+                                                                    <div className="flex justify-between gap-4"><span className="text-slate-400">Hỗ trợ</span><span className="font-black">{d?.gap ?? 0} người</span></div>
+                                                                    <div className="flex justify-between gap-4 border-t mt-1 pt-1"><span className="text-indigo-600 font-semibold">Tổng BP</span><span className="font-black">{d?.totalHC} người</span></div>
+                                                                </div>
+                                                            )
+                                                        }}
+                                                    />
+                                                    <Legend wrapperStyle={{ fontSize: '9px', paddingTop: '4px' }} />
+                                                    <Bar dataKey="shellingLineMP" name="Người tại Line" stackId="mp" fill="#3b82f6" radius={[0,0,0,0]} />
+                                                    <Bar dataKey="gap"            name="Hỗ trợ / Khác" stackId="mp" fill="#cbd5e1" opacity={0.8} radius={[2,2,0,0]} />
+                                                    <Line type="monotone" dataKey="totalHC" name="Tổng BP (BC)" stroke="#6366f1" strokeWidth={2} dot={{ r: 2.5, fill: '#6366f1' }} connectNulls />
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    )}
+
+                                    {/* Auto Insights */}
+                                    {insights.length > 0 && (
+                                        <div className="space-y-1.5 border-t pt-3">
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">🧠 Phân tích tự động</p>
+                                            <div className="space-y-1.5">
+                                                {insights.map((ins, i) => (
+                                                    <div key={i} className="flex items-start gap-2 bg-slate-50 rounded-lg px-3 py-2">
+                                                        <span className="text-sm mt-0.5 flex-shrink-0">{ins.icon}</span>
+                                                        <span className={`text-xs font-medium ${ins.color}`}>{ins.text}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                </CardContent>
+                            </Card>
                         )
                     })()}
 
