@@ -402,6 +402,12 @@ function parseBlock(block: string): HeadcountRecord | null {
     if (!vegTotal && vegInOT) vegTotal = parseInt(vegInOT[2])
     const otVegMatch = ot.match(/(\d+)\s*chay/i)
     if (!vegTotal && otVegMatch) vegTotal = parseInt(otVegMatch[1])
+    // Fallback: "Trong đó: - Chay: N" or standalone "Chay: N" line (not inside OT field)
+    if (!vegTotal) {
+        const standalonChayMatch = text.match(/(?:^|[\n\-–•])\s*chay\s*:\s*(\d+)/im)
+        if (standalonChayMatch) vegTotal = parseInt(standalonChayMatch[1])
+    }
+
 
     const lines = text.split("\n")
     let senderHint = ""
