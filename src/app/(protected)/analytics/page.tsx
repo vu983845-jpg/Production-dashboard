@@ -55,7 +55,7 @@ interface Department {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const PRODUCTION_DEPT_CODES = ['SHELL', 'STEAM', 'PEEL_MC', 'HPEEL', 'CS', 'BORMA', 'PACK', 'FGWH']
+const PRODUCTION_DEPT_CODES = ['SHELL', 'STEAM', 'PEEL_MC', 'CS', 'BORMA', 'PACK', 'FGWH']
 
 const LINE_COLORS = [
     "#E30613", "#2563EB", "#16A34A", "#D97706", "#7C3AED",
@@ -643,7 +643,7 @@ export default function AnalyticsPage() {
                                     <XAxis type="number" domain={[0, 120]} unit="%" tick={{ fontSize: 11, fill: "#64748b" }} />
                                     <YAxis type="category" dataKey="deptCode" tick={{ fontSize: 12, fill: "#475569", fontWeight: 600 }} width={65} />
                                     <Tooltip
-                                        formatter={(v: number, n: string) => [`${v}%`, "Đạt KPI"]}
+                                        formatter={(v: any) => [`${v}%`, "Đạt KPI"]}
                                         content={({ active, payload }) => {
                                             if (!active || !payload?.length) return null
                                             const d = payload[0].payload as DeptMonth
@@ -660,7 +660,7 @@ export default function AnalyticsPage() {
                                     />
                                     <ReferenceLine x={100} stroke="#16a34a" strokeDasharray="4 4" />
                                     <Bar dataKey="achievePct" name="Đạt KPI (%)" radius={[0, 6, 6, 0]} maxBarSize={22}
-                                        label={{ position: "right", formatter: (v: number) => `${v}%`, fontSize: 11, fill: "#475569" }}
+                                        label={{ position: "right", formatter: (v: any) => `${v}%`, fontSize: 11, fill: "#475569" }}
                                     >
                                         {allDeptMonth.map((entry, index) => (
                                             <Cell
