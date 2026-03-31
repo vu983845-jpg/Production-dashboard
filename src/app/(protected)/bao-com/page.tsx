@@ -918,8 +918,17 @@ export default function BaoCom() {
         const sectionMap = new Map<string, SectionRow>()
         rows.forEach(r => {
             const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
-            const sectionName = r.department_name   // e.g. "Loading S1", "Shelling S2"
+            let sectionName = r.department_name   // e.g. "Loading S1", "Shelling S2"
             const shift = r.shift ?? '1'
+            // Normalize: if sectionName equals dept code (saved from kitchen tab), derive a proper section name
+            if (sectionName === deptCode && deptCode) {
+                const displayName = DEPT_DISPLAY[deptCode] ?? deptCode
+                if (shift === 'OT') {
+                    sectionName = `${displayName} OT`
+                } else {
+                    sectionName = `${displayName} S${shift}`  // e.g. 'Loading S2'
+                }
+            }
             const key = `${sectionName}|${shift}`
             if (!sectionMap.has(key)) sectionMap.set(key, {
                 sectionName, deptCode, shift,
@@ -927,7 +936,8 @@ export default function BaoCom() {
             })
             const e = sectionMap.get(key)!
             // Vegetarian meals are included in the total (chay + mặn không phân biệt trong thống kê tháng)
-            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0)
+            // Also include ot_count - kitchen tab may store OT in this field
+            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0) + (r.ot_count ?? 0)
             if (total > 0)          e.days.set(r.work_date, (e.days.get(r.work_date) ?? 0) + total)
             if ((r.official_present ?? 0) > 0)  e.officialDays.set(r.work_date, (e.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
             if ((r.seasonal_present ?? 0) > 0)  e.seasonalDays.set(r.work_date, (e.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
