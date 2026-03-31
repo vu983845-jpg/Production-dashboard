@@ -106,7 +106,7 @@ export default function ReportPage() {
 
     // Only show departments that have production plans + output tracked (exclude support/admin depts)
     const PRODUCTION_DEPT_CODES = new Set([
-        'STEAM', 'SHELL', 'BORMA', 'PEEL_MC', 'CS', 'HPEEL', 'PACK', 'FGWH',
+        'STEAM', 'SHELL', 'BORMA', 'PEEL_MC', 'CS', 'HAND', 'PACK', 'FGWH',
         'MAINT_SHELL', 'MAINT_HCA',
     ])
 
