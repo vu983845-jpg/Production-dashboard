@@ -1,0 +1,89 @@
+TIỀN CƠM CÁN BỘ CÔNG NHÂN VIÊN THÁNG 04-2026,,,,,,,,,,,,,
+Từ ngày 26/03/2026 đến ngày 25/04/2026,,,,,,,,,,,,,
+Section,26,27,28,29,30,31,Total
+Loading S1,10,10,10,,9,9,48
+Loading S2,,,,,,,0
+Loading S3,,,,,,,0
+OT,8,9,,,7,,24
+Steaming S1,4,4,4,,4,4,20
+Steaming S2,4,,8,,3,,15
+Steaming S3,,,,,,4,4
+OT,,2,6,,6,,14
+Shelling S1,19,21,22,,16,16,94
+Shelling thời vụ S1,,,,,,,0
+Shelling S2,16,15,15,,14,,60
+Shelling thời vụ S2,,,,,,,0
+Shelling S3,15,16,15,,18,,64
+Shelling thời vụ S3,,,,,,,0
+OT,13,1,,,1,,15
+Maintenance shelling S1,6,6,6,,4,4,26
+Maintenance shelling S2,2,2,2,,3,,9
+Maintenance shelling S3,2,2,2,,3,,9
+OT,,,,,,,0
+Borma S1,4,5,4,,4,5,22
+Borma thời vụ S1,,,,,,,0
+Borma S2,3,3,5,,9,,20
+Borma thời vụ S2,,,,,,,0
+Borma S3,5,5,5,,,,15
+Borma thời vụ S3,,,,,,,0
+OT,7,4,2,,,,13
+Peeling S1,8,8,7,,7,5,35
+Peeling thời vụ S1,,,,,,,0
+Peeling S2,8,7,7,,7,,29
+Peeling thời vụ S2,,,,,,,0
+Peeling S3,7,8,8,,8,,31
+Peeling thời vụ S3,,,,,,,0
+OT,,,5,4,,4,13
+Machine Grading - shift 1,21,21,20,,19,21,102
+Machine Grading  - thời vụ 1,,,,,,,0
+Machine Grading  - shift 2,,,,,20,,20
+Machine Grading  thời vụ - shift 2,,,,,,,0
+Machine Grading  - shift 3,20,20,20,,,,60
+Machine Grading  thời vụ- shift 3,,,,,,,0
+OT,41,40,,,,,81
+Manual Grading -Shift 1 (Ms Huệ),45,44,44,,3,3,139
+Manual Grading Thời vụ -Shift 1 (Ms Huệ),,,,,,,0
+Manual Grading -Shift 2 (Ms Huệ),,,,,,,0
+Manual Grading Thời vụ -Shift 2 (Ms Huệ),,,,,,,0
+Manual Grading -Shift 3 (Ms Huệ),,,,,41,,41
+Manual Grading Thời vụ -Shift 3 (Ms Huệ),,,,,,,0
+OT,2,2,1,,,,5
+Manual peeling S1 - Liên,,,,,,,0
+Manual peeling S1 thời vụ - Liên,,,,,,,0
+Manual peeling S1 - Dung,,,,,62,65,127
+Manual peeling S1 thời vụ - Dung,,,,,,,0
+Manual peeling S2 - Liên,,,,,60,,60
+Manual peeling S2 thời vụ - Liên,,,,,,,0
+Manual peeling S2 - Dung,65,62,63,,,,190
+Manual peeling S2 thời vụ - Dung,,,,,,,0
+Manual peeling S3 - Liên,58,58,50,,,,166
+Manual peeling S3 thời vụ - Liên,,,,,,,0
+Manual peeling S3 - Dung,,,,,,,0
+Manual peeling S3 thời vụ - Dung,,,,,,,0
+OT,6,,,,,, 6
+Packing S1,13,13,13,,13,13,65
+Packing thời vụ S1,,,,,,,0
+Packing S2,,,,,13,,13
+Packing thời vụ S2,,,,,,,0
+Packing S3,15,15,14,,,,44
+Packing OT,12,12,12,,,,36
+Boiler worker S1,1,1,1,,1,1,5
+Boiler worker S2,1,1,1,,1,1,5
+Boiler worker S3,1,1,1,,1,1,5
+Boiler OT,,,,,,, 0
+Maintenance S1,11,9,8,,8,8,44
+Maintenance S2,2,1,1,,1,1,6
+Maintenance S3,2,2,2,,2,2,10
+Maintenance OT,,4,,,1,,5
+Cleaning worker,8,7,8,,8,8,39
+Cleaning worker S2,1,1,1,,1,1,5
+Cleaning worker S3,,,,,,1,1
+OT,,,,,,,2
+QC,11,11,9,,12,12,55
+QC S2,2,2,2,,6,6,18
+QC S3,8,8,7,,4,4,31
+QC OT,16,14,,,5,4,39
+Office 1,17,17,7,,18,18,77
+Office 2,,,,,,,0
+Office 3,,,,,,,0
+Total,520,507,417,0,435,213,2092

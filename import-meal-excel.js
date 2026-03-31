@@ -101,6 +101,10 @@ const SECTION_MAP = {
     'Maintenance S1':                           { code: 'MAINT_HCA',  shift: '1', type: 'official' },
     'Maintenance S2':                           { code: 'MAINT_HCA',  shift: '2', type: 'official' },
     'Maintenance S3':                           { code: 'MAINT_HCA',  shift: '3', type: 'official' },
+    // CLEANING
+    'Cleaning worker':                          { code: 'CLEAN',      shift: '1', type: 'official' },
+    'Cleaning worker S2':                       { code: 'CLEAN',      shift: '2', type: 'official' },
+    'Cleaning worker S3':                       { code: 'CLEAN',      shift: '3', type: 'official' },
     // QC
     'QC':                                       { code: 'QC',         shift: '1', type: 'official' },
     'QC S2':                                    { code: 'QC',         shift: '2', type: 'official' },
@@ -109,6 +113,15 @@ const SECTION_MAP = {
     'Office 1':                                 { code: 'OFFICE',     shift: '1', type: 'official' },
     'Office 2':                                 { code: 'OFFICE',     shift: '2', type: 'official' },
     'Office 3':                                 { code: 'OFFICE',     shift: '3', type: 'official' },
+};
+
+// OT section names that belong to specific depts
+const NAMED_OT_SECTIONS = {
+    'Packing OT':     'PACK',
+    'Boiler OT':      'BOILER',
+    'Maintenance OT': 'MAINT_HCA',
+    'QC OT':          'QC',
+    'Cleaning OT':    'CLEAN',
 };
 
 // ─── Parse period từ header CSV ───────────────────────────────────────────
@@ -162,17 +175,12 @@ function parseCSV(csvText) {
     // value: { official_present, seasonal_present, ot_count, ... }
     const grouped = new Map();
 
-    // Named OT sections → dept code
-    const NAMED_OT = {
-        'Packing OT':     'PACK',
-        'Boiler OT':      'BOILER',
-        'Maintenance OT': 'MAINT_HCA',
-        'QC OT':          'QC',
-    };
+    // Named OT sections → dept code (moved to top-level const NAMED_OT_SECTIONS above)
 
     const dataLines = lines.slice(headerIdx + 1);
     let seenTotal = false;
     let lastDeptCode = null;
+    let lastSectionName = null;
 
     for (const line of dataLines) {
         if (!line.trim()) continue;
@@ -185,20 +193,27 @@ function parseCSV(csvText) {
         if (seenTotal) continue;
         if (!section) continue;
 
+        // Normalize Unicode NFC (CSV sometimes uses NFD decomposed Vietnamese)
+        const sectionNFC = section.normalize('NFC');
+
+
         // ── Xác định dept code cho OT row ──────────────────────
-        let otDeptCode = NAMED_OT[section] || null;
-        if (!otDeptCode && section === 'OT' && lastDeptCode) otDeptCode = lastDeptCode;
+        let otDeptCode = NAMED_OT_SECTIONS[sectionNFC] || null;
+        if (!otDeptCode && sectionNFC === 'OT' && lastDeptCode) otDeptCode = lastDeptCode;
 
         if (otDeptCode) {
-            // Lưu OT meals với shift = "OT"
+            // OT row: department_name = section name + " OT" for named OT, or lastSectionName for generic OT
+            const otSectionName = NAMED_OT_SECTIONS[sectionNFC] ? sectionNFC : (lastSectionName ? `${lastSectionName} OT` : `${otDeptCode} OT`)
             for (let ci = 0; ci < colDays.length; ci++) {
                 const colDay = colDays[ci];
                 const val = parseInt((cols[ci + 1] || '').trim());
                 if (isNaN(val) || val === 0) continue;
                 const workDate = colToDate(colDay, period);
-                const key = `${otDeptCode}|OT|${workDate}`;
+                // Key by OT section name + shift OT
+                const key = `${otSectionName}|OT|${workDate}`;
                 if (!grouped.has(key)) {
                     grouped.set(key, { code: otDeptCode, shift: 'OT', work_date: workDate,
+                        section_name: otSectionName,
                         official_present: 0, seasonal_present: 0, ot_count: 0 });
                 }
                 grouped.get(key).official_present += val;
@@ -207,10 +222,12 @@ function parseCSV(csvText) {
         }
 
         // ── Regular section ─────────────────────────────────────
-        const mapping = SECTION_MAP[section] || SECTION_MAP[sectionRaw];
+        // Use NFC-normalized name to match SECTION_MAP (handles NFD CSV vs NFC map keys)
+        const mapping = SECTION_MAP[sectionNFC] || SECTION_MAP[section] || SECTION_MAP[sectionRaw];
         if (!mapping) continue;
 
         lastDeptCode = mapping.code; // cập nhật dept hiện tại
+        lastSectionName = sectionNFC; // lưu NFC section name để dùng cho OT row tiếp theo
 
         for (let ci = 0; ci < colDays.length; ci++) {
             const colDay = colDays[ci];
@@ -218,11 +235,13 @@ function parseCSV(csvText) {
             if (isNaN(val) || val === 0) continue;
 
             const workDate = colToDate(colDay, period);
-            const key = `${mapping.code}|${mapping.shift}|${workDate}`;
+            // Key by NFC SECTION NAME to preserve section-level granularity
+            const key = `${sectionNFC}|${mapping.shift}|${workDate}`;
 
             if (!grouped.has(key)) {
                 grouped.set(key, {
                     code: mapping.code, shift: mapping.shift, work_date: workDate,
+                    section_name: sectionNFC,  // store NFC normalized name in DB
                     official_present: 0, seasonal_present: 0, ot_count: 0,
                 });
             }
@@ -279,10 +298,10 @@ async function main() {
     const codeToName = {};
     depts.forEach(d => { codeToId[d.code] = d.id; codeToName[d.code] = d.name_en; });
 
-    // Build payload
+    // Build payload - use section_name as department_name for full granularity
     const payload = records.map(r => ({
         work_date:        r.work_date,
-        department_name:  codeToName[r.code] || r.code,
+        department_name:  r.section_name || codeToName[r.code] || r.code,
         department_id:    codeToId[r.code] || null,
         shift:            r.shift,
         official_present: r.official_present,

@@ -94,6 +94,7 @@ interface MealStatRow {
     official_present: number | null
     seasonal_present: number | null
     ot_count: number | null
+    vegetarian: number | null
 }
 
 // Department mapping: Zalo name hoặc tên Excel → DB department code
@@ -594,6 +595,25 @@ function deduplicateRecords(records: HeadcountRecord[]): HeadcountRecord[] {
     return Array.from(seen.values())
 }
 
+/**
+ * Expand a single record whose shift is "1, 2, 3" (or "1,2" etc.) into N records.
+ * Headcount values are DIVIDED EQUALLY across shifts (Boiler pattern).
+ */
+function expandMultiShiftRecord(record: HeadcountRecord): HeadcountRecord[] {
+    const shiftNums = record.shift.match(/[1-3]/g)
+    if (!shiftNums || shiftNums.length <= 1) return [record]
+    const n = shiftNums.length
+    const div = (v: number | null) => v != null ? Math.round(v / n) : null
+    return shiftNums.map(s => ({
+        ...record,
+        shift: s,
+        officialPresent:  div(record.officialPresent),
+        officialAbsent:   div(record.officialAbsent),
+        seasonalPresent:  div(record.seasonalPresent),
+        seasonalAbsent:   div(record.seasonalAbsent),
+    }))
+}
+
 function parseZaloText(rawText: string): HeadcountRecord[] {
     // Step 1: Strip Zalo extension triple-duplication format
     const cleanText = cleanZaloExportTriple(rawText)
@@ -603,11 +623,14 @@ function parseZaloText(rawText: string): HeadcountRecord[] {
         // Try QC compact format first (Ca1: 12 (1 chay) OT: 3)
         const qcRecs = parseQCCompact(block)
         if (qcRecs.length > 0) { records.push(...qcRecs); continue }
-        // Expand multi-shift blocks (1 area, nhiều ca) thành records riêng
+        // Expand multi-shift blocks (1 area, many shifts on separate lines)
         const subBlocks = splitMultiShiftBlock(block)
         for (const sub of subBlocks) {
             const record = parseBlock(sub)
-            if (record && (record.date || record.area !== "—")) records.push(record)
+            if (record && (record.date || record.area !== "—")) {
+                // Expand "Ca: 1.2.3" into 3 records, headcount divided equally
+                records.push(...expandMultiShiftRecord(record))
+            }
         }
     }
     // Step 2: Dedup by (date+area+shift), keeping last occurrence
@@ -828,7 +851,7 @@ export default function BaoCom() {
             const { from, to } = getBillingCycle(statsMonth)
             const { data, error } = await supabase
                 .from("meal_headcount")
-                .select("work_date, department_id, department_name, shift, official_present, seasonal_present, ot_count")
+                .select("work_date, department_id, department_name, shift, official_present, seasonal_present, ot_count, vegetarian")
                 .gte("work_date", from)
                 .lte("work_date", to)
                 .order("work_date")
@@ -842,7 +865,7 @@ export default function BaoCom() {
     }
 
     // Thứ tự bộ phận theo layout Excel
-    const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','PACK','BOILER','MAINT_HCA','QC','OFFICE']
+    const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','PACK','BOILER','MAINT_HCA','CLEAN','QC','OFFICE']
     const SHIFT_ORDER = ['1','2','3','OT']
 
     // Tên hiển thị đẹp như trong Excel
@@ -850,48 +873,106 @@ export default function BaoCom() {
         FGWH:       'Loading',
         STEAM:      'Steaming',
         SHELL:      'Shelling',
-        MAINT_SHELL:'Maint. Shelling',
+        MAINT_SHELL:'Maintenance shelling',
         BORMA:      'Borma',
-        PEEL:       'Peeling (Machine)',
+        PEEL:       'Peeling',
         CS:         'Machine Grading',
         HPEEL:      'Hand Peeling',
         PACK:       'Packing',
-        BOILER:     'Boiler',
+        BOILER:     'Boiler worker',
         MAINT_HCA:  'Maintenance',
+        CLEAN:      'Cleaning worker',
         QC:         'QC',
         OFFICE:     'Office',
     }
 
-    type ShiftEntry = { deptKey: string; deptName: string; deptCode: string; shift: string; days: Map<string, number> }
-    type DeptGroup  = { deptKey: string; name: string; code: string; shifts: ShiftEntry[] }
+    // Excel Section row order within each dept group
+    const SECTION_ORDER: Record<string, string[]> = {
+        FGWH:       ['Loading S1','Loading S2','Loading S3'],
+        STEAM:      ['Steaming S1','Steaming S2','Steaming S3'],
+        SHELL:      ['Shelling S1','Shelling thời vụ S1','Shelling S2','Shelling thời vụ S2','Shelling S3','Shelling thời vụ S3'],
+        MAINT_SHELL:['Maintenance shelling S1','Maintenance shelling S2','Maintenance shelling S3'],
+        BORMA:      ['Borma S1','Borma thời vụ S1','Borma S2','Borma thời vụ S2','Borma S3','Borma thời vụ S3'],
+        PEEL:       ['Peeling S1','Peeling thời vụ S1','Peeling S2','Peeling thời vụ S2','Peeling S3','Peeling thời vụ S3'],
+        CS:         ['Machine Grading - shift 1','Machine Grading  - thời vụ 1','Machine Grading  - shift 2','Machine Grading  thời vụ - shift 2','Machine Grading  - shift 3','Machine Grading  thời vụ- shift 3'],
+        HPEEL:      ['Manual Grading -Shift 1 (Ms Huệ)','Manual Grading Thời vụ -Shift 1 (Ms Huệ)','Manual Grading -Shift 2 (Ms Huệ)','Manual Grading Thời vụ -Shift 2 (Ms Huệ)','Manual Grading -Shift 3 (Ms Huệ)','Manual Grading Thời vụ -Shift 3 (Ms Huệ)','Manual peeling S1 - Liên','Manual peeling S1 thời vụ - Liên','Manual peeling S1 - Dung','Manual peeling S1 thời vụ - Dung','Manual peeling S2 - Liên','Manual peeling S2 thời vụ - Liên','Manual peeling S2 - Dung','Manual peeling S2 thời vụ - Dung','Manual peeling S3 - Liên','Manual peeling S3 thời vụ - Liên','Manual peeling S3 - Dung','Manual peeling S3 thời vụ - Dung'],
+        PACK:       ['Packing S1','Packing thời vụ S1','Packing S2','Packing thời vụ S2','Packing S3'],
+        BOILER:     ['Boiler worker S1','Boiler worker S2','Boiler worker S3'],
+        MAINT_HCA:  ['Maintenance S1','Maintenance S2','Maintenance S3'],
+        CLEAN:      ['Cleaning worker','Cleaning worker S2','Cleaning worker S3'],
+        QC:         ['QC','QC S2','QC S3'],
+        OFFICE:     ['Office 1','Office 2','Office 3'],
+    }
 
-    // Build pivot: group by dept + shift
+    type ShiftEntry = { deptKey: string; deptName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; otDays: Map<string, number> }
+    type DeptGroup  = { deptKey: string; name: string; code: string; shifts: ShiftEntry[]; sectionRows: SectionRow[] }
+    // SectionRow: 1 row per department_name (the Excel "Section" name)
+    type SectionRow = { sectionName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number> }
+
+    // Build pivot: group by department_name ("Section" in Excel)
     const buildMonthlyPivot = (rows: MealStatRow[]) => {
+        // 1. All unique days sorted
+        const days = [...new Set(rows.map(r => r.work_date))].sort()
+
+        // 2. Map section_name → SectionRow
+        const sectionMap = new Map<string, SectionRow>()
+        rows.forEach(r => {
+            const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
+            const sectionName = r.department_name   // e.g. "Loading S1", "Shelling S2"
+            const shift = r.shift ?? '1'
+            const key = `${sectionName}|${shift}`
+            if (!sectionMap.has(key)) sectionMap.set(key, {
+                sectionName, deptCode, shift,
+                days: new Map(), officialDays: new Map(), seasonalDays: new Map()
+            })
+            const e = sectionMap.get(key)!
+            // Vegetarian meals are included in the total (chay + mặn không phân biệt trong thống kê tháng)
+            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0)
+            if (total > 0)          e.days.set(r.work_date, (e.days.get(r.work_date) ?? 0) + total)
+            if ((r.official_present ?? 0) > 0)  e.officialDays.set(r.work_date, (e.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
+            if ((r.seasonal_present ?? 0) > 0)  e.seasonalDays.set(r.work_date, (e.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
+        })
+
+        // 3. Build shift-level pivot (for OT) — same as before
         const shiftMap = new Map<string, ShiftEntry>()
         rows.forEach(r => {
             const deptKey  = r.department_id ?? r.department_name
             const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
-            const deptName = DEPT_DISPLAY[deptCode] ?? (r.department_id
-                ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
-                : r.department_name)
+            const deptName = DEPT_DISPLAY[deptCode] ?? r.department_name
             const shift = r.shift ?? '1'
             const mapKey = `${deptKey}|${shift}`
-            if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey, deptName, deptCode, shift, days: new Map() })
+            if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey, deptName, deptCode, shift, days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map() })
             const entry = shiftMap.get(mapKey)!
-            const count = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
+            const count = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0)
             if (count > 0) entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + count)
+            if ((r.official_present ?? 0) > 0) entry.officialDays.set(r.work_date, (entry.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
+            if ((r.seasonal_present ?? 0) > 0) entry.seasonalDays.set(r.work_date, (entry.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
         })
-        const days = [...new Set(rows.map(r => r.work_date))].sort()
+
+        // 4. Build dept groups
         const deptGroupMap = new Map<string, DeptGroup>()
         shiftMap.forEach(se => {
             const displayName = DEPT_DISPLAY[se.deptCode] ?? se.deptName
-            if (!deptGroupMap.has(se.deptKey)) deptGroupMap.set(se.deptKey, { deptKey: se.deptKey, name: displayName, code: se.deptCode, shifts: [] })
-            deptGroupMap.get(se.deptKey)!.shifts.push(se)
+            if (!deptGroupMap.has(se.deptCode || se.deptKey)) deptGroupMap.set(se.deptCode || se.deptKey, { deptKey: se.deptKey, name: displayName, code: se.deptCode, shifts: [], sectionRows: [] })
+            deptGroupMap.get(se.deptCode || se.deptKey)!.shifts.push(se)
+        })
+        // Attach section rows to dept groups
+        sectionMap.forEach(sr => {
+            const dg = deptGroupMap.get(sr.deptCode) ?? [...deptGroupMap.values()].find(g => g.code === sr.deptCode)
+            if (dg && !dg.sectionRows.find(s => s.sectionName === sr.sectionName && s.shift === sr.shift)) {
+                dg.sectionRows.push(sr)
+            }
         })
         deptGroupMap.forEach(dg => {
             dg.shifts.sort((a, b) => {
                 const ai = SHIFT_ORDER.indexOf(a.shift); const bi = SHIFT_ORDER.indexOf(b.shift)
                 return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+            })
+            // Sort section rows by SECTION_ORDER
+            const order = SECTION_ORDER[dg.code] ?? []
+            dg.sectionRows.sort((a, b) => {
+                const ai = order.indexOf(a.sectionName); const bi = order.indexOf(b.sectionName)
+                return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi)
             })
         })
         const deptGroups = [...deptGroupMap.values()].sort((a, b) => {
@@ -900,27 +981,48 @@ export default function BaoCom() {
             if (ai < 0) return 1; if (bi < 0) return -1
             return ai - bi
         })
-        return { days, deptGroups }
+        return { days, deptGroups, sectionMap }
     }
 
     const exportMonthlyExcel = () => {
         if (!statsData || statsData.length === 0) return
         const { days, deptGroups } = buildMonthlyPivot(statsData)
-        const header = ["Bộ phận", "Ca", ...days.map(d => parseInt(d.slice(8), 10)), "TỔNG"]
+        // Title rows like excel
+        const billingLabel = getBillingCycle(statsMonth).label
+        const titleRow = [`TIỀN CƠM CÁN BỘ CÔNG NHÂN VIÊN THÁNG ${statsMonth}`]
+        const periodRow = [`Từ ngày ${billingLabel}`]
+        const header = ["Section", ...days.map(d => parseInt(d.slice(8), 10)), "Total"]
         const dataRows: (string | number)[][] = []
         deptGroups.forEach(dept => {
-            dept.shifts.forEach(sr => {
+            dept.sectionRows.forEach(sr => {
                 const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
-                if (rowTotal === 0) return
-                dataRows.push([dept.name, sr.shift === 'OT' ? 'OT' : `Ca ${sr.shift}`, ...days.map(d => sr.days.get(d) ?? 0), rowTotal])
+                dataRows.push([sr.sectionName, ...days.map(d => sr.days.get(d) ?? ''), rowTotal || ''])
             })
+            // OT row within group
+            const otShift = dept.shifts.find(s => s.shift === 'OT')
+            if (otShift) {
+                const otTotal = [...otShift.days.values()].reduce((a, b) => a + b, 0)
+                if (otTotal > 0) dataRows.push(['OT', ...days.map(d => otShift.days.get(d) ?? ''), otTotal])
+            }
         })
-        const footerRow = ["TỔNG NGÀY", "", ...days.map(d =>
-            deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)
-        ), deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
-        const wsData = [header, ...dataRows, footerRow]
+        // Footer rows
+        const totalRow = ['Total', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0) + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)),
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0) + (dg.shifts.find(sh=>sh.shift==='OT') ? [...dg.shifts.find(sh=>sh.shift==='OT')!.days.values()].reduce((a,b)=>a+b,0) : 0), 0)]
+        const ca1Row = ['Ca 1:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '1').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '1').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
+        const ca2Row = ['Ca 2:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '2').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '2').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
+        const ca3Row = ['Ca 3:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '3').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '3').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
+        const otRow = ['OT', ...days.map(d => deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)),
+            deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh=>sh.shift==='OT') ? [...dg.shifts.find(sh=>sh.shift==='OT')!.days.values()].reduce((a,b)=>a+b,0) : 0), 0)]
+        const tvRow = ['Thời vụ', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.seasonalDays.get(d) ?? 0), 0), 0)),
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.seasonalDays.values()].reduce((a,b)=>a+b,0), 0), 0)]
+        const ctRow = ['Chính thức', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.officialDays.get(d) ?? 0), 0), 0)),
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.officialDays.values()].reduce((a,b)=>a+b,0), 0), 0)]
+        const wsData = [titleRow, periodRow, header, ...dataRows, totalRow, ca1Row, ca2Row, ca3Row, otRow, tvRow, ctRow]
         const ws = XLSX.utils.aoa_to_sheet(wsData)
-        ws["!cols"] = [{ wch: 20 }, { wch: 6 }, ...days.map(() => ({ wch: 5 })), { wch: 8 }]
+        ws["!cols"] = [{ wch: 32 }, ...days.map(() => ({ wch: 5 })), { wch: 8 }]
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, `Cơm ${statsMonth}`)
         XLSX.writeFile(wb, `bao-com-${statsMonth}.xlsx`)
@@ -1663,66 +1765,142 @@ export default function BaoCom() {
                     {statsData !== null && (() => {
                         if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">Không có dữ liệu trong tháng này</div>
                         const { days, deptGroups } = buildMonthlyPivot(statsData)
+                        // Total per day (all sections including OT)
                         const dayTotals = days.map(d =>
-                            deptGroups.reduce((s, dg) => s + dg.shifts.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)
+                            deptGroups.reduce((s, dg) =>
+                                s + dg.sectionRows.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0)
+                                  + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)
                         )
                         const grandTotal = dayTotals.reduce((a, b) => a + b, 0)
+                        // Ca subtotals
+                        const caTotal = (caNum: string) => days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === caNum).reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0))
+                        const otDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0))
+                        const tvDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.seasonalDays.get(d) ?? 0), 0), 0))
+                        const ctDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.officialDays.get(d) ?? 0), 0), 0))
+                        const ca1Totals = caTotal('1'); const ca2Totals = caTotal('2'); const ca3Totals = caTotal('3')
                         return (
                             <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                                 <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
-                                    <span>Tháng {statsMonth} — chu kỳ {getBillingCycle(statsMonth).label}</span>
+                                    <div>
+                                        <div className="font-bold text-sm">TIỀN CƠM CÁN BỘ CÔNG NHÂN VIÊN THÁNG {statsMonth}</div>
+                                        <div className="text-xs text-muted-foreground font-normal">Chu kỳ: {getBillingCycle(statsMonth).label}</div>
+                                    </div>
                                     <button onClick={exportMonthlyExcel} className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
                                         <FileSpreadsheet className="h-3.5 w-3.5" /> Xuất Excel
                                     </button>
                                 </div>
                                 <div className="overflow-x-auto">
-                                    <table className="text-xs min-w-full">
+                                    <table className="text-xs min-w-full border-collapse">
                                         <thead>
-                                            <tr className="bg-muted/40 text-muted-foreground">
-                                                <th className="px-3 py-2 font-semibold text-left sticky left-0 bg-muted/40 z-10 min-w-[140px] whitespace-nowrap">Bộ phận / Ca</th>
-                                                {days.map(d => <th key={d} className="px-2 py-2 font-semibold text-center whitespace-nowrap">{parseInt(d.slice(8), 10)}</th>)}
-                                                <th className="px-3 py-2 font-bold text-right text-purple-700 whitespace-nowrap">TỔNG</th>
+                                            <tr className="bg-slate-100 text-slate-700 border-b-2 border-slate-300">
+                                                <th className="px-3 py-2 font-bold text-left sticky left-0 bg-slate-100 z-10 min-w-[200px] border-r border-slate-300">
+                                                    Section
+                                                </th>
+                                                {days.map(d => (
+                                                    <th key={d} className="px-1.5 py-2 font-bold text-center w-8">
+                                                        {parseInt(d.slice(8), 10)}
+                                                    </th>
+                                                ))}
+                                                <th className="px-2 py-2 font-bold text-center bg-slate-200 border-l border-slate-300">Total</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {deptGroups.map(dept => (
-                                                <Fragment key={dept.deptKey}>
-                                                    {/* Dept header row */}
-                                                    <tr className="bg-purple-50 border-t-2 border-purple-200">
-                                                        <td colSpan={days.length + 2} className="px-3 py-1 font-bold text-purple-800 text-xs uppercase tracking-wide sticky left-0 bg-purple-50 z-10">
-                                                            {dept.name}
-                                                        </td>
-                                                    </tr>
-                                                    {/* Shift rows */}
-                                                    {dept.shifts.map(sr => {
+                                            {deptGroups.map(dept => {
+                                                const deptOT = dept.shifts.find(sh => sh.shift === 'OT')
+                                                const deptOTTotal = deptOT ? [...deptOT.days.values()].reduce((a,b)=>a+b,0) : 0
+                                                return (
+                                                <Fragment key={dept.code || dept.deptKey}>
+                                                    {/* Section data rows */}
+                                                    {dept.sectionRows.map((sr, sIdx) => {
                                                         const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
-                                                        if (rowTotal === 0) return null
-                                                        const isOT = sr.shift === 'OT'
+                                                        const isTV = /thời vụ/i.test(sr.sectionName)
                                                         return (
-                                                            <tr key={`${dept.deptKey}|${sr.shift}`} className={isOT ? "bg-orange-50/60" : "hover:bg-muted/30"}>
-                                                                <td className={`px-3 py-1.5 whitespace-nowrap sticky left-0 z-10 pl-6 font-medium ${isOT ? "bg-orange-50/60 text-orange-700" : "bg-white"}`}>
-                                                                    {isOT ? "⏱ OT" : `Ca ${sr.shift}`}
+                                                            <tr key={`${sr.sectionName}|${sr.shift}`}
+                                                                className={`border-b border-slate-100 ${sIdx === 0 ? 'border-t-2 border-t-slate-300' : ''} ${isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
+                                                                <td className={`px-3 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium ${
+                                                                    sIdx === 0 ? 'border-t-2 border-t-slate-300' : ''
+                                                                } ${isTV ? 'bg-blue-50/40 italic text-blue-600' : 'bg-white'}`}>
+                                                                    {sr.sectionName}
                                                                 </td>
                                                                 {days.map(d => {
                                                                     const v = sr.days.get(d) ?? 0
                                                                     return (
-                                                                        <td key={d} className={`px-2 py-1.5 text-center ${v > 0 ? (isOT ? "text-orange-600 font-semibold" : "font-semibold text-foreground") : "text-muted-foreground/30"}`}>
-                                                                            {v > 0 ? v : "—"}
+                                                                        <td key={d} className={`px-1.5 py-1 text-center ${
+                                                                            v > 0 ? (isTV ? 'text-blue-600' : 'font-semibold text-slate-800') : 'text-slate-200'
+                                                                        }`}>
+                                                                            {v > 0 ? v : ''}
                                                                         </td>
                                                                     )
                                                                 })}
-                                                                <td className={`px-3 py-1.5 text-right font-bold ${isOT ? "text-orange-600" : "text-purple-700"}`}>{rowTotal}</td>
+                                                                <td className={`px-2 py-1 text-center font-bold border-l border-slate-200 ${
+                                                                    rowTotal > 0 ? (isTV ? 'text-blue-700' : 'text-slate-700') : 'text-slate-300'
+                                                                }`}>
+                                                                    {rowTotal > 0 ? rowTotal : ''}
+                                                                </td>
                                                             </tr>
                                                         )
                                                     })}
+                                                    {/* OT row for this dept group */}
+                                                    {deptOT && deptOTTotal > 0 && (
+                                                        <tr className="bg-orange-50 border-b border-orange-100">
+                                                            <td className="px-3 py-1 whitespace-nowrap sticky left-0 z-10 bg-orange-50 font-semibold text-orange-700 italic border-r border-orange-100">
+                                                                OT
+                                                            </td>
+                                                            {days.map(d => {
+                                                                const v = deptOT.days.get(d) ?? 0
+                                                                return (
+                                                                    <td key={d} className={`px-1.5 py-1 text-center ${
+                                                                        v > 0 ? 'text-orange-600 font-semibold' : 'text-orange-200'
+                                                                    }`}>
+                                                                        {v > 0 ? v : ''}
+                                                                    </td>
+                                                                )
+                                                            })}
+                                                            <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100">
+                                                                {deptOTTotal}
+                                                            </td>
+                                                        </tr>
+                                                    )}
                                                 </Fragment>
-                                            ))}
+                                                )
+                                            })}
                                         </tbody>
+                                        {/* Footer rows matching Excel format */}
                                         <tfoot>
-                                            <tr className="bg-muted/60 font-bold border-t-2">
-                                                <td className="px-3 py-2 sticky left-0 bg-muted/60 z-10">TỔNG NGÀY</td>
-                                                {dayTotals.map((v, i) => <td key={days[i]} className="px-2 py-2 text-center text-purple-700">{v > 0 ? v : ""}</td>)}
-                                                <td className="px-3 py-2 text-right text-purple-700">{grandTotal}</td>
+                                            <tr className="bg-slate-700 text-white font-bold border-t-2 border-slate-500">
+                                                <td className="px-3 py-2 sticky left-0 bg-slate-700 z-10 border-r border-slate-500">Total</td>
+                                                {dayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-2 text-center">{v > 0 ? v : ''}</td>)}
+                                                <td className="px-2 py-2 text-center border-l border-slate-500">{grandTotal}</td>
+                                            </tr>
+                                            <tr className="bg-blue-600 text-white text-[11px]">
+                                                <td className="px-3 py-1.5 sticky left-0 bg-blue-600 z-10 font-semibold border-r border-blue-400">Ca 1:</td>
+                                                {ca1Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                <td className="px-2 py-1.5 text-center font-bold border-l border-blue-400">{ca1Totals.reduce((a,b)=>a+b,0)}</td>
+                                            </tr>
+                                            <tr className="bg-blue-500 text-white text-[11px]">
+                                                <td className="px-3 py-1.5 sticky left-0 bg-blue-500 z-10 font-semibold border-r border-blue-300">Ca 2:</td>
+                                                {ca2Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                <td className="px-2 py-1.5 text-center font-bold border-l border-blue-300">{ca2Totals.reduce((a,b)=>a+b,0)}</td>
+                                            </tr>
+                                            <tr className="bg-blue-400 text-white text-[11px]">
+                                                <td className="px-3 py-1.5 sticky left-0 bg-blue-400 z-10 font-semibold border-r border-blue-200">Ca 3:</td>
+                                                {ca3Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                <td className="px-2 py-1.5 text-center font-bold border-l border-blue-200">{ca3Totals.reduce((a,b)=>a+b,0)}</td>
+                                            </tr>
+                                            <tr className="bg-orange-500 text-white text-[11px]">
+                                                <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">OT</td>
+                                                {otDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                <td className="px-2 py-1.5 text-center font-bold border-l border-orange-300">{otDayTotals.reduce((a,b)=>a+b,0)}</td>
+                                            </tr>
+                                            <tr className="bg-purple-100 text-purple-800 text-[11px]">
+                                                <td className="px-3 py-1.5 sticky left-0 bg-purple-100 z-10 font-semibold border-r border-purple-200">Thời vụ</td>
+                                                {tvDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                <td className="px-2 py-1.5 text-center font-bold border-l border-purple-200">{tvDayTotals.reduce((a,b)=>a+b,0)}</td>
+                                            </tr>
+                                            <tr className="bg-green-100 text-green-800 text-[11px]">
+                                                <td className="px-3 py-1.5 sticky left-0 bg-green-100 z-10 font-semibold border-r border-green-200">Chính thức</td>
+                                                {ctDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                <td className="px-2 py-1.5 text-center font-bold border-l border-green-200">{ctDayTotals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                         </tfoot>
                                     </table>
