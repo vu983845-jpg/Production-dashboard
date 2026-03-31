@@ -806,7 +806,7 @@ export default function BaoCom() {
         init()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const canEdit = ["admin", "hr_admin", "hse_admin"].includes(userRole)
+    const canEdit = ["hr_admin", "hse_admin"].includes(userRole)
     const canSave = canEdit
 
     // ─── Build summary text for kitchen ───
