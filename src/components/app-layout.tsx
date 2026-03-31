@@ -15,6 +15,7 @@ import {
     Zap,
     ShieldCheck,
     UtensilsCrossed,
+    BarChart3,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -74,6 +75,12 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
             href: "/report",
             icon: FileText,
             roles: ["admin", "dept_user", "viewer"],
+        },
+        {
+            title: "Analytics",
+            href: "/analytics",
+            icon: BarChart3,
+            roles: ["admin", "dept_user", "viewer", "plant_manager"],
         },
         {
             title: t("nav.users"),
