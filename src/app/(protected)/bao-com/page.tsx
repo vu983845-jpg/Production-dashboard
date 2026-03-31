@@ -936,8 +936,8 @@ export default function BaoCom() {
             })
             const e = sectionMap.get(key)!
             // Vegetarian meals are included in the total (chay + mặn không phân biệt trong thống kê tháng)
-            // Also include ot_count - kitchen tab may store OT in this field
-            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0) + (r.ot_count ?? 0)
+            // OT count is NOT included here — it belongs to the OT row, not the regular Ca row
+            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0)
             if (total > 0)          e.days.set(r.work_date, (e.days.get(r.work_date) ?? 0) + total)
             if ((r.official_present ?? 0) > 0)  e.officialDays.set(r.work_date, (e.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
             if ((r.seasonal_present ?? 0) > 0)  e.seasonalDays.set(r.work_date, (e.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
@@ -957,6 +957,14 @@ export default function BaoCom() {
             if (count > 0) entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + count)
             if ((r.official_present ?? 0) > 0) entry.officialDays.set(r.work_date, (entry.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
             if ((r.seasonal_present ?? 0) > 0) entry.seasonalDays.set(r.work_date, (entry.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
+            // Route ot_count to a synthetic OT shift entry for this dept
+            // (kitchen tab records store OT workers in ot_count alongside regular shifts)
+            if ((r.ot_count ?? 0) > 0 && shift !== 'OT') {
+                const otMapKey = `${deptKey}|OT`
+                if (!shiftMap.has(otMapKey)) shiftMap.set(otMapKey, { deptKey, deptName, deptCode, shift: 'OT', days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map() })
+                const otEntry = shiftMap.get(otMapKey)!
+                otEntry.days.set(r.work_date, (otEntry.days.get(r.work_date) ?? 0) + (r.ot_count ?? 0))
+            }
         })
 
         // 4. Build dept groups
