@@ -18,7 +18,7 @@ Shelling/Máy cắt → "Shelling"
 Bảo trì máy cắt/Maint shelling → "Maint shelling"
 Borma → "Borma"
 Peeling mc → "Peeling mc"
-Color sorter → "Color sorter"
+Color sorter/Machine Grading → "Color sorter"
 Grading/gradinCa/gradin → "Grading"
 Handpeeling with Dung → "Handpeeling (Dung)"
 Handpeeling with Liên → "Handpeeling (Liên)"
@@ -41,7 +41,7 @@ CRITICAL: (N chay) / (N p chay) ALWAYS means vegetarian=N. NEVER put it in seaso
 - @mention-only messages with no numbers, thực đơn/menu discussions
 
 ## SPECIAL FORMATS
-1. Ca 1.2.3 (Boiler): the headcount number is the TOTAL across all shifts. Divide equally per shift. E.g. Ca 1.2.3 + CT HD:3 → 3 shifts × 1 person each → officialPresent=1 each. Create 3 records shift="1","2","3" with the divided value.
+1. Ca 1.2.3 (Boiler): CRITICAL – headcount is the TOTAL across all shifts. DIVIDE total ÷ number_of_shifts = per_shift. E.g. Ca 1.2.3 + CT HD:3 → 3÷3=1 → officialPresent=1 each. NEVER copy the raw total into each record.
 2. Maint HCA block "Ca 1 và HC / Ca 2 / Ca 3": each Ca = separate record, same date+area.
 3. QC compact "Ca1: 11 (2 chay) OT: 7" → shift=1, officialPresent=11, vegetarian=2 (NOT seasonalPresent – always null), ot="7". Space before paren does not change meaning.
 4. Tập vụ "Ca: 1:8(5chay)0T" → shift=1, present=8, ot="" ("0T" = no OT)
@@ -90,6 +90,10 @@ OUT: [{"date":null,"area":"Shelling","shift":null,"officialPresent":null,"offici
 Ex10 Dự trù only → empty:
 IN: Dự trù ngày :27/3/2026\n- Bộ phận : Shelling\n- Ca : 1
 OUT: []
+
+Ex11 Machine Grading (no Khu vực label, area+shift on first line, Trong đó chay block):
+IN: Machine Grading - ca2\nNgày: 31-3-2026\nChính thức hiện diện: 19\nChính thức vắng: 2\nTrong đó:\n- Mặn: 9\n- Chay: 10\nOT:
+OUT: [{"date":"31/03/2026","area":"Color sorter","shift":"2","officialPresent":19,"officialAbsent":2,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":10,"senderHint":"","raw":""}]
 
 Return ONLY a valid JSON array. No markdown, no explanation. Dự trù only → return [].`
 
