@@ -998,15 +998,15 @@ export default function ReportPage() {
                         <span className="text-sm text-muted-foreground">{summary.daysWithData} days with data</span>
                     </div>
 
-                    {/* KPI Cards */}
+                    {/* KPI Cards — Production + Quality in one row */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <KPICard label="Actual Production" value={`${summary.totalActual.toFixed(1)} T`}
-                            sub={`KH: ${summary.totalPlan.toFixed(1)} T`} />
+                            sub={`Plan: ${summary.totalPlan.toFixed(1)} T`} />
                         <KPICard
                             label="MTD Achievement"
                             value={achievePct !== null ? `${achievePct.toFixed(1)}%` : "—"}
                             color={achievePct !== null ? (achievePct >= 100 ? "text-green-600" : "text-red-600") : undefined}
-                            sub={achievePct !== null ? (achievePct >= 100 ? "✅ Target Met" : "⚠️ Target Not Met") : undefined}
+                            sub={achievePct !== null ? (achievePct >= 100 ? "✅ Target Met" : "⚠️ Below Target") : undefined}
                         />
                         <KPICard
                             label="Variance"
@@ -1015,6 +1015,14 @@ export default function ReportPage() {
                         />
                         <KPICard label="Total Downtime" value={`${summary.totalDowntime} mins`}
                             sub={`~${(summary.totalDowntime/60).toFixed(1)} hrs`} />
+                        {summary.avgBroken > 0 && (
+                            <KPICard label="Avg Broken %" value={`${summary.avgBroken.toFixed(2)}%`} color="text-red-600"
+                                sub="Quality loss" />
+                        )}
+                        {summary.avgUnpeel > 0 && (
+                            <KPICard label="Avg Unpeel %" value={`${summary.avgUnpeel.toFixed(2)}%`} color="text-amber-600"
+                                sub="Unpeeled shell" />
+                        )}
                     </div>
 
                     {/* ── SECTION 1: Daily Output vs Plan ──────────────────── */}
@@ -1165,18 +1173,6 @@ export default function ReportPage() {
                         </Card>
                     )}
 
-                    {/* Quality KPIs */}
-
-                    {(summary.avgBroken > 0 || summary.avgUnpeel > 0) && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {summary.avgBroken > 0 && (
-                                <KPICard label="Avg Broken %" value={`${summary.avgBroken.toFixed(2)}%`} color="text-red-600" />
-                            )}
-                            {summary.avgUnpeel > 0 && (
-                                <KPICard label="Avg Unpeel %" value={`${summary.avgUnpeel.toFixed(2)}%`} color="text-amber-600" />
-                            )}
-                        </div>
-                    )}
 
                     {/* ── Manpower Efficiency Deep-Dive (from Báo Cơm) ── */}
                     {(() => {
@@ -1684,35 +1680,11 @@ export default function ReportPage() {
                                         </CardContent>
                                     </Card>
 
-                                    {/* Chart 2: Downtime */}
-                                    <Card className="col-span-1 lg:col-span-3">
-                                        <CardHeader className="pb-2 border-b">
-                                            <CardTitle className="text-sm font-bold">{language === 'vi' ? 'Phân tích Giờ dừng máy (Phút)' : 'Downtime Analysis (Mins)'}</CardTitle>
-                                            <CardDescription className="text-xs leading-relaxed text-slate-600">
-                                                {language === 'vi'
-                                                    ? 'Biểu đồ cột tích lũy (stacked) tổng thời gian dừng máy (phút) mỗi ngày, chia theo từng máy. Ngày nào cột cao là ngày có tổng downtime lớn. Màu của mỗi lớp cột cho biết máy nào chịu trách nhiệm nhiều nhất cho sự cố hôm đó. Phối hợp với chart Hiệu suất để xác định nguyên nhân năng suất giảm.'
-                                                    : 'Stacked bars show daily downtime (minutes) broken down by each shelling line. Tall bars = high total downtime that day. Each color layer identifies which line caused the most stoppage. Cross-reference with the efficiency chart to pinpoint root causes of productivity drops.'}
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="h-64 w-full mt-2">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <ComposedChart data={downChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                                        <YAxis tick={{ fontSize: 10 }} />
-                                                        <Tooltip contentStyle={{ fontSize: '11px' }} />
-                                                        <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                                        <Bar dataKey="A" stackId="a" fill="#3b82f6" name="Line A" />
-                                                        <Bar dataKey="B" stackId="a" fill="#10b981" name="Line B" />
-                                                        <Bar dataKey="C" stackId="a" fill="#f59e0b" name="Line C" />
-                                                        <Bar dataKey="D1" stackId="a" fill="#ef4444" name="Line D1" />
-                                                        <Bar dataKey="D2" stackId="a" fill="#8b5cf6" name="Line D2" />
-                                                    </ComposedChart>
-                                                </ResponsiveContainer>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                    {/* Chart 2: Downtime by Line (SHELL — per-line stacked)
+                                        NOTE: Hidden — overall downtime analysis moved to Downtime Impact
+                                        section at top of report. This chart (per-line breakdown) is
+                                        available in Deep-Dive SECTION 3 below.
+                                    */}
 
                                     {/* All-Lines Broken Rate Overview */}
                                     {allLineBrokenData.some(d => d.broken !== null) && (
@@ -2304,75 +2276,78 @@ export default function ReportPage() {
                         )
                     })()}
 
-                    {/* Daily Detail Table */}
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-bold flex items-center justify-between">
-                                <span>Daily Details</span>
-                                <span className="text-xs font-normal text-muted-foreground">{records.length} ngày</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b bg-muted/50">
-                                            <th className="text-left p-3 font-semibold whitespace-nowrap">Date</th>
-                                            <th className="text-right p-3 font-semibold">Actual (T)</th>
-                                            <th className="text-right p-3 font-semibold">Plan (T)</th>
-                                            <th className="text-right p-3 font-semibold">Achieved %</th>
-                                            <th className="text-right p-3 font-semibold">Downtime</th>
-                                            {records.some(r => r.avg_broken_pct > 0) && <th className="text-right p-3 font-semibold">Broken %</th>}
-                                            {records.some(r => r.avg_unpeel_pct > 0) && <th className="text-right p-3 font-semibold">Unpeel %</th>}
-                                            <th className="text-left p-3 font-semibold">Note</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {records.map(r => {
-                                            const ap = r.plan_ton > 0 ? r.actual_ton / r.plan_ton * 100 : null
-                                            const hasBroken  = records.some(x => x.avg_broken_pct > 0)
-                                            const hasUnpeel  = records.some(x => x.avg_unpeel_pct > 0)
-                                            return (
-                                                <tr key={r.work_date} className={`border-b hover:bg-muted/20 ${r.actual_ton === 0 ? "opacity-40" : ""}`}>
-                                                    <td className="p-3 font-medium whitespace-nowrap">{fmtDate(r.work_date)}</td>
-                                                    <td className="p-3 text-right font-bold text-primary">{r.actual_ton > 0 ? r.actual_ton.toFixed(2) : "—"}</td>
-                                                    <td className="p-3 text-right text-muted-foreground">{r.plan_ton > 0 ? r.plan_ton.toFixed(2) : "—"}</td>
-                                                    <td className={`p-3 text-right font-semibold whitespace-nowrap`}>
-                                                        {ap !== null ? (
-                                                            <span className={ap >= 100 ? "text-green-600" : "text-red-600"}>
-                                                                {ap >= 100 ? <TrendingUp className="inline h-3 w-3 mr-0.5" /> : <TrendingDown className="inline h-3 w-3 mr-0.5" />}
-                                                                {ap.toFixed(1)}%
-                                                            </span>
-                                                        ) : "—"}
-                                                    </td>
-                                                    <td className="p-3 text-right text-amber-600">{(() => { const m = r.downtime_min || 0; if (!m) return '—'; const h = Math.floor(m/60), rm = m%60; return h > 0 ? `${h}h${rm > 0 ? ` ${rm}m` : ''}` : `${rm}m` })()}</td>
-                                                    {hasBroken && <td className="p-3 text-right text-red-600">{r.avg_broken_pct > 0 ? r.avg_broken_pct.toFixed(2)+"%" : "—"}</td>}
-                                                    {hasUnpeel && <td className="p-3 text-right text-amber-700">{r.avg_unpeel_pct > 0 ? r.avg_unpeel_pct.toFixed(2)+"%" : "—"}</td>}
-                                                    <td className="p-3 text-muted-foreground text-xs max-w-[200px] truncate">{r.note}</td>
-                                                </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr className="border-t-2 bg-muted/30 font-bold">
-                                            <td className="p-3">Total / Avg</td>
-                                            <td className="p-3 text-right text-primary">{summary.totalActual.toFixed(2)}</td>
-                                            <td className="p-3 text-right text-muted-foreground">{summary.totalPlan.toFixed(2)}</td>
-                                            <td className={`p-3 text-right ${achievePct !== null && achievePct >= 100 ? "text-green-600" : "text-red-600"}`}>
-                                                {achievePct !== null ? achievePct.toFixed(1)+"%" : "—"}
-                                            </td>
-                                            <td className="p-3 text-right text-amber-600">{(() => { const m = summary.totalDowntime || 0; const h = Math.floor(m/60), rm = m%60; return h > 0 ? `${h}h${rm > 0 ? ` ${rm}m` : ''}` : `${rm}m` })()}</td>
-                                            {records.some(r => r.avg_broken_pct > 0) && <td className="p-3 text-right text-red-600">{summary.avgBroken > 0 ? summary.avgBroken.toFixed(2)+"%" : "—"}</td>}
-                                            {records.some(r => r.avg_unpeel_pct > 0) && <td className="p-3 text-right text-amber-700">{summary.avgUnpeel > 0 ? summary.avgUnpeel.toFixed(2)+"%" : "—"}</td>}
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    {/* Daily Detail Table — hidden for SHELL (Shelling Shift Details below is more granular) */}
+                    {selectedDept !== 'SHELL' && (
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-bold flex items-center justify-between">
+                                    <span>Daily Details</span>
+                                    <span className="text-xs font-normal text-muted-foreground">{records.length} days</span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b bg-muted/50">
+                                                <th className="text-left p-3 font-semibold whitespace-nowrap">Date</th>
+                                                <th className="text-right p-3 font-semibold">Actual (T)</th>
+                                                <th className="text-right p-3 font-semibold">Plan (T)</th>
+                                                <th className="text-right p-3 font-semibold">Achieved %</th>
+                                                <th className="text-right p-3 font-semibold">Downtime</th>
+                                                {records.some(r => r.avg_broken_pct > 0) && <th className="text-right p-3 font-semibold">Broken %</th>}
+                                                {records.some(r => r.avg_unpeel_pct > 0) && <th className="text-right p-3 font-semibold">Unpeel %</th>}
+                                                <th className="text-left p-3 font-semibold">Note</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {records.map(r => {
+                                                const ap = r.plan_ton > 0 ? r.actual_ton / r.plan_ton * 100 : null
+                                                const hasBroken  = records.some(x => x.avg_broken_pct > 0)
+                                                const hasUnpeel  = records.some(x => x.avg_unpeel_pct > 0)
+                                                return (
+                                                    <tr key={r.work_date} className={`border-b hover:bg-muted/20 ${r.actual_ton === 0 ? "opacity-40" : ""}`}>
+                                                        <td className="p-3 font-medium whitespace-nowrap">{fmtDate(r.work_date)}</td>
+                                                        <td className="p-3 text-right font-bold text-primary">{r.actual_ton > 0 ? r.actual_ton.toFixed(2) : "—"}</td>
+                                                        <td className="p-3 text-right text-muted-foreground">{r.plan_ton > 0 ? r.plan_ton.toFixed(2) : "—"}</td>
+                                                        <td className={`p-3 text-right font-semibold whitespace-nowrap`}>
+                                                            {ap !== null ? (
+                                                                <span className={ap >= 100 ? "text-green-600" : "text-red-600"}>
+                                                                    {ap >= 100 ? <TrendingUp className="inline h-3 w-3 mr-0.5" /> : <TrendingDown className="inline h-3 w-3 mr-0.5" />}
+                                                                    {ap.toFixed(1)}%
+                                                                </span>
+                                                            ) : "—"}
+                                                        </td>
+                                                        <td className="p-3 text-right text-amber-600">{(() => { const m = r.downtime_min || 0; if (!m) return '—'; const h = Math.floor(m/60), rm = m%60; return h > 0 ? `${h}h${rm > 0 ? ` ${rm}m` : ''}` : `${rm}m` })()}</td>
+                                                        {hasBroken && <td className="p-3 text-right text-red-600">{r.avg_broken_pct > 0 ? r.avg_broken_pct.toFixed(2)+"%" : "—"}</td>}
+                                                        {hasUnpeel && <td className="p-3 text-right text-amber-700">{r.avg_unpeel_pct > 0 ? r.avg_unpeel_pct.toFixed(2)+"%" : "—"}</td>}
+                                                        <td className="p-3 text-muted-foreground text-xs max-w-[200px] truncate">{r.note}</td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="border-t-2 bg-muted/30 font-bold">
+                                                <td className="p-3">Total / Avg</td>
+                                                <td className="p-3 text-right text-primary">{summary.totalActual.toFixed(2)}</td>
+                                                <td className="p-3 text-right text-muted-foreground">{summary.totalPlan.toFixed(2)}</td>
+                                                <td className={`p-3 text-right ${achievePct !== null && achievePct >= 100 ? "text-green-600" : "text-red-600"}`}>
+                                                    {achievePct !== null ? achievePct.toFixed(1)+"%" : "—"}
+                                                </td>
+                                                <td className="p-3 text-right text-amber-600">{(() => { const m = summary.totalDowntime || 0; const h = Math.floor(m/60), rm = m%60; return h > 0 ? `${h}h${rm > 0 ? ` ${rm}m` : ''}` : `${rm}m` })()}</td>
+                                                {records.some(r => r.avg_broken_pct > 0) && <td className="p-3 text-right text-red-600">{summary.avgBroken > 0 ? summary.avgBroken.toFixed(2)+"%" : "—"}</td>}
+                                                {records.some(r => r.avg_unpeel_pct > 0) && <td className="p-3 text-right text-amber-700">{summary.avgUnpeel > 0 ? summary.avgUnpeel.toFixed(2)+"%" : "—"}</td>}
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Shelling Daily Detail Table */}
+
                     {selectedDept === "SHELL" && shellingLines.length > 0 && (
                         <Card className="overflow-hidden">
                             <CardHeader className="pb-3 border-b bg-muted/20">
