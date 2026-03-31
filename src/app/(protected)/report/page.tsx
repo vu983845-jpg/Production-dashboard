@@ -98,6 +98,9 @@ export default function ReportPage() {
     const [shellingEnergyMonthly, setShellingEnergyMonthly] = useState<{work_date: string; kwh: number}[]>([])
     // Headcount từ báo cơm: { work_date → { official, seasonal } }
     const [headcountDaily, setHeadcountDaily] = useState<Record<string, { official: number; seasonal: number; shifts: number }>>({}) 
+    // Raw downtime events (with cause detail) for analysis in report
+    const [downtimeEvents, setDowntimeEvents] = useState<any[]>([])
+
 
     // Báo cơm dept code (meal_headcount.department_id lookup) may differ from report code
     // PEEL_MC in report = PEEL in meal_headcount
@@ -149,18 +152,19 @@ export default function ReportPage() {
 
         if (error) console.error("Report query error:", error)
 
-        // Fetch Native Downtime Events
+        // Fetch Native Downtime Events (with cause detail for analysis)
         const nativeDownByDate: Record<string, number> = {}
         if (dept?.id) {
             const { data: dtEvents } = await supabase
                 .from('downtime_events')
-                .select('work_date, duration_mins, start_time, end_time, is_ongoing')
+                .select('work_date, duration_mins, start_time, end_time, is_ongoing, root_cause, severity, machine_area')
                 .eq('department_id', dept.id)
                 .eq('exclude_downtime', false)
                 .gte('work_date', start)
                 .lte('work_date', end)
                 
             if (dtEvents) {
+                setDowntimeEvents(dtEvents)
                 dtEvents.forEach((evt: any) => {
                     const d = evt.work_date
                     let mins = Number(evt.duration_mins || 0)
@@ -170,7 +174,11 @@ export default function ReportPage() {
                     }
                     nativeDownByDate[d] = (nativeDownByDate[d] || 0) + mins
                 })
+            } else {
+                setDowntimeEvents([])
             }
+        } else {
+            setDowntimeEvents([])
         }
 
         const rows: DailyRecord[] = (data ?? []).map((r: any) => ({
@@ -461,7 +469,55 @@ export default function ReportPage() {
             }))
     })()
 
+    // ── Downtime Analysis computed data ──────────────────────────────────────
+    const PLANNED_CODES = new Set(['BT','CIL','MP','PT','PW','TP','TT'])
+
+    const dtPareto = (() => {
+        if (!downtimeEvents.length) return []
+        const map: Record<string, number> = {}
+        downtimeEvents.forEach(e => {
+            const code = e.root_cause || 'Unknown'
+            let mins = Number(e.duration_mins || 0)
+            if (e.is_ongoing && e.start_time) {
+                const endT = e.end_time ? new Date(e.end_time) : new Date()
+                mins = Math.max(0, Math.round((endT.getTime() - new Date(e.start_time).getTime()) / 60000))
+            }
+            map[code] = (map[code] || 0) + mins
+        })
+        const total = Object.values(map).reduce((s, v) => s + v, 0)
+        let cum = 0
+        return Object.entries(map)
+            .sort(([,a],[,b]) => b - a)
+            .map(([code, mins]) => {
+                cum += mins
+                return {
+                    code,
+                    mins,
+                    hrs: +(mins/60).toFixed(1),
+                    pct: total > 0 ? +((mins/total)*100).toFixed(1) : 0,
+                    cumPct: total > 0 ? +((cum/total)*100).toFixed(1) : 0,
+                    planned: PLANNED_CODES.has(code),
+                }
+            })
+    })()
+
+    const dtPlannedMins = downtimeEvents.reduce((s, e) => PLANNED_CODES.has(e.root_cause) ? s + Number(e.duration_mins || 0) : s, 0)
+    const dtUnplannedMins = (summary?.totalDowntime || 0) - Math.max(0, dtPlannedMins)
+
+    // Estimated lost production: unplanned downtime hours × avg throughput (T/h)
+    const avgThroughputPerHr = (() => {
+        const daysWithOutput = records.filter(r => r.actual_ton > 0)
+        if (!daysWithOutput.length) return null
+        const totalTons = daysWithOutput.reduce((s,r) => s + r.actual_ton, 0)
+        const totalProductiveHrs = daysWithOutput.length * 8
+        return totalTons / totalProductiveHrs
+    })()
+    const estimatedLostTons = avgThroughputPerHr !== null
+        ? +((dtUnplannedMins / 60) * avgThroughputPerHr).toFixed(1)
+        : null
+
     const perfChartData = (() => {
+
         if (selectedDept !== 'SHELL' || !filteredShellingLines.length) return [];
         const lines = filteredShellingLines.filter(r => r.line_code === selectedShellLine);
         const map = new Map<string, any>();
@@ -1023,7 +1079,94 @@ export default function ReportPage() {
                         </Card>
                     )}
 
+                    {/* ── SECTION 2: Downtime Impact Analysis ────────────── */}
+                    {summary.totalDowntime > 0 && (
+                        <Card className="border-red-100">
+                            <CardHeader className="pb-2 border-b bg-red-50/40">
+                                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                    ⚠️ Downtime Impact Analysis
+                                    <span className="text-xs font-normal text-muted-foreground">
+                                        Total: {summary.totalDowntime} mins ({(summary.totalDowntime/60).toFixed(1)} hrs)
+                                    </span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-3 space-y-3">
+                                {/* KPI row */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <div className="rounded-lg bg-red-50 border border-red-200 p-2.5 text-center">
+                                        <p className="text-[10px] text-red-600 font-semibold uppercase">Unplanned DT</p>
+                                        <p className="text-lg font-black text-red-700">{Math.max(0, dtUnplannedMins)} min</p>
+                                        <p className="text-[10px] text-red-500">{(Math.max(0,dtUnplannedMins)/60).toFixed(1)} hrs</p>
+                                    </div>
+                                    <div className="rounded-lg bg-blue-50 border border-blue-200 p-2.5 text-center">
+                                        <p className="text-[10px] text-blue-600 font-semibold uppercase">Planned DT</p>
+                                        <p className="text-lg font-black text-blue-700">{dtPlannedMins} min</p>
+                                        <p className="text-[10px] text-blue-500">{(dtPlannedMins/60).toFixed(1)} hrs</p>
+                                    </div>
+                                    <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-center">
+                                        <p className="text-[10px] text-amber-600 font-semibold uppercase">Unplanned %</p>
+                                        <p className="text-lg font-black text-amber-700">
+                                            {summary.totalDowntime > 0 ? ((Math.max(0,dtUnplannedMins)/summary.totalDowntime)*100).toFixed(0) : 0}%
+                                        </p>
+                                        <p className="text-[10px] text-amber-500">of total DT</p>
+                                    </div>
+                                    <div className={`rounded-lg border p-2.5 text-center ${estimatedLostTons !== null && estimatedLostTons > 0 ? 'bg-rose-50 border-rose-200' : 'bg-slate-50 border-slate-200'}`}>
+                                        <p className="text-[10px] text-rose-600 font-semibold uppercase">Est. Lost Output</p>
+                                        <p className="text-lg font-black text-rose-700">
+                                            {estimatedLostTons !== null ? `${estimatedLostTons} T` : '—'}
+                                        </p>
+                                        <p className="text-[10px] text-rose-400">unplanned DT impact</p>
+                                    </div>
+                                </div>
+
+                                {/* Pareto chart */}
+                                {dtPareto.length > 0 && (
+                                    <div>
+                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Downtime by Root Cause — Pareto</p>
+                                        <div className="h-44 w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={dtPareto} margin={{ top: 4, right: 16, left: -16, bottom: 0 }} layout="vertical">
+                                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                                                    <XAxis type="number" tick={{ fontSize: 9 }} tickLine={false} axisLine={false}
+                                                        label={{ value: 'Hours', position: 'insideBottomRight', style: { fontSize: 9, fill: '#94a3b8' }, offset: 0 }} />
+                                                    <YAxis type="category" dataKey="code" tick={{ fontSize: 10, fontWeight: 600 }} tickLine={false} axisLine={false} width={32} />
+                                                    <Tooltip
+                                                        content={({ active, payload }: any) => {
+                                                            if (!active || !payload?.length) return null
+                                                            const d = payload[0].payload
+                                                            return (
+                                                                <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-2.5 text-[11px]">
+                                                                    <p className="font-bold text-slate-700">{d.code} — {d.planned ? '✅ Planned' : '🔴 Unplanned'}</p>
+                                                                    <p>{d.mins} mins ({d.hrs} hrs)</p>
+                                                                    <p className="text-muted-foreground">{d.pct}% of total · Cumulative {d.cumPct}%</p>
+                                                                </div>
+                                                            )
+                                                        }}
+                                                    />
+                                                    <Bar dataKey="hrs" name="Hours" radius={[0,3,3,0]} barSize={14}>
+                                                        {dtPareto.map((d, i) => (
+                                                            <Cell key={i} fill={d.planned ? '#3b82f6' : '#ef4444'} />
+                                                        ))}
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <p className="text-[10px] text-center text-muted-foreground mt-1">
+                                            🔴 Red = Unplanned (BD/WT/LU/MS/BL/PF/SP) &nbsp;·&nbsp; 🔵 Blue = Planned (MP/CIL/BT/PT/PW/TP/TT)
+                                        </p>
+                                    </div>
+                                )}
+                                {dtPareto.length === 0 && (
+                                    <p className="text-xs text-center text-muted-foreground italic py-2">
+                                        No detailed downtime cause data recorded for this period.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Quality KPIs */}
+
                     {(summary.avgBroken > 0 || summary.avgUnpeel > 0) && (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                             {summary.avgBroken > 0 && (
