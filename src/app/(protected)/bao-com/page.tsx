@@ -806,7 +806,8 @@ export default function BaoCom() {
         init()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const canSave = ["admin", "hr", "HSE", "hse", "hse_admin"].includes(userRole)
+    const canEdit = ["admin", "hr_admin", "hse_admin"].includes(userRole)
+    const canSave = canEdit
 
     // ─── Build summary text for kitchen ───
     const buildSummaryText = (): string => {
@@ -1533,9 +1534,9 @@ export default function BaoCom() {
                         <UtensilsCrossed className="h-6 w-6 text-orange-600" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Báo Cơm — Headcount Tracker</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Meal Reporting — Headcount Tracker</h1>
                         <p className="text-sm text-muted-foreground">
-                            Paste Zalo → Phân tích → Lưu DB → Xem lịch sử
+                            Paste Zalo messages · Parse · Save to DB · View history
                         </p>
                     </div>
                 </div>
@@ -1552,7 +1553,7 @@ export default function BaoCom() {
                     }`}
                 >
                     <ClipboardPaste className="h-4 w-4" />
-                    Nhập & Phân tích
+                    Input & Parse
                 </button>
                 <button
                     onClick={() => setActiveTab("history")}
@@ -1563,7 +1564,7 @@ export default function BaoCom() {
                     }`}
                 >
                     <History className="h-4 w-4" />
-                    Lịch sử đã lưu
+                    Saved Records
                 </button>
                 <button
                     onClick={() => setActiveTab("kitchen")}
@@ -1574,7 +1575,7 @@ export default function BaoCom() {
                     }`}
                 >
                     <MessageSquare className="h-4 w-4" />
-                    🍳 Báo cơm nhà ăn
+                    🍳 Kitchen Summary
                 </button>
                 <button
                     onClick={() => setActiveTab("monthly")}
@@ -1585,7 +1586,7 @@ export default function BaoCom() {
                     }`}
                 >
                     <span className="text-base leading-none">📅</span>
-                    Theo tháng
+                    Monthly Report
                 </button>
             </div>
 
@@ -1673,12 +1674,14 @@ export default function BaoCom() {
                                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                                     <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b">
                                         <span className="text-sm font-semibold">Chi tiết từng bộ phận</span>
+                                        {canEdit && (
                                         <button
                                             onClick={() => setAddRow({ deptId: "", officialPresent: 0, seasonalPresent: 0, vegetarian: 0, otCount: 0 })}
                                             className="flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-900 bg-green-50 border border-green-200 px-2 py-1 rounded-lg transition-colors"
                                         >
-                                            <span className="text-base leading-none">+</span> Thêm bộ phận
+                                            <span className="text-base leading-none">+</span> Add Department
                                         </button>
+                                        )}
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm">
@@ -1719,8 +1722,12 @@ export default function BaoCom() {
                                                                 <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
                                                                 <td className="px-3 py-2 text-right">{r.ot_count ?? 0}</td>
                                                                 <td className="px-2 py-2 whitespace-nowrap">
-                                                                    <button onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">✏️ Sửa</button>
-                                                                    <button onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">🗑</button>
+                                                                    {canEdit && (
+                                                                    <>
+                                                                    <button onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">✏️ Edit</button>
+                                                                    <button onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">🗑 Delete</button>
+                                                                    </>
+                                                                    )}
                                                                 </td>
                                                             </>)}
                                                         </tr>
@@ -2669,7 +2676,7 @@ export default function BaoCom() {
                                                 </th>
                                             ))}
                                             <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">TỔNG</th>
-                                            {canSave && <th className="px-2 py-2 text-center font-semibold text-muted-foreground min-w-[72px]">Sửa / Xóa</th>}
+                                            {canEdit && <th className="px-2 py-2 text-center font-semibold text-muted-foreground min-w-[72px]">Edit / Delete</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
@@ -2694,7 +2701,7 @@ export default function BaoCom() {
                                                         )
                                                     })}
                                                     <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || '—'}</td>
-                                                    {canSave && (
+                                                    {canEdit && (
                                                         <td className="px-2 py-2 text-center">
                                                             <div className="flex items-center justify-center gap-1">
                                                                 {/* Edit: go to kitchen tab for the latest date of this row */}
@@ -2749,7 +2756,7 @@ export default function BaoCom() {
                                             <td className="px-2 py-2 text-center text-primary border-l">
                                                 {historyRecords.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}
                                             </td>
-                                            {canSave && <td />}
+                                            {canEdit && <td />}
                                         </tr>
                                     </tfoot>
                                 </table>
