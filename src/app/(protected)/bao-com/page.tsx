@@ -920,13 +920,17 @@ export default function BaoCom() {
             const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
             let sectionName = r.department_name   // e.g. "Loading S1", "Shelling S2"
             const shift = r.shift ?? '1'
-            // Normalize: if sectionName equals dept code (saved from kitchen tab), derive a proper section name
-            if (sectionName === deptCode && deptCode) {
-                const displayName = DEPT_DISPLAY[deptCode] ?? deptCode
+            // Normalize: if sectionName is not a known section for this dept (e.g. kitchen tab saves
+            // 'Shelling', 'STEAMING', 'FGWH' instead of canonical 'Shelling S2', 'Steaming S1',
+            // 'Loading S1'), derive the proper section name from dept display name + shift
+            const knownSections = SECTION_ORDER[deptCode] ?? []
+            const isKnownSection = knownSections.some(s => s.toLowerCase() === sectionName.toLowerCase())
+            if (!isKnownSection && deptCode) {
+                const displayName = DEPT_DISPLAY[deptCode] ?? sectionName
                 if (shift === 'OT') {
                     sectionName = `${displayName} OT`
                 } else {
-                    sectionName = `${displayName} S${shift}`  // e.g. 'Loading S2'
+                    sectionName = `${displayName} S${shift}`  // e.g. 'Loading S2', 'Shelling S2'
                 }
             }
             // Vegetarian meals are included in the total (chay + mặn không phân biệt)
@@ -1871,8 +1875,8 @@ export default function BaoCom() {
                                                             </span>
                                                         </td>
                                                     </tr>
-                                                    {/* Section data rows */}
-                                                    {dept.sectionRows.map((sr, sIdx) => {
+                                                    {/* Section data rows — exclude shift='OT' since OT is shown in the deptOT row below */}
+                                                    {dept.sectionRows.filter(sr => sr.shift !== 'OT').map((sr, sIdx) => {
                                                         const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
                                                         const isTV = /thời vụ/i.test(sr.sectionName)
                                                         const shiftLabel = sr.shift === 'OT' ? 'OT' : `Ca ${sr.shift}`
