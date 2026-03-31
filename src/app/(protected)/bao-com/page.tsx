@@ -357,14 +357,18 @@ function parseBlock(block: string): HeadcountRecord | null {
     if (!area) {
         const firstMeaningfulLine = text.split('\n').find(l => {
             const t = l.trim()
-            return t.length > 2 && !/^(date|ngày|ngay|chính|thời|ot:|dự|trong đó)/i.test(t) && !/^\d{1,2}[./]/.test(t)
+            // Skip: empty, bullet/dash lines, lines with colons (are field labels), dates
+            return t.length > 2
+                && !/^[-–•]/.test(t)
+                && !t.includes(':')
+                && !/^(date|ngày|ngay|chính|thời|ot|dự|trong đó)/i.test(t)
+                && !/^\d{1,2}[./]/.test(t)
         })
         if (firstMeaningfulLine) {
             // Strip " - caN" or " caN" suffix to get clean area
-            area = firstMeaningfulLine.trim().replace(/\s*[-–]\s*ca\s*\d+/i, "").trim()
+            area = firstMeaningfulLine.trim().replace(/\s*[-–]\s*ca\s*\d+/i, '').trim()
         }
     }
-
 
     let shift = getField(text, ["ca"])
     const inlineShift = getField(text, ["khu vực", "khu vuc"]).match(/ca\s*:\s*(\S+)/i)
@@ -376,7 +380,8 @@ function parseBlock(block: string): HeadcountRecord | null {
     const shiftOnlyMatch = shift.match(/^[\d,\s]+/)
     if (shiftOnlyMatch) shift = shiftOnlyMatch[0].trim()
     // Fallback: extract shift from "Dept - caN" on first line (e.g. "Machine Grading - ca2")
-    if (!shift) {
+    // Also use this if shift resolved to something non-numeric (getField grabbed wrong line)
+    if (!shift || !/^\d/.test(shift)) {
         const firstLineShift = text.split('\n')[0]?.match(/[-–]\s*ca\s*(\d+)/i)
         if (firstLineShift) shift = firstLineShift[1]
     }
@@ -421,11 +426,15 @@ function parseBlock(block: string): HeadcountRecord | null {
     if (!vegTotal && vegInOT) vegTotal = parseInt(vegInOT[2])
     const otVegMatch = ot.match(/(\d+)\s*chay/i)
     if (!vegTotal && otVegMatch) vegTotal = parseInt(otVegMatch[1])
-    // Fallback: "Trong đó: - Chay: N" or standalone "Chay: N" line (not inside OT field)
+    // Fallback: scan line by line for "- Chay: N" or "Chay: N" (from "Trong đó:" block)
     if (!vegTotal) {
-        const standalonChayMatch = text.match(/(?:^|[\n\-–•])\s*chay\s*:\s*(\d+)/im)
-        if (standalonChayMatch) vegTotal = parseInt(standalonChayMatch[1])
+        for (const ln of text.split('\n')) {
+            const t = ln.trim().replace(/^[-–•]\s*/, '')  // strip leading bullet
+            const m = t.match(/^chay\s*:\s*(\d+)/i)
+            if (m) { vegTotal = parseInt(m[1]); break }
+        }
     }
+
 
 
     const lines = text.split("\n")
