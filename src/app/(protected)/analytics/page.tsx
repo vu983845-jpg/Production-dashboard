@@ -43,8 +43,6 @@ interface DailyRaw {
     actual_ton: number
     plan_ton: number
     downtime_min: number
-    broken_pct?: number
-    avg_broken_pct?: number
 }
 
 interface Department {
@@ -192,12 +190,13 @@ export default function AnalyticsPage() {
         const monthPromises = months.map(async (m) => {
             const start = format(startOfMonth(m), "yyyy-MM-dd")
             const end = format(endOfMonth(m), "yyyy-MM-dd")
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from("v_dashboard_daily")
-                .select("work_date,actual_ton,plan_ton,downtime_min,broken_pct,avg_broken_pct")
+                .select("work_date,actual_ton,plan_ton,downtime_min")
                 .eq("dept_code", selectedDept)
                 .gte("work_date", start)
                 .lte("work_date", end)
+            if (error) console.error("Analytics fetch error:", error.message)
             return { month: m, rows: (data ?? []) as DailyRaw[] }
         })
 
@@ -209,7 +208,6 @@ export default function AnalyticsPage() {
             const plan = rows.reduce((s, r) => s + Number(r.plan_ton || 0), 0)
             const downtime = rows.reduce((s, r) => s + Number(r.downtime_min || 0), 0)
             const daysWithData = rows.filter(r => Number(r.actual_ton) > 0).length
-            const sumBrokenW = rows.reduce((s, r) => s + (Number(r.broken_pct || r.avg_broken_pct || 0) * Number(r.actual_ton || 0)), 0)
             return {
                 monthLabel: formatMonthLabel(month),
                 monthKey: format(month, "yyyy-MM"),
@@ -218,7 +216,7 @@ export default function AnalyticsPage() {
                 achievePct: plan > 0 ? +(actual / plan * 100).toFixed(1) : 0,
                 downtime: +downtime.toFixed(0),
                 daysWithData,
-                avgBroken: actual > 0 ? +(sumBrokenW / actual).toFixed(2) : 0,
+                avgBroken: 0,
             }
         })
         setTrendData(trend)
