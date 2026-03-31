@@ -110,7 +110,7 @@ export function OverviewTab({
         { name: 'HCA', value: Number((dashboardsData['region-HCA']?.summary?.totalActual || 0).toFixed(1)), fill: '#059669' },
     ].filter(d => d.value > 0)
 
-    // Dept rows
+    // Dept rows — ẩn dept không có data (actual=0 AND plan=0)
     const deptRows = departments.filter(d => d.code !== 'FGWH').map(dept => {
         const s = dashboardsData[dept.id]?.summary
         return {
@@ -121,7 +121,7 @@ export function OverviewTab({
             downtime: s?.downtime || 0,
             badge: ''
         }
-    })
+    }).filter(row => row.actual > 0 || row.plan > 0)
 
     // Add FGWH ISP
     const fgwhPct = kpiSummary.fgwhTarget > 0 ? (kpiSummary.fgwhActual / kpiSummary.fgwhTarget) * 100 : 0
