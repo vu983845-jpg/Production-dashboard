@@ -929,18 +929,21 @@ export default function BaoCom() {
                     sectionName = `${displayName} S${shift}`  // e.g. 'Loading S2'
                 }
             }
-            const key = `${sectionName}|${shift}`
-            if (!sectionMap.has(key)) sectionMap.set(key, {
-                sectionName, deptCode, shift,
-                days: new Map(), officialDays: new Map(), seasonalDays: new Map()
-            })
-            const e = sectionMap.get(key)!
-            // Vegetarian meals are included in the total (chay + mặn không phân biệt trong thống kê tháng)
-            // OT count is NOT included here — it belongs to the OT row, not the regular Ca row
+            // Vegetarian meals are included in the total (chay + mặn không phân biệt)
+            // OT count is NOT included here — it belongs to the OT row
             const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0)
-            if (total > 0)          e.days.set(r.work_date, (e.days.get(r.work_date) ?? 0) + total)
-            if ((r.official_present ?? 0) > 0)  e.officialDays.set(r.work_date, (e.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
-            if ((r.seasonal_present ?? 0) > 0)  e.seasonalDays.set(r.work_date, (e.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
+            // Only create section row if there is actual headcount data (skip zero-only records)
+            if (total > 0) {
+                const key = `${sectionName}|${shift}`
+                if (!sectionMap.has(key)) sectionMap.set(key, {
+                    sectionName, deptCode, shift,
+                    days: new Map(), officialDays: new Map(), seasonalDays: new Map()
+                })
+                const e = sectionMap.get(key)!
+                e.days.set(r.work_date, (e.days.get(r.work_date) ?? 0) + total)
+                if ((r.official_present ?? 0) > 0)  e.officialDays.set(r.work_date, (e.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
+                if ((r.seasonal_present ?? 0) > 0)  e.seasonalDays.set(r.work_date, (e.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
+            }
         })
 
         // 3. Build shift-level pivot (for OT) — same as before
