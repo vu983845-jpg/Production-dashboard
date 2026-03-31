@@ -97,16 +97,24 @@ export default function ReportPage() {
     const [compressorMonthly, setCompressorMonthly] = useState<{work_date: string; total_kwh: number}[]>([])
     const [shellingEnergyMonthly, setShellingEnergyMonthly] = useState<{work_date: string; kwh: number}[]>([])
 
+    // Only show departments that have production plans + output tracked (exclude support/admin depts)
+    const PRODUCTION_DEPT_CODES = new Set([
+        'STEAM', 'SHELL', 'BORMA', 'PEEL_MC', 'CS', 'HPEEL', 'PACK', 'FGWH',
+        'MAINT_SHELL', 'MAINT_HCA',
+    ])
+
     // Load departments from DB (same as dashboard)
     useEffect(() => {
         supabase.from("departments").select("id, code, name_vi, name_en").order("sort_order")
             .then(({ data }) => {
                 if (data && data.length > 0) {
-                    setDepartments(data)
-                    setSelectedDept(data[0].code)
+                    const productionDepts = data.filter(d => PRODUCTION_DEPT_CODES.has(d.code))
+                    setDepartments(productionDepts)
+                    setSelectedDept(productionDepts[0]?.code ?? data[0].code)
                 }
             })
     }, [])
+
 
     const dept = departments.find(d => d.code === selectedDept)
 
