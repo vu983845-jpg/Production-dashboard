@@ -1819,8 +1819,11 @@ export default function BaoCom() {
                                     <table className="text-xs min-w-full border-collapse">
                                         <thead>
                                             <tr className="bg-slate-100 text-slate-700 border-b-2 border-slate-300">
-                                                <th className="px-3 py-2 font-bold text-left sticky left-0 bg-slate-100 z-10 min-w-[200px] border-r border-slate-300">
-                                                    Section
+                                                <th className="px-3 py-2 font-bold text-left sticky left-0 bg-slate-100 z-10 min-w-[160px] border-r border-slate-300">
+                                                    Bộ phận
+                                                </th>
+                                                <th className="px-2 py-2 font-bold text-center sticky left-[160px] bg-slate-100 z-10 w-10 border-r border-slate-300">
+                                                    Ca
                                                 </th>
                                                 {days.map(d => (
                                                     <th key={d} className="px-1.5 py-2 font-bold text-center w-8">
@@ -1834,31 +1837,45 @@ export default function BaoCom() {
                                             {deptGroups.map(dept => {
                                                 const deptOT = dept.shifts.find(sh => sh.shift === 'OT')
                                                 const deptOTTotal = deptOT ? [...deptOT.days.values()].reduce((a,b)=>a+b,0) : 0
+                                                const deptTotal = dept.sectionRows.reduce((s, sr) => s + [...sr.days.values()].reduce((a,b)=>a+b,0), 0) + (deptOTTotal ?? 0)
                                                 return (
                                                 <Fragment key={dept.code || dept.deptKey}>
+                                                    {/* Dept group header row */}
+                                                    <tr className="bg-slate-200 border-t-2 border-slate-400">
+                                                        <td colSpan={days.length + 3}
+                                                            className="px-3 py-1 sticky left-0 font-bold text-slate-700 text-xs uppercase tracking-wide">
+                                                            📦 {dept.name}
+                                                            <span className="ml-2 text-slate-500 font-normal normal-case tracking-normal">
+                                                                — Tổng: {deptTotal > 0 ? deptTotal : 0} phần
+                                                            </span>
+                                                        </td>
+                                                    </tr>
                                                     {/* Section data rows */}
                                                     {dept.sectionRows.map((sr, sIdx) => {
                                                         const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
                                                         const isTV = /thời vụ/i.test(sr.sectionName)
+                                                        const shiftLabel = sr.shift === 'OT' ? 'OT' : `Ca ${sr.shift}`
+                                                        const shiftColor = sr.shift === '1' ? 'bg-blue-100 text-blue-700' : sr.shift === '2' ? 'bg-emerald-100 text-emerald-700' : sr.shift === '3' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
                                                         return (
                                                             <tr key={`${sr.sectionName}|${sr.shift}`}
-                                                                className={`border-b border-slate-100 ${sIdx === 0 ? 'border-t-2 border-t-slate-300' : ''} ${isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
-                                                                <td className={`px-3 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium ${
-                                                                    sIdx === 0 ? 'border-t-2 border-t-slate-300' : ''
-                                                                } ${isTV ? 'bg-blue-50/40 italic text-blue-600' : 'bg-white'}`}>
+                                                                className={`border-b border-slate-100 ${isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
+                                                                <td className={`px-3 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium text-xs ${isTV ? 'bg-blue-50/60 italic text-blue-600' : 'bg-white text-slate-600'}`}>
                                                                     {sr.sectionName}
+                                                                </td>
+                                                                <td className={`px-1 py-1 sticky left-[160px] z-10 text-center bg-white border-r border-slate-200`}>
+                                                                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${shiftColor}`}>{shiftLabel}</span>
                                                                 </td>
                                                                 {days.map(d => {
                                                                     const v = sr.days.get(d) ?? 0
                                                                     return (
-                                                                        <td key={d} className={`px-1.5 py-1 text-center ${
-                                                                            v > 0 ? (isTV ? 'text-blue-600' : 'font-semibold text-slate-800') : 'text-slate-200'
+                                                                        <td key={d} className={`px-1.5 py-1 text-center text-xs ${
+                                                                            v > 0 ? (isTV ? 'text-blue-600 font-semibold' : 'font-semibold text-slate-800') : 'text-slate-200'
                                                                         }`}>
-                                                                            {v > 0 ? v : ''}
+                                                                            {v > 0 ? v : '—'}
                                                                         </td>
                                                                     )
                                                                 })}
-                                                                <td className={`px-2 py-1 text-center font-bold border-l border-slate-200 ${
+                                                                <td className={`px-2 py-1 text-center font-bold border-l border-slate-200 text-xs ${
                                                                     rowTotal > 0 ? (isTV ? 'text-blue-700' : 'text-slate-700') : 'text-slate-300'
                                                                 }`}>
                                                                     {rowTotal > 0 ? rowTotal : ''}
@@ -1869,20 +1886,23 @@ export default function BaoCom() {
                                                     {/* OT row for this dept group */}
                                                     {deptOT && deptOTTotal > 0 && (
                                                         <tr className="bg-orange-50 border-b border-orange-100">
-                                                            <td className="px-3 py-1 whitespace-nowrap sticky left-0 z-10 bg-orange-50 font-semibold text-orange-700 italic border-r border-orange-100">
-                                                                OT
+                                                            <td className="px-3 py-1 whitespace-nowrap sticky left-0 z-10 bg-orange-50 font-semibold text-orange-700 italic border-r border-orange-100 text-xs">
+                                                                {dept.name} (OT)
+                                                            </td>
+                                                            <td className="px-1 py-1 sticky left-[160px] z-10 text-center bg-orange-50 border-r border-orange-100">
+                                                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">OT</span>
                                                             </td>
                                                             {days.map(d => {
                                                                 const v = deptOT.days.get(d) ?? 0
                                                                 return (
-                                                                    <td key={d} className={`px-1.5 py-1 text-center ${
+                                                                    <td key={d} className={`px-1.5 py-1 text-center text-xs ${
                                                                         v > 0 ? 'text-orange-600 font-semibold' : 'text-orange-200'
                                                                     }`}>
-                                                                        {v > 0 ? v : ''}
+                                                                        {v > 0 ? v : '—'}
                                                                     </td>
                                                                 )
                                                             })}
-                                                            <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100">
+                                                            <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100 text-xs">
                                                                 {deptOTTotal}
                                                             </td>
                                                         </tr>
@@ -1894,37 +1914,44 @@ export default function BaoCom() {
                                         {/* Footer rows matching Excel format */}
                                         <tfoot>
                                             <tr className="bg-slate-700 text-white font-bold border-t-2 border-slate-500">
-                                                <td className="px-3 py-2 sticky left-0 bg-slate-700 z-10 border-r border-slate-500">Total</td>
+                                                <td className="px-3 py-2 sticky left-0 bg-slate-700 z-10 border-r border-slate-500">TỔNG</td>
+                                                <td className="px-2 py-2 sticky left-[160px] bg-slate-700 z-10 border-r border-slate-500"></td>
                                                 {dayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-2 text-center">{v > 0 ? v : ''}</td>)}
                                                 <td className="px-2 py-2 text-center border-l border-slate-500">{grandTotal}</td>
                                             </tr>
                                             <tr className="bg-blue-600 text-white text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-blue-600 z-10 font-semibold border-r border-blue-400">Ca 1:</td>
+                                                <td className="px-2 py-1.5 sticky left-[160px] bg-blue-600 z-10 border-r border-blue-400"></td>
                                                 {ca1Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-blue-400">{ca1Totals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-blue-500 text-white text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-blue-500 z-10 font-semibold border-r border-blue-300">Ca 2:</td>
+                                                <td className="px-2 py-1.5 sticky left-[160px] bg-blue-500 z-10 border-r border-blue-300"></td>
                                                 {ca2Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-blue-300">{ca2Totals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-blue-400 text-white text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-blue-400 z-10 font-semibold border-r border-blue-200">Ca 3:</td>
+                                                <td className="px-2 py-1.5 sticky left-[160px] bg-blue-400 z-10 border-r border-blue-200"></td>
                                                 {ca3Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-blue-200">{ca3Totals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-orange-500 text-white text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">OT</td>
+                                                <td className="px-2 py-1.5 sticky left-[160px] bg-orange-500 z-10 border-r border-orange-300"></td>
                                                 {otDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-orange-300">{otDayTotals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-purple-100 text-purple-800 text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-purple-100 z-10 font-semibold border-r border-purple-200">Thời vụ</td>
+                                                <td className="px-2 py-1.5 sticky left-[160px] bg-purple-100 z-10 border-r border-purple-200"></td>
                                                 {tvDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-purple-200">{tvDayTotals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-green-100 text-green-800 text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-green-100 z-10 font-semibold border-r border-green-200">Chính thức</td>
+                                                <td className="px-2 py-1.5 sticky left-[160px] bg-green-100 z-10 border-r border-green-200"></td>
                                                 {ctDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-green-200">{ctDayTotals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
