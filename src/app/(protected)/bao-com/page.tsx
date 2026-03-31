@@ -1203,11 +1203,38 @@ export default function BaoCom() {
             const deptId = getEffectiveDeptId(r, i)
             const _area = getEffectiveArea(r, i)
             const canonicalName = getCanonicalDeptName(r, i, deptId)
+            const workDate = dateToISO(r.date)
+            const shift = r.shift.replace(/[^1-3]/g, '') || '1'
+
+            // ── Check nếu data đã tồn tại ──
+            const { data: existing } = await supabase
+                .from('meal_headcount')
+                .select('id, official_present, seasonal_present, vegetarian, ot_count')
+                .eq('work_date', workDate)
+                .eq('department_name', canonicalName)
+                .eq('shift', shift)
+                .maybeSingle()
+
+            if (existing) {
+                const existSummary = `CT: ${existing.official_present ?? 0}, TV: ${existing.seasonal_present ?? 0}, Chay: ${existing.vegetarian ?? 0}, OT: ${existing.ot_count ?? 0}`
+                const ok = window.confirm(
+                    `⚠️ Đã có dữ liệu cho:\n` +
+                    `📅 ${workDate}  |  Bộ phận: ${canonicalName}  |  Ca ${shift}\n` +
+                    `Dữ liệu cũ: ${existSummary}\n\n` +
+                    `Bạn có muốn ghi đè lại không?`
+                )
+                if (!ok) {
+                    setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '⏭ Bỏ qua (đã có data)' } }))
+                    setConfirmingRow(null)
+                    return
+                }
+            }
+
             const payload = {
-                work_date: dateToISO(r.date),
+                work_date: workDate,
                 department_name: canonicalName,
                 department_id: deptId,
-                shift: r.shift.replace(/[^1-3]/g, '') || '1',
+                shift,
                 official_present: r.officialPresent ?? 0,
                 official_absent: r.officialAbsent ?? 0,
                 seasonal_present: r.seasonalPresent ?? 0,
@@ -1222,7 +1249,7 @@ export default function BaoCom() {
             if (error) throw error
 
             setConfirmedRows(prev => new Set([...prev, i]))
-            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: '✓ Đã lưu' } }))
+            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: existing ? '✓ Đã ghi đè' : '✓ Đã lưu' } }))
         } catch (e) {
             setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '❌ ' + (e instanceof Error ? e.message : String(e)) } }))
         } finally {
