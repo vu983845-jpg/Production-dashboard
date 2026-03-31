@@ -502,17 +502,28 @@ export default function ReportPage() {
     })()
 
     const dtPlannedMins = downtimeEvents.reduce((s, e) => PLANNED_CODES.has(e.root_cause) ? s + Number(e.duration_mins || 0) : s, 0)
-    const dtUnplannedMins = (summary?.totalDowntime || 0) - Math.max(0, dtPlannedMins)
+    const dtUnplannedMins = Math.max(0, (summary?.totalDowntime || 0) - Math.max(0, dtPlannedMins))
 
     // Estimated lost production: unplanned downtime hours × avg throughput (T/h)
-    const avgThroughputPerHr = (() => {
+    // Use actual run_hours from shelling data if available; otherwise skip estimate
+    const { avgThroughputPerHr, throughputMethod } = (() => {
+        // Method 1: use real run_hours from shelling line records
+        if (shellingLines && shellingLines.length > 0) {
+            const totalTons = shellingLines.reduce((s,r) => s + Number(r.actual_ton || 0), 0)
+            const totalRunHrs = shellingLines.reduce((s,r) => s + Number(r.run_hours || 0), 0)
+            if (totalRunHrs > 0 && totalTons > 0) {
+                return { avgThroughputPerHr: totalTons / totalRunHrs, throughputMethod: 'shelling run_hours' }
+            }
+        }
+        // Method 2: fallback — daily records ÷ actual working hours (assume 20h/day for 3-shift)
         const daysWithOutput = records.filter(r => r.actual_ton > 0)
-        if (!daysWithOutput.length) return null
+        if (!daysWithOutput.length) return { avgThroughputPerHr: null, throughputMethod: null }
         const totalTons = daysWithOutput.reduce((s,r) => s + r.actual_ton, 0)
-        const totalProductiveHrs = daysWithOutput.length * 8
-        return totalTons / totalProductiveHrs
+        const totalProductiveHrs = daysWithOutput.length * 20 // 3-shift factory ~20h net
+        return { avgThroughputPerHr: totalTons / totalProductiveHrs, throughputMethod: 'daily ÷ 20h' }
     })()
-    const estimatedLostTons = avgThroughputPerHr !== null
+
+    const estimatedLostTons = avgThroughputPerHr !== null && dtUnplannedMins > 0
         ? +((dtUnplannedMins / 60) * avgThroughputPerHr).toFixed(1)
         : null
 
@@ -998,8 +1009,37 @@ export default function ReportPage() {
                         <span className="text-sm text-muted-foreground">{summary.daysWithData} days with data</span>
                     </div>
 
+                    {/* ── Sticky Report Navigator ── */}
+                    <div className="sticky top-0 z-20 -mx-1 px-1 py-1.5">
+                        <div className="bg-white/90 backdrop-blur-md border border-slate-200 rounded-xl shadow-sm px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0 mr-1">
+                                {language === 'vi' ? 'Mục lục' : 'Navigate'}
+                            </span>
+                            {[
+                                { id: 'report-kpi', icon: '📊', label: language === 'vi' ? 'KPI' : 'KPIs', always: true },
+                                { id: 'report-daily', icon: '📈', label: language === 'vi' ? 'Sản lượng' : 'Output Trend', always: true },
+                                { id: 'report-downtime', icon: '⚠️', label: language === 'vi' ? 'Downtime' : 'Downtime', show: summary.totalDowntime > 0 },
+                                { id: 'report-manpower', icon: '👷', label: language === 'vi' ? 'Nhân lực' : 'Manpower', show: Object.keys(headcountDaily).length > 0 },
+                                { id: 'report-shelling', icon: '🦐', label: language === 'vi' ? 'Shelling Lines' : 'Shelling', show: selectedDept === 'SHELL' },
+                                { id: 'report-oee', icon: '⚙️', label: 'OEE', show: selectedDept === 'SHELL' },
+                                { id: 'report-energy', icon: '⚡', label: language === 'vi' ? 'Năng lượng' : 'Energy', show: ['PEEL_MC','CS'].includes(selectedDept) },
+                                { id: 'report-table', icon: '🗒️', label: language === 'vi' ? 'Chi tiết' : 'Detail Table', always: true },
+                            ].filter(s => s.always || s.show).map(s => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                                    className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-slate-200 text-slate-600 hover:bg-primary hover:text-white hover:border-primary transition-all duration-150 whitespace-nowrap"
+                                >
+                                    <span>{s.icon}</span>
+                                    <span>{s.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* KPI Cards — Production + Quality in one row */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div id="report-kpi" className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
                         <KPICard label="Actual Production" value={`${summary.totalActual.toFixed(1)} T`}
                             sub={`Plan: ${summary.totalPlan.toFixed(1)} T`} />
                         <KPICard
@@ -1027,7 +1067,7 @@ export default function ReportPage() {
 
                     {/* ── SECTION 1: Daily Output vs Plan ──────────────────── */}
                     {dailyOutputChartData.length > 0 && (
-                        <Card className="border-emerald-100">
+                        <Card className="border-emerald-100" id="report-daily">
                             <CardHeader className="pb-2 border-b bg-emerald-50/40">
                                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                                     📊 Daily Production — Actual vs Plan
@@ -1089,12 +1129,12 @@ export default function ReportPage() {
 
                     {/* ── SECTION 2: Downtime Impact Analysis ────────────── */}
                     {summary.totalDowntime > 0 && (
-                        <Card className="border-red-100">
+                        <Card className="border-red-100" id="report-downtime">
                             <CardHeader className="pb-2 border-b bg-red-50/40">
                                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                    ⚠️ Downtime Impact Analysis
+                                    ⚠️ {language === 'vi' ? 'Phân tích Ảnh hưởng Downtime' : 'Downtime Impact Analysis'}
                                     <span className="text-xs font-normal text-muted-foreground">
-                                        Total: {summary.totalDowntime} mins ({(summary.totalDowntime/60).toFixed(1)} hrs)
+                                        {language === 'vi' ? 'Tổng' : 'Total'}: {summary.totalDowntime} mins ({(summary.totalDowntime/60).toFixed(1)} hrs)
                                     </span>
                                 </CardTitle>
                             </CardHeader>
@@ -1102,56 +1142,85 @@ export default function ReportPage() {
                                 {/* KPI row */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                     <div className="rounded-lg bg-red-50 border border-red-200 p-2.5 text-center">
-                                        <p className="text-[10px] text-red-600 font-semibold uppercase">Unplanned DT</p>
-                                        <p className="text-lg font-black text-red-700">{Math.max(0, dtUnplannedMins)} min</p>
-                                        <p className="text-[10px] text-red-500">{(Math.max(0,dtUnplannedMins)/60).toFixed(1)} hrs</p>
+                                        <p className="text-[10px] text-red-600 font-semibold uppercase">
+                                            {language === 'vi' ? 'DT Ngoài kế hoạch' : 'Unplanned DT'}
+                                        </p>
+                                        <p className="text-lg font-black text-red-700">{dtUnplannedMins} min</p>
+                                        <p className="text-[10px] text-red-500">{(dtUnplannedMins/60).toFixed(1)} hrs</p>
                                     </div>
                                     <div className="rounded-lg bg-blue-50 border border-blue-200 p-2.5 text-center">
-                                        <p className="text-[10px] text-blue-600 font-semibold uppercase">Planned DT</p>
+                                        <p className="text-[10px] text-blue-600 font-semibold uppercase">
+                                            {language === 'vi' ? 'DT Có kế hoạch' : 'Planned DT'}
+                                        </p>
                                         <p className="text-lg font-black text-blue-700">{dtPlannedMins} min</p>
                                         <p className="text-[10px] text-blue-500">{(dtPlannedMins/60).toFixed(1)} hrs</p>
                                     </div>
                                     <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-center">
-                                        <p className="text-[10px] text-amber-600 font-semibold uppercase">Unplanned %</p>
-                                        <p className="text-lg font-black text-amber-700">
-                                            {summary.totalDowntime > 0 ? ((Math.max(0,dtUnplannedMins)/summary.totalDowntime)*100).toFixed(0) : 0}%
+                                        <p className="text-[10px] text-amber-600 font-semibold uppercase">
+                                            {language === 'vi' ? '% Ngoài kế hoạch' : 'Unplanned %'}
                                         </p>
-                                        <p className="text-[10px] text-amber-500">of total DT</p>
+                                        <p className="text-lg font-black text-amber-700">
+                                            {summary.totalDowntime > 0 ? ((dtUnplannedMins/summary.totalDowntime)*100).toFixed(0) : 0}%
+                                        </p>
+                                        <p className="text-[10px] text-amber-500">
+                                            {language === 'vi' ? 'so với tổng DT' : 'of total DT'}
+                                        </p>
                                     </div>
                                     <div className={`rounded-lg border p-2.5 text-center ${estimatedLostTons !== null && estimatedLostTons > 0 ? 'bg-rose-50 border-rose-200' : 'bg-slate-50 border-slate-200'}`}>
-                                        <p className="text-[10px] text-rose-600 font-semibold uppercase">Est. Lost Output</p>
+                                        <p className="text-[10px] text-rose-600 font-semibold uppercase">
+                                            {language === 'vi' ? 'Sản lượng Mất ước tính' : 'Est. Lost Output'}
+                                        </p>
                                         <p className="text-lg font-black text-rose-700">
                                             {estimatedLostTons !== null ? `${estimatedLostTons} T` : '—'}
                                         </p>
-                                        <p className="text-[10px] text-rose-400">unplanned DT impact</p>
+                                        <p className="text-[10px] text-rose-400">
+                                            {avgThroughputPerHr !== null
+                                                ? `${avgThroughputPerHr.toFixed(2)} T/h × ${(dtUnplannedMins/60).toFixed(1)} h`
+                                                : (language === 'vi' ? 'không đủ dữ liệu' : 'insufficient data')}
+                                        </p>
                                     </div>
                                 </div>
+
+                                {/* Formula explanation */}
+                                {estimatedLostTons !== null && (
+                                    <div className="text-[10px] text-muted-foreground bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 leading-relaxed">
+                                        <span className="font-semibold text-slate-600">
+                                            {language === 'vi' ? '📌 Cách tính: ' : '📌 Formula: '}
+                                        </span>
+                                        {language === 'vi'
+                                            ? `Sản lượng mất ≈ Downtime ngoài KH (${(dtUnplannedMins/60).toFixed(1)} giờ) × Năng suất thực tế (${avgThroughputPerHr?.toFixed(2)} T/h từ ${throughputMethod === 'shelling run_hours' ? 'tổng run_hours thực chạy' : 'sản lượng ngày ÷ 20h ca'}). Đây là ước tính — không tính downtime có kế hoạch (MP, CIL, BT…).`
+                                            : `Est. lost ≈ Unplanned downtime (${(dtUnplannedMins/60).toFixed(1)} h) × actual throughput (${avgThroughputPerHr?.toFixed(2)} T/h from ${throughputMethod === 'shelling run_hours' ? 'actual shelling run_hours' : 'daily output ÷ 20h shifts'}). Planned downtime (MP, CIL, BT…) is excluded.`
+                                        }
+                                    </div>
+                                )}
 
                                 {/* Pareto chart */}
                                 {dtPareto.length > 0 && (
                                     <div>
-                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Downtime by Root Cause — Pareto</p>
+                                        <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">
+                                            {language === 'vi' ? 'Downtime theo Nguyên nhân — Pareto' : 'Downtime by Root Cause — Pareto'}
+                                        </p>
                                         <div className="h-44 w-full">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={dtPareto} margin={{ top: 4, right: 16, left: -16, bottom: 0 }} layout="vertical">
                                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                                     <XAxis type="number" tick={{ fontSize: 9 }} tickLine={false} axisLine={false}
-                                                        label={{ value: 'Hours', position: 'insideBottomRight', style: { fontSize: 9, fill: '#94a3b8' }, offset: 0 }} />
-                                                    <YAxis type="category" dataKey="code" tick={{ fontSize: 10, fontWeight: 600 }} tickLine={false} axisLine={false} width={32} />
+                                                        label={{ value: language === 'vi' ? 'Giờ' : 'Hours', position: 'insideBottomRight', style: { fontSize: 9, fill: '#94a3b8' }, offset: 0 }} />
+                                                    <YAxis type="category" dataKey="code" tick={{ fontSize: 10, fontWeight: 600 }} tickLine={false} axisLine={false} width={36} />
                                                     <Tooltip
                                                         content={({ active, payload }: any) => {
                                                             if (!active || !payload?.length) return null
                                                             const d = payload[0].payload
                                                             return (
                                                                 <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-2.5 text-[11px]">
-                                                                    <p className="font-bold text-slate-700">{d.code} — {d.planned ? '✅ Planned' : '🔴 Unplanned'}</p>
+                                                                    <p className="font-bold text-slate-700">{d.code} — {d.planned ? (language === 'vi' ? '✅ Có KH' : '✅ Planned') : (language === 'vi' ? '🔴 Ngoài KH' : '🔴 Unplanned')}</p>
                                                                     <p>{d.mins} mins ({d.hrs} hrs)</p>
-                                                                    <p className="text-muted-foreground">{d.pct}% of total · Cumulative {d.cumPct}%</p>
+                                                                    <p className="text-muted-foreground">{d.pct}% {language === 'vi' ? 'tổng' : 'of total'} · {language === 'vi' ? 'Tích lũy' : 'Cumulative'} {d.cumPct}%</p>
                                                                 </div>
                                                             )
                                                         }}
                                                     />
-                                                    <Bar dataKey="hrs" name="Hours" radius={[0,3,3,0]} barSize={14}>
+                                                    <Bar dataKey="hrs" name={language === 'vi' ? 'Giờ' : 'Hours'} radius={[0,3,3,0]} barSize={14}>
                                                         {dtPareto.map((d, i) => (
                                                             <Cell key={i} fill={d.planned ? '#3b82f6' : '#ef4444'} />
                                                         ))}
@@ -1160,13 +1229,13 @@ export default function ReportPage() {
                                             </ResponsiveContainer>
                                         </div>
                                         <p className="text-[10px] text-center text-muted-foreground mt-1">
-                                            🔴 Red = Unplanned (BD/WT/LU/MS/BL/PF/SP) &nbsp;·&nbsp; 🔵 Blue = Planned (MP/CIL/BT/PT/PW/TP/TT)
+                                            🔴 {language === 'vi' ? 'Đỏ = Ngoài kế hoạch' : 'Red = Unplanned'} (BD/WT/LU/MS/BL/PF/SP) &nbsp;·&nbsp; 🔵 {language === 'vi' ? 'Xanh = Có kế hoạch' : 'Blue = Planned'} (MP/CIL/BT/PT/PW/TP/TT)
                                         </p>
                                     </div>
                                 )}
                                 {dtPareto.length === 0 && (
                                     <p className="text-xs text-center text-muted-foreground italic py-2">
-                                        No detailed downtime cause data recorded for this period.
+                                        {language === 'vi' ? 'Chưa có dữ liệu nguyên nhân downtime cho kỳ này.' : 'No detailed downtime cause data recorded for this period.'}
                                     </p>
                                 )}
                             </CardContent>
@@ -1175,6 +1244,7 @@ export default function ReportPage() {
 
 
                     {/* ── Manpower Efficiency Deep-Dive (from Báo Cơm) ── */}
+                    <div id="report-manpower" />
                     {(() => {
                         const hcEntries = Object.entries(headcountDaily).sort(([a], [b]) => a.localeCompare(b))
                         if (hcEntries.length === 0) return null
@@ -1435,7 +1505,7 @@ export default function ReportPage() {
 
                     {/* Shelling Lines Summary */}
                     {selectedDept === "SHELL" && (
-                        <div className="space-y-6">
+                        <div id="report-shelling" className="space-y-6">
                             <Card>
                             <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-slate-50/50">
                                 <CardTitle className="text-sm font-bold text-slate-800">Shelling Lines — {language === 'vi' ? 'Tổng tháng' : 'Monthly Total'}</CardTitle>
@@ -1546,6 +1616,7 @@ export default function ReportPage() {
                         </Card>
 
                         {/* OEE Summary KPI Cards */}
+                        <div id="report-oee" />
                         {oeeSummaryByLine.length > 0 && (
                             <Card>
                                 <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-indigo-50/30">
@@ -2228,6 +2299,7 @@ export default function ReportPage() {
                 )}
 
                     {/* Compressor kWh vs Production Chart */}
+                    <div id="report-energy" />
                     {['PEEL_MC', 'CS'].includes(selectedDept) && compressorMonthly.length > 0 && (() => {
                         const chartData = records.map(r => {
                             const comp = compressorMonthly.find(c => c.work_date === r.work_date)
@@ -2277,6 +2349,7 @@ export default function ReportPage() {
                     })()}
 
                     {/* Daily Detail Table — hidden for SHELL (Shelling Shift Details below is more granular) */}
+                    <div id="report-table" />
                     {selectedDept !== 'SHELL' && (
                         <Card>
                             <CardHeader className="pb-2">
