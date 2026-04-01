@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Bot, Send, Loader2, Check, AlertCircle, Sparkles, RotateCcw } from "lucide-react"
+import { Bot, Send, Loader2, Check, AlertCircle, Sparkles, RotateCcw, RefreshCw } from "lucide-react"
 import { format } from "date-fns"
 
 interface MealRow {
@@ -18,11 +18,20 @@ interface MealRow {
     vegetarian: number
 }
 
+interface DiffRow {
+    row: MealRow
+    existing: Record<string, number>
+    deptId: string
+}
+
 interface Message {
     role: "user" | "assistant"
     content: string
     rows?: MealRow[]
     confirmed?: boolean
+    // For update-confirm messages
+    diffRows?: DiffRow[]
+    updateConfirmed?: boolean
 }
 
 interface Props {
@@ -42,6 +51,12 @@ const INITIAL_MSG: Message = {
     content: "Xin chào! Nhập báo cơm bằng ngôn ngữ tự nhiên — tôi sẽ parse và hiển thị bảng để bạn xác nhận trước khi lưu.\n\nVí dụ: *Ca 1 hôm nay: SHELL 45, STEAM 30, PEEL 20 chính thức*",
 }
 
+const NUM_FIELDS = ["official_present", "seasonal_present", "official_absent", "seasonal_absent", "ot_count", "vegetarian"] as const
+
+function isSameData(row: MealRow, existing: Record<string, number>) {
+    return NUM_FIELDS.every(f => (row[f] ?? 0) === (existing[f] ?? 0))
+}
+
 export function MealAiChat({ deptList, onSaveSuccess }: Props) {
     const supabase = createClient()
     const [input, setInput] = useState("")
@@ -50,7 +65,6 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
     const [saving, setSaving] = useState<string | null>(null)
     const [saveResults, setSaveResults] = useState<Record<string, "ok" | "err">>({})
     const endRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -58,6 +72,21 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
 
     const findDeptId = (code: string) =>
         deptList.find(d => d.code === code)?.id ?? null
+
+    const doUpsert = async (row: MealRow, deptId: string) => {
+        return supabase.from("meal_headcount").upsert({
+            work_date: row.date,
+            department_id: deptId,
+            department_name: row.dept_display,
+            shift: row.shift,
+            official_present: row.official_present ?? 0,
+            official_absent: row.official_absent ?? 0,
+            seasonal_present: row.seasonal_present ?? 0,
+            seasonal_absent: row.seasonal_absent ?? 0,
+            ot_count: row.ot_count ?? 0,
+            vegetarian: row.vegetarian ?? 0,
+        }, { onConflict: "work_date,department_id,shift" })
+    }
 
     const sendMessage = async (overrideInput?: string) => {
         const text = (overrideInput ?? input).trim()
@@ -88,39 +117,96 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
         }
     }
 
+    // Main confirm: check existing before saving
     const handleConfirm = async (msgIdx: number, rows: MealRow[]) => {
         const key = `msg-${msgIdx}`
         setSaving(key)
-        const errors: string[] = []
+
+        const toInsert: { row: MealRow; deptId: string }[] = []
+        const toUpdate: DiffRow[] = []
+        const alreadySame: string[] = []
+        const notFound: string[] = []
 
         for (const row of rows) {
             const deptId = findDeptId(row.dept_code)
-            if (!deptId) { errors.push(`Không tìm thấy bộ phận: ${row.dept_code}`); continue }
-            const { error } = await supabase.from("meal_headcount").upsert({
-                work_date: row.date,
-                department_id: deptId,
-                department_name: row.dept_display,
-                shift: row.shift,
-                official_present: row.official_present ?? 0,
-                official_absent: row.official_absent ?? 0,
-                seasonal_present: row.seasonal_present ?? 0,
-                seasonal_absent: row.seasonal_absent ?? 0,
-                ot_count: row.ot_count ?? 0,
-                vegetarian: row.vegetarian ?? 0,
-            }, { onConflict: "work_date,department_id,shift" })
+            if (!deptId) { notFound.push(row.dept_code); continue }
+
+            // Check existing record
+            const { data: existing } = await supabase
+                .from("meal_headcount")
+                .select("official_present,seasonal_present,official_absent,seasonal_absent,ot_count,vegetarian")
+                .eq("work_date", row.date)
+                .eq("department_id", deptId)
+                .eq("shift", row.shift)
+                .maybeSingle()
+
+            if (!existing) {
+                toInsert.push({ row, deptId })
+            } else if (isSameData(row, existing as Record<string, number>)) {
+                alreadySame.push(`${row.dept_display} Ca${row.shift}`)
+            } else {
+                toUpdate.push({ row, existing: existing as Record<string, number>, deptId })
+            }
+        }
+
+        // Save new records immediately
+        const errors: string[] = []
+        for (const { row, deptId } of toInsert) {
+            const { error } = await doUpsert(row, deptId)
             if (error) errors.push(`${row.dept_display} Ca${row.shift}: ${error.message}`)
         }
 
         setSaving(null)
-        setSaveResults(prev => ({ ...prev, [key]: errors.length === 0 ? "ok" : "err" }))
         setMessages(prev => prev.map((m, i) => i === msgIdx ? { ...m, confirmed: true } : m))
+        setSaveResults(prev => ({ ...prev, [key]: errors.length === 0 ? "ok" : "err" }))
+
+        // Build summary message
+        const lines: string[] = []
+        if (toInsert.length > 0 && errors.length === 0)
+            lines.push(`✅ Đã lưu mới: ${toInsert.map(x => `${x.row.dept_display} Ca${x.row.shift}`).join(", ")}`)
+        if (errors.length > 0)
+            lines.push(`❌ Lỗi khi lưu:\n${errors.join("\n")}`)
+        if (alreadySame.length > 0)
+            lines.push(`ℹ️ Đã có dữ liệu giống hệt, bỏ qua: ${alreadySame.join(", ")}`)
+        if (notFound.length > 0)
+            lines.push(`⚠️ Không tìm thấy bộ phận: ${notFound.join(", ")}`)
+
+        if (toUpdate.length > 0) {
+            lines.push(`🔄 ${toUpdate.length} dòng có số liệu khác — xem bên dưới để xác nhận cập nhật.`)
+        }
+
+        setMessages(prev => [...prev, {
+            role: "assistant",
+            content: lines.join("\n") || "Đã xử lý.",
+            diffRows: toUpdate.length > 0 ? toUpdate : undefined,
+        }])
+
+        if (toInsert.length > 0 || alreadySame.length > 0) onSaveSuccess?.()
+    }
+
+    // Confirm update for diffRows
+    const handleConfirmUpdate = async (msgIdx: number, diffRows: DiffRow[]) => {
+        const key = `update-${msgIdx}`
+        setSaving(key)
+        const errors: string[] = []
+        for (const { row, deptId } of diffRows) {
+            const { error } = await doUpsert(row, deptId)
+            if (error) errors.push(`${row.dept_display} Ca${row.shift}: ${error.message}`)
+        }
+        setSaving(null)
+        setMessages(prev => prev.map((m, i) => i === msgIdx ? { ...m, updateConfirmed: true } : m))
         setMessages(prev => [...prev, {
             role: "assistant",
             content: errors.length === 0
-                ? `✅ Đã lưu ${rows.length} dòng báo cơm thành công!`
-                : `⚠️ Có lỗi:\n${errors.join("\n")}`,
+                ? `✅ Đã cập nhật ${diffRows.length} dòng thành công!`
+                : `❌ Lỗi:\n${errors.join("\n")}`,
         }])
         onSaveSuccess?.()
+    }
+
+    const handleRejectUpdate = (msgIdx: number) => {
+        setMessages(prev => prev.map((m, i) => i === msgIdx ? { ...m, updateConfirmed: true } : m))
+        setMessages(prev => [...prev, { role: "assistant", content: "↩️ Đã bỏ qua cập nhật. Số liệu cũ được giữ nguyên." }])
     }
 
     const handleReject = (msgIdx: number) => {
@@ -187,7 +273,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                             </div>
                         )}
 
-                        <div className={`max-w-[85%] space-y-2 ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col`}>
+                        <div className={`max-w-[90%] space-y-2 ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col`}>
                             {/* Bubble */}
                             <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                                 msg.role === "user"
@@ -201,13 +287,11 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                 )}
                             </div>
 
-                            {/* Preview Table */}
+                            {/* Preview Table (new records) */}
                             {msg.rows && msg.rows.length > 0 && !msg.confirmed && (
                                 <div className="w-full bg-white border border-orange-200/80 rounded-xl overflow-hidden shadow-md">
                                     <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-2.5 border-b border-orange-100 flex items-center justify-between">
-                                        <p className="text-sm font-bold text-orange-700 flex items-center gap-2">
-                                            📋 Preview — {msg.rows.length} dòng chờ xác nhận
-                                        </p>
+                                        <p className="text-sm font-bold text-orange-700">📋 Preview — {msg.rows.length} dòng chờ xác nhận</p>
                                         <p className="text-xs text-orange-500">Kiểm tra trước khi lưu</p>
                                     </div>
                                     <div className="overflow-x-auto">
@@ -225,10 +309,8 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                             </thead>
                                             <tbody>
                                                 {msg.rows.map((r, ri) => (
-                                                    <tr key={ri} className={`border-t border-slate-100 transition-colors ${ri % 2 === 0 ? "bg-white" : "bg-slate-50/40"} hover:bg-orange-50/50`}>
-                                                        <td className="px-4 py-3 font-mono text-slate-600 font-medium">
-                                                            {format(new Date(r.date), "dd/MM/yyyy")}
-                                                        </td>
+                                                    <tr key={ri} className={`border-t border-slate-100 ${ri % 2 === 0 ? "bg-white" : "bg-slate-50/40"} hover:bg-orange-50/50`}>
+                                                        <td className="px-4 py-3 font-mono text-slate-600 font-medium">{format(new Date(r.date), "dd/MM/yyyy")}</td>
                                                         <td className="px-4 py-3">
                                                             <span className="font-semibold text-slate-800">{r.dept_display}</span>
                                                             <span className="ml-2 text-xs text-slate-400 font-mono">({r.dept_code})</span>
@@ -246,24 +328,14 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                             <tfoot>
                                                 <tr className="border-t-2 border-orange-200 bg-orange-50/80">
                                                     <td colSpan={3} className="px-4 py-2 text-xs font-bold text-orange-700">TỔNG</td>
-                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">
-                                                        {msg.rows.reduce((s, r) => s + (r.official_present ?? 0), 0)}
-                                                    </td>
-                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">
-                                                        {msg.rows.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}
-                                                    </td>
-                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">
-                                                        {msg.rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)}
-                                                    </td>
-                                                    <td className="px-4 py-2 text-center font-bold text-green-700">
-                                                        {msg.rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}
-                                                    </td>
+                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">{msg.rows.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
+                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">{msg.rows.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
+                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">{msg.rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)}</td>
+                                                    <td className="px-4 py-2 text-center font-bold text-green-700">{msg.rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
                                                 </tr>
                                             </tfoot>
                                         </table>
                                     </div>
-
-                                    {/* Confirm / Cancel */}
                                     <div className="flex gap-3 p-4 border-t border-orange-100 bg-orange-50/50">
                                         <button
                                             onClick={() => handleConfirm(idx, msg.rows!)}
@@ -271,7 +343,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                             className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 shadow-md shadow-orange-200 text-sm"
                                         >
                                             {saving === `msg-${idx}` ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin" /> Đang lưu...</>
+                                                <><Loader2 className="h-4 w-4 animate-spin" /> Đang kiểm tra...</>
                                             ) : (
                                                 <><Check className="h-4 w-4" /> Xác nhận lưu {msg.rows.length} dòng</>
                                             )}
@@ -287,6 +359,77 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                 </div>
                             )}
 
+                            {/* Diff Table (update confirmation) */}
+                            {msg.diffRows && msg.diffRows.length > 0 && !msg.updateConfirmed && (
+                                <div className="w-full bg-white border border-amber-300 rounded-xl overflow-hidden shadow-md">
+                                    <div className="bg-amber-50 px-4 py-2.5 border-b border-amber-200 flex items-center gap-2">
+                                        <RefreshCw className="h-4 w-4 text-amber-600" />
+                                        <p className="text-sm font-bold text-amber-700">Số liệu khác — có muốn cập nhật?</p>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-slate-50/80 text-slate-500 text-xs font-bold uppercase">
+                                                    <th className="px-3 py-2 text-left">Bộ phận / Ca</th>
+                                                    <th className="px-3 py-2 text-center">Chính thức</th>
+                                                    <th className="px-3 py-2 text-center">Thời vụ</th>
+                                                    <th className="px-3 py-2 text-center">OT</th>
+                                                    <th className="px-3 py-2 text-center">Chay</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {msg.diffRows.map((d, di) => (
+                                                    <tr key={di} className="border-t border-slate-100">
+                                                        <td className="px-3 py-2">
+                                                            <span className="font-semibold">{d.row.dept_display}</span>
+                                                            <span className="ml-1 text-xs bg-orange-100 text-orange-700 rounded px-1.5 py-0.5">Ca {d.row.shift}</span>
+                                                            <div className="text-xs text-slate-400">{format(new Date(d.row.date), "dd/MM/yyyy")}</div>
+                                                        </td>
+                                                        {(["official_present", "seasonal_present", "ot_count", "vegetarian"] as const).map(f => {
+                                                            const oldVal = d.existing[f] ?? 0
+                                                            const newVal = d.row[f] ?? 0
+                                                            const changed = oldVal !== newVal
+                                                            return (
+                                                                <td key={f} className="px-3 py-2 text-center">
+                                                                    {changed ? (
+                                                                        <div className="flex flex-col items-center gap-0.5">
+                                                                            <span className="line-through text-slate-400 text-xs">{oldVal}</span>
+                                                                            <span className="font-bold text-amber-700 bg-amber-50 rounded px-1.5">{newVal}</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-slate-500">{newVal}</span>
+                                                                    )}
+                                                                </td>
+                                                            )
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="flex gap-3 p-4 border-t border-amber-100 bg-amber-50/40">
+                                        <button
+                                            onClick={() => handleConfirmUpdate(idx, msg.diffRows!)}
+                                            disabled={saving === `update-${idx}`}
+                                            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-2.5 rounded-xl hover:opacity-90 disabled:opacity-60 shadow-sm text-sm"
+                                        >
+                                            {saving === `update-${idx}` ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin" /> Đang cập nhật...</>
+                                            ) : (
+                                                <><RefreshCw className="h-4 w-4" /> Cập nhật {msg.diffRows.length} dòng</>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => handleRejectUpdate(idx)}
+                                            disabled={saving === `update-${idx}`}
+                                            className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 border border-slate-200 rounded-xl bg-white"
+                                        >
+                                            Giữ nguyên
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Confirmed badge */}
                             {msg.rows && msg.confirmed && (
                                 <div className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full ${
@@ -295,7 +438,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                         : "bg-slate-100 text-slate-500"
                                 }`}>
                                     {saveResults[`msg-${idx}`] === "ok"
-                                        ? <><Check className="h-3 w-3" /> Đã lưu thành công</>
+                                        ? <><Check className="h-3 w-3" /> Đã xử lý</>
                                         : <><AlertCircle className="h-3 w-3" /> Đã xử lý</>
                                     }
                                 </div>
@@ -327,7 +470,6 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                 <div className="flex gap-3 items-end">
                     <div className="flex-1 relative">
                         <textarea
-                            ref={inputRef}
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => {
