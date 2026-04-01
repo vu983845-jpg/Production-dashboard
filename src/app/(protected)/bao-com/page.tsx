@@ -732,7 +732,7 @@ export default function BaoCom() {
     const [records, setRecords] = useState<HeadcountRecord[]>([])
     const [parsed, setParsed] = useState(false)
     const [copied, setCopied] = useState(false)
-    const [activeTab, setActiveTab] = useState<"parse" | "history" | "kitchen" | "monthly" | "ai-chat">("parse")
+    const [activeTab, setActiveTab] = useState<"history" | "kitchen" | "monthly" | "ai-chat">("ai-chat")
 
     const [areaOverrides, setAreaOverrides] = useState<Record<number, string>>({})
     const [showSummary, setShowSummary] = useState(false)
@@ -1567,17 +1567,7 @@ export default function BaoCom() {
 
             {/* Tab navigation */}
             <div className="flex border-b">
-                <button
-                    onClick={() => setActiveTab("parse")}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                        activeTab === "parse"
-                            ? "border-orange-500 text-orange-600"
-                            : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                    <ClipboardPaste className="h-4 w-4" />
-                    Input & Parse
-                </button>
+
                 <button
                     onClick={() => setActiveTab("history")}
                     className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
@@ -2079,7 +2069,7 @@ export default function BaoCom() {
             {/* ═══════════════════════════════════════════ */}
             {/* TAB 1: PARSE & SAVE                        */}
             {/* ═══════════════════════════════════════════ */}
-            {activeTab === "parse" && (
+            {false && activeTab === "parse" && (
                 <>
                     {/* Paste area */}
                     {!parsed && (
