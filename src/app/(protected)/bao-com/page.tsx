@@ -732,7 +732,7 @@ export default function BaoCom() {
     const [records, setRecords] = useState<HeadcountRecord[]>([])
     const [parsed, setParsed] = useState(false)
     const [copied, setCopied] = useState(false)
-    const [activeTab, setActiveTab] = useState<"parse" | "history" | "kitchen" | "monthly">("parse")
+    const [activeTab, setActiveTab] = useState<"parse" | "history" | "kitchen" | "monthly" | "ai-chat">("parse")
 
     const [areaOverrides, setAreaOverrides] = useState<Record<number, string>>({})
     const [showSummary, setShowSummary] = useState(false)
@@ -1611,7 +1611,30 @@ export default function BaoCom() {
                     <span className="text-base leading-none">📅</span>
                     Monthly Report
                 </button>
+                {canEdit && (
+                    <button
+                        onClick={() => setActiveTab("ai-chat")}
+                        className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                            activeTab === "ai-chat"
+                                ? "border-orange-500 text-orange-600"
+                                : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                        <span className="text-base leading-none">🤖</span>
+                        AI Nhập Nhanh
+                    </button>
+                )}
             </div>
+
+            {/* ═══════════════════════════════════════════ */}
+            {/* TAB: AI CHAT NHP NHANH                       */}
+            {/* ═══════════════════════════════════════════ */}
+            {activeTab === "ai-chat" && canEdit && (
+                <MealAiChat
+                    deptList={deptList}
+                    onSaveSuccess={() => setHistoryRefreshKey(k => k + 1)}
+                />
+            )}
 
             {/* ═══════════════════════════════════════════ */}
             {/* TAB 3: KITCHEN / BÁO CƠM NHÀ ĂN               */}
@@ -2791,14 +2814,6 @@ export default function BaoCom() {
             })()}
 
         </div>
-
-        {/* AI Chat nổi — chỉ hiện với HSE/HR/admin */}
-        {canEdit && (
-            <MealAiChat
-                deptList={deptList}
-                onSaveSuccess={() => setHistoryRefreshKey(k => k + 1)}
-            />
-        )}
         </>
     )
 }

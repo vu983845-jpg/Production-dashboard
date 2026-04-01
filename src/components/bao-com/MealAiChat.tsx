@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { Bot, Send, X, ChevronDown, Loader2, Check, AlertCircle, Sparkles, UtensilsCrossed } from "lucide-react"
+import { Bot, Send, Loader2, Check, AlertCircle, Sparkles, RotateCcw } from "lucide-react"
 import { format } from "date-fns"
 
 interface MealRow {
@@ -30,39 +30,41 @@ interface Props {
     onSaveSuccess?: () => void
 }
 
+const SUGGESTIONS = [
+    "Ca 1 hôm nay: SHELL 45, STEAM 30, PEEL 20",
+    "Ca 2 ngày hôm qua: QC 12 chính thức 5 thời vụ",
+    "Ca 3: BORMA 8, PACK 15, CS 10",
+    "Tổng hợp ca 1 hôm nay toàn nhà máy",
+]
+
+const INITIAL_MSG: Message = {
+    role: "assistant",
+    content: "Xin chào! Nhập báo cơm bằng ngôn ngữ tự nhiên — tôi sẽ parse và hiển thị bảng để bạn xác nhận trước khi lưu.\n\nVí dụ: *Ca 1 hôm nay: SHELL 45, STEAM 30, PEEL 20 chính thức*",
+}
+
 export function MealAiChat({ deptList, onSaveSuccess }: Props) {
     const supabase = createClient()
-    const [open, setOpen] = useState(false)
     const [input, setInput] = useState("")
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            role: "assistant",
-            content: "Xin chào! Tôi có thể giúp bạn nhập báo cơm nhanh hơn.\n\nVí dụ: *\"Ca 1 hôm nay: SHELL 45 người, STEAM 30 người, PEEL 20 người\"*\n\nHoặc: *\"Ca 2 ngày 02/04: QC 12 chính thức, 5 thời vụ\"*",
-        },
-    ])
+    const [messages, setMessages] = useState<Message[]>([INITIAL_MSG])
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState<string | null>(null)
     const [saveResults, setSaveResults] = useState<Record<string, "ok" | "err">>({})
     const endRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLInputElement>(null)
+    const inputRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
-        if (open) {
-            endRef.current?.scrollIntoView({ behavior: "smooth" })
-            setTimeout(() => inputRef.current?.focus(), 100)
-        }
-    }, [messages, open])
+        endRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, [messages])
 
-    const findDeptId = (code: string): string | null => {
-        return deptList.find(d => d.code === code)?.id ?? null
-    }
+    const findDeptId = (code: string) =>
+        deptList.find(d => d.code === code)?.id ?? null
 
-    const sendMessage = async () => {
-        if (!input.trim() || loading) return
-        const userMsg = input.trim()
+    const sendMessage = async (overrideInput?: string) => {
+        const text = (overrideInput ?? input).trim()
+        if (!text || loading) return
         setInput("")
 
-        const newMessages: Message[] = [...messages, { role: "user", content: userMsg }]
+        const newMessages: Message[] = [...messages, { role: "user", content: text }]
         setMessages(newMessages)
         setLoading(true)
 
@@ -71,17 +73,16 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
             const res = await fetch("/api/ai-meal", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: userMsg, history }),
+                body: JSON.stringify({ message: text, history }),
             })
             const data = await res.json()
-
             setMessages(prev => [...prev, {
                 role: "assistant",
                 content: data.message || "Đã xử lý.",
                 rows: data.rows ?? undefined,
             }])
         } catch {
-            setMessages(prev => [...prev, { role: "assistant", content: "❌ Lỗi kết nối. Thử lại nhé!" }])
+            setMessages(prev => [...prev, { role: "assistant", content: "❌ Lỗi kết nối. Thử lại!" }])
         } finally {
             setLoading(false)
         }
@@ -95,7 +96,6 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
         for (const row of rows) {
             const deptId = findDeptId(row.dept_code)
             if (!deptId) { errors.push(`Không tìm thấy bộ phận: ${row.dept_code}`); continue }
-
             const { error } = await supabase.from("meal_headcount").upsert({
                 work_date: row.date,
                 department_id: deptId,
@@ -108,210 +108,249 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                 ot_count: row.ot_count ?? 0,
                 vegetarian: row.vegetarian ?? 0,
             }, { onConflict: "work_date,department_id,shift" })
-
             if (error) errors.push(`${row.dept_display} Ca${row.shift}: ${error.message}`)
         }
 
         setSaving(null)
         setSaveResults(prev => ({ ...prev, [key]: errors.length === 0 ? "ok" : "err" }))
-
-        setMessages(prev => prev.map((m, i) =>
-            i === msgIdx ? { ...m, confirmed: true } : m
-        ))
-
-        const resultMsg = errors.length === 0
-            ? `✅ Đã lưu ${rows.length} dòng báo cơm thành công!`
-            : `⚠️ Lưu xong nhưng có lỗi:\n${errors.join("\n")}`
-
-        setMessages(prev => [...prev, { role: "assistant", content: resultMsg }])
+        setMessages(prev => prev.map((m, i) => i === msgIdx ? { ...m, confirmed: true } : m))
+        setMessages(prev => [...prev, {
+            role: "assistant",
+            content: errors.length === 0
+                ? `✅ Đã lưu ${rows.length} dòng báo cơm thành công!`
+                : `⚠️ Có lỗi:\n${errors.join("\n")}`,
+        }])
         onSaveSuccess?.()
     }
 
     const handleReject = (msgIdx: number) => {
         setMessages(prev => [
-            ...prev,
-            {
-                role: "assistant",
-                content: "❌ Đã huỷ. Bạn có thể nhập lại hoặc điều chỉnh thông tin.",
-            }
+            ...prev.map((m, i) => i === msgIdx ? { ...m, confirmed: true } : m),
+            { role: "assistant", content: "❌ Đã huỷ. Nhập lại hoặc điều chỉnh thông tin." },
         ])
-        // Mark as confirmed to hide buttons
-        setMessages(prev => prev.map((m, i) => i === msgIdx ? { ...m, confirmed: true } : m))
+    }
+
+    const handleReset = () => {
+        setMessages([INITIAL_MSG])
+        setSaveResults({})
+        setInput("")
     }
 
     return (
-        <>
-            {/* FAB Button */}
-            <button
-                onClick={() => setOpen(o => !o)}
-                className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-3 rounded-2xl shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/60 hover:scale-105 transition-all duration-300 font-bold text-sm"
-            >
-                <UtensilsCrossed className="h-4 w-4" />
-                <span>AI Báo Cơm</span>
-                <Sparkles className="h-3.5 w-3.5 opacity-80" />
-            </button>
-
-            {/* Chat Panel */}
-            {open && (
-                <div className="fixed bottom-20 right-6 z-50 w-[380px] max-h-[70vh] flex flex-col rounded-2xl shadow-2xl border border-orange-200/50 overflow-hidden bg-white animate-in slide-in-from-bottom-4 fade-in duration-300">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-white">
-                            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                                <Bot className="h-4 w-4" />
-                            </div>
-                            <div>
-                                <p className="font-bold text-sm">AI Nhập Báo Cơm</p>
-                                <p className="text-white/70 text-xs">Nhập bằng ngôn ngữ tự nhiên</p>
-                            </div>
-                        </div>
-                        <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
-                            <X className="h-4 w-4" />
-                        </button>
+        <div className="rounded-2xl border border-orange-200/70 bg-white shadow-xl shadow-orange-100/40 overflow-hidden flex flex-col" style={{ minHeight: 560 }}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3 text-white">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner">
+                        <Bot className="h-5 w-5" />
                     </div>
+                    <div>
+                        <p className="font-bold text-base flex items-center gap-2">
+                            AI Nhập Báo Cơm
+                            <Sparkles className="h-4 w-4 opacity-80" />
+                        </p>
+                        <p className="text-white/75 text-xs">Nhập bằng ngôn ngữ tự nhiên · Xem bảng preview · Xác nhận lưu</p>
+                    </div>
+                </div>
+                <button
+                    onClick={handleReset}
+                    title="Bắt đầu lại"
+                    className="flex items-center gap-1.5 text-white/80 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-white/15 transition-colors border border-white/20"
+                >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reset
+                </button>
+            </div>
 
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-orange-50/30 min-h-0">
-                        {messages.map((msg, idx) => (
-                            <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                                <div className={`max-w-[92%] ${msg.role === "user" ? "order-1" : ""}`}>
-                                    {/* Message bubble */}
-                                    <div className={`rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
-                                        msg.role === "user"
-                                            ? "bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-tr-sm"
-                                            : "bg-white border border-slate-200/80 text-slate-800 rounded-tl-sm shadow-sm"
-                                    }`}>
-                                        {msg.content.split(/(\*[^*]+\*)/g).map((part, i) =>
-                                            part.startsWith("*") && part.endsWith("*")
-                                                ? <em key={i} className="not-italic font-semibold">{part.slice(1, -1)}</em>
-                                                : part
-                                        )}
-                                    </div>
+            {/* Quick suggestions */}
+            <div className="px-4 py-2.5 border-b border-orange-100/80 bg-orange-50/40 flex items-center gap-2 overflow-x-auto shrink-0">
+                <span className="text-xs text-orange-500 font-bold shrink-0">Gợi ý:</span>
+                {SUGGESTIONS.map(s => (
+                    <button
+                        key={s}
+                        onClick={() => sendMessage(s)}
+                        disabled={loading}
+                        className="shrink-0 text-xs px-3 py-1.5 bg-white text-orange-600 rounded-full border border-orange-200 hover:bg-orange-100 hover:border-orange-400 transition-all font-medium shadow-sm disabled:opacity-50"
+                    >
+                        {s.length > 40 ? s.slice(0, 40) + "…" : s}
+                    </button>
+                ))}
+            </div>
 
-                                    {/* Preview table */}
-                                    {msg.rows && msg.rows.length > 0 && !msg.confirmed && (
-                                        <div className="mt-2 bg-white border border-orange-200 rounded-xl overflow-hidden shadow-sm">
-                                            <div className="bg-orange-50 px-3 py-2 border-b border-orange-100">
-                                                <p className="text-xs font-bold text-orange-700">📋 Preview — {msg.rows.length} dòng</p>
-                                            </div>
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-xs">
-                                                    <thead>
-                                                        <tr className="bg-slate-50 text-slate-500 font-semibold">
-                                                            <th className="px-2 py-1.5 text-left">Ngày</th>
-                                                            <th className="px-2 py-1.5 text-left">Bộ phận</th>
-                                                            <th className="px-2 py-1.5 text-center">Ca</th>
-                                                            <th className="px-2 py-1.5 text-center">CT</th>
-                                                            <th className="px-2 py-1.5 text-center">TV</th>
-                                                            <th className="px-2 py-1.5 text-center">OT</th>
-                                                            <th className="px-2 py-1.5 text-center">🥬</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {msg.rows.map((r, ri) => (
-                                                            <tr key={ri} className="border-t border-slate-100 hover:bg-orange-50/50 transition-colors">
-                                                                <td className="px-2 py-1.5 font-mono text-slate-600">{format(new Date(r.date), "dd/MM")}</td>
-                                                                <td className="px-2 py-1.5 font-semibold text-slate-800 max-w-[80px] truncate">{r.dept_display}</td>
-                                                                <td className="px-2 py-1.5 text-center">
-                                                                    <span className="bg-orange-100 text-orange-700 rounded-md px-1.5 py-0.5 font-bold">{r.shift}</span>
-                                                                </td>
-                                                                <td className="px-2 py-1.5 text-center font-bold text-slate-800">{r.official_present ?? 0}</td>
-                                                                <td className="px-2 py-1.5 text-center text-slate-600">{r.seasonal_present ?? 0}</td>
-                                                                <td className="px-2 py-1.5 text-center text-slate-600">{r.ot_count ?? 0}</td>
-                                                                <td className="px-2 py-1.5 text-center text-green-600">{r.vegetarian ?? 0}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            {/* Confirm buttons */}
-                                            <div className="flex gap-2 p-2 border-t border-orange-100 bg-orange-50/50">
-                                                <button
-                                                    onClick={() => handleConfirm(idx, msg.rows!)}
-                                                    disabled={saving === `msg-${idx}`}
-                                                    className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60"
-                                                >
-                                                    {saving === `msg-${idx}` ? (
-                                                        <><Loader2 className="h-3 w-3 animate-spin" /> Đang lưu...</>
-                                                    ) : (
-                                                        <><Check className="h-3 w-3" /> Xác nhận lưu</>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleReject(idx)}
-                                                    disabled={saving === `msg-${idx}`}
-                                                    className="px-3 py-2 text-xs font-bold text-slate-500 hover:text-red-500 border border-slate-200 rounded-lg hover:border-red-200 transition-colors"
-                                                >
-                                                    Huỷ
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Already confirmed badge */}
-                                    {msg.rows && msg.confirmed && (
-                                        <div className="mt-1.5 flex items-center gap-1 text-xs text-slate-400">
-                                            {saveResults[`msg-${idx}`] === "ok"
-                                                ? <><Check className="h-3 w-3 text-green-500" /> Đã lưu</>
-                                                : <><AlertCircle className="h-3 w-3 text-red-400" /> Đã xử lý</>
-                                            }
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-
-                        {loading && (
-                            <div className="flex justify-start">
-                                <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-3 py-2 shadow-sm">
-                                    <div className="flex gap-1 items-center">
-                                        <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                                        <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                                        <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                                    </div>
-                                </div>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gradient-to-b from-orange-50/20 to-white/60">
+                {messages.map((msg, idx) => (
+                    <div key={idx} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        {msg.role === "assistant" && (
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                                <Bot className="h-4 w-4 text-white" />
                             </div>
                         )}
-                        <div ref={endRef} />
-                    </div>
 
-                    {/* Quick suggestions */}
-                    <div className="px-3 pt-2 pb-1 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto">
-                        {[
-                            "Ca 1 hôm nay:",
-                            "Ca 2 ngày hôm qua:",
-                            "Ca 3:",
-                        ].map(s => (
-                            <button
-                                key={s}
-                                onClick={() => setInput(s)}
-                                className="shrink-0 text-xs px-2.5 py-1 bg-orange-50 text-orange-600 rounded-full border border-orange-200 hover:bg-orange-100 transition-colors font-medium"
-                            >
-                                {s}
-                            </button>
-                        ))}
-                    </div>
+                        <div className={`max-w-[85%] space-y-2 ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col`}>
+                            {/* Bubble */}
+                            <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                                msg.role === "user"
+                                    ? "bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-tr-sm shadow-md shadow-orange-200"
+                                    : "bg-white border border-slate-200/80 text-slate-800 rounded-tl-sm shadow-sm"
+                            }`}>
+                                {msg.content.split(/(\*[^*]+\*)/g).map((part, i) =>
+                                    part.startsWith("*") && part.endsWith("*")
+                                        ? <strong key={i} className="font-semibold">{part.slice(1, -1)}</strong>
+                                        : part
+                                )}
+                            </div>
 
-                    {/* Input */}
-                    <div className="px-3 pb-3 pt-1.5 bg-white flex gap-2">
-                        <input
+                            {/* Preview Table */}
+                            {msg.rows && msg.rows.length > 0 && !msg.confirmed && (
+                                <div className="w-full bg-white border border-orange-200/80 rounded-xl overflow-hidden shadow-md">
+                                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-2.5 border-b border-orange-100 flex items-center justify-between">
+                                        <p className="text-sm font-bold text-orange-700 flex items-center gap-2">
+                                            📋 Preview — {msg.rows.length} dòng chờ xác nhận
+                                        </p>
+                                        <p className="text-xs text-orange-500">Kiểm tra trước khi lưu</p>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-slate-50/80 text-slate-500 text-xs font-bold uppercase tracking-wide">
+                                                    <th className="px-4 py-2.5 text-left">Ngày</th>
+                                                    <th className="px-4 py-2.5 text-left">Bộ phận</th>
+                                                    <th className="px-4 py-2.5 text-center">Ca</th>
+                                                    <th className="px-4 py-2.5 text-center">Chính thức</th>
+                                                    <th className="px-4 py-2.5 text-center">Thời vụ</th>
+                                                    <th className="px-4 py-2.5 text-center">OT</th>
+                                                    <th className="px-4 py-2.5 text-center">🥬 Chay</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {msg.rows.map((r, ri) => (
+                                                    <tr key={ri} className={`border-t border-slate-100 transition-colors ${ri % 2 === 0 ? "bg-white" : "bg-slate-50/40"} hover:bg-orange-50/50`}>
+                                                        <td className="px-4 py-3 font-mono text-slate-600 font-medium">
+                                                            {format(new Date(r.date), "dd/MM/yyyy")}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="font-semibold text-slate-800">{r.dept_display}</span>
+                                                            <span className="ml-2 text-xs text-slate-400 font-mono">({r.dept_code})</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className="bg-orange-100 text-orange-700 rounded-lg px-2.5 py-1 font-bold text-xs">Ca {r.shift}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center font-bold text-slate-800 text-base">{r.official_present ?? 0}</td>
+                                                        <td className="px-4 py-3 text-center text-slate-600">{r.seasonal_present ?? 0}</td>
+                                                        <td className="px-4 py-3 text-center text-slate-600">{r.ot_count ?? 0}</td>
+                                                        <td className="px-4 py-3 text-center text-green-600 font-medium">{r.vegetarian ?? 0}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="border-t-2 border-orange-200 bg-orange-50/80">
+                                                    <td colSpan={3} className="px-4 py-2 text-xs font-bold text-orange-700">TỔNG</td>
+                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">
+                                                        {msg.rows.reduce((s, r) => s + (r.official_present ?? 0), 0)}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">
+                                                        {msg.rows.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center font-bold text-orange-800">
+                                                        {msg.rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)}
+                                                    </td>
+                                                    <td className="px-4 py-2 text-center font-bold text-green-700">
+                                                        {msg.rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+
+                                    {/* Confirm / Cancel */}
+                                    <div className="flex gap-3 p-4 border-t border-orange-100 bg-orange-50/50">
+                                        <button
+                                            onClick={() => handleConfirm(idx, msg.rows!)}
+                                            disabled={saving === `msg-${idx}`}
+                                            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 shadow-md shadow-orange-200 text-sm"
+                                        >
+                                            {saving === `msg-${idx}` ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin" /> Đang lưu...</>
+                                            ) : (
+                                                <><Check className="h-4 w-4" /> Xác nhận lưu {msg.rows.length} dòng</>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => handleReject(idx)}
+                                            disabled={saving === `msg-${idx}`}
+                                            className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-red-500 border border-slate-200 hover:border-red-200 rounded-xl transition-colors bg-white"
+                                        >
+                                            Huỷ
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Confirmed badge */}
+                            {msg.rows && msg.confirmed && (
+                                <div className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full ${
+                                    saveResults[`msg-${idx}`] === "ok"
+                                        ? "bg-green-50 text-green-600 border border-green-200"
+                                        : "bg-slate-100 text-slate-500"
+                                }`}>
+                                    {saveResults[`msg-${idx}`] === "ok"
+                                        ? <><Check className="h-3 w-3" /> Đã lưu thành công</>
+                                        : <><AlertCircle className="h-3 w-3" /> Đã xử lý</>
+                                    }
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+
+                {/* Typing indicator */}
+                {loading && (
+                    <div className="flex gap-3 justify-start">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0 shadow-sm">
+                            <Bot className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-5 py-3 shadow-sm">
+                            <div className="flex gap-1.5 items-center h-5">
+                                {[0, 150, 300].map(delay => (
+                                    <div key={delay} className="w-2 h-2 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <div ref={endRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="border-t border-orange-100 p-4 bg-white shrink-0">
+                <div className="flex gap-3 items-end">
+                    <div className="flex-1 relative">
+                        <textarea
                             ref={inputRef}
                             value={input}
                             onChange={e => setInput(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                            placeholder='VD: "Ca 1: SHELL 45, STEAM 30"'
-                            className="flex-1 text-sm px-3 py-2 rounded-xl border border-slate-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all bg-slate-50/50"
+                            onKeyDown={e => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault()
+                                    sendMessage()
+                                }
+                            }}
+                            placeholder='Nhập báo cơm... VD: "Ca 1 hôm nay: SHELL 45, STEAM 30, PEEL 20 chính thức, 10 thời vụ"'
+                            rows={2}
+                            className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:border-orange-400 focus:ring-3 focus:ring-orange-100 outline-none transition-all bg-slate-50/50 resize-none leading-relaxed placeholder:text-slate-400"
                         />
-                        <button
-                            onClick={sendMessage}
-                            disabled={!input.trim() || loading}
-                            className="w-9 h-9 flex items-center justify-center bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40 shadow-sm"
-                        >
-                            <Send className="h-4 w-4" />
-                        </button>
+                        <p className="absolute bottom-2 right-3 text-[10px] text-slate-400">Enter để gửi · Shift+Enter xuống dòng</p>
                     </div>
+                    <button
+                        onClick={() => sendMessage()}
+                        disabled={!input.trim() || loading}
+                        className="h-[72px] w-14 flex items-center justify-center bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-xl hover:opacity-90 transition-all disabled:opacity-40 shadow-md shadow-orange-200 hover:scale-105 active:scale-95"
+                    >
+                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                    </button>
                 </div>
-            )}
-        </>
+            </div>
+        </div>
     )
 }
