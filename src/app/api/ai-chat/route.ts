@@ -452,39 +452,51 @@ async function handleGetEnergyData(params: any, supabase: any) {
         start = today; end = today
     }
 
-    const [{ data: energy }, { data: water }, { data: compress }] = await Promise.all([
-        supabase.from("energy_meter_readings").select("meter_date,meter_name,delta_kwh,delta_m3")
-            .gte("meter_date", start).lte("meter_date", end).order("meter_date"),
-        supabase.from("energy_meter_readings").select("meter_date,meter_name,delta_kwh,delta_m3")
-            .gte("meter_date", start).lte("meter_date", end).not("delta_m3", "is", null),
-        supabase.from("compressor_readings").select("reading_date,unit_name,run_hours,delta_kwh")
-            .gte("reading_date", start).lte("reading_date", end).order("reading_date"),
+    const [{ data: energy }, { data: compressors }] = await Promise.all([
+        supabase.from("daily_energy")
+            .select("work_date,electricity_kwh,electricity_peak_kwh,electricity_normal_kwh,electricity_offpeak_kwh,water_m3")
+            .gte("work_date", start).lte("work_date", end).order("work_date"),
+        supabase.from("daily_compressor")
+            .select("work_date,meter1,meter2,meter3")
+            .gte("work_date", start).lte("work_date", end).order("work_date"),
     ])
 
-    const totalElec = (energy || []).reduce((s: number, r: any) => s + Number(r.delta_kwh || 0), 0)
-    const totalWater = (water || []).reduce((s: number, r: any) => s + Number(r.delta_m3 || 0), 0)
-    const totalCompressKwh = (compress || []).reduce((s: number, r: any) => s + Number(r.delta_kwh || 0), 0)
-    const totalCompressHours = (compress || []).reduce((s: number, r: any) => s + Number(r.run_hours || 0), 0)
+    // Tổng điện: ưu tiên peak+normal+offpeak, fallback electricity_kwh
+    const totalElec = (energy || []).reduce((s: number, r: any) => {
+        const stacked = Number(r.electricity_peak_kwh || 0) + Number(r.electricity_normal_kwh || 0) + Number(r.electricity_offpeak_kwh || 0)
+        return s + (stacked > 0 ? stacked : Number(r.electricity_kwh || 0))
+    }, 0)
+    const totalWater = (energy || []).reduce((s: number, r: any) => s + Number(r.water_m3 || 0), 0)
+
+    // Máy nén khí: cộng delta (meter index - index ngày hôm trước)
+    let totalCompressKwh = 0
+    if (compressors && compressors.length > 1) {
+        for (let i = 1; i < compressors.length; i++) {
+            const prev = compressors[i - 1], curr = compressors[i]
+            totalCompressKwh += Math.max(0, Number(curr.meter1 || 0) - Number(prev.meter1 || 0)) * 1000
+            totalCompressKwh += Math.max(0, Number(curr.meter2 || 0) - Number(prev.meter2 || 0)) * 1000
+            totalCompressKwh += Math.max(0, Number(curr.meter3 || 0) - Number(prev.meter3 || 0)) * 1000
+        }
+    }
 
     const label = date ? `ngày ${date}` : `tháng ${month}`
     let text = `⚡ **Điện - Nước - Máy nén khí — ${label}:**\n\n`
-    text += `⚡ Tổng điện tiêu thụ: **${totalElec.toFixed(0)} kWh**\n`
+    text += `⚡ Tổng điện tiêu thụ: **${Math.round(totalElec).toLocaleString("vi-VN")} kWh**\n`
     text += `💧 Tổng nước tiêu thụ: **${totalWater.toFixed(1)} m³**\n`
-    text += `🌬️ Máy nén khí: **${totalCompressKwh.toFixed(0)} kWh** | Tổng giờ chạy: **${totalCompressHours.toFixed(1)} giờ**\n`
+    text += `🌬️ Máy nén khí (ước tính): **${Math.round(totalCompressKwh).toLocaleString("vi-VN")} kWh**\n`
 
-    // Per-meter breakdown if single day
+    // Chi tiết nếu hỏi theo ngày
     if (date && energy && energy.length > 0) {
-        text += `\n📋 Chi tiết đồng hồ điện:\n`
-        energy.forEach((r: any) => {
-            if (r.delta_kwh > 0) text += `  • ${r.meter_name}: ${Number(r.delta_kwh).toFixed(0)} kWh\n`
-        })
-    }
-    if (date && compress && compress.length > 0) {
-        text += `\n📋 Chi tiết máy nén khí:\n`
-        compress.forEach((r: any) => {
-            if (r.run_hours > 0 || r.delta_kwh > 0)
-                text += `  • ${r.unit_name}: ${Number(r.run_hours || 0).toFixed(1)}h | ${Number(r.delta_kwh || 0).toFixed(0)} kWh\n`
-        })
+        const r = energy[0]
+        const peak = Number(r.electricity_peak_kwh || 0)
+        const normal = Number(r.electricity_normal_kwh || 0)
+        const offpeak = Number(r.electricity_offpeak_kwh || 0)
+        if (peak + normal + offpeak > 0) {
+            text += `\n📋 Chi tiết giờ điện:\n`
+            text += `  • Cao điểm: ${Math.round(peak).toLocaleString("vi-VN")} kWh\n`
+            text += `  • Bình thường: ${Math.round(normal).toLocaleString("vi-VN")} kWh\n`
+            text += `  • Thấp điểm: ${Math.round(offpeak).toLocaleString("vi-VN")} kWh\n`
+        }
     }
 
     return { success: true, message: text }
