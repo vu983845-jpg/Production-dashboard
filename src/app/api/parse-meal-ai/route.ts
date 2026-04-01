@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// AI cascade: Gemini primary → Groq fallback (nếu Gemini 429)
-const GEMINI_MODEL = 'gemini-3.1-flash-lite-latest'   // 500 RPD, 15 RPM – tốt nhất trong free tier
-const GROQ_MODEL   = 'llama-3.3-70b-versatile'  // Groq fallback (active model)
+// AI cascade: Gemini 2.5 Flash (smart) → Gemini 3.1 Flash Lite (high quota) → Groq (fallback)
+const GEMINI_MODEL_SMART = 'gemini-2.5-flash'              // Tier 1: thông minh hơn, 20 RPD
+const GEMINI_MODEL_QUOTA = 'gemini-3.1-flash-lite-latest'  // Tier 2: quota cao (500 RPD), fallback khi 2.5 hết
+const GROQ_MODEL         = 'llama-3.3-70b-versatile'       // Tier 3: Groq, last resort
 
 
 // System prompt – HeadcountRecord format
@@ -139,9 +140,9 @@ function extractJsonArray(text: string): unknown[] | null {
     catch { return null }
 }
 
-// ── Gemini call ───────────────────────────────────────────────────────────
-async function callGemini(filtered: string, apiKey: string): Promise<{ raw: string } | { status429: true }> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`
+// ── Gemini call (dùng chung cho cả 2 model) ─────────────────────────────
+async function callGemini(filtered: string, apiKey: string, model: string): Promise<{ raw: string } | { status429: true }> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
     const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -200,14 +201,14 @@ export async function POST(req: NextRequest) {
 
     try {
         let rawContent = ''
-        let provider = 'gemini'
+        let provider = 'gemini-2.5-flash'
 
-        // 1️⃣ Thử Gemini trước
+        // 1️⃣ Tier 1: Gemini 2.5 Flash (thông minh nhất, 20 RPD)
         if (geminiKey) {
-            const result = await callGemini(filtered, geminiKey)
+            const result = await callGemini(filtered, geminiKey, GEMINI_MODEL_SMART)
             if ('status429' in result) {
-                console.warn('[parse-meal-ai] Gemini 429 – falling back to Groq')
-                provider = 'groq'
+                console.warn('[parse-meal-ai] Gemini 2.5 Flash 429 – trying gemini-3.1-flash-lite')
+                provider = 'gemini-3.1-flash-lite'
             } else {
                 rawContent = result.raw
             }
@@ -215,10 +216,21 @@ export async function POST(req: NextRequest) {
             provider = 'groq'
         }
 
-        // 2️⃣ Fallback Groq nếu cần
+        // 2️⃣ Tier 2: Gemini 3.1 Flash Lite (500 RPD)
+        if (provider === 'gemini-3.1-flash-lite') {
+            const result = await callGemini(filtered, geminiKey!, GEMINI_MODEL_QUOTA)
+            if ('status429' in result) {
+                console.warn('[parse-meal-ai] Gemini 3.1 Flash Lite 429 – falling back to Groq')
+                provider = 'groq'
+            } else {
+                rawContent = result.raw
+            }
+        }
+
+        // 3️⃣ Tier 3: Groq (last resort)
         if (provider === 'groq') {
             if (!groqKey) {
-                return NextResponse.json({ error: 'Gemini quota exceeded và không có GROQ_API_KEY' }, { status: 429 })
+                return NextResponse.json({ error: 'Tất cả Gemini quota đã hết và không có GROQ_API_KEY' }, { status: 429 })
             }
             const result = await callGroq(filtered, groqKey)
             rawContent = result.raw
