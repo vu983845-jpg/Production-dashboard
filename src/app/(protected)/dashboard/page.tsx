@@ -103,6 +103,8 @@ export default function DashboardPage() {
     const [shellingSubView, setShellingSubView] = useState<'production' | 'capacity'>('production')
     const [showCo2Intensity, setShowCo2Intensity] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
+    const [userProfile, setUserProfile] = useState<{ deptCode: string; userName: string } | null>(null)
+
 
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
     const [dailyElecVsProd, setDailyElecVsProd] = useState<any[]>([]) // kWh/T daily breakdown
@@ -116,6 +118,23 @@ export default function DashboardPage() {
         totalEmission: 0, totalEmissionTarget: 265
     })
 
+    // Load user profile for loader greeting
+    useEffect(() => {
+        async function loadProfile() {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
+            const { data: p } = await supabase.from("profiles")
+                .select("full_name, department_id")
+                .eq("id", user.id).single()
+            if (p?.department_id) {
+                const { data: dept } = await supabase.from("departments")
+                    .select("code").eq("id", p.department_id).single()
+                setUserProfile({ deptCode: dept?.code || "", userName: p.full_name || "" })
+            }
+        }
+        loadProfile()
+    }, [])
+
     // Load Departments
     useEffect(() => {
         async function loadDepts() {
@@ -124,6 +143,7 @@ export default function DashboardPage() {
         }
         loadDepts()
     }, [])
+
 
     // Optional helper to get working days left this month (excluding Sundays)
     const getRemainingWorkingDays = (monthDate: Date) => {
@@ -1311,7 +1331,11 @@ export default function DashboardPage() {
 
     return (
         <>
-        <DashboardLoader isLoading={pageLoading} />
+        <DashboardLoader
+            isLoading={pageLoading}
+            deptCode={userProfile?.deptCode}
+            userName={userProfile?.userName}
+        />
         <div
             className="flex-col md:flex w-full relative z-0"
             style={{

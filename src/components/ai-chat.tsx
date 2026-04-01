@@ -84,11 +84,12 @@ export function AIChatWidget({ userContext }: AIChatWidgetProps) {
     }, [messages])
 
     useEffect(() => {
-        if (isOpen && !isGreeted) {
+        // Show greeting when chat opens AND we have a valid userContext
+        if (isOpen && !isGreeted && userContext.fullName) {
             setIsGreeted(true)
             setMessages([buildGreeting(userContext)])
         }
-    }, [isOpen])
+    }, [isOpen, userContext.fullName])
 
     const sendMessage = async (text?: string) => {
         const userText = (text || input).trim()

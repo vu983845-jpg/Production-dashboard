@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { createClient } from "@/lib/supabase/client"
+
 
 // ── Personalized greetings per dept code ────────────────────────────────────
 const DEPT_GREETINGS: Record<string, { salute: string; emoji: string }> = {
@@ -12,31 +12,19 @@ const DEPT_GREETINGS: Record<string, { salute: string; emoji: string }> = {
     PACK:    { salute: "Chào Anh Shipper!",    emoji: "📦" },
 }
 
-export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
+export function DashboardLoader({
+    isLoading,
+    deptCode,
+    userName,
+}: {
+    isLoading: boolean
+    deptCode?: string
+    userName?: string
+}) {
     const [visible, setVisible] = useState(true)
     const [fadeOut, setFadeOut] = useState(false)
     const isFirstLoad = useRef(true)
-    const [deptCode, setDeptCode] = useState<string | null>(null)
-    const [userName, setUserName] = useState<string | null>(null)
-    const profileFetched = useRef(false)
 
-    // Fetch profile once on mount for personalized greeting
-    useEffect(() => {
-        if (profileFetched.current) return
-        profileFetched.current = true
-        const supabase = createClient()
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (!user) return
-            supabase.from("profiles").select("full_name, departments(code)")
-                .eq("id", user.id).single()
-                .then(({ data }) => {
-                    if (data) {
-                        setUserName((data as any).full_name || null)
-                        setDeptCode((data as any).departments?.code || null)
-                    }
-                })
-        })
-    }, [])
 
     useEffect(() => {
         if (isLoading) {
