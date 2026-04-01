@@ -1556,50 +1556,6 @@ export default function DashboardPage() {
                     </FadeInStagger>
                 )}
 
-                {/* ⚡ Daily Electricity Intensity vs Shell+Peel Output */}
-                {dailyElecVsProd.length > 0 && (
-                    <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 md:p-5 mb-3 md:mb-4">
-                        <div className="flex items-center justify-between mb-3">
-                            <div>
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">⚡ Phát thải điện vs Sản lượng (Shell + Peeling)</span>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Cột: Sản lượng output (T) · Đường: kWh/T · Shell output = Input × 0.22</p>
-                            </div>
-                        </div>
-                        <ChartWrapper className="w-full">
-                            <ResponsiveContainer width="100%" height={200}>
-                                <ComposedChart data={dailyElecVsProd} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={32} unit="T" />
-                                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#f59e0b' }} axisLine={false} tickLine={false} width={44} unit=" k/T" />
-                                    <Tooltip
-                                        content={({ active, payload, label }) => {
-                                            if (!active || !payload?.length) return null;
-                                            return (
-                                                <div className="bg-white/98 border border-slate-100 rounded-xl shadow-xl p-3 text-xs min-w-[180px]">
-                                                    <p className="font-black text-slate-700 mb-2 border-b border-slate-100 pb-1">{label}</p>
-                                                    {payload.map((p: any, i: number) => (
-                                                        <div key={i} className="flex justify-between gap-6 py-0.5">
-                                                            <span className="flex items-center gap-1.5 text-slate-500">
-                                                                <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: p.color }} />
-                                                                {p.name}
-                                                            </span>
-                                                            <span className="font-bold text-slate-800 tabular-nums">{Number(p.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}{p.name === 'kWh/T' ? '' : ' T'}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            );
-                                        }}
-                                    />
-                                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, color: '#94a3b8' }} />
-                                    <Bar yAxisId="left" dataKey="ShellOut" name="Shell output (×0.22)" stackId="prod" fill="#6366f1" opacity={0.85} radius={[0, 0, 0, 0]} maxBarSize={28} />
-                                    <Bar yAxisId="left" dataKey="PeelOut" name="Peel output" stackId="prod" fill="#22d3ee" opacity={0.85} radius={[3, 3, 0, 0]} maxBarSize={28} />
-                                    <Line yAxisId="right" type="monotone" dataKey="KwhPerT" name="kWh/T" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }} activeDot={{ r: 5 }} />
-                                </ComposedChart>
-                            </ResponsiveContainer>
-                        </ChartWrapper>
-                    </div>
-                )}
 
                 <TabsContent value="stations" className="mt-0 pt-2">
                     <FadeInStagger faster>
@@ -1766,6 +1722,51 @@ export default function DashboardPage() {
                     </Card>
                 )
             }
+
+            {/* ⚡ Daily Electricity Intensity vs Shell+Peel Output — moved below energy card */}
+            {dailyElecVsProd.length > 0 && (
+                <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 md:p-5 mt-3 md:mt-4 mb-3 md:mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">⚡ Phát thải điện vs Sản lượng (Shell + Peeling)</span>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Cột: Sản lượng output (T) · Đường: kWh/T · Shell output = Input × 0.22</p>
+                        </div>
+                    </div>
+                    <ChartWrapper className="w-full">
+                        <ResponsiveContainer width="100%" height={200}>
+                            <ComposedChart data={dailyElecVsProd} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={32} unit="T" />
+                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#f59e0b' }} axisLine={false} tickLine={false} width={44} unit=" k/T" />
+                                <Tooltip
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload?.length) return null;
+                                        return (
+                                            <div className="bg-white/98 border border-slate-100 rounded-xl shadow-xl p-3 text-xs min-w-[180px]">
+                                                <p className="font-black text-slate-700 mb-2 border-b border-slate-100 pb-1">{label}</p>
+                                                {payload.map((p: any, i: number) => (
+                                                    <div key={i} className="flex justify-between gap-6 py-0.5">
+                                                        <span className="flex items-center gap-1.5 text-slate-500">
+                                                            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: p.color }} />
+                                                            {p.name}
+                                                        </span>
+                                                        <span className="font-bold text-slate-800 tabular-nums">{Number(p.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}{p.name === 'kWh/T' ? '' : ' T'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, color: '#94a3b8' }} />
+                                <Bar yAxisId="left" dataKey="ShellOut" name="Shell output (×0.22)" stackId="prod" fill="#6366f1" opacity={0.85} radius={[0, 0, 0, 0]} maxBarSize={28} />
+                                <Bar yAxisId="left" dataKey="PeelOut" name="Peel output" stackId="prod" fill="#22d3ee" opacity={0.85} radius={[3, 3, 0, 0]} maxBarSize={28} />
+                                <Line yAxisId="right" type="monotone" dataKey="KwhPerT" name="kWh/T" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </ChartWrapper>
+                </div>
+            )}
 
             <div className="grid gap-4 mt-4">
                 <Card className="bg-white border border-slate-200 shadow-sm">
