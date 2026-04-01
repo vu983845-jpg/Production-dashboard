@@ -321,6 +321,12 @@ export default function InputPage() {
                 if (profile.secondary_department_id) {
                     ids.add(profile.secondary_department_id)
                 }
+                // Support new allowed_dept_ids array (takes union with above)
+                if (profile.allowed_dept_ids && profile.allowed_dept_ids.length > 0) {
+                    profile.allowed_dept_ids.forEach((id: string) => ids.add(id))
+                    // Set first allowed dept as default if no primary set
+                    if (!profile.department_id) setSelectedDept(profile.allowed_dept_ids[0])
+                }
                 setAllowedDeptIds(ids)
             }
 

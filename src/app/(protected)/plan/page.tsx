@@ -21,6 +21,7 @@ export default function AdminPlanPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [role, setRole] = useState("")
     const [userId, setUserId] = useState("")
+    const [allowedDeptIds, setAllowedDeptIds] = useState<string[] | null>(null) // null = single dept only
 
     // Monthly Setup State
     const [selectedMonth, setSelectedMonth] = useState<Date>(startOfMonth(new Date()))
@@ -44,6 +45,7 @@ export default function AdminPlanPage() {
     useEffect(() => {
         async function loadData() {
             let currentRole = "";
+            let currentAllowedDeptIds: string[] | null = null;
             // Load User Profile first
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
@@ -52,7 +54,12 @@ export default function AdminPlanPage() {
                 if (profile) {
                     setRole(profile.role)
                     currentRole = profile.role
-                    if (profile.department_id) {
+                    // Support multi-dept: allowed_dept_ids takes priority over single department_id
+                    if (profile.allowed_dept_ids && profile.allowed_dept_ids.length > 0) {
+                        currentAllowedDeptIds = profile.allowed_dept_ids
+                        setAllowedDeptIds(profile.allowed_dept_ids)
+                        setSelectedDept(profile.department_id || profile.allowed_dept_ids[0])
+                    } else if (profile.department_id) {
                         setSelectedDept(profile.department_id)
                     }
                 }
@@ -63,8 +70,13 @@ export default function AdminPlanPage() {
             if (data) {
                 if (currentRole === 'admin') {
                     data.push({ id: "energy", name_en: "Điện & Nước (Energy)", code: "ENERGY" })
+                    setDepartments(data)
+                } else if (currentAllowedDeptIds && currentAllowedDeptIds.length > 0) {
+                    // Multi-dept user: only show their allowed departments
+                    setDepartments(data.filter(d => currentAllowedDeptIds!.includes(d.id)))
+                } else {
+                    setDepartments(data)
                 }
-                setDepartments(data)
             }
         }
         loadData()
@@ -356,7 +368,7 @@ export default function AdminPlanPage() {
                     <Select
                         value={selectedDept}
                         onValueChange={setSelectedDept}
-                        disabled={role === "dept_user"}
+                        disabled={role === "dept_user" && !allowedDeptIds}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="Chọn bộ phận" />
