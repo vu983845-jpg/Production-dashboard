@@ -73,20 +73,28 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
     const findDeptId = (code: string) =>
         deptList.find(d => d.code === code)?.id ?? null
 
-    const doUpsert = async (row: MealRow, deptId: string) => {
-        return supabase.from("meal_headcount").upsert({
-            work_date: row.date,
-            department_id: deptId,
-            department_name: row.dept_display,
-            shift: row.shift,
-            official_present: row.official_present ?? 0,
-            official_absent: row.official_absent ?? 0,
-            seasonal_present: row.seasonal_present ?? 0,
-            seasonal_absent: row.seasonal_absent ?? 0,
-            ot_count: row.ot_count ?? 0,
-            vegetarian: row.vegetarian ?? 0,
-        }, { onConflict: "work_date,department_id,shift" })
-    }
+    const buildPayload = (row: MealRow, deptId: string) => ({
+        work_date: row.date,
+        department_id: deptId,
+        department_name: row.dept_display,
+        shift: row.shift,
+        official_present: row.official_present ?? 0,
+        official_absent: row.official_absent ?? 0,
+        seasonal_present: row.seasonal_present ?? 0,
+        seasonal_absent: row.seasonal_absent ?? 0,
+        ot_count: row.ot_count ?? 0,
+        vegetarian: row.vegetarian ?? 0,
+    })
+
+    const doInsert = async (row: MealRow, deptId: string) =>
+        supabase.from("meal_headcount").insert(buildPayload(row, deptId))
+
+    const doUpdate = async (row: MealRow, deptId: string) =>
+        supabase.from("meal_headcount")
+            .update(buildPayload(row, deptId))
+            .eq("work_date", row.date)
+            .eq("department_id", deptId)
+            .eq("shift", row.shift)
 
     const sendMessage = async (overrideInput?: string) => {
         const text = (overrideInput ?? input).trim()
@@ -152,7 +160,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
         // Save new records immediately
         const errors: string[] = []
         for (const { row, deptId } of toInsert) {
-            const { error } = await doUpsert(row, deptId)
+            const { error } = await doInsert(row, deptId)
             if (error) errors.push(`${row.dept_display} Ca${row.shift}: ${error.message}`)
         }
 
@@ -190,7 +198,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
         setSaving(key)
         const errors: string[] = []
         for (const { row, deptId } of diffRows) {
-            const { error } = await doUpsert(row, deptId)
+            const { error } = await doUpdate(row, deptId)
             if (error) errors.push(`${row.dept_display} Ca${row.shift}: ${error.message}`)
         }
         setSaving(null)
