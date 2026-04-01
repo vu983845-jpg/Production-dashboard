@@ -1120,13 +1120,28 @@ export default function BaoCom() {
                 .eq("shift", summaryShift)
                 .order("department_name")
             if (error) throw error
-            // Dedup: if multiple rows for same department_id, keep only the latest
-            const seen = new Map<string, SavedRecord>()
+            // Aggregate: sum up all sub-section records that share the same department_id
+            // (e.g. HPEEL has both "Manual Grading -Shift 1 (Ms Huệ)" AND "Manual peeling S1 - Dung"
+            //  — they must be SUMMED, not deduped)
+            const aggMap = new Map<string, SavedRecord>()
             ;(data ?? []).forEach(r => {
                 const key = r.department_id ?? r.department_name
-                if (!seen.has(key) || r.created_at > seen.get(key)!.created_at) seen.set(key, r)
+                if (!aggMap.has(key)) {
+                    // Clone first record as the base
+                    aggMap.set(key, { ...r })
+                } else {
+                    // Sum numeric fields into the base record
+                    const base = aggMap.get(key)!
+                    base.official_present  = (base.official_present  ?? 0) + (r.official_present  ?? 0)
+                    base.official_absent   = (base.official_absent   ?? 0) + (r.official_absent   ?? 0)
+                    base.seasonal_present  = (base.seasonal_present  ?? 0) + (r.seasonal_present  ?? 0)
+                    base.seasonal_absent   = (base.seasonal_absent   ?? 0) + (r.seasonal_absent   ?? 0)
+                    base.vegetarian        = (base.vegetarian        ?? 0) + (r.vegetarian        ?? 0)
+                    base.ot_count          = (base.ot_count          ?? 0) + (r.ot_count          ?? 0)
+                }
             })
-            setSummaryData([...seen.values()].sort((a, b) => a.department_name.localeCompare(b.department_name)))
+            setSummaryData([...aggMap.values()].sort((a, b) => a.department_name.localeCompare(b.department_name)))
+
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e)
             setSummaryError(msg || "Lỗi không xác định")
@@ -2358,7 +2373,7 @@ export default function BaoCom() {
                                                             <td className="px-3 py-2.5 font-medium whitespace-nowrap">{effArea}</td>
                                                             <td className="px-3 py-2.5 text-center">
                                                                 <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                                                    Ca {r.shift}
+                                                                    Ca {r.shift === 'OT' ? 'OT' : (r.shift?.replace(/[^1-3]/g, '') || '1')}
                                                                 </span>
                                                             </td>
                                                             {/* CT HĐ — editable */}

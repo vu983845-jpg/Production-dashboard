@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // AI cascade: Gemini primary → Groq fallback (nếu Gemini 429)
-const GEMINI_MODEL = 'gemini-2.0-flash'   // 200 RPD free tier
+const GEMINI_MODEL = 'gemini-3.1-flash-lite-latest'   // 500 RPD, 15 RPM – tốt nhất trong free tier
 const GROQ_MODEL   = 'llama-3.3-70b-versatile'  // Groq fallback (active model)
+
 
 // System prompt – HeadcountRecord format
 const BASE_SYSTEM_PROMPT = `You parse Vietnamese factory Zalo shift reports into JSON.
@@ -49,6 +50,7 @@ CRITICAL: (N chay) / (N p chay) ALWAYS means vegetarian=N. NEVER put it in seaso
 5. Supplement OT short msg "Shelling OT 5p ăn 14h" → date=null, shift=null, ot="5"
 6. Handpeeling: detect supervisor from leading name or "(Dung)"/"(Liên)" in area line.
 7. Message with Dự trù appended at end: extract only attendance part, ignore from "Dự trù" onward.
+8. CRITICAL – Warehouse/Loading (FGWH) "Hành Chánh" label: When area=Warehouse and shift field contains "Hành Chánh", "HC", "hành chính", "hanh chanh", or similar administrative labels → ALWAYS output shift="1". Do NOT create a separate shift named "HC" or "Hành Chánh". All administrative (Hành Chánh) staff in the Loading/Warehouse team eat at Ca 1.
 
 ## EXAMPLES
 
@@ -96,7 +98,12 @@ Ex11 Machine Grading (no Khu vực label, area+shift on first line, Trong đó c
 IN: Machine Grading - ca2\nNgày: 31-3-2026\nChính thức hiện diện: 19\nChính thức vắng: 2\nTrong đó:\n- Mặn: 9\n- Chay: 10\nOT:
 OUT: [{"date":"31/03/2026","area":"Color sorter","shift":"2","officialPresent":19,"officialAbsent":2,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":10,"senderHint":"","raw":""}]
 
+Ex12 Loading/Warehouse – Hành Chánh = Ca 1 (CRITICAL rule 8):
+IN: Loading - 01/04/2025\nHành Chánh\nChính thức hiện diện: 10\nChính thức vắng: 0\nTrong đó:\n- Mặn: 10\n- Chay: 0\nOT:
+OUT: [{"date":"01/04/2025","area":"Warehouse","shift":"1","officialPresent":10,"officialAbsent":0,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":0,"senderHint":"","raw":""}]
+
 Return ONLY a valid JSON array. No markdown, no explanation. Dự trù only → return [].`
+
 
 // ── Pre-filter: bỏ dòng không liên quan để tiết kiệm token ──────────────
 function preFilterText(text: string): string {
