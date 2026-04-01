@@ -26,6 +26,19 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
         .eq("id", session.user.id)
         .single()
 
+    // Fetch dept details if user has a department
+    let deptCode = ""
+    let deptName = ""
+    if (profile?.department_id) {
+        const { data: dept } = await supabase
+            .from("departments")
+            .select("code, name_en")
+            .eq("id", profile.department_id)
+            .single()
+        deptCode = dept?.code || ""
+        deptName = dept?.name_en || ""
+    }
+
     if (!profile) {
         return (
             <div className="flex flex-col items-center justify-center p-10">
@@ -46,7 +59,13 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
     }
 
     return (
-        <AppLayout role={profile.role} fullName={profile.full_name}>
+        <AppLayout
+            role={profile.role}
+            fullName={profile.full_name}
+            departmentId={profile.department_id || ""}
+            deptCode={deptCode}
+            deptName={deptName}
+        >
             {children}
         </AppLayout>
     )

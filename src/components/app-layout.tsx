@@ -32,14 +32,18 @@ import { IntersnackLogo } from "@/components/intersnack-logo"
 import { LanguageToggle } from "@/components/language-toggle"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { UserGuide } from "@/components/user-guide"
+import { AIChatWidget } from "@/components/ai-chat"
 
 interface AppLayoutProps {
     children: ReactNode
     role: string
     fullName: string
+    departmentId: string
+    deptCode: string
+    deptName: string
 }
 
-export function AppLayout({ children, role, fullName }: AppLayoutProps) {
+export function AppLayout({ children, role, fullName, departmentId, deptCode, deptName }: AppLayoutProps) {
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
@@ -103,6 +107,7 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
     ]
 
     return (
+        <>
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <header className="sticky top-0 z-30 flex h-16 items-center gap-4 bg-[#E30613] text-white px-4 md:px-6 shadow-md">
                 <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
@@ -217,5 +222,16 @@ export function AppLayout({ children, role, fullName }: AppLayoutProps) {
                 </div>
             </footer>
         </div>
+        {/* AI Chat Widget — visible to all logged-in users */}
+        <AIChatWidget
+            userContext={{
+                deptId: departmentId,
+                deptCode: deptCode || role,
+                deptName: deptName || "Toàn nhà máy",
+                role,
+                fullName,
+            }}
+        />
+        </>
     )
 }
