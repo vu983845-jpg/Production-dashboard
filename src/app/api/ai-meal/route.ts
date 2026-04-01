@@ -11,15 +11,16 @@ const DEPT_DISPLAY: Record<string, string> = {
     SHELL: "Shelling", STEAM: "Steaming", PEEL: "Peeling",
     PEEL_MC: "Peeling MC", CS: "Color Sorter", BORMA: "Borma",
     PACK: "Packing", BOILER: "Boiler", QC: "QC",
-    FGWH: "Loading/WH", HPEEL: "Hand Peeling",
+    FGWH: "Loading/WH",
+    HAND: "Manual Peeling (Li\u00ean)",   // Real dept: HANDPEELING
+    HPEEL: "Hand Peeling",              // Real dept: Hand Peeling
     HPEEL_GRADING: "Manual Grading (Ms Hu\u1ec7)",
-    HPEEL_LIEN: "Manual Peeling (Li\u00ean)",
     HPEEL_DUNG: "Manual Peeling (Dung)",
     RCN: "RCN", MAINT_SHELL: "Maint Shelling",
     MAINT_HCA: "Maintenance HCA", OFFICE: "Office", CLEAN: "Cleaning",
 }
-// Sub-codes that all map to HPEEL department_id
-const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG"])
+// Only HPEEL_GRADING and HPEEL_DUNG are virtual sub-codes → map to HPEEL dept_id
+const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_DUNG"])
 
 export async function POST(req: NextRequest) {
     try {
@@ -44,7 +45,7 @@ NHIỆM VỤ: Parse câu hỏi của user thành danh sách headcount và trả 
 
 CÁC BỘ PHẬN HỢP LỆ (PHẢI dùng đúng code này):
 SHELL, STEAM, PEEL, PEEL_MC, CS, BORMA, PACK, BOILER, QC, FGWH,
-HPEEL, HPEEL_GRADING, HPEEL_LIEN, HPEEL_DUNG,
+HAND, HPEEL, HPEEL_GRADING, HPEEL_DUNG,
 RCN, MAINT_SHELL, MAINT_HCA, OFFICE, CLEAN
 
 MAPPING TÊN TIẾNG VIỆT → CODE:
@@ -59,8 +60,8 @@ MAPPING TÊN TIẾNG VIỆT → CODE:
 - "qc", "kiểm tra chất lượng" → QC
 - "loading", "warehouse", "kho", "fgwh" → FGWH
 - "hand peeling", "hpeel", "bóc tay" → HPEEL
+- "manual peeling liên", "liên", "handpeeling liên" → HAND  (real dept, không phải sub-code)
 - "manual grading", "grading", "ms huệ", "huệ" → HPEEL_GRADING
-- "manual peeling liên", "liên" → HPEEL_LIEN
 - "manual peeling dung", "dung" → HPEEL_DUNG
 - "rcn" → RCN
 - "bảo trì shelling", "maint shelling" → MAINT_SHELL
