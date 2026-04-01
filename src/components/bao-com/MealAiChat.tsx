@@ -8,6 +8,7 @@ import { format } from "date-fns"
 interface MealRow {
     date: string
     dept_code: string
+    dept_lookup?: string   // For HPEEL sub-codes: the real dept code to look up
     dept_display: string
     shift: string
     official_present: number
@@ -70,8 +71,11 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
         endRef.current?.scrollIntoView({ behavior: "smooth" })
     }, [messages])
 
-    const findDeptId = (code: string) =>
-        deptList.find(d => d.code === code)?.id ?? null
+    const findDeptId = (row: MealRow) => {
+        // HPEEL sub-groups (HPEEL_LIEN, HPEEL_DUNG, HPEEL_GRADING) use HPEEL dept_id
+        const lookupCode = row.dept_lookup ?? row.dept_code
+        return deptList.find(d => d.code === lookupCode)?.id ?? null
+    }
 
     const buildPayload = (row: MealRow, deptId: string) => ({
         work_date: row.date,
@@ -95,6 +99,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
             .eq("work_date", row.date)
             .eq("department_id", deptId)
             .eq("shift", row.shift)
+            .eq("department_name", row.dept_display)
 
     const sendMessage = async (overrideInput?: string) => {
         const text = (overrideInput ?? input).trim()
@@ -136,16 +141,17 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
         const notFound: string[] = []
 
         for (const row of rows) {
-            const deptId = findDeptId(row.dept_code)
+            const deptId = findDeptId(row)
             if (!deptId) { notFound.push(row.dept_code); continue }
 
-            // Check existing record
+            // Check existing record — include department_name for HPEEL sub-groups
             const { data: existing } = await supabase
                 .from("meal_headcount")
                 .select("official_present,seasonal_present,official_absent,seasonal_absent,ot_count,vegetarian")
                 .eq("work_date", row.date)
                 .eq("department_id", deptId)
                 .eq("shift", row.shift)
+                .eq("department_name", row.dept_display)
                 .maybeSingle()
 
             if (!existing) {

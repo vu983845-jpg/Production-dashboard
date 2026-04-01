@@ -5,16 +5,21 @@ import { format } from "date-fns"
 const GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
-// Dept map - must match actual 'code' values in departments table
+// Dept map - codes must match departments.code in DB
+// HPEEL sub-groups use HPEEL dept_id but different department_name
 const DEPT_DISPLAY: Record<string, string> = {
     SHELL: "Shelling", STEAM: "Steaming", PEEL: "Peeling",
     PEEL_MC: "Peeling MC", CS: "Color Sorter", BORMA: "Borma",
     PACK: "Packing", BOILER: "Boiler", QC: "QC",
-    FGWH: "Loading/WH", HAND: "Hand Peeling (Liên)",
-    HPEEL: "Hand Peeling", RCN: "RCN",
-    MAINT_SHELL: "Maint Shelling", MAINT_HCA: "Maintenance HCA",
-    OFFICE: "Office", CLEAN: "Cleaning",
+    FGWH: "Loading/WH", HPEEL: "Hand Peeling",
+    HPEEL_GRADING: "Manual Grading (Ms Hu\u1ec7)",
+    HPEEL_LIEN: "Manual Peeling (Li\u00ean)",
+    HPEEL_DUNG: "Manual Peeling (Dung)",
+    RCN: "RCN", MAINT_SHELL: "Maint Shelling",
+    MAINT_HCA: "Maintenance HCA", OFFICE: "Office", CLEAN: "Cleaning",
 }
+// Sub-codes that all map to HPEEL department_id
+const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG"])
 
 export async function POST(req: NextRequest) {
     try {
@@ -37,8 +42,10 @@ Hôm nay là ${todayDisplay} (${today}).
 
 NHIỆM VỤ: Parse câu hỏi của user thành danh sách headcount và trả về JSON.
 
-CÁC BỘ PHẬN HỢP LỆ (PHẢI dùng đúng code này, không tự đặt tên khác):
-SHELL, STEAM, PEEL, PEEL_MC, CS, BORMA, PACK, BOILER, QC, FGWH, HAND, HPEEL, RCN, MAINT_SHELL, MAINT_HCA, OFFICE, CLEAN
+CÁC BỘ PHẬN HỢP LỆ (PHẢI dùng đúng code này):
+SHELL, STEAM, PEEL, PEEL_MC, CS, BORMA, PACK, BOILER, QC, FGWH,
+HPEEL, HPEEL_GRADING, HPEEL_LIEN, HPEEL_DUNG,
+RCN, MAINT_SHELL, MAINT_HCA, OFFICE, CLEAN
 
 MAPPING TÊN TIẾNG VIỆT → CODE:
 - "shelling", "cắt tách", "shell" → SHELL
@@ -52,7 +59,9 @@ MAPPING TÊN TIẾNG VIỆT → CODE:
 - "qc", "kiểm tra chất lượng" → QC
 - "loading", "warehouse", "kho", "fgwh" → FGWH
 - "hand peeling", "hpeel", "bóc tay" → HPEEL
-- "manual peeling", "manual peeling liên", "liên" → HAND
+- "manual grading", "grading", "ms huệ", "huệ" → HPEEL_GRADING
+- "manual peeling liên", "liên" → HPEEL_LIEN
+- "manual peeling dung", "dung" → HPEEL_DUNG
 - "rcn" → RCN
 - "bảo trì shelling", "maint shelling" → MAINT_SHELL
 - "bảo trì highcare", "maint HCA" → MAINT_HCA
@@ -143,6 +152,8 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
                     parsedRows = parsed.rows.map((r: { dept_code: string; [key: string]: unknown }) => ({
                         ...r,
                         dept_display: DEPT_DISPLAY[r.dept_code] ?? r.dept_code,
+                        // Sub-groups resolve to HPEEL dept lookup code
+                        dept_lookup: HPEEL_SUBCODES.has(r.dept_code) ? "HPEEL" : r.dept_code,
                     }))
                 }
             } catch { /* ignore */ }
