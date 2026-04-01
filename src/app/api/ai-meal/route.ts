@@ -5,14 +5,14 @@ import { format } from "date-fns"
 const GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
-// Dept map
+// Dept map - must match actual 'code' values in departments table
 const DEPT_DISPLAY: Record<string, string> = {
-    PEEL: "Peeling", CS: "Machine Grading", STEAM: "Steaming",
-    PACK: "Packing", BORMA: "Borma", SHELL: "Shelling",
-    BOILER: "Boiler", QC: "QC", FGWH: "Loading/WH",
-    HPEEL: "Hand Peeling", HPEEL_GRADING: "Manual Grading (Ms Huệ)",
-    HPEEL_LIEN: "Manual Peeling (Liên)", HPEEL_DUNG: "Manual Peeling (Dung)",
-    MAINT_SHELL: "Maintenance Shelling", MAINT_HCA: "Maintenance HCA",
+    SHELL: "Shelling", STEAM: "Steaming", PEEL: "Peeling",
+    PEEL_MC: "Peeling MC", CS: "Color Sorter", BORMA: "Borma",
+    PACK: "Packing", BOILER: "Boiler", QC: "QC",
+    FGWH: "Loading/WH", HAND: "Hand Peeling (Liên)",
+    HPEEL: "Hand Peeling", RCN: "RCN",
+    MAINT_SHELL: "Maint Shelling", MAINT_HCA: "Maintenance HCA",
     OFFICE: "Office", CLEAN: "Cleaning",
 }
 
@@ -37,27 +37,27 @@ Hôm nay là ${todayDisplay} (${today}).
 
 NHIỆM VỤ: Parse câu hỏi của user thành danh sách headcount và trả về JSON.
 
-CÁC BỘ PHẬN HỢP LỆ (dùng code này):
-PEEL, CS, STEAM, PACK, BORMA, SHELL, BOILER, QC, FGWH, HPEEL, HPEEL_GRADING, HPEEL_LIEN, HPEEL_DUNG, MAINT_SHELL, MAINT_HCA, OFFICE, CLEAN
+CÁC BỘ PHẬN HỢP LỆ (PHẢI dùng đúng code này, không tự đặt tên khác):
+SHELL, STEAM, PEEL, PEEL_MC, CS, BORMA, PACK, BOILER, QC, FGWH, HAND, HPEEL, RCN, MAINT_SHELL, MAINT_HCA, OFFICE, CLEAN
 
 MAPPING TÊN TIẾNG VIỆT → CODE:
-- "peeling", "bóc vỏ máy" → PEEL
-- "color sorter", "machine grading", "CS" → CS
-- "steaming", "hấp", "steam" → STEAM
-- "packing", "đóng gói", "pack" → PACK
 - "shelling", "cắt tách", "shell" → SHELL
+- "steaming", "hấp", "steam" → STEAM
+- "peeling", "bóc vỏ máy", "peel" → PEEL
+- "peeling mc", "peel mc" → PEEL_MC
+- "color sorter", "machine grading", "CS" → CS
 - "borma" → BORMA
+- "packing", "đóng gói", "pack" → PACK
 - "boiler", "lò hơi" → BOILER
 - "qc", "kiểm tra chất lượng" → QC
 - "loading", "warehouse", "kho", "fgwh" → FGWH
-- "hand peeling", "bóc tay", "hpeel" → HPEEL
-- "grading", "ms Huệ" → HPEEL_GRADING
-- "liên" → HPEEL_LIEN
-- "dung" → HPEEL_DUNG
+- "hand peeling", "hpeel", "bóc tay" → HPEEL
+- "manual peeling", "manual peeling liên", "liên" → HAND
+- "rcn" → RCN
 - "bảo trì shelling", "maint shelling" → MAINT_SHELL
 - "bảo trì highcare", "maint HCA" → MAINT_HCA
-- "office", "văn phòng" → OFFICE
-- "tạp vụ", "cleaning" → CLEAN
+- "office", "văn phòng", "hành chánh" → OFFICE
+- "tạp vụ", "cleaning", "clean" → CLEAN
 
 CA LÀM VIỆC:
 - "Ca 1", "S1", "shift 1", "buổi sáng" → "1"
