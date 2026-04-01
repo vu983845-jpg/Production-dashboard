@@ -170,23 +170,27 @@ Department ID (dùng khi ghi DB): ${ctx.deptId}
 1. Thu thập thông tin từ user (kiểm tra lịch sử hội thoại trước khi hỏi)
 2. Khi đủ thông tin, tóm tắt và hỏi xác nhận 1 lần
 3. Sau xác nhận, xuất ACTION để ghi DB
-4. User chỉ được ghi data bộ phận của họ (dept_id: ${ctx.deptId}${isAdmin ? " — admin có thể ghi mọi bộ phận" : ""})
+4. User chỉ được GHI data bộ phận của họ (dept_id: ${ctx.deptId}${isAdmin ? " — admin có thể ghi mọi bộ phận" : ""})
+5. User có thể ĐỌC/XEM data của tất cả bộ phận và thông tin điện/nước toàn nhà máy
 
 ## ACTIONS:
 - **update_plan**: Kế hoạch tháng (tổng tấn/cont, cutoff, targets)
 - **log_downtime**: Ghi downtime (ngày, phút, lý do, khu vực)
 - **update_actual**: Sản lượng thực tế ngày (actual_ton, actual_container, input_ton, downtime_min)
-- **get_summary**: Tóm tắt sản xuất MTD
+- **get_summary**: Tóm tắt sản xuất MTD của 1 bộ phận
+- **get_all_production**: Xem sản lượng tất cả bộ phận trong 1 ngày hoặc tháng
+- **get_energy_data**: Xem điện, nước, máy nén khí toàn nhà máy
 
 ## QUY TẮC CONFIRM:
-- LUÔN tóm tắt toàn bộ data trước khi ghi: "📋 Tôi sẽ lưu: [liệt kê đầy đủ]. Xác nhận?"
+- LUÔN tóm tắt toàn bộ data trước khi GHI: "📋 Tôi sẽ lưu: [liệt kê đầy đủ]. Xác nhận?"
 - Sau khi user bấm xác nhận → xuất JSON trong thẻ <ACTION>...</ACTION>
 - Không hỏi lại sau khi user đã confirm
+- Với các action ĐỌC (get_all_production, get_energy_data, get_summary): KHÔNG cần hỏi xác nhận, xuất ACTION ngay
 
 ## FORMAT ACTION:
 <ACTION>
 {
-  "type": "update_plan" | "log_downtime" | "update_actual" | "get_summary",
+  "type": "update_plan" | "log_downtime" | "update_actual" | "get_summary" | "get_all_production" | "get_energy_data",
   "params": { ... }
 }
 </ACTION>
@@ -202,6 +206,12 @@ Department ID (dùng khi ghi DB): ${ctx.deptId}
 
 ### get_summary params:
 { "deptId": "${ctx.deptId}", "month": "YYYY-MM" }
+
+### get_all_production params:
+{ "date"?: "YYYY-MM-DD", "month"?: "YYYY-MM" }  — dùng date để xem 1 ngày, month để xem cả tháng
+
+### get_energy_data params:
+{ "date"?: "YYYY-MM-DD", "month"?: "YYYY-MM" }  — trả về điện, nước, máy nén khí
 `
 }
 
@@ -362,6 +372,124 @@ async function handleGetSummary(params: any, supabase: any) {
     }
 }
 
+async function handleGetAllProduction(params: any, supabase: any) {
+    const { date, month } = params
+    const { data: depts } = await supabase.from("departments").select("id,name_vi,code").order("code")
+
+    let start: string, end: string
+    if (date) {
+        start = date; end = date
+    } else if (month) {
+        const md = new Date(month + "-01")
+        start = format(startOfMonth(md), "yyyy-MM-dd")
+        end = format(endOfMonth(md), "yyyy-MM-dd")
+    } else {
+        const today = format(new Date(), "yyyy-MM-dd")
+        start = today; end = today
+    }
+
+    const { data: actuals } = await supabase.from("daily_actual")
+        .select("department_id,work_date,actual_ton,actual_container")
+        .gte("work_date", start).lte("work_date", end)
+
+    const { data: plans } = await supabase.from("daily_plan")
+        .select("department_id,work_date,plan_ton,plan_container")
+        .gte("work_date", start).lte("work_date", end)
+
+    const { data: downtime } = await supabase.from("downtime_events")
+        .select("department_id,work_date,duration_mins")
+        .gte("work_date", start).lte("work_date", end)
+
+    const deptMap = new Map((depts || []).map((d: any) => [d.id, d]))
+
+    // Aggregate per dept
+    const aggActual = new Map<string, number>()
+    const aggContainer = new Map<string, number>()
+    const aggPlan = new Map<string, number>()
+    const aggDowntime = new Map<string, number>()
+    ;(actuals || []).forEach((r: any) => {
+        aggActual.set(r.department_id, (aggActual.get(r.department_id) || 0) + Number(r.actual_ton || 0))
+        aggContainer.set(r.department_id, (aggContainer.get(r.department_id) || 0) + Number(r.actual_container || 0))
+    })
+    ;(plans || []).forEach((r: any) => {
+        aggPlan.set(r.department_id, (aggPlan.get(r.department_id) || 0) + Number(r.plan_ton || 0))
+    })
+    ;(downtime || []).forEach((r: any) => {
+        aggDowntime.set(r.department_id, (aggDowntime.get(r.department_id) || 0) + Number(r.duration_mins || 0))
+    })
+
+    const rows = (depts || []).map((d: any) => ({
+        dept: `${d.code} - ${d.name_vi}`,
+        planTon: Number((aggPlan.get(d.id) || 0).toFixed(1)),
+        actualTon: Number((aggActual.get(d.id) || 0).toFixed(1)),
+        actualContainer: aggContainer.get(d.id) || 0,
+        downtimeMin: aggDowntime.get(d.id) || 0,
+        pct: aggPlan.get(d.id) ? ((aggActual.get(d.id) || 0) / aggPlan.get(d.id)! * 100).toFixed(1) + "%" : "N/A",
+    }))
+
+    const label = date ? `ngày ${date}` : `tháng ${month}`
+    let text = `📊 **Sản lượng toàn nhà máy — ${label}:**\n\n`
+    rows.forEach(r => {
+        const contInfo = r.actualContainer > 0 ? ` | ${r.actualContainer} cont` : ""
+        const dtInfo = r.downtimeMin > 0 ? ` | DT: ${r.downtimeMin}p` : ""
+        text += `• **${r.dept}**: ${r.actualTon}T / KH ${r.planTon}T (${r.pct})${contInfo}${dtInfo}\n`
+    })
+
+    return { success: true, message: text }
+}
+
+async function handleGetEnergyData(params: any, supabase: any) {
+    const { date, month } = params
+    let start: string, end: string
+    if (date) {
+        start = date; end = date
+    } else if (month) {
+        const md = new Date(month + "-01")
+        start = format(startOfMonth(md), "yyyy-MM-dd")
+        end = format(endOfMonth(md), "yyyy-MM-dd")
+    } else {
+        const today = format(new Date(), "yyyy-MM-dd")
+        start = today; end = today
+    }
+
+    const [{ data: energy }, { data: water }, { data: compress }] = await Promise.all([
+        supabase.from("energy_meter_readings").select("meter_date,meter_name,delta_kwh,delta_m3")
+            .gte("meter_date", start).lte("meter_date", end).order("meter_date"),
+        supabase.from("energy_meter_readings").select("meter_date,meter_name,delta_kwh,delta_m3")
+            .gte("meter_date", start).lte("meter_date", end).not("delta_m3", "is", null),
+        supabase.from("compressor_readings").select("reading_date,unit_name,run_hours,delta_kwh")
+            .gte("reading_date", start).lte("reading_date", end).order("reading_date"),
+    ])
+
+    const totalElec = (energy || []).reduce((s: number, r: any) => s + Number(r.delta_kwh || 0), 0)
+    const totalWater = (water || []).reduce((s: number, r: any) => s + Number(r.delta_m3 || 0), 0)
+    const totalCompressKwh = (compress || []).reduce((s: number, r: any) => s + Number(r.delta_kwh || 0), 0)
+    const totalCompressHours = (compress || []).reduce((s: number, r: any) => s + Number(r.run_hours || 0), 0)
+
+    const label = date ? `ngày ${date}` : `tháng ${month}`
+    let text = `⚡ **Điện - Nước - Máy nén khí — ${label}:**\n\n`
+    text += `⚡ Tổng điện tiêu thụ: **${totalElec.toFixed(0)} kWh**\n`
+    text += `💧 Tổng nước tiêu thụ: **${totalWater.toFixed(1)} m³**\n`
+    text += `🌬️ Máy nén khí: **${totalCompressKwh.toFixed(0)} kWh** | Tổng giờ chạy: **${totalCompressHours.toFixed(1)} giờ**\n`
+
+    // Per-meter breakdown if single day
+    if (date && energy && energy.length > 0) {
+        text += `\n📋 Chi tiết đồng hồ điện:\n`
+        energy.forEach((r: any) => {
+            if (r.delta_kwh > 0) text += `  • ${r.meter_name}: ${Number(r.delta_kwh).toFixed(0)} kWh\n`
+        })
+    }
+    if (date && compress && compress.length > 0) {
+        text += `\n📋 Chi tiết máy nén khí:\n`
+        compress.forEach((r: any) => {
+            if (r.run_hours > 0 || r.delta_kwh > 0)
+                text += `  • ${r.unit_name}: ${Number(r.run_hours || 0).toFixed(1)}h | ${Number(r.delta_kwh || 0).toFixed(0)} kWh\n`
+        })
+    }
+
+    return { success: true, message: text }
+}
+
 // ── Main POST handler ────────────────────────────────────────────────────────
 export async function POST(req: Request) {
     const supabase = await createClient()
@@ -420,8 +548,12 @@ export async function POST(req: Request) {
             const actionJson = JSON.parse(actionMatch[1].trim())
             let result: any = { success: false, message: "Unknown action" }
 
-            // Security check: non-admin users can only write to their own dept
-            if (userContext.role !== "admin" && actionJson.params?.deptId !== userContext.deptId) {
+            // READ actions: allow all users (no dept restriction)
+            const readActions = ["get_all_production", "get_energy_data", "get_summary"]
+            const isReadAction = readActions.includes(actionJson.type)
+
+            // Security check: non-admin users can only WRITE to their own dept
+            if (!isReadAction && userContext.role !== "admin" && actionJson.params?.deptId !== userContext.deptId) {
                 return NextResponse.json({
                     text: "⛔ Bạn không có quyền ghi dữ liệu cho bộ phận khác.",
                     actionResult: null,
@@ -439,6 +571,8 @@ export async function POST(req: Request) {
                         result.message = `📊 **Tóm tắt tháng ${s.month}:**\n- Sản lượng thực tế: **${s.totalActual.toFixed(1)} tấn** / KH: ${s.totalPlan.toFixed(1)} tấn (${s.totalPlan > 0 ? ((s.totalActual / s.totalPlan) * 100).toFixed(1) : "N/A"}%)\n- Số ngày có data: ${s.daysHaveData} ngày\n- Tổng downtime: ${s.totalDowntime} phút (${(s.totalDowntime / 60).toFixed(1)} giờ)`
                     }
                     break
+                case "get_all_production": result = await handleGetAllProduction(actionJson.params, supabase); break
+                case "get_energy_data": result = await handleGetEnergyData(actionJson.params, supabase); break
             }
 
             // Strip <ACTION> tags from display text
