@@ -4,39 +4,13 @@ import { useEffect, useState, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 // ── Personalized greetings per dept code ────────────────────────────────────
-const DEPT_GREETINGS: Record<string, { salute: string; joke: string; emoji: string }> = {
-    CS: {
-        salute: "Chào chị Kiều! 👸",
-        joke: "Hôm nay hạt điều đẹp màu như chị vậy 🌈",
-        emoji: "🎨",
-    },
-    PEEL_MC: {
-        salute: "Chào Mr. Triều! 💪",
-        joke: "Bóc vỏ giỏi như anh, chắc về nhà bóc vỏ tôm cũng số 1 🦐",
-        emoji: "⚙️",
-    },
-    SHELL: {
-        salute: "Chào Mr. Song Duy! 🤝",
-        joke: "Shelling nhanh như anh, mai mốt làm thêm nghề... tách vỏ sò nhé 🐚",
-        emoji: "🔩",
-    },
-    STEAM: {
-        salute: "Chào Mr. Thần Nổ Hủ! 💥",
-        joke: "Hấp đều thì tốt, nhưng đừng để nổ hủ thật nha anh ơi 😅",
-        emoji: "♨️",
-    },
-    PACK: {
-        salute: "Chào Anh Shipper! 📦",
-        joke: "Container nào qua tay anh cũng giao đúng hạn — xuất sắc hơn Shopee Express 🚢",
-        emoji: "🚀",
-    },
+const DEPT_GREETINGS: Record<string, { salute: string; emoji: string }> = {
+    CS:      { salute: "Chào chị Kiều!",      emoji: "👸" },
+    PEEL_MC: { salute: "Chào Mr. Triều!",      emoji: "💪" },
+    SHELL:   { salute: "Chào Mr. Song Duy!",   emoji: "🤝" },
+    STEAM:   { salute: "Chào Mr. Thần Nổ Hủ!", emoji: "💥" },
+    PACK:    { salute: "Chào Anh Shipper!",    emoji: "📦" },
 }
-
-const DEFAULT_JOKES = [
-    "Chúc cả team làm việc năng suất như máy... nhưng đừng downtime nhé! ⚡",
-    "Hôm nay trời đẹp — hạt điều cũng đẹp — năng suất cũng đẹp! 🌞",
-    "Chúc một ngày sản xuất suôn sẻ, đạt plan, zero downtime! 🎯",
-]
 
 export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
     const [visible, setVisible] = useState(true)
@@ -82,7 +56,7 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
 
     const isRefresh = !isFirstLoad.current
     const greeting = deptCode ? DEPT_GREETINGS[deptCode] : null
-    const randomJoke = DEFAULT_JOKES[Math.floor(Date.now() / 86400000) % DEFAULT_JOKES.length]
+
 
     return (
         <div
@@ -158,34 +132,15 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
             {/* ── Personalized greeting (first load only) ── */}
             {!isRefresh && greeting && (
                 <div
-                    className="mx-4 mb-5 px-5 py-3 rounded-2xl text-center max-w-xs"
+                    className="mb-5 px-6 py-2.5 rounded-2xl text-center"
                     style={{
                         background: "linear-gradient(135deg, rgba(192,57,43,0.06) 0%, rgba(192,57,43,0.02) 100%)",
                         border: "1px solid rgba(192,57,43,0.12)",
                         animation: "slide-up 0.5s ease 0.3s both",
                     }}
                 >
-                    <p className="text-lg font-bold mb-1" style={{ color: "#C0392B" }}>
+                    <p className="text-base font-bold" style={{ color: "#C0392B" }}>
                         {greeting.emoji} {greeting.salute}
-                    </p>
-                    <p className="text-[12px] text-slate-500 leading-relaxed italic">
-                        "{greeting.joke}"
-                    </p>
-                </div>
-            )}
-
-            {/* Default fun message for depts without a specific greeting */}
-            {!isRefresh && !greeting && (
-                <div
-                    className="mx-4 mb-5 px-5 py-3 rounded-2xl text-center max-w-xs"
-                    style={{
-                        background: "linear-gradient(135deg, rgba(192,57,43,0.04) 0%, rgba(192,57,43,0.01) 100%)",
-                        border: "1px solid rgba(192,57,43,0.08)",
-                        animation: "slide-up 0.5s ease 0.3s both",
-                    }}
-                >
-                    <p className="text-[12px] text-slate-500 leading-relaxed italic">
-                        "{randomJoke}"
                     </p>
                 </div>
             )}
