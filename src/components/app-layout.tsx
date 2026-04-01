@@ -60,7 +60,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: t("nav.dashboard"),
             href: "/dashboard",
             icon: LayoutDashboard,
-            roles: ["admin", "dept_user", "viewer"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager"],
         },
         {
             title: t("nav.input"),
@@ -78,13 +78,13 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: "Production Report",
             href: "/report",
             icon: FileText,
-            roles: ["admin", "dept_user", "viewer"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager"],
         },
         {
             title: "Analytics",
             href: "/analytics",
             icon: BarChart3,
-            roles: ["admin", "dept_user", "viewer", "plant_manager"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager"],
         },
         {
             title: t("nav.users"),
@@ -96,7 +96,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: "Energy Hub",
             href: "/energy",
             icon: Zap,
-            roles: ["admin", "dept_user", "viewer", "HSE", "hse", "plant_manager", "maint"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
         },
         {
             title: "Báo Cơm",
