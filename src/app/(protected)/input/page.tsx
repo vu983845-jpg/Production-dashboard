@@ -71,12 +71,10 @@ const recalcEnergyData = (data: MonthlyEnergyRecord[], prevMonth: any) => {
             today.electricity_offpeak_kwh = Math.max(0, today.meter_offpeak - yesterday.meter_offpeak);
         }
 
-        // Water
+        // Water: consumption = today's meter - yesterday's meter
+        // yesterday is prevMonth object on day 0 (e.g. March 31 reading used for April 1)
         if (today.water_meter_reading != null && yesterday.water_meter_reading != null) {
-            if (i > 0) {
-                const prev = yesterday as MonthlyEnergyRecord;
-                prev.water_m3 = Math.max(0, today.water_meter_reading - yesterday.water_meter_reading);
-            }
+            today.water_m3 = Math.max(0, today.water_meter_reading - yesterday.water_meter_reading);
         }
 
         // Override total if any sub-meters are calculated
