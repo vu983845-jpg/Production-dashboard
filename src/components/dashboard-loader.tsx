@@ -54,8 +54,9 @@ export function DashboardLoader({
             className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
             style={{
                 background: isRefresh
-                    ? "rgba(255,255,255,0.82)"
+                    ? "rgba(255,255,255,0.92)"
                     : "rgba(255,255,255,1)",
+
                 backdropFilter: isRefresh ? "blur(6px)" : "none",
                 WebkitBackdropFilter: isRefresh ? "blur(6px)" : "none",
                 transition: "opacity 0.5s ease",
@@ -120,8 +121,8 @@ export function DashboardLoader({
                 </p>
             </div>
 
-            {/* ── Personalized greeting (first load only) ── */}
-            {!isRefresh && greeting && (
+            {/* ── Personalized greeting (always shown) ── */}
+            {greeting && (
                 <div
                     className="mb-5 px-6 py-2.5 rounded-2xl text-center"
                     style={{
