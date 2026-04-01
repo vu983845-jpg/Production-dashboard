@@ -5,13 +5,14 @@ import { useEffect, useState, useRef } from "react"
 
 // ── Personalized greetings per dept code ────────────────────────────────────
 const DEPT_GREETINGS: Record<string, { salute: string; emoji: string }> = {
-    CS:      { salute: "Chào chị Kiều!",       emoji: "👸" },
-    PEEL_MC: { salute: "Chào Mr. Triều!",       emoji: "💪" },
-    SHELL:   { salute: "Chào Mr. Song Duy!",    emoji: "🤝" },
-    STEAM:   { salute: "Chào Mr. Thần Nổ Hủ!", emoji: "💥" },
-    PACK:    { salute: "Chào Anh Shipper!",     emoji: "📦" },
-    FGWH:    { salute: "Chào Tú!",              emoji: "📫" },
-    RCN:     { salute: "Chào Thánh Nổ Hủ!",    emoji: "🔥" },
+    CS:      { salute: "Chào chị Kiều!",              emoji: "👸" },
+    PEEL_MC: { salute: "Chào Mr. Triều!",              emoji: "💪" },
+    SHELL:   { salute: "Chào Mr. Song Duy!",           emoji: "🤝" },
+    STEAM:   { salute: "Chào Mr. Thần Nổ Hủ!",        emoji: "💥" },
+    PACK:    { salute: "Chào Anh Shipper!",            emoji: "📦" },
+    FGWH:    { salute: "Chào Tú!",                    emoji: "📫" },
+    RCN:     { salute: "Chào Thánh Nổ Hủ!",           emoji: "🔥" },
+    HAND:    { salute: "Chào Thịnh! Today is your lucky day 🍀", emoji: "🎰" },
 }
 
 export function DashboardLoader({
