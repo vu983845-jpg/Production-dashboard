@@ -1,4 +1,5 @@
 "use client"
+import { DashboardLoader } from "@/components/dashboard-loader"
 
 import { useState, useEffect, useRef } from "react"
 import { format, startOfMonth, startOfWeek, isSunday, endOfMonth, addDays, subDays } from "date-fns"
@@ -101,6 +102,7 @@ export default function DashboardPage() {
     const [deptViewModes, setDeptViewModes] = useState<Record<string, 'chart' | 'details' | 'lines' | 'isp'>>({})
     const [shellingSubView, setShellingSubView] = useState<'production' | 'capacity'>('production')
     const [showCo2Intensity, setShowCo2Intensity] = useState(false);
+    const [pageLoading, setPageLoading] = useState(true);
 
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
     const [dailyElecVsProd, setDailyElecVsProd] = useState<any[]>([]) // kWh/T daily breakdown
@@ -286,6 +288,7 @@ export default function DashboardPage() {
     // Load Dashboard Data
     useEffect(() => {
         async function fetchDashboard() {
+            setPageLoading(true);
             const dashboards: any = {};
             const startFilter = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
             const endFilter = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
@@ -690,6 +693,7 @@ export default function DashboardPage() {
                 })
                 setShellingLineMonthData(aggregated)
             }
+            setPageLoading(false);
         }
         fetchDashboard()
     }, [selectedDept, selectedMonth])
@@ -1306,7 +1310,16 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="flex-col md:flex w-full relative z-0">
+        <>
+        <DashboardLoader isLoading={pageLoading} />
+        <div
+            className="flex-col md:flex w-full relative z-0"
+            style={{
+                opacity: pageLoading ? 0 : 1,
+                transform: pageLoading ? 'translateY(12px)' : 'translateY(0)',
+                transition: 'opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s',
+            }}
+        >
             {/* Ambient Background Gradient for Glassmorphism to pop out */}
             <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-emerald-50 pointer-events-none -z-10"></div>
             
@@ -1842,5 +1855,6 @@ export default function DashboardPage() {
                 </Card>
             </div>
         </div >
+        </>
     )
 }
