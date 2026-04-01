@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, Fragment } from "react"
+import { MealAiChat } from "@/components/bao-com/MealAiChat"
 import {
     ClipboardPaste,
     TableIcon,
@@ -1547,6 +1548,7 @@ export default function BaoCom() {
     const uniqueDates = [...new Set(records.map((r) => r.date).filter(Boolean))]
 
     return (
+        <>
         <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -2789,5 +2791,14 @@ export default function BaoCom() {
             })()}
 
         </div>
+
+        {/* AI Chat nổi — chỉ hiện với HSE/HR/admin */}
+        {canEdit && (
+            <MealAiChat
+                deptList={deptList}
+                onSaveSuccess={() => setHistoryRefreshKey(k => k + 1)}
+            />
+        )}
+        </>
     )
 }
