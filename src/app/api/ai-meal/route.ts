@@ -104,7 +104,7 @@ Trả lời bằng text ngắn (1-2 câu xác nhận) VÀ JSON block như sau:
 Nếu không có data hoặc không hiểu → chỉ trả lời text, KHÔNG có JSON block.`
 
     const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash-lite",
+        model: "gemini-3.1-flash-lite-preview",
         systemInstruction: systemPrompt,
     })
 
