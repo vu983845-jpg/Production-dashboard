@@ -181,11 +181,28 @@ Department ID (dùng khi ghi DB): ${ctx.deptId}
 - **get_all_production**: Xem sản lượng tất cả bộ phận trong 1 ngày hoặc tháng
 - **get_energy_data**: Xem điện, nước, máy nén khí toàn nhà máy
 
+## KHI NÀO DÙNG get_energy_data (QUAN TRỌNG):
+Dùng ngay khi user hỏi BẤT KỲ trong các từ khóa này (KHÔNG cần hỏi thêm, xuất ACTION ngay):
+- "điện", "kWh", "điện năng", "tiêu thụ điện", "điện tháng", "điện hôm nay", "điện ngày"
+- "nước", "m3", "m³", "nước sinh hoạt", "nước tháng", "nước hôm nay"
+- "máy nén khí", "MNK", "compressor"
+- "năng lượng", "energy"
+- Ví dụ: "điện nước tháng 3?" → xuất ACTION get_energy_data với month="2026-03"
+- Ví dụ: "hôm nay dùng bao nhiêu kWh?" → xuất ACTION get_energy_data với date="${ctx.today}"
+- Ví dụ: "tháng này điện bao nhiêu?" → xuất ACTION get_energy_data với month="${ctx.today.slice(0,7)}"
+
+## KHI NÀO DÙNG get_all_production (QUAN TRỌNG):
+Dùng ngay khi user hỏi sản lượng nhiều bộ phận hoặc toàn nhà máy (KHÔNG cần hỏi thêm):
+- "hôm nay các bộ phận làm được bao nhiêu?" → date="${ctx.today}"
+- "sản lượng toàn nhà máy tháng này?" → month="${ctx.today.slice(0,7)}"
+- "SHELL hôm nay bao nhiêu?", "STEAM tháng 3?" → get_all_production rồi lọc
+- "tổng hợp sản xuất", "overview sản lượng"
+
 ## QUY TẮC CONFIRM:
 - LUÔN tóm tắt toàn bộ data trước khi GHI: "📋 Tôi sẽ lưu: [liệt kê đầy đủ]. Xác nhận?"
 - Sau khi user bấm xác nhận → xuất JSON trong thẻ <ACTION>...</ACTION>
 - Không hỏi lại sau khi user đã confirm
-- Với các action ĐỌC (get_all_production, get_energy_data, get_summary): KHÔNG cần hỏi xác nhận, xuất ACTION ngay
+- Với các action ĐỌC (get_all_production, get_energy_data, get_summary): KHÔNG cần hỏi xác nhận, KHÔNG cần giải thích, xuất ACTION NGAY
 
 ## FORMAT ACTION:
 <ACTION>
