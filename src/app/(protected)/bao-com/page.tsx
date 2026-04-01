@@ -1243,11 +1243,14 @@ export default function BaoCom() {
     }
 
     const getDBMissingDepts = (rows: SavedRecord[]): { code: string; name: string }[] => {
-        const reported = new Set(rows.map(r =>
-            r.department_id
+        // PEEL_MC is an alias for PEEL — treat them as the same dept for missing-check
+        const DEPT_MISSING_ALIAS: Record<string, string> = { PEEL_MC: 'PEEL' }
+        const reported = new Set(rows.map(r => {
+            const code = r.department_id
                 ? (deptList.find(d => d.id === r.department_id)?.code ?? "")
                 : ""
-        ))
+            return DEPT_MISSING_ALIAS[code] ?? code
+        }))
         return EXPECTED_DEPTS
             .filter(code => !reported.has(code))
             .map(code => {
