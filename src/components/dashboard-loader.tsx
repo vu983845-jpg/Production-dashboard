@@ -40,8 +40,8 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
                 <span
                     className="absolute rounded-[28px]"
                     style={{
-                        width: 120,
-                        height: 120,
+                        width: 148,
+                        height: 148,
                         border: "2px solid rgba(192,57,43,0.2)",
                         animation: "pulse-ring 2s ease-out infinite",
                     }}
@@ -49,28 +49,26 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
                 <span
                     className="absolute rounded-[28px]"
                     style={{
-                        width: 120,
-                        height: 120,
-                        border: "2px solid rgba(192,57,43,0.12)",
+                        width: 148,
+                        height: 148,
+                        border: "2px solid rgba(192,57,43,0.1)",
                         animation: "pulse-ring 2s ease-out infinite 0.5s",
                     }}
                 />
 
                 {/* Logo box */}
                 <div
-                    className="relative rounded-[22px] shadow-xl overflow-hidden"
+                    className="relative rounded-[24px] shadow-xl overflow-hidden bg-white"
                     style={{
-                        width: 96,
-                        height: 96,
+                        width: 120,
+                        height: 120,
                         animation: "logo-breathe 2.4s ease-in-out infinite",
                     }}
                 >
                     <img
-                        src="/assets/intersnack-icon.png"
+                        src="/assets/intersnack-custom.jpg"
                         alt="Intersnack"
-                        width={96}
-                        height={96}
-                        style={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }}
+                        style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }}
                     />
                 </div>
             </div>
