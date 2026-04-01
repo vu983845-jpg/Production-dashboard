@@ -186,6 +186,34 @@ export default function AnalyticsPage() {
             months.push(subMonths(now, i))
         }
 
+        // Determine date range for the full period
+        const rangeStart = format(startOfMonth(months[0]), "yyyy-MM-dd")
+        const rangeEnd = format(endOfMonth(months[months.length - 1]), "yyyy-MM-dd")
+
+        // Get department_id for downtime_events query
+        const deptObj = departments.find(d => d.code === selectedDept)
+        const deptId = deptObj?.id ?? null
+
+        // Fetch downtime_events for full range (same approach as Production Report)
+        const downtimeByDate: Record<string, number> = {}
+        if (deptId) {
+            const { data: dtEvents } = await supabase
+                .from("downtime_events")
+                .select("work_date,duration_mins,start_time,end_time,is_ongoing")
+                .eq("department_id", deptId)
+                .eq("exclude_downtime", false)
+                .gte("work_date", rangeStart)
+                .lte("work_date", rangeEnd)
+            ;(dtEvents ?? []).forEach((evt: any) => {
+                let mins = Number(evt.duration_mins || 0)
+                if (evt.is_ongoing && evt.start_time) {
+                    const endT = evt.end_time ? new Date(evt.end_time) : new Date()
+                    mins = Math.max(0, Math.round((endT.getTime() - new Date(evt.start_time).getTime()) / 60000))
+                }
+                downtimeByDate[evt.work_date] = (downtimeByDate[evt.work_date] || 0) + mins
+            })
+        }
+
         // Fetch each month in parallel
         const monthPromises = months.map(async (m) => {
             const start = format(startOfMonth(m), "yyyy-MM-dd")
@@ -197,7 +225,12 @@ export default function AnalyticsPage() {
                 .gte("work_date", start)
                 .lte("work_date", end)
             if (error) console.error("Analytics fetch error:", error.message)
-            return { month: m, rows: (data ?? []) as DailyRaw[] }
+            // Override view downtime_min with real downtime from downtime_events
+            const rows = (data ?? []).map((r: any) => ({
+                ...r,
+                downtime_min: downtimeByDate[r.work_date] ?? Number(r.downtime_min || 0)
+            })) as DailyRaw[]
+            return { month: m, rows }
         })
 
         const results = await Promise.all(monthPromises)
