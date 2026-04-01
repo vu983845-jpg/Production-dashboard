@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useRef } from "react"
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
@@ -130,18 +130,18 @@ import { createClient } from "@/lib/supabase/client"
 
 // Schemas
 const actualSchema = z.object({
-    actual_ton: z.coerce.number().min(0, "Giá trị phải >= 0"),
+    actual_ton: z.coerce.number().min(0, "GiÃ¡ trá»‹ pháº£i >= 0"),
     pass1_ton: z.coerce.number().min(0, "Pass 1 >= 0").optional().default(0),
     pass2_ton: z.coerce.number().min(0, "Pass 2 >= 0").optional().default(0),
-    isp_ton: z.coerce.number().min(0, "Giá trị ISP >= 0").optional().default(0),
-    actual_container: z.coerce.number().min(0, "Số container >= 0").optional().default(0),
+    isp_ton: z.coerce.number().min(0, "GiÃ¡ trá»‹ ISP >= 0").optional().default(0),
+    actual_container: z.coerce.number().min(0, "Sá»‘ container >= 0").optional().default(0),
     note: z.string().optional(),
-    electricity_meter_reading: z.coerce.number().min(0, "Chỉ số điện >= 0").optional(),
+    electricity_meter_reading: z.coerce.number().min(0, "Chá»‰ sá»‘ Ä‘iá»‡n >= 0").optional(),
 })
 
 const kpiSchema = z.object({
-    wip_open_ton: z.coerce.number().min(0, "WIP Đầu >= 0").optional().default(0),
-    wip_close_ton: z.coerce.number().min(0, "WIP Cuối >= 0").optional().default(0),
+    wip_open_ton: z.coerce.number().min(0, "WIP Äáº§u >= 0").optional().default(0),
+    wip_close_ton: z.coerce.number().min(0, "WIP Cuá»‘i >= 0").optional().default(0),
     input_ton: z.coerce.number().min(0, "Input >= 0").optional().default(0),
     good_output_ton: z.coerce.number().min(0, "Output >= 0").optional().default(0),
     downtime_min: z.coerce.number().min(0, "Downtime >= 0").optional().default(0),
@@ -149,8 +149,8 @@ const kpiSchema = z.object({
     unpeel_pct: z.coerce.number().min(0, "Unpeel >= 0").max(100, "Unpeel <= 100").optional().default(0),
     isp_pct: z.coerce.number().min(0, "ISP >= 0").max(100, "ISP <= 100").optional().default(0),
     sw_pct: z.coerce.number().min(0, "SW >= 0").max(100, "SW <= 100").optional().default(0),
-    actual_container: z.coerce.number().min(0, "Số container >= 0").optional().default(0),
-    electricity_meter_reading: z.coerce.number().min(0, "Chỉ số điện >= 0").optional(),
+    actual_container: z.coerce.number().min(0, "Sá»‘ container >= 0").optional().default(0),
+    electricity_meter_reading: z.coerce.number().min(0, "Chá»‰ sá»‘ Ä‘iá»‡n >= 0").optional(),
     note: z.string().optional(),
 })
 
@@ -181,7 +181,7 @@ export default function InputPage() {
     const [dtDuration, setDtDuration] = useState("")
     const [dtCause, setDtCause] = useState("")
     const [dtNote, setDtNote] = useState("")
-    const [dtCustomNote, setDtCustomNote] = useState("") // shown when user picks 'Nhập lý do khác...'
+    const [dtCustomNote, setDtCustomNote] = useState("") // shown when user picks 'Nháº­p lÃ½ do khÃ¡c...'
     const DT_CUSTOM_SENTINEL = "__CUSTOM__"
 
     // Shelling Monthly Energy State
@@ -224,14 +224,14 @@ export default function InputPage() {
     size?: string;
     note: string; }
     
-    // Fixed default staffing (nhân sự cố định) per line when running
+    // Fixed default staffing (nhÃ¢n sá»± cá»‘ Ä‘á»‹nh) per line when running
     const SHELLING_LINE_MANPOWER: Record<ShellLine, number> = { A: 2, B: 2, C: 2, D1: 2, D2: 3 }
     // Ideal (theoretical) capacity per hour per line in tons/hour
     const SHELLING_IDEAL_RATE: Record<ShellLine, number> = { A: 1.4, B: 1.8, C: 1.5, D1: 1.2, D2: 1.2 }
     const SHELL_PLANNED_HOURS = 8
     // Helper: compute OEE for a line+shift using cross-line active-shift logic
     // If the factory shift is active (any line ran) but THIS line has no output,
-    // those 8h count as planned time → Availability drops accordingly.
+    // those 8h count as planned time â†’ Availability drops accordingly.
     const calcOEE = (line: ShellLine, shift: ShellShift) => {
         // Check if ANY line is running this shift (factory active)
         const shiftIsActive = SHELLING_LINES.some(l => {
@@ -244,7 +244,7 @@ export default function InputPage() {
         const aTon = (d?.actual_ton || 0)
         const broken = (d?.broken_pct || 0)
         // Availability = actual run hours / planned 8h
-        // If line didn't run in an active shift → runH=0 → avail=0 (correct!)
+        // If line didn't run in an active shift â†’ runH=0 â†’ avail=0 (correct!)
         const avail = runH / SHELL_PLANNED_HOURS
         const idealTon = runH > 0 ? runH * SHELLING_IDEAL_RATE[line] : 0
         const perf = idealTon > 0 ? Math.min(1, aTon / idealTon) : 0
@@ -263,7 +263,7 @@ export default function InputPage() {
     })
     
     const shellingFetchRef = useRef<string>("");
-    const SHIFT_LEADERS = ['Mrs. Tâm', 'Ms. Linh', 'Mr. Trí']
+    const SHIFT_LEADERS = ['Mrs. TÃ¢m', 'Ms. Linh', 'Mr. TrÃ­']
     const [shiftLeaders, setShiftLeaders] = useState<Record<ShellShift, string>>({
         'Ca 1': '',
         'Ca 2': '',
@@ -514,7 +514,7 @@ export default function InputPage() {
             return
         }
         if (monthlyEnergyData.length === 0) return
-        if (role !== 'admin' && role !== 'HSE') return
+        if (role !== 'admin' && role !== 'HSE' && role !== 'hse_admin') return
 
         // Debounce: wait 1.5s after last change before saving
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
@@ -571,7 +571,7 @@ export default function InputPage() {
     // Load Energy when date changes
     useEffect(() => {
         async function fetchEnergy() {
-            if (!date || (role !== 'admin' && role !== 'HSE' && role !== 'maint')) return;
+            if (!date || (role !== 'admin' && role !== 'HSE' && role !== 'hse_admin' && role !== 'maint')) return;
             isFirstEnergyLoad.current = true // Mark next state update as a DB load (prevent auto-save)
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
@@ -635,7 +635,7 @@ export default function InputPage() {
     // Load Compressor Meter Data
     useEffect(() => {
         async function fetchCompressor() {
-            if (!date || (role !== 'admin' && role !== 'HSE' && role !== 'maint')) return;
+            if (!date || (role !== 'admin' && role !== 'HSE' && role !== 'hse_admin' && role !== 'maint')) return;
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
             const prevDateStr = format(subDays(startOfMonth(date), 1), "yyyy-MM-dd");
@@ -683,7 +683,7 @@ export default function InputPage() {
         fetchCompressor();
         
         async function fetchOtherElec() {
-            if (role !== 'admin' && role !== 'HSE' && role !== 'maint') return;
+            if (role !== 'admin' && role !== 'HSE' && role !== 'hse_admin' && role !== 'maint') return;
             const startStr = format(startOfMonth(date), "yyyy-MM-dd");
             const endStr = format(endOfMonth(date), "yyyy-MM-dd");
 
@@ -739,7 +739,7 @@ export default function InputPage() {
     useEffect(() => {
         async function fetchShellingEnergy() {
             if (!date) return;
-            const hasShellAccess = role === 'admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL');
+            const hasShellAccess = role === 'admin' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL');
             if (!hasShellAccess) return;
 
             const shellDept = departments.find(d => d.code === 'SHELL');
@@ -803,16 +803,16 @@ export default function InputPage() {
     // Save Actual
     async function onSubmitActual(values: z.infer<typeof actualSchema>) {
         if (!selectedDept) {
-            toast.error("Vui lòng chọn bộ phận")
+            toast.error("Vui lÃ²ng chá»n bá»™ pháº­n")
             return
         }
 
         // Show confirmation if admin
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'hse_admin') {
             setConfirmDialog({
                 isOpen: true,
-                title: "Xác nhận lưu Sản lượng",
-                description: "Bạn đang lưu bằng quyền Admin. Dữ liệu sẽ đè lên báo cáo hiện tại của ngày này. Bạn có chắc chắn muốn lưu?",
+                title: "XÃ¡c nháº­n lÆ°u Sáº£n lÆ°á»£ng",
+                description: "Báº¡n Ä‘ang lÆ°u báº±ng quyá»n Admin. Dá»¯ liá»‡u sáº½ Ä‘Ã¨ lÃªn bÃ¡o cÃ¡o hiá»‡n táº¡i cá»§a ngÃ y nÃ y. Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n lÆ°u?",
                 onConfirm: () => executeSaveActual(values)
             })
         } else {
@@ -841,7 +841,7 @@ export default function InputPage() {
         )
 
         if (actualError) {
-            toast.error("Lỗi khi lưu Actual: " + actualError.message)
+            toast.error("Lá»—i khi lÆ°u Actual: " + actualError.message)
         } else {
             // If Shelling, also save electricity to daily_kpi
             const deptCode = departments.find(d => d.id === selectedDept)?.code
@@ -858,7 +858,7 @@ export default function InputPage() {
                 if (kpiError) throw kpiError
             }
 
-            toast.success("Đã lưu Actual thành công")
+            toast.success("ÄÃ£ lÆ°u Actual thÃ nh cÃ´ng")
             fetchHistory(selectedDept)
             // Auto-save shelling line data when dept is SHELL
             if (departments.find(d => d.id === selectedDept)?.code === 'SHELL') {
@@ -870,7 +870,7 @@ export default function InputPage() {
 
     async function handleAddDowntime() {
         if (!selectedDept || !dtDuration || !dtCause) return;
-        // Resolve the actual note: if user chose "Nhập lý do khác..." use their typed text
+        // Resolve the actual note: if user chose "Nháº­p lÃ½ do khÃ¡c..." use their typed text
         const resolvedNote = dtNote === DT_CUSTOM_SENTINEL ? dtCustomNote.trim() : dtNote;
         if (dtNote === DT_CUSTOM_SENTINEL && !resolvedNote) return; // guard: must type something
         setIsSaving(true);
@@ -885,9 +885,9 @@ export default function InputPage() {
         }).select().single();
 
         if (error) {
-            toast.error("Lỗi khi lưu sự cố: " + error.message);
+            toast.error("Lá»—i khi lÆ°u sá»± cá»‘: " + error.message);
         } else {
-            toast.success("Đã ghi nhận sự cố");
+            toast.success("ÄÃ£ ghi nháº­n sá»± cá»‘");
             setDowntimes(prev => [...prev, data]);
             setDtDuration("");
             setDtCause("");
@@ -901,12 +901,12 @@ export default function InputPage() {
     }
 
     async function handleDeleteDowntime(id: string) {
-        if (!window.confirm("Bạn có chắc muốn xóa sự cố này?")) return;
+        if (!window.confirm("Báº¡n cÃ³ cháº¯c muá»‘n xÃ³a sá»± cá»‘ nÃ y?")) return;
         const { error } = await supabase.from('downtime_events').delete().eq('id', id);
         if (error) {
-            toast.error("Lỗi khi xóa: " + error.message);
+            toast.error("Lá»—i khi xÃ³a: " + error.message);
         } else {
-            toast.success("Đã xóa sự cố");
+            toast.success("ÄÃ£ xÃ³a sá»± cá»‘");
             setDowntimes(prev => {
                 const updated = prev.filter(r => r.id !== id);
                 const newTotal = updated.reduce((s, r) => s + Number(r.duration_mins), 0);
@@ -929,9 +929,9 @@ export default function InputPage() {
             { onConflict: 'work_date' }
         )
         if (error) {
-            toast.error('Lỗi khi lưu FGWH: ' + error.message)
+            toast.error('Lá»—i khi lÆ°u FGWH: ' + error.message)
         } else {
-            toast.success('Đã lưu số liệu FGWH thành công')
+            toast.success('ÄÃ£ lÆ°u sá»‘ liá»‡u FGWH thÃ nh cÃ´ng')
             fetchHistory(selectedDept)
         }
         setIsSaving(false)
@@ -956,9 +956,9 @@ export default function InputPage() {
         const { error } = await supabase.from('daily_electricity_others').upsert(payload, { onConflict: 'work_date' });
 
         if (error) {
-            toast.error("Lỗi khi lưu Điện Khác: " + error.message);
+            toast.error("Lá»—i khi lÆ°u Äiá»‡n KhÃ¡c: " + error.message);
         } else {
-            toast.success("Đã cập nhật số liệu Điện Khác");
+            toast.success("ÄÃ£ cáº­p nháº­t sá»‘ liá»‡u Äiá»‡n KhÃ¡c");
         }
         setIsSaving(false);
     }
@@ -975,8 +975,8 @@ export default function InputPage() {
                 updated_at: new Date().toISOString(),
             }));
         const { error } = await supabase.from('daily_compressor').upsert(payload, { onConflict: 'work_date' });
-        if (error) toast.error('Lỗi khi lưu Máy nén khí: ' + error.message);
-        else toast.success('Đã lưu dữ liệu Máy nén khí thành công');
+        if (error) toast.error('Lá»—i khi lÆ°u MÃ¡y nÃ©n khÃ­: ' + error.message);
+        else toast.success('ÄÃ£ lÆ°u dá»¯ liá»‡u MÃ¡y nÃ©n khÃ­ thÃ nh cÃ´ng');
         setIsSaving(false);
     }
 
@@ -998,9 +998,9 @@ export default function InputPage() {
             { onConflict: 'work_date' }
         )
         if (error) {
-            toast.error('Lỗi khi lưu Điện/Nước/Củi: ' + error.message)
+            toast.error('Lá»—i khi lÆ°u Äiá»‡n/NÆ°á»›c/Cá»§i: ' + error.message)
         } else {
-            toast.success('Đã lưu toàn bộ dữ liệu Điện/Nước/Củi của tháng thành công')
+            toast.success('ÄÃ£ lÆ°u toÃ n bá»™ dá»¯ liá»‡u Äiá»‡n/NÆ°á»›c/Cá»§i cá»§a thÃ¡ng thÃ nh cÃ´ng')
         }
         setIsSaving(false)
     }
@@ -1079,9 +1079,9 @@ export default function InputPage() {
         )
         const { error } = await supabase.from('shelling_line_daily').upsert(payload, { onConflict: 'work_date,line_code,shift_name' })
         if (error) {
-            toast.error('Lỗi khi lưu Shelling Lines: ' + error.message)
+            toast.error('Lá»—i khi lÆ°u Shelling Lines: ' + error.message)
         } else {
-            toast.success('Đã lưu dữ liệu Shelling Lines thành công')
+            toast.success('ÄÃ£ lÆ°u dá»¯ liá»‡u Shelling Lines thÃ nh cÃ´ng')
         }
         setIsSaving(false)
     }
@@ -1109,9 +1109,9 @@ export default function InputPage() {
                 { onConflict: 'work_date,department_id' }
             )
             if (error) {
-                toast.error('Lỗi khi lưu Điện Shelling: ' + error.message)
+                toast.error('Lá»—i khi lÆ°u Äiá»‡n Shelling: ' + error.message)
             } else {
-                toast.success('Đã lưu dữ liệu Điện Shelling thành công')
+                toast.success('ÄÃ£ lÆ°u dá»¯ liá»‡u Äiá»‡n Shelling thÃ nh cÃ´ng')
             }
         }
         setIsSaving(false)
@@ -1120,16 +1120,16 @@ export default function InputPage() {
     // Save KPI
     async function onSubmitKpi(values: z.infer<typeof kpiSchema>) {
         if (!selectedDept) {
-            toast.error("Vui lòng chọn bộ phận")
+            toast.error("Vui lÃ²ng chá»n bá»™ pháº­n")
             return
         }
 
         // Show confirmation if admin
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'hse_admin') {
             setConfirmDialog({
                 isOpen: true,
-                title: "Xác nhận lưu KPI",
-                description: "Bạn đang lưu KPI bằng quyền Admin. Dữ liệu này sẽ đè lên KPI hiện tại của bộ phận trong ngày hôm nay. Bạn có chắc chắn muốn lưu?",
+                title: "XÃ¡c nháº­n lÆ°u KPI",
+                description: "Báº¡n Ä‘ang lÆ°u KPI báº±ng quyá»n Admin. Dá»¯ liá»‡u nÃ y sáº½ Ä‘Ã¨ lÃªn KPI hiá»‡n táº¡i cá»§a bá»™ pháº­n trong ngÃ y hÃ´m nay. Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n lÆ°u?",
                 onConfirm: () => executeSaveKpi(values)
             })
         } else {
@@ -1164,9 +1164,9 @@ export default function InputPage() {
         }
 
         if (error) {
-            toast.error("Lỗi khi lưu KPI: " + error.message)
+            toast.error("Lá»—i khi lÆ°u KPI: " + error.message)
         } else {
-            toast.success("Đã lưu KPI thành công")
+            toast.success("ÄÃ£ lÆ°u KPI thÃ nh cÃ´ng")
             fetchHistory(selectedDept)
         }
         setIsSaving(false)
@@ -1208,22 +1208,22 @@ export default function InputPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Huỷ bỏ</AlertDialogCancel>
+                        <AlertDialogCancel>Huá»· bá»</AlertDialogCancel>
                         <AlertDialogAction onClick={() => {
                             setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                             confirmDialog.onConfirm();
-                        }} className="bg-primary hover:bg-primary/90">Đồng ý lưu</AlertDialogAction>
+                        }} className="bg-primary hover:bg-primary/90">Äá»“ng Ã½ lÆ°u</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 
             <div className="flex items-center justify-between space-y-2 border-b pb-4 mb-4">
-                <h2 className="text-3xl font-bold tracking-tight">Nhập Liệu Báo Cáo</h2>
+                <h2 className="text-3xl font-bold tracking-tight">Nháº­p Liá»‡u BÃ¡o CÃ¡o</h2>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                 <div className="space-y-2 lg:col-span-2">
-                    <label className="text-sm font-medium">Ngày làm việc</label>
+                    <label className="text-sm font-medium">NgÃ y lÃ m viá»‡c</label>
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -1234,7 +1234,7 @@ export default function InputPage() {
                                 )}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date ? format(date, "PPP", { locale: vi }) : <span>Chọn ngày</span>}
+                                {date ? format(date, "PPP", { locale: vi }) : <span>Chá»n ngÃ y</span>}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -1251,24 +1251,24 @@ export default function InputPage() {
 
             <Tabs defaultValue={role === 'maint' ? 'other-elec' : 'production'} className="space-y-4">
                 <TabsList>
-                    {role !== 'maint' && <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>}
-                    {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
-                    {(role === 'admin' || role === 'HSE' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
-                    {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
-                    {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsTrigger value="other-elec">⚡ Điện Khác</TabsTrigger>}
+                    {role !== 'maint' && <TabsTrigger value="production">Sáº£n Pháº©m & KPI</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="energy">Äiá»‡n & NÆ°á»›c</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Äiá»‡n Shelling (ThÃ¡ng)</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="compressor">ðŸŒ¬ï¸ MÃ¡y NÃ©n KhÃ­</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="other-elec">âš¡ Äiá»‡n KhÃ¡c</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="production" className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                         <div className="space-y-2 lg:col-span-2">
-                            <label className="text-sm font-medium">Bộ phận</label>
+                            <label className="text-sm font-medium">Bá»™ pháº­n</label>
                             <Select
                                 value={selectedDept}
                                 onValueChange={setSelectedDept}
                                 disabled={role === "dept_user" && allowedDeptIds.size <= 1}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Chọn bộ phận" />
+                                    <SelectValue placeholder="Chá»n bá»™ pháº­n" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {(role === "dept_user" ? departments.filter(d => allowedDeptIds.has(d.id)) : departments).map((d) => (
@@ -1283,21 +1283,21 @@ export default function InputPage() {
 
                     {!selectedDept ? (
                         <div className="flex flex-col items-center justify-center p-12 mt-8 border rounded-xl border-dashed bg-card/50 text-muted-foreground">
-                            <p>Vui lòng chọn bộ phận ở thanh Tùy chọn để bắt đầu nhập liệu.</p>
+                            <p>Vui lÃ²ng chá»n bá»™ pháº­n á»Ÿ thanh TÃ¹y chá»n Ä‘á»ƒ báº¯t Ä‘áº§u nháº­p liá»‡u.</p>
                         </div>
                     ) : role === 'viewer' ? (
                         <div className="flex flex-col items-center justify-center p-12 mt-8 border rounded-xl border-dashed bg-amber-50 text-amber-700 gap-2">
-                            <p className="font-semibold text-lg">🔒 Chế độ Xem</p>
-                            <p className="text-sm text-center">Tài khoản này chỉ có quyền xem Dashboard. Liên hệ Admin để được cấp quyền nhập liệu.</p>
+                            <p className="font-semibold text-lg">ðŸ”’ Cháº¿ Ä‘á»™ Xem</p>
+                            <p className="text-sm text-center">TÃ i khoáº£n nÃ y chá»‰ cÃ³ quyá»n xem Dashboard. LiÃªn há»‡ Admin Ä‘á»ƒ Ä‘Æ°á»£c cáº¥p quyá»n nháº­p liá»‡u.</p>
                         </div>
                     ) : departments.find(d => d.id === selectedDept)?.code === 'FGWH' ? (
                         /* FGWH: Direct ISP / Non-ISP form, no tabs needed */
                         <div className="rounded-xl border bg-card text-card-foreground shadow">
                             <div className="p-6 space-y-6 max-w-lg">
-                                <h3 className="font-semibold text-base">FGWH — Nhập Sản lượng thực tế</h3>
+                                <h3 className="font-semibold text-base">FGWH â€” Nháº­p Sáº£n lÆ°á»£ng thá»±c táº¿</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">ISP Thực tế (Tấn)</label>
+                                        <label className="text-sm font-medium">ISP Thá»±c táº¿ (Táº¥n)</label>
                                         <input
                                             type="number"
                                             step="0.001"
@@ -1308,7 +1308,7 @@ export default function InputPage() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">Non-ISP Thực tế (Tấn)</label>
+                                        <label className="text-sm font-medium">Non-ISP Thá»±c táº¿ (Táº¥n)</label>
                                         <input
                                             type="number"
                                             step="0.001"
@@ -1324,7 +1324,7 @@ export default function InputPage() {
                                     disabled={isSaving}
                                     className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
                                 >
-                                    {isSaving ? 'Đang lưu...' : 'Lưu FGWH'}
+                                    {isSaving ? 'Äang lÆ°u...' : 'LÆ°u FGWH'}
                                 </button>
                             </div>
                         </div>
@@ -1332,9 +1332,9 @@ export default function InputPage() {
                         <div className="space-y-8">
                             <Tabs defaultValue="actual" className="space-y-4">
                                 <TabsList>
-                                    <TabsTrigger value="actual">Actual (Sản lượng)</TabsTrigger>
-                                    <TabsTrigger value="kpi">KPI (WIP, Đầu ra, Thời gian)</TabsTrigger>
-                                    <TabsTrigger value="downtime">Downtime (Sự cố)</TabsTrigger>
+                                    <TabsTrigger value="actual">Actual (Sáº£n lÆ°á»£ng)</TabsTrigger>
+                                    <TabsTrigger value="kpi">KPI (WIP, Äáº§u ra, Thá»i gian)</TabsTrigger>
+                                    <TabsTrigger value="downtime">Downtime (Sá»± cá»‘)</TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent value="actual" className="space-y-4">
@@ -1346,8 +1346,8 @@ export default function InputPage() {
                                                         <Table>
                                                             <TableHeader className="bg-muted/50">
                                                                 <TableRow>
-                                                                    <TableHead className="w-1/2">Chỉ tiêu</TableHead>
-                                                                    <TableHead className="w-1/2"><span>Giá trị nhập</span><span className="ml-2 text-[10px] font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{format(date, "dd/MM/yyyy")}</span></TableHead>
+                                                                    <TableHead className="w-1/2">Chá»‰ tiÃªu</TableHead>
+                                                                    <TableHead className="w-1/2"><span>GiÃ¡ trá»‹ nháº­p</span><span className="ml-2 text-[10px] font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{format(date, "dd/MM/yyyy")}</span></TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
@@ -1356,7 +1356,7 @@ export default function InputPage() {
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0 pb-0">
                                                                                 <div className="bg-slate-50/60 border-b px-4 pt-3 pb-2 flex gap-4 overflow-x-auto">
-                                                                                    <p className="text-xs font-semibold text-slate-700 whitespace-nowrap self-center mr-2">👤 Tổ trưởng:</p>
+                                                                                    <p className="text-xs font-semibold text-slate-700 whitespace-nowrap self-center mr-2">ðŸ‘¤ Tá»• trÆ°á»Ÿng:</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (
                                                                                         <div key={shift} className="flex flex-col items-start min-w-[120px]">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
@@ -1365,14 +1365,14 @@ export default function InputPage() {
                                                                                                 onChange={e => setShiftLeaders(prev => ({ ...prev, [shift]: e.target.value }))}
                                                                                                 className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white focus:outline-none focus:border-primary"
                                                                                             >
-                                                                                                <option value="">-- Trống --</option>
+                                                                                                <option value="">-- Trá»‘ng --</option>
                                                                                                 {SHIFT_LEADERS.map(l => <option key={l} value={l}>{l}</option>)}
                                                                                             </select>
                                                                                         </div>
                                                                                     ))}
                                                                                 </div>
                                                                                 <div className="bg-blue-50/60 border-b px-4 pt-3 pb-1">
-                                                                                    <p className="text-xs font-semibold text-blue-700 mb-2">📊 Sản lượng theo từng Line (Tấn)</p>
+                                                                                    <p className="text-xs font-semibold text-blue-700 mb-2">ðŸ“Š Sáº£n lÆ°á»£ng theo tá»«ng Line (Táº¥n)</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
@@ -1409,7 +1409,7 @@ export default function InputPage() {
                                                                                         </div>
                                                                                     ))}
                                                                                     <p className="text-[10px] font-semibold text-blue-800 text-right">
-                                                                                        Tổng 3 ca: <span className="text-base font-black">{SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l]?.['Ca 1']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 2']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 3']?.actual_ton || 0), 0).toFixed(3)}</span> T
+                                                                                        Tá»•ng 3 ca: <span className="text-base font-black">{SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l]?.['Ca 1']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 2']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 3']?.actual_ton || 0), 0).toFixed(3)}</span> T
                                                                                     </p>
                                                                                 </div>
                                                                             </TableCell>
@@ -1417,7 +1417,7 @@ export default function InputPage() {
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-purple-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-purple-700 mb-2">🏷️ Kích cỡ (Size)</p>
+                                                                                    <p className="text-xs font-semibold text-purple-700 mb-2">ðŸ·ï¸ KÃ­ch cá»¡ (Size)</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
@@ -1444,7 +1444,7 @@ export default function InputPage() {
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-green-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-green-700 mb-2">⏱ Thời gian chạy máy (Giờ)</p>
+                                                                                    <p className="text-xs font-semibold text-green-700 mb-2">â± Thá»i gian cháº¡y mÃ¡y (Giá»)</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
@@ -1461,7 +1461,7 @@ export default function InputPage() {
                                                                                                             type="number" step="0.1" min="0" max="24" readOnly
                                                                                                             className="w-full text-right p-1 rounded border-2 border-green-300 bg-green-50 text-sm focus:outline-none text-green-800 font-semibold cursor-not-allowed"
                                                                                                             value={runHrs > 0 ? runHrs.toFixed(1) : ''}
-                                                                                                            title="Tự động tính = 7 giờ - Dừng máy"
+                                                                                                            title="Tá»± Ä‘á»™ng tÃ­nh = 7 giá» - Dá»«ng mÃ¡y"
                                                                                                         />
                                                                                                     </div>
                                                                                                 )})}
@@ -1474,7 +1474,7 @@ export default function InputPage() {
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-red-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">⏸ Thời gian dừng máy - Downtime (Phút)</p>
+                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">â¸ Thá»i gian dá»«ng mÃ¡y - Downtime (PhÃºt)</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
@@ -1486,7 +1486,7 @@ export default function InputPage() {
                                                                                                             type="number" step="1" min="0" readOnly
                                                                                                             className="w-full text-right p-1 rounded border-2 border-red-200 bg-red-50 text-sm focus:outline-none text-red-700 font-semibold cursor-not-allowed"
                                                                                                             value={shellingLineData[line]?.[shift]?.downtime_min || ''}
-                                                                                                            title="Dữ liệu tự động đồng bộ từ Hệ thống Cảnh báo Sự cố"
+                                                                                                            title="Dá»¯ liá»‡u tá»± Ä‘á»™ng Ä‘á»“ng bá»™ tá»« Há»‡ thá»‘ng Cáº£nh bÃ¡o Sá»± cá»‘"
                                                                                                         />
                                                                                                     </div>
                                                                                                 ))}
@@ -1500,8 +1500,8 @@ export default function InputPage() {
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-amber-50/40 border-b px-4 pt-2 pb-3">
                                                                                     <div className="flex items-center gap-2 mb-2">
-                                                                                        <p className="text-xs font-semibold text-amber-700">🧑‍🤝‍🧑 Nhân sự tham gia (Người)</p>
-                                                                                        <span className="text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full font-medium">Định mức: A/B/C/D1=2, D2=3</span>
+                                                                                        <p className="text-xs font-semibold text-amber-700">ðŸ§‘â€ðŸ¤â€ðŸ§‘ NhÃ¢n sá»± tham gia (NgÆ°á»i)</p>
+                                                                                        <span className="text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full font-medium">Äá»‹nh má»©c: A/B/C/D1=2, D2=3</span>
                                                                                     </div>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
@@ -1522,7 +1522,7 @@ export default function InputPage() {
                                                                                                             type="number" step="1" min="0"
                                                                                                             className={`w-full text-right p-1 rounded border-2 text-sm focus:outline-none ${isOverridden ? 'border-orange-400 bg-orange-50 text-orange-800 font-semibold' : 'border-amber-200 bg-white'}`}
                                                                                                             value={currentMp || ''}
-                                                                                                            title={isRunning ? `Định mức cố định: ${defaultMp} người` : 'Nhập volume trước để tự điền'}
+                                                                                                            title={isRunning ? `Äá»‹nh má»©c cá»‘ Ä‘á»‹nh: ${defaultMp} ngÆ°á»i` : 'Nháº­p volume trÆ°á»›c Ä‘á»ƒ tá»± Ä‘iá»n'}
                                                                                                             onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], manpower: Number(e.target.value) || 0 } } }))}
                                                                                                         />
                                                                                                     </div>
@@ -1537,7 +1537,7 @@ export default function InputPage() {
                                                                         <TableRow>
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-red-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">💔 Tỷ lệ Bể (% Broken)</p>
+                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">ðŸ’” Tá»· lá»‡ Bá»ƒ (% Broken)</p>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
                                                                                         <div key={shift} className="mb-3">
                                                                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
@@ -1565,22 +1565,22 @@ export default function InputPage() {
                                                                             <TableCell colSpan={2} className="p-0">
                                                                                 <div className="bg-indigo-50/60 border-b px-4 pt-2 pb-3">
                                                                                     <div className="flex items-center gap-2 mb-2">
-                                                                                        <p className="text-xs font-semibold text-indigo-700">📈 OEE (Hiệu suất Tổng thể)</p>
-                                                                                        <span className="text-[10px] text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded-full">Avail × Perf × Quality</span>
+                                                                                        <p className="text-xs font-semibold text-indigo-700">ðŸ“ˆ OEE (Hiá»‡u suáº¥t Tá»•ng thá»ƒ)</p>
+                                                                                        <span className="text-[10px] text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded-full">Avail Ã— Perf Ã— Quality</span>
                                                                                     </div>
                                                                                     {/* OEE Explanation Card */}
                                                                                     <div className="mb-3 rounded-lg border border-indigo-200 bg-white/70 p-2.5 text-[10px] text-slate-600 space-y-1.5">
-                                                                                        <p className="font-bold text-indigo-800 text-[11px]">📖 OEE là gì?</p>
-                                                                                        <p>OEE (<b>Overall Equipment Effectiveness</b>) đo lường hiệu quả tổng thể của thiết bị qua 3 thành phần:</p>
+                                                                                        <p className="font-bold text-indigo-800 text-[11px]">ðŸ“– OEE lÃ  gÃ¬?</p>
+                                                                                        <p>OEE (<b>Overall Equipment Effectiveness</b>) Ä‘o lÆ°á»ng hiá»‡u quáº£ tá»•ng thá»ƒ cá»§a thiáº¿t bá»‹ qua 3 thÃ nh pháº§n:</p>
                                                                                         <div className="grid grid-cols-1 gap-1 mt-1">
-                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-blue-600 shrink-0">Tính sẵn sàng (A):</span><span>Run Hours / 8h kế hoạch. Ca nào có line khác chạy mà line này tắt → A giảm.</span></div>
-                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-emerald-600 shrink-0">Hiệu suất (P):</span><span>Sản lượng thực / (Run Hours × Tốc độ thiết kế). P thấp = chạy chậm hơn lý thuyết.</span></div>
-                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-rose-600 shrink-0">Chất lượng (Q):</span><span>1 − % Bể. Q thấp = nhiều hạt vỡ.</span></div>
+                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-blue-600 shrink-0">TÃ­nh sáºµn sÃ ng (A):</span><span>Run Hours / 8h káº¿ hoáº¡ch. Ca nÃ o cÃ³ line khÃ¡c cháº¡y mÃ  line nÃ y táº¯t â†’ A giáº£m.</span></div>
+                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-emerald-600 shrink-0">Hiá»‡u suáº¥t (P):</span><span>Sáº£n lÆ°á»£ng thá»±c / (Run Hours Ã— Tá»‘c Ä‘á»™ thiáº¿t káº¿). P tháº¥p = cháº¡y cháº­m hÆ¡n lÃ½ thuyáº¿t.</span></div>
+                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-rose-600 shrink-0">Cháº¥t lÆ°á»£ng (Q):</span><span>1 âˆ’ % Bá»ƒ. Q tháº¥p = nhiá»u háº¡t vá»¡.</span></div>
                                                                                         </div>
                                                                                         <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-indigo-100">
-                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span> ≥75% Tốt</span>
-                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> 55–74% Cần cải thiện</span>
-                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> &lt;55% Kém</span>
+                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span> â‰¥75% Tá»‘t</span>
+                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> 55â€“74% Cáº§n cáº£i thiá»‡n</span>
+                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> &lt;55% KÃ©m</span>
                                                                                         </div>
                                                                                     </div>
                                                                                     {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (
@@ -1596,7 +1596,7 @@ export default function InputPage() {
                                                                                                         : 'border-red-400 bg-red-50 text-red-800'
                                                                                                     const tooltip = oeeData?.hasData
                                                                                                         ? `Avail: ${(oeeData.avail * 100).toFixed(1)}% | Perf: ${(oeeData.perf * 100).toFixed(1)}% | Quality: ${(oeeData.qual * 100).toFixed(1)}%`
-                                                                                                        : 'Chưa có dữ liệu'
+                                                                                                        : 'ChÆ°a cÃ³ dá»¯ liá»‡u'
                                                                                                     return (
                                                                                                         <div key={`${line}-${shift}`} className="flex flex-col items-center">
                                                                                                             <label className="text-[10px] font-bold mb-1 text-indigo-500">{line}</label>
@@ -1604,7 +1604,7 @@ export default function InputPage() {
                                                                                                                 title={tooltip}
                                                                                                                 className={`w-full text-right p-1 rounded border-2 text-sm font-bold ${oeeColor}`}
                                                                                                             >
-                                                                                                                {oeeVal !== null ? `${(oeeVal * 100).toFixed(1)}%` : '—'}
+                                                                                                                {oeeVal !== null ? `${(oeeVal * 100).toFixed(1)}%` : 'â€”'}
                                                                                                             </div>
                                                                                                         </div>
                                                                                                     )
@@ -1617,7 +1617,7 @@ export default function InputPage() {
                                                                         </TableRow>
 
                                                                         <TableRow className="bg-blue-50">
-                                                                            <TableCell className="font-semibold text-blue-800">Tổng sản lượng Shelling (Tấn)</TableCell>
+                                                                            <TableCell className="font-semibold text-blue-800">Tá»•ng sáº£n lÆ°á»£ng Shelling (Táº¥n)</TableCell>
                                                                             <TableCell className="p-2 align-middle">
                                                                                 <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
                                                                                     <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 focus-visible:ring-1 shadow-none font-bold text-blue-900" /></FormControl></FormItem>
@@ -1628,7 +1628,7 @@ export default function InputPage() {
                                                                 ) : departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' ? (
                                                                     <>
                                                                         <TableRow>
-                                                                            <TableCell className="font-medium align-middle text-blue-700">Pass 1 (Tấn)</TableCell>
+                                                                            <TableCell className="font-medium align-middle text-blue-700">Pass 1 (Táº¥n)</TableCell>
                                                                             <TableCell className="p-2 align-middle">
                                                                                 <FormField control={formActual.control} name="pass1_ton" render={({ field }) => (
                                                                                     <FormItem><FormControl><Input type="number" step="0.001"
@@ -1645,7 +1645,7 @@ export default function InputPage() {
                                                                             </TableCell>
                                                                         </TableRow>
                                                                         <TableRow>
-                                                                            <TableCell className="font-medium align-middle text-green-700">Pass 2 (Tấn)</TableCell>
+                                                                            <TableCell className="font-medium align-middle text-green-700">Pass 2 (Táº¥n)</TableCell>
                                                                             <TableCell className="p-2 align-middle">
                                                                                 <FormField control={formActual.control} name="pass2_ton" render={({ field }) => (
                                                                                     <FormItem><FormControl><Input type="number" step="0.001"
@@ -1662,7 +1662,7 @@ export default function InputPage() {
                                                                             </TableCell>
                                                                         </TableRow>
                                                                         <TableRow className="bg-blue-50">
-                                                                            <TableCell className="font-semibold text-blue-800">Tổng sản lượng (Tấn)</TableCell>
+                                                                            <TableCell className="font-semibold text-blue-800">Tá»•ng sáº£n lÆ°á»£ng (Táº¥n)</TableCell>
                                                                             <TableCell className="p-2 align-middle">
                                                                                 <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
                                                                                     <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 shadow-none font-bold text-blue-900 cursor-not-allowed" /></FormControl></FormItem>
@@ -1672,7 +1672,7 @@ export default function InputPage() {
                                                                     </>
                                                                 ) : (
                                                                     <TableRow>
-                                                                        <TableCell className="font-medium align-middle">Sản lượng thực tế (Tấn)</TableCell>
+                                                                        <TableCell className="font-medium align-middle">Sáº£n lÆ°á»£ng thá»±c táº¿ (Táº¥n)</TableCell>
                                                                         <TableCell className="p-2 align-middle">
                                                                             <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
                                                                                 <FormItem><FormControl><Input type="number" step="0.001" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
@@ -1682,7 +1682,7 @@ export default function InputPage() {
                                                                 )}
                                                                 {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (
                                                                     <TableRow>
-                                                                        <TableCell className="font-medium text-blue-600 align-middle">Sản lượng ISP (Tấn)</TableCell>
+                                                                        <TableCell className="font-medium text-blue-600 align-middle">Sáº£n lÆ°á»£ng ISP (Táº¥n)</TableCell>
                                                                         <TableCell className="p-2 align-middle">
                                                                             <FormField control={formActual.control} name="isp_ton" render={({ field }) => (
                                                                                 <FormItem><FormControl><Input type="number" step="0.001" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
@@ -1692,7 +1692,7 @@ export default function InputPage() {
                                                                 )}
                                                                 {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
                                                                     <TableRow>
-                                                                        <TableCell className="font-medium align-middle">Số Container thực tế</TableCell>
+                                                                        <TableCell className="font-medium align-middle">Sá»‘ Container thá»±c táº¿</TableCell>
                                                                         <TableCell className="p-2 align-middle">
                                                                             <FormField control={formActual.control} name="actual_container" render={({ field }) => (
                                                                                 <FormItem><FormControl><Input type="number" step="0.01" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
@@ -1702,7 +1702,7 @@ export default function InputPage() {
                                                                 )}
                                                                 {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
                                                                     <TableRow>
-                                                                        <TableCell className="font-medium text-amber-600 align-middle">Chỉ số điện Shelling (kWh)</TableCell>
+                                                                        <TableCell className="font-medium text-amber-600 align-middle">Chá»‰ sá»‘ Ä‘iá»‡n Shelling (kWh)</TableCell>
                                                                         <TableCell className="p-2 align-middle">
                                                                             <FormField control={formActual.control} name="electricity_meter_reading" render={({ field }) => (
                                                                                 <FormItem><FormControl><Input type="number" step="1" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
@@ -1711,10 +1711,10 @@ export default function InputPage() {
                                                                     </TableRow>
                                                                 )}
                                                                 <TableRow>
-                                                                    <TableCell className="font-medium align-middle border-b-0">Ghi chú (Tùy chọn)</TableCell>
+                                                                    <TableCell className="font-medium align-middle border-b-0">Ghi chÃº (TÃ¹y chá»n)</TableCell>
                                                                     <TableCell className="p-2 align-middle border-b-0">
                                                                         <FormField control={formActual.control} name="note" render={({ field }) => (
-                                                                            <FormItem><FormControl><Input {...field} placeholder="Vd: Ca sáng nghỉ 30p..." className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
+                                                                            <FormItem><FormControl><Input {...field} placeholder="Vd: Ca sÃ¡ng nghá»‰ 30p..." className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
                                                                         )} />
                                                                     </TableCell>
                                                                 </TableRow>
@@ -1724,11 +1724,11 @@ export default function InputPage() {
 
                                                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t pt-4 gap-4">
                                                         <p className="text-sm font-medium text-amber-700 bg-amber-50 px-3 py-2 rounded-md border border-amber-200 flex-1">
-                                                            ⚠️ <span className="font-bold">Lưu ý:</span> Bạn nhớ bấm nút <strong>Lưu Actual</strong> sau khi nhập xong nhé!
+                                                            âš ï¸ <span className="font-bold">LÆ°u Ã½:</span> Báº¡n nhá»› báº¥m nÃºt <strong>LÆ°u Actual</strong> sau khi nháº­p xong nhÃ©!
                                                         </p>
                                                         <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
                                                             <Save className="mr-2 h-4 w-4" />
-                                                            {isSaving ? "Đang lưu..." : "Lưu Actual"}
+                                                            {isSaving ? "Äang lÆ°u..." : "LÆ°u Actual"}
                                                         </Button>
                                                     </div>
                                                 </form>
@@ -1746,8 +1746,8 @@ export default function InputPage() {
                                                         <Table>
                                                             <TableHeader className="bg-muted/50">
                                                                 <TableRow>
-                                                                    <TableHead className="w-1/2">Chỉ tiêu KPI</TableHead>
-                                                                    <TableHead className="w-1/2">Giá trị nhập</TableHead>
+                                                                    <TableHead className="w-1/2">Chá»‰ tiÃªu KPI</TableHead>
+                                                                    <TableHead className="w-1/2">GiÃ¡ trá»‹ nháº­p</TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
@@ -1764,19 +1764,19 @@ export default function InputPage() {
                                                                         </TableRow>
                                                                     );
 
-                                                                    if (role === 'admin') {
+                                                                    if (role === 'admin' || role === 'hse_admin') {
                                                                         return (
                                                                             <>
-                                                                                <Row label="WIP Tồn đầu ngày (T)" name="wip_open_ton" step="0.001" />
-                                                                                <Row label="WIP Tồn cuối ngày (T)" name="wip_close_ton" step="0.001" />
-                                                                                <Row label="Input đầu vào (Tấn)" name="input_ton" step="0.001" />
-                                                                                <Row label="Good Output đạt (Tính Yield)" name="good_output_ton" step="0.001" />
-                                                                                <Row label="Downtime (Phút)" name="downtime_min" step="1" />
-                                                                                <Row label="Tỷ lệ Bể (Broken %)" name="broken_pct" step="0.1" />
-                                                                                <Row label="Tỷ lệ Sót lụa (Unpeel %)" name="unpeel_pct" step="0.1" />
-                                                                                <Row label="Tỷ lệ thu hồi (ISP %)" name="isp_pct" step="0.1" />
-                                                                                <Row label="Tỷ lệ SW (%)" name="sw_pct" step="0.1" />
-                                                                                <Row label="Chỉ số điện (kWh)" name="electricity_meter_reading" step="1" className="text-amber-600 font-semibold" />
+                                                                                <Row label="WIP Tá»“n Ä‘áº§u ngÃ y (T)" name="wip_open_ton" step="0.001" />
+                                                                                <Row label="WIP Tá»“n cuá»‘i ngÃ y (T)" name="wip_close_ton" step="0.001" />
+                                                                                <Row label="Input Ä‘áº§u vÃ o (Táº¥n)" name="input_ton" step="0.001" />
+                                                                                <Row label="Good Output Ä‘áº¡t (TÃ­nh Yield)" name="good_output_ton" step="0.001" />
+                                                                                <Row label="Downtime (PhÃºt)" name="downtime_min" step="1" />
+                                                                                <Row label="Tá»· lá»‡ Bá»ƒ (Broken %)" name="broken_pct" step="0.1" />
+                                                                                <Row label="Tá»· lá»‡ SÃ³t lá»¥a (Unpeel %)" name="unpeel_pct" step="0.1" />
+                                                                                <Row label="Tá»· lá»‡ thu há»“i (ISP %)" name="isp_pct" step="0.1" />
+                                                                                <Row label="Tá»· lá»‡ SW (%)" name="sw_pct" step="0.1" />
+                                                                                <Row label="Chá»‰ sá»‘ Ä‘iá»‡n (kWh)" name="electricity_meter_reading" step="1" className="text-amber-600 font-semibold" />
                                                                                 {selectedDeptCode === "SHELL" && (
                                                                                     <TableRow>
                                                                                         <TableCell colSpan={2} className="p-0 border-b-0">
@@ -1787,19 +1787,19 @@ export default function InputPage() {
                                                                                                     const actualTon = formActual.watch("actual_ton") || 0;
                                                                                                     const intensity = actualTon > 0 ? (consumption / actualTon).toFixed(2) : "0.00";
 
-                                                                                                    if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">Chưa có chỉ số ngày hôm trước để tính tiêu thụ.</p>;
+                                                                                                    if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">ChÆ°a cÃ³ chá»‰ sá»‘ ngÃ y hÃ´m trÆ°á»›c Ä‘á»ƒ tÃ­nh tiÃªu thá»¥.</p>;
 
                                                                                                     return (
                                                                                                         <div className="grid grid-cols-2 gap-4">
                                                                                                             <div>
-                                                                                                                <p className="text-xs text-amber-700 font-medium">Tiêu thụ Shelling hôm nay</p>
+                                                                                                                <p className="text-xs text-amber-700 font-medium">TiÃªu thá»¥ Shelling hÃ´m nay</p>
                                                                                                                 <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
-                                                                                                                <p className="text-[10px] text-amber-600">(Số mới {currentMeter} - Số cũ {prevMeterReading})</p>
+                                                                                                                <p className="text-[10px] text-amber-600">(Sá»‘ má»›i {currentMeter} - Sá»‘ cÅ© {prevMeterReading})</p>
                                                                                                             </div>
                                                                                                             <div>
-                                                                                                                <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn (Shelling)</p>
+                                                                                                                <p className="text-xs text-amber-700 font-medium">Chá»‰ sá»‘ kWh / Táº¥n (Shelling)</p>
                                                                                                                 <p className="text-xl font-bold text-amber-900">{intensity} <span className="text-sm font-normal">kWh/T</span></p>
-                                                                                                                <p className="text-[10px] text-amber-600">(Tiêu thụ / {actualTon} Tấn phẩm)</p>
+                                                                                                                <p className="text-[10px] text-amber-600">(TiÃªu thá»¥ / {actualTon} Táº¥n pháº©m)</p>
                                                                                                             </div>
                                                                                                         </div>
                                                                                                     );
@@ -1815,8 +1815,8 @@ export default function InputPage() {
                                                                     if (selectedDeptCode === "PEEL_MC") {
                                                                         return (
                                                                             <>
-                                                                                <Row label="Tỷ lệ Bể (Broken %)" name="broken_pct" step="0.1" />
-                                                                                <Row label="Tỷ lệ Sót lụa (Unpeel %)" name="unpeel_pct" step="0.1" />
+                                                                                <Row label="Tá»· lá»‡ Bá»ƒ (Broken %)" name="broken_pct" step="0.1" />
+                                                                                <Row label="Tá»· lá»‡ SÃ³t lá»¥a (Unpeel %)" name="unpeel_pct" step="0.1" />
                                                                             </>
                                                                         );
                                                                     }
@@ -1824,9 +1824,9 @@ export default function InputPage() {
                                                                     if (selectedDeptCode === "HAND") {
                                                                         return (
                                                                             <>
-                                                                                <Row label="WIP Tồn đầu ngày (Tấn)" name="wip_open_ton" step="0.001" />
-                                                                                <Row label="WIP Tồn cuối ngày (Tấn)" name="wip_close_ton" step="0.001" />
-                                                                                <Row label="Tỷ lệ thu hồi (ISP %)" name="isp_pct" step="0.1" />
+                                                                                <Row label="WIP Tá»“n Ä‘áº§u ngÃ y (Táº¥n)" name="wip_open_ton" step="0.001" />
+                                                                                <Row label="WIP Tá»“n cuá»‘i ngÃ y (Táº¥n)" name="wip_close_ton" step="0.001" />
+                                                                                <Row label="Tá»· lá»‡ thu há»“i (ISP %)" name="isp_pct" step="0.1" />
                                                                             </>
                                                                         );
                                                                     }
@@ -1834,8 +1834,8 @@ export default function InputPage() {
                                                                     if (selectedDeptCode === "SHELL") {
                                                                         return (
                                                                             <>
-                                                                                <Row label="Tỷ lệ Bể (Broken %)" name="broken_pct" step="0.1" />
-                                                                                <Row label="Chỉ số đồng hồ điện (kWh)" name="electricity_meter_reading" step="1" className="text-amber-600 font-semibold" />
+                                                                                <Row label="Tá»· lá»‡ Bá»ƒ (Broken %)" name="broken_pct" step="0.1" />
+                                                                                <Row label="Chá»‰ sá»‘ Ä‘á»“ng há»“ Ä‘iá»‡n (kWh)" name="electricity_meter_reading" step="1" className="text-amber-600 font-semibold" />
                                                                                 <TableRow>
                                                                                     <TableCell colSpan={2} className="p-0 border-b-0">
                                                                                         <div className="p-4 bg-amber-50 rounded-b-md">
@@ -1845,21 +1845,21 @@ export default function InputPage() {
                                                                                                 const targetActualTon = prevDayActual || 0;
                                                                                                 const intensity = targetActualTon > 0 ? (consumption / targetActualTon).toFixed(2) : "0.00";
 
-                                                                                                if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">Chưa có chỉ số ngày hôm trước để tính tiêu thụ.</p>;
+                                                                                                if (prevMeterReading === null) return <p className="text-xs text-muted-foreground italic">ChÆ°a cÃ³ chá»‰ sá»‘ ngÃ y hÃ´m trÆ°á»›c Ä‘á»ƒ tÃ­nh tiÃªu thá»¥.</p>;
 
                                                                                                 return (
                                                                                                     <div className="grid grid-cols-2 gap-4">
                                                                                                         <div>
-                                                                                                            <p className="text-xs text-amber-700 font-medium">Tiêu thụ Ca trước (Tự động tính)</p>
+                                                                                                            <p className="text-xs text-amber-700 font-medium">TiÃªu thá»¥ Ca trÆ°á»›c (Tá»± Ä‘á»™ng tÃ­nh)</p>
                                                                                                             <p className="text-xl font-bold text-amber-900">{consumption.toLocaleString()} <span className="text-sm font-normal">kWh</span></p>
-                                                                                                            <p className="text-[10px] text-amber-600">(Mới {currentMeter} - Cũ {prevMeterReading})</p>
+                                                                                                            <p className="text-[10px] text-amber-600">(Má»›i {currentMeter} - CÅ© {prevMeterReading})</p>
                                                                                                         </div>
                                                                                                         <div>
-                                                                                                            <p className="text-xs text-amber-700 font-medium">Chỉ số kWh / Tấn (Ca trước)</p>
+                                                                                                            <p className="text-xs text-amber-700 font-medium">Chá»‰ sá»‘ kWh / Táº¥n (Ca trÆ°á»›c)</p>
                                                                                                             <p className="text-xl font-bold text-amber-900">{intensity} <span className="text-sm font-normal">kWh/T</span></p>
                                                                                                             {targetActualTon > 0
-                                                                                                                ? <p className="text-[10px] text-amber-600">(Tiêu thụ / {targetActualTon} Tấn phẩm ngày trước)</p>
-                                                                                                                : <p className="text-[10px] text-red-500 italic">Chưa có sản lượng ngày hôm trước</p>
+                                                                                                                ? <p className="text-[10px] text-amber-600">(TiÃªu thá»¥ / {targetActualTon} Táº¥n pháº©m ngÃ y trÆ°á»›c)</p>
+                                                                                                                : <p className="text-[10px] text-red-500 italic">ChÆ°a cÃ³ sáº£n lÆ°á»£ng ngÃ y hÃ´m trÆ°á»›c</p>
                                                                                                             }
                                                                                                         </div>
                                                                                                     </div>
@@ -1873,14 +1873,14 @@ export default function InputPage() {
                                                                     }
 
                                                                     if (selectedDeptCode === "BORMA") {
-                                                                        return <Row label="Tỷ lệ SW (%)" name="sw_pct" step="0.1" />;
+                                                                        return <Row label="Tá»· lá»‡ SW (%)" name="sw_pct" step="0.1" />;
                                                                     }
 
                                                                     if (selectedDeptCode === "STEAM") {
                                                                         return (
                                                                             <>
-                                                                                <Row label="Tồn kho đầu ngày (Tấn)" name="wip_open_ton" step="0.001" />
-                                                                                <Row label="Tồn kho cuối ngày (Tấn)" name="wip_close_ton" step="0.001" />
+                                                                                <Row label="Tá»“n kho Ä‘áº§u ngÃ y (Táº¥n)" name="wip_open_ton" step="0.001" />
+                                                                                <Row label="Tá»“n kho cuá»‘i ngÃ y (Táº¥n)" name="wip_close_ton" step="0.001" />
                                                                             </>
                                                                         );
                                                                     }
@@ -1888,16 +1888,16 @@ export default function InputPage() {
                                                                     // Default
                                                                     return (
                                                                         <>
-                                                                            <Row label="WIP Tồn đầu ngày (T)" name="wip_open_ton" step="0.001" />
-                                                                            <Row label="WIP Tồn cuối ngày (T)" name="wip_close_ton" step="0.001" />
-                                                                            <Row label="Input đầu vào (Tấn)" name="input_ton" step="0.001" />
-                                                                            <Row label="Good Output đạt (Tính Yield)" name="good_output_ton" step="0.001" />
+                                                                            <Row label="WIP Tá»“n Ä‘áº§u ngÃ y (T)" name="wip_open_ton" step="0.001" />
+                                                                            <Row label="WIP Tá»“n cuá»‘i ngÃ y (T)" name="wip_close_ton" step="0.001" />
+                                                                            <Row label="Input Ä‘áº§u vÃ o (Táº¥n)" name="input_ton" step="0.001" />
+                                                                            <Row label="Good Output Ä‘áº¡t (TÃ­nh Yield)" name="good_output_ton" step="0.001" />
                                                                         </>
                                                                     );
                                                                 })()}
                                                                 
                                                                 <TableRow>
-                                                                    <TableCell className="font-medium align-middle border-b-0">Ghi chú (Tùy chọn)</TableCell>
+                                                                    <TableCell className="font-medium align-middle border-b-0">Ghi chÃº (TÃ¹y chá»n)</TableCell>
                                                                     <TableCell className="p-2 align-middle border-b-0">
                                                                         <FormField control={formKpi.control} name="note" render={({ field }) => (
                                                                             <FormItem><FormControl><Input {...field} placeholder="Vd: ... " className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
@@ -1910,11 +1910,11 @@ export default function InputPage() {
 
                                                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t pt-4 gap-4">
                                                         <p className="text-sm font-medium text-amber-700 bg-amber-50 px-3 py-2 rounded-md border border-amber-200 flex-1">
-                                                            ⚠️ <span className="font-bold">Lưu ý:</span> Bạn nhớ bấm nút <strong>Lưu KPI</strong> sau khi nhập xong nhé!
+                                                            âš ï¸ <span className="font-bold">LÆ°u Ã½:</span> Báº¡n nhá»› báº¥m nÃºt <strong>LÆ°u KPI</strong> sau khi nháº­p xong nhÃ©!
                                                         </p>
                                                         <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
                                                             <Save className="mr-2 h-4 w-4" />
-                                                            {isSaving ? "Đang lưu..." : "Lưu KPI"}
+                                                            {isSaving ? "Äang lÆ°u..." : "LÆ°u KPI"}
                                                         </Button>
                                                     </div>
                                                 </form>
@@ -1932,58 +1932,58 @@ export default function InputPage() {
 
                                                 // 14 standard downtime codes
                                                 const DT_CODES = [
-                                                    { code: 'BD', planned: false, label: 'Không kế hoạch – Hư hỏng sửa chữa – Breakdown' },
-                                                    { code: 'BL', planned: false, label: 'Không kế hoạch – Bị chặn – Blocked' },
-                                                    { code: 'BT', planned: true,  label: 'Có kế hoạch – Dừng nghỉ – Breaktime' },
-                                                    { code: 'CIL', planned: true, label: 'Có kế hoạch – Vệ sinh – Cleaning' },
-                                                    { code: 'LU', planned: false, label: 'Không kế hoạch – Thiếu nguồn lực – Lack of Utility' },
-                                                    { code: 'MP', planned: true,  label: 'Có kế hoạch – Bảo dưỡng – Maintenance Plan' },
-                                                    { code: 'MS', planned: false, label: 'Không kế hoạch – Lỗi dừng nhỏ – Minor Stop' },
-                                                    { code: 'PF', planned: false, label: 'Không kế hoạch – Lỗi quy trình – Process Failures' },
-                                                    { code: 'PT', planned: true,  label: 'Có kế hoạch – Pit Stop' },
-                                                    { code: 'PW', planned: true,  label: 'Có kế hoạch – Thực hiện dự án – Project Work' },
-                                                    { code: 'SP', planned: false, label: 'Không kế hoạch – Lấy mẫu – Sampling' },
-                                                    { code: 'TP', planned: true,  label: 'Có kế hoạch – Thử nghiệm – Trial Plan' },
-                                                    { code: 'TT', planned: true,  label: 'Có kế hoạch – Đào tạo – Training Time' },
-                                                    { code: 'WT', planned: false, label: 'Không kế hoạch – Chờ đợi – Waiting' },
+                                                    { code: 'BD', planned: false, label: 'KhÃ´ng káº¿ hoáº¡ch â€“ HÆ° há»ng sá»­a chá»¯a â€“ Breakdown' },
+                                                    { code: 'BL', planned: false, label: 'KhÃ´ng káº¿ hoáº¡ch â€“ Bá»‹ cháº·n â€“ Blocked' },
+                                                    { code: 'BT', planned: true,  label: 'CÃ³ káº¿ hoáº¡ch â€“ Dá»«ng nghá»‰ â€“ Breaktime' },
+                                                    { code: 'CIL', planned: true, label: 'CÃ³ káº¿ hoáº¡ch â€“ Vá»‡ sinh â€“ Cleaning' },
+                                                    { code: 'LU', planned: false, label: 'KhÃ´ng káº¿ hoáº¡ch â€“ Thiáº¿u nguá»“n lá»±c â€“ Lack of Utility' },
+                                                    { code: 'MP', planned: true,  label: 'CÃ³ káº¿ hoáº¡ch â€“ Báº£o dÆ°á»¡ng â€“ Maintenance Plan' },
+                                                    { code: 'MS', planned: false, label: 'KhÃ´ng káº¿ hoáº¡ch â€“ Lá»—i dá»«ng nhá» â€“ Minor Stop' },
+                                                    { code: 'PF', planned: false, label: 'KhÃ´ng káº¿ hoáº¡ch â€“ Lá»—i quy trÃ¬nh â€“ Process Failures' },
+                                                    { code: 'PT', planned: true,  label: 'CÃ³ káº¿ hoáº¡ch â€“ Pit Stop' },
+                                                    { code: 'PW', planned: true,  label: 'CÃ³ káº¿ hoáº¡ch â€“ Thá»±c hiá»‡n dá»± Ã¡n â€“ Project Work' },
+                                                    { code: 'SP', planned: false, label: 'KhÃ´ng káº¿ hoáº¡ch â€“ Láº¥y máº«u â€“ Sampling' },
+                                                    { code: 'TP', planned: true,  label: 'CÃ³ káº¿ hoáº¡ch â€“ Thá»­ nghiá»‡m â€“ Trial Plan' },
+                                                    { code: 'TT', planned: true,  label: 'CÃ³ káº¿ hoáº¡ch â€“ ÄÃ o táº¡o â€“ Training Time' },
+                                                    { code: 'WT', planned: false, label: 'KhÃ´ng káº¿ hoáº¡ch â€“ Chá» Ä‘á»£i â€“ Waiting' },
                                                 ];
 
-                                                // Sub-causes per dept × code — only for codes that have specific sub-items
+                                                // Sub-causes per dept Ã— code â€” only for codes that have specific sub-items
                                                 const subCauseMap: Record<string, Record<string, string[]>> = {
                                                     SHELL: {
                                                         BD: [
-                                                            'Hư hỏng cấp liệu',
-                                                            'Hư hỏng đầu cắt',
-                                                            'Hư hỏng sàng rung',
-                                                            'Hư hỏng motor sàng rung',
-                                                            'Hư hỏng motor ly tâm',
-                                                            'Hư hỏng gàu tải',
-                                                            'Hư hỏng ly tâm',
-                                                            'Hư hỏng cụm phân trục',
-                                                            'Hư hỏng hệ quạt thổi',
-                                                            'Tuột ống vỏ',
+                                                            'HÆ° há»ng cáº¥p liá»‡u',
+                                                            'HÆ° há»ng Ä‘áº§u cáº¯t',
+                                                            'HÆ° há»ng sÃ ng rung',
+                                                            'HÆ° há»ng motor sÃ ng rung',
+                                                            'HÆ° há»ng motor ly tÃ¢m',
+                                                            'HÆ° há»ng gÃ u táº£i',
+                                                            'HÆ° há»ng ly tÃ¢m',
+                                                            'HÆ° há»ng cá»¥m phÃ¢n trá»¥c',
+                                                            'HÆ° há»ng há»‡ quáº¡t thá»•i',
+                                                            'Tuá»™t á»‘ng vá»',
                                                         ],
                                                         WT: [
-                                                            'Chờ hàng đạt ẩm',
-                                                            'Chờ lấy vỏ ở silo vỏ',
+                                                            'Chá» hÃ ng Ä‘áº¡t áº©m',
+                                                            'Chá» láº¥y vá» á»Ÿ silo vá»',
                                                         ],
                                                         LU: [
-                                                            'Không có nguyên liệu',
+                                                            'KhÃ´ng cÃ³ nguyÃªn liá»‡u',
                                                         ],
                                                     },
                                                     PEEL_MC: {
                                                         BD: [
-                                                            'Máy nén khí hỏng',
-                                                            'Áp suất khí thấp',
-                                                            'Lưỡi bóc mòn',
-                                                            'Băng tải hỏng',
-                                                            'Bộ phận cơ khí hỏng',
+                                                            'MÃ¡y nÃ©n khÃ­ há»ng',
+                                                            'Ãp suáº¥t khÃ­ tháº¥p',
+                                                            'LÆ°á»¡i bÃ³c mÃ²n',
+                                                            'BÄƒng táº£i há»ng',
+                                                            'Bá»™ pháº­n cÆ¡ khÃ­ há»ng',
                                                         ],
                                                         WT: [
-                                                            'Chờ hạt cắt đầu vào',
+                                                            'Chá» háº¡t cáº¯t Ä‘áº§u vÃ o',
                                                         ],
                                                         LU: [
-                                                            'Thiếu nhân lực',
+                                                            'Thiáº¿u nhÃ¢n lá»±c',
                                                         ],
                                                     },
                                                 };
@@ -1998,30 +1998,30 @@ export default function InputPage() {
                                                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start bg-muted/30 p-4 rounded-lg border">
                                                             {/* Col 1: Minutes */}
                                                             <div className="sm:col-span-2 space-y-2">
-                                                                <Label>Số phút dừng</Label>
+                                                                <Label>Sá»‘ phÃºt dá»«ng</Label>
                                                                 <Input type="number" value={dtDuration} onChange={e => setDtDuration(e.target.value)} placeholder="0" className="bg-white" />
                                                             </div>
 
                                                             {/* Col 2: Code picker */}
                                                             <div className="sm:col-span-3 space-y-2">
-                                                                <Label>Mã downtime</Label>
+                                                                <Label>MÃ£ downtime</Label>
                                                                 <Select value={dtCause} onValueChange={v => { setDtCause(v); setDtNote(''); setDtCustomNote(''); }}>
                                                                     <SelectTrigger className="bg-white font-mono">
-                                                                        <SelectValue placeholder="Chọn mã..." />
+                                                                        <SelectValue placeholder="Chá»n mÃ£..." />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
-                                                                        <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Không kế hoạch</div>
+                                                                        <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">KhÃ´ng káº¿ hoáº¡ch</div>
                                                                         {DT_CODES.filter(c => !c.planned).map(c => (
                                                                             <SelectItem key={c.code} value={c.code}>
                                                                                 <span className="font-mono font-bold text-red-600 mr-2">{c.code}</span>
-                                                                                <span className="text-xs">{c.code === 'BD' ? 'Hư hỏng / Breakdown' : c.code === 'BL' ? 'Bị chặn / Blocked' : c.code === 'LU' ? 'Thiếu nguồn lực / Lack Utility' : c.code === 'MS' ? 'Dừng nhỏ / Minor Stop' : c.code === 'PF' ? 'Lỗi quy trình / Process Fail' : c.code === 'SP' ? 'Lấy mẫu / Sampling' : c.code === 'WT' ? 'Chờ đợi / Waiting' : c.label}</span>
+                                                                                <span className="text-xs">{c.code === 'BD' ? 'HÆ° há»ng / Breakdown' : c.code === 'BL' ? 'Bá»‹ cháº·n / Blocked' : c.code === 'LU' ? 'Thiáº¿u nguá»“n lá»±c / Lack Utility' : c.code === 'MS' ? 'Dá»«ng nhá» / Minor Stop' : c.code === 'PF' ? 'Lá»—i quy trÃ¬nh / Process Fail' : c.code === 'SP' ? 'Láº¥y máº«u / Sampling' : c.code === 'WT' ? 'Chá» Ä‘á»£i / Waiting' : c.label}</span>
                                                                             </SelectItem>
                                                                         ))}
-                                                                        <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1 border-t">Có kế hoạch</div>
+                                                                        <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1 border-t">CÃ³ káº¿ hoáº¡ch</div>
                                                                         {DT_CODES.filter(c => c.planned).map(c => (
                                                                             <SelectItem key={c.code} value={c.code}>
                                                                                 <span className="font-mono font-bold text-blue-600 mr-2">{c.code}</span>
-                                                                                <span className="text-xs">{c.code === 'BT' ? 'Dừng nghỉ / Breaktime' : c.code === 'CIL' ? 'Vệ sinh / Cleaning' : c.code === 'MP' ? 'Bảo dưỡng / Maint Plan' : c.code === 'PT' ? 'Pit Stop' : c.code === 'PW' ? 'Dự án / Project Work' : c.code === 'TP' ? 'Thử nghiệm / Trial' : c.code === 'TT' ? 'Đào tạo / Training' : c.label}</span>
+                                                                                <span className="text-xs">{c.code === 'BT' ? 'Dá»«ng nghá»‰ / Breaktime' : c.code === 'CIL' ? 'Vá»‡ sinh / Cleaning' : c.code === 'MP' ? 'Báº£o dÆ°á»¡ng / Maint Plan' : c.code === 'PT' ? 'Pit Stop' : c.code === 'PW' ? 'Dá»± Ã¡n / Project Work' : c.code === 'TP' ? 'Thá»­ nghiá»‡m / Trial' : c.code === 'TT' ? 'ÄÃ o táº¡o / Training' : c.label}</span>
                                                                             </SelectItem>
                                                                         ))}
                                                                     </SelectContent>
@@ -2029,7 +2029,7 @@ export default function InputPage() {
                                                                 {/* Badge show planned/unplanned */}
                                                                 {selectedCodeInfo && (
                                                                     <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-medium ${selectedCodeInfo.planned ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
-                                                                        {selectedCodeInfo.planned ? '📅 Có kế hoạch' : '🚨 Không kế hoạch'}
+                                                                        {selectedCodeInfo.planned ? 'ðŸ“… CÃ³ káº¿ hoáº¡ch' : 'ðŸš¨ KhÃ´ng káº¿ hoáº¡ch'}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -2037,22 +2037,22 @@ export default function InputPage() {
                                                             {/* Col 3: Sub-cause (only if this code has one for this dept) */}
                                                             <div className="sm:col-span-4 space-y-2">
                                                                 <Label>
-                                                                    Lý do chi tiết
-                                                                    {!hasSubList && dtCause && <span className="text-[10px] text-muted-foreground ml-1">(tuỳ chọn)</span>}
+                                                                    LÃ½ do chi tiáº¿t
+                                                                    {!hasSubList && dtCause && <span className="text-[10px] text-muted-foreground ml-1">(tuá»³ chá»n)</span>}
                                                                 </Label>
                                                                 {hasSubList ? (
                                                                     <>
                                                                         <Select value={dtNote} onValueChange={v => { setDtNote(v); if (v !== DT_CUSTOM_SENTINEL) setDtCustomNote(''); }} disabled={!dtCause}>
-                                                                            <SelectTrigger className="bg-white"><SelectValue placeholder="Chọn lý do..." /></SelectTrigger>
+                                                                            <SelectTrigger className="bg-white"><SelectValue placeholder="Chá»n lÃ½ do..." /></SelectTrigger>
                                                                             <SelectContent>
                                                                                 {subCauses.map((s: string) => (
                                                                                     <SelectItem key={s} value={s}>{s}</SelectItem>
                                                                                 ))}
-                                                                                <SelectItem value={DT_CUSTOM_SENTINEL}>✏️ Nhập lý do mới...</SelectItem>
+                                                                                <SelectItem value={DT_CUSTOM_SENTINEL}>âœï¸ Nháº­p lÃ½ do má»›i...</SelectItem>
                                                                             </SelectContent>
                                                                         </Select>
                                                                         {isCustomMode && (
-                                                                            <Input autoFocus value={dtCustomNote} onChange={e => setDtCustomNote(e.target.value)} placeholder="Nhập lý do cụ thể..." className="bg-amber-50 border-amber-300 mt-1" />
+                                                                            <Input autoFocus value={dtCustomNote} onChange={e => setDtCustomNote(e.target.value)} placeholder="Nháº­p lÃ½ do cá»¥ thá»ƒ..." className="bg-amber-50 border-amber-300 mt-1" />
                                                                         )}
                                                                     </>
                                                                 ) : (
@@ -2061,7 +2061,7 @@ export default function InputPage() {
                                                                         <Input
                                                                             value={dtNote === DT_CUSTOM_SENTINEL ? dtCustomNote : dtNote}
                                                                             onChange={e => setDtNote(e.target.value)}
-                                                                            placeholder={dtCause ? 'Ghi chú thêm (không bắt buộc)...' : '— chọn mã trước —'}
+                                                                            placeholder={dtCause ? 'Ghi chÃº thÃªm (khÃ´ng báº¯t buá»™c)...' : 'â€” chá»n mÃ£ trÆ°á»›c â€”'}
                                                                             className="bg-white flex-1"
                                                                             disabled={!dtCause}
                                                                         />
@@ -2076,7 +2076,7 @@ export default function InputPage() {
                                                                     disabled={isSaving || !dtDuration || !dtCause || (hasSubList && isCustomMode && !dtCustomNote.trim())}
                                                                     className="bg-red-600 hover:bg-red-700 w-full"
                                                                 >
-                                                                    <Plus className="h-4 w-4 mr-1" /> Thêm sự cố
+                                                                    <Plus className="h-4 w-4 mr-1" /> ThÃªm sá»± cá»‘
                                                                 </Button>
                                                             </div>
                                                         </div>
@@ -2089,19 +2089,19 @@ export default function InputPage() {
                                                 <Table>
                                                     <TableHeader className="bg-red-50 text-red-900">
                                                         <TableRow>
-                                                            <TableHead className="w-[100px]">Thời gian</TableHead>
-                                                            <TableHead className="w-[150px]">Nguyên nhân</TableHead>
-                                                            <TableHead>Ghi chú</TableHead>
+                                                            <TableHead className="w-[100px]">Thá»i gian</TableHead>
+                                                            <TableHead className="w-[150px]">NguyÃªn nhÃ¢n</TableHead>
+                                                            <TableHead>Ghi chÃº</TableHead>
                                                             <TableHead className="w-[60px] text-center"></TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
                                                         {downtimes.length === 0 ? (
-                                                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-20 bg-white">Chưa có sự cố nào được ghi nhận trong ngày.</TableCell></TableRow>
+                                                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-20 bg-white">ChÆ°a cÃ³ sá»± cá»‘ nÃ o Ä‘Æ°á»£c ghi nháº­n trong ngÃ y.</TableCell></TableRow>
                                                         ) : (
                                                             downtimes.map((dt) => (
                                                                 <TableRow key={dt.id} className="bg-white">
-                                                                    <TableCell className="font-semibold text-red-600">{dt.duration_mins} phút</TableCell>
+                                                                    <TableCell className="font-semibold text-red-600">{dt.duration_mins} phÃºt</TableCell>
                                                                     <TableCell className="font-medium">{dt.root_cause}</TableCell>
                                                                     <TableCell className="text-muted-foreground text-sm">{dt.note || "-"}</TableCell>
                                                                     <TableCell className="text-center">
@@ -2117,8 +2117,8 @@ export default function InputPage() {
                                             </div>
                                             
                                             <div className="flex justify-between items-center px-4 py-3 bg-red-50 rounded-md border border-red-100">
-                                                <span className="text-sm font-medium text-red-800">Tổng thời gian dừng máy:</span>
-                                                <span className="text-lg font-black text-red-700">{downtimes.reduce((s, r) => s + Number(r.duration_mins), 0)} phút</span>
+                                                <span className="text-sm font-medium text-red-800">Tá»•ng thá»i gian dá»«ng mÃ¡y:</span>
+                                                <span className="text-lg font-black text-red-700">{downtimes.reduce((s, r) => s + Number(r.duration_mins), 0)} phÃºt</span>
                                             </div>
                                         </div>
                                     </div>
@@ -2128,26 +2128,26 @@ export default function InputPage() {
                             {/* Recent History Table */}
                             <div className="mt-12 space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-bold">Lịch sử nhập liệu gần đây</h3>
-                                    <p className="text-sm text-muted-foreground italic">Hiển thị 10 ngày gần nhất của bộ phận</p>
+                                    <h3 className="text-lg font-bold">Lá»‹ch sá»­ nháº­p liá»‡u gáº§n Ä‘Ã¢y</h3>
+                                    <p className="text-sm text-muted-foreground italic">Hiá»ƒn thá»‹ 10 ngÃ y gáº§n nháº¥t cá»§a bá»™ pháº­n</p>
                                 </div>
                                 <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="bg-muted/50">
-                                                <TableHead className="w-[120px]">Ngày</TableHead>
-                                                <TableHead className="text-right">Sản lượng (T)</TableHead>
+                                                <TableHead className="w-[120px]">NgÃ y</TableHead>
+                                                <TableHead className="text-right">Sáº£n lÆ°á»£ng (T)</TableHead>
                                                 <TableHead className="text-right">Input/Output (T)</TableHead>
                                                 <TableHead className="text-right">Downtime</TableHead>
-                                                <TableHead>Ghi chú</TableHead>
-                                                <TableHead className="w-[80px] text-center">Thao tác</TableHead>
+                                                <TableHead>Ghi chÃº</TableHead>
+                                                <TableHead className="w-[80px] text-center">Thao tÃ¡c</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {recentRecords.length === 0 ? (
                                                 <TableRow>
                                                     <TableCell colSpan={6} className="h-24 text-center text-muted-foreground whitespace-nowrap">
-                                                        Chưa có dữ liệu lịch sử cho bộ phận này.
+                                                        ChÆ°a cÃ³ dá»¯ liá»‡u lá»‹ch sá»­ cho bá»™ pháº­n nÃ y.
                                                     </TableCell>
                                                 </TableRow>
                                             ) : (
@@ -2196,15 +2196,15 @@ export default function InputPage() {
                     )}
                 </TabsContent>
 
-                {(role === 'admin' || role === 'HSE') && (
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin') && (
                     <TabsContent value="energy" className="space-y-4">
                         <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
                             <div className="p-6">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-semibold text-lg">Bảng Ghi Nhận Năng Lượng: Tháng {format(date, "MM/yyyy")}</h3>
+                                    <h3 className="font-semibold text-lg">Báº£ng Ghi Nháº­n NÄƒng LÆ°á»£ng: ThÃ¡ng {format(date, "MM/yyyy")}</h3>
                                     <Button onClick={saveEnergy} disabled={isSaving} size="sm">
                                         <Save className="mr-2 h-4 w-4" />
-                                        {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Tháng'}
+                                        {isSaving ? 'Äang lÆ°u...' : 'LÆ°u ToÃ n Bá»™ ThÃ¡ng'}
                                     </Button>
                                 </div>
 
@@ -2212,8 +2212,8 @@ export default function InputPage() {
                                 <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                                     <div className="flex flex-wrap items-end gap-3">
                                         <div className="flex-1 min-w-[180px]">
-                                            <Label className="text-sm font-bold text-orange-700 mb-1 block">🔥 Tổng Củi Tháng (kg)</Label>
-                                            <p className="text-[11px] text-orange-500 mb-1">Nhập tổng kg → hệ thống chia đều cho các ngày đến hôm nay</p>
+                                            <Label className="text-sm font-bold text-orange-700 mb-1 block">ðŸ”¥ Tá»•ng Cá»§i ThÃ¡ng (kg)</Label>
+                                            <p className="text-[11px] text-orange-500 mb-1">Nháº­p tá»•ng kg â†’ há»‡ thá»‘ng chia Ä‘á»u cho cÃ¡c ngÃ y Ä‘áº¿n hÃ´m nay</p>
                                             <div className="flex gap-2">
                                                 <Input
                                                     type="number"
@@ -2238,7 +2238,7 @@ export default function InputPage() {
                                                                 d.wood_kg = perDay;
                                                             });
                                                             setMonthlyEnergyData([...newData]);
-                                                            toast.success(`Đã chia ${total.toLocaleString()} kg cho ${count} ngày (${perDay.toLocaleString()} kg/ngày)`);
+                                                            toast.success(`ÄÃ£ chia ${total.toLocaleString()} kg cho ${count} ngÃ y (${perDay.toLocaleString()} kg/ngÃ y)`);
                                                         }
                                                     }}
                                                 />
@@ -2249,7 +2249,7 @@ export default function InputPage() {
                                                     onClick={() => {
                                                         const total = Number(woodTotalInput);
                                                         if (!total || total <= 0) {
-                                                            toast.error("Vui lòng nhập tổng kg củi trước");
+                                                            toast.error("Vui lÃ²ng nháº­p tá»•ng kg cá»§i trÆ°á»›c");
                                                             return;
                                                         }
                                                         const today = new Date();
@@ -2263,13 +2263,13 @@ export default function InputPage() {
                                                             d.wood_kg = perDay;
                                                         });
                                                         setMonthlyEnergyData([...newData]);
-                                                        toast.success(`Đã chia ${total.toLocaleString()} kg cho ${count} ngày (${perDay.toLocaleString()} kg/ngày)`);
+                                                        toast.success(`ÄÃ£ chia ${total.toLocaleString()} kg cho ${count} ngÃ y (${perDay.toLocaleString()} kg/ngÃ y)`);
                                                     }}
                                                 >
-                                                    Chia đều
+                                                    Chia Ä‘á»u
                                                 </Button>
                                             </div>
-                                            <p className="text-[10px] text-orange-400 mt-1">Nhập số rồi nhấn Enter ↵ hoặc bấm Chia đều</p>
+                                            <p className="text-[10px] text-orange-400 mt-1">Nháº­p sá»‘ rá»“i nháº¥n Enter â†µ hoáº·c báº¥m Chia Ä‘á»u</p>
                                         </div>
                                     </div>
                                 </div>
@@ -2278,24 +2278,24 @@ export default function InputPage() {
                                     <Table>
                                         <TableHeader className="bg-muted">
                                             <TableRow>
-                                                <TableHead rowSpan={2} className="border-r w-[80px] text-center">Ngày</TableHead>
-                                                <TableHead colSpan={5} className="border-r text-center text-amber-600 bg-amber-50/50">⚡ Điện năng (kWh)</TableHead>
-                                                <TableHead colSpan={3} className="border-r text-center text-blue-600 bg-blue-50/50">💧 Nước (m³)</TableHead>
-                                                <TableHead colSpan={2} className="text-center text-orange-600 bg-orange-50/50">🔥 Củi (Tấn)</TableHead>
+                                                <TableHead rowSpan={2} className="border-r w-[80px] text-center">NgÃ y</TableHead>
+                                                <TableHead colSpan={5} className="border-r text-center text-amber-600 bg-amber-50/50">âš¡ Äiá»‡n nÄƒng (kWh)</TableHead>
+                                                <TableHead colSpan={3} className="border-r text-center text-blue-600 bg-blue-50/50">ðŸ’§ NÆ°á»›c (mÂ³)</TableHead>
+                                                <TableHead colSpan={2} className="text-center text-orange-600 bg-orange-50/50">ðŸ”¥ Cá»§i (Táº¥n)</TableHead>
                                             </TableRow>
                                             <TableRow>
                                                 {/* Dien */}
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số Cao</TableHead>
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số B.Thường</TableHead>
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số Thấp</TableHead>
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[100px]">Tổng tiêu thụ</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.sá»‘ Cao</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.sá»‘ B.ThÆ°á»ng</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.sá»‘ Tháº¥p</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[100px]">Tá»•ng tiÃªu thá»¥</TableHead>
                                                 <TableHead className="text-center bg-amber-50/50 border-r w-[80px]">Target</TableHead>
                                                 {/* Nuoc */}
-                                                <TableHead className="text-center bg-blue-50/50 border-r w-[120px]">Chỉ số đầu ngày</TableHead>
-                                                <TableHead className="text-center bg-blue-50/50 border-r w-[100px]">Tiêu thụ</TableHead>
+                                                <TableHead className="text-center bg-blue-50/50 border-r w-[120px]">Chá»‰ sá»‘ Ä‘áº§u ngÃ y</TableHead>
+                                                <TableHead className="text-center bg-blue-50/50 border-r w-[100px]">TiÃªu thá»¥</TableHead>
                                                 <TableHead className="text-center bg-blue-50/50 border-r w-[80px]">Target</TableHead>
                                                 {/* Cui */}
-                                                <TableHead className="text-center bg-orange-50/50 border-r w-[100px]">Thực tế (kg)</TableHead>
+                                                <TableHead className="text-center bg-orange-50/50 border-r w-[100px]">Thá»±c táº¿ (kg)</TableHead>
                                                 <TableHead className="text-center bg-orange-50/50 w-[80px]">Target</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -2442,7 +2442,7 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                 <div className="mt-6 flex justify-end">
                                     <Button onClick={saveEnergy} disabled={isSaving}>
                                         <Save className="mr-2 h-4 w-4" />
-                                        {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Tháng'}
+                                        {isSaving ? 'Äang lÆ°u...' : 'LÆ°u ToÃ n Bá»™ ThÃ¡ng'}
                                     </Button>
                                 </div>
                             </div>
@@ -2450,34 +2450,34 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                     </TabsContent>
                 )}
 
-                {(role === 'admin' || role === 'HSE') && (
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin') && (
                     <TabsContent value="compressor" className="space-y-4">
                         <div className="rounded-xl border bg-card text-card-foreground shadow">
                             <div className="p-6">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-semibold text-lg text-purple-800">🌬️ Máy nén khí — Chỉ số Điện: Tháng {format(date, "MM/yyyy")}</h3>
+                                    <h3 className="font-semibold text-lg text-purple-800">ðŸŒ¬ï¸ MÃ¡y nÃ©n khÃ­ â€” Chá»‰ sá»‘ Äiá»‡n: ThÃ¡ng {format(date, "MM/yyyy")}</h3>
                                     <Button onClick={saveCompressor} disabled={isSaving} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
                                         <Save className="mr-2 h-4 w-4" />
-                                        {isSaving ? 'Đang lưu...' : 'Lưu toàn bộ tháng'}
+                                        {isSaving ? 'Äang lÆ°u...' : 'LÆ°u toÃ n bá»™ thÃ¡ng'}
                                     </Button>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <Table>
                                         <TableHeader className="bg-muted">
                                             <TableRow>
-                                                <TableHead rowSpan={2} className="border-r w-[60px] text-center">Ngày</TableHead>
-                                                <TableHead colSpan={3} className="border-r text-center text-purple-700 bg-purple-50/60">Đồng hồ (Chỉ số MWh)</TableHead>
-                                                <TableHead colSpan={3} className="border-r text-center text-indigo-700 bg-indigo-50/60">Tiêu thụ (kWh/ngày)</TableHead>
-                                                <TableHead className="text-center bg-rose-50/60 text-rose-700">Tổng kWh</TableHead>
+                                                <TableHead rowSpan={2} className="border-r w-[60px] text-center">NgÃ y</TableHead>
+                                                <TableHead colSpan={3} className="border-r text-center text-purple-700 bg-purple-50/60">Äá»“ng há»“ (Chá»‰ sá»‘ MWh)</TableHead>
+                                                <TableHead colSpan={3} className="border-r text-center text-indigo-700 bg-indigo-50/60">TiÃªu thá»¥ (kWh/ngÃ y)</TableHead>
+                                                <TableHead className="text-center bg-rose-50/60 text-rose-700">Tá»•ng kWh</TableHead>
                                             </TableRow>
                                             <TableRow>
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 1</TableHead>
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 2</TableHead>
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 3</TableHead>
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 1</TableHead>
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 2</TableHead>
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 3</TableHead>
-                                                <TableHead className="text-center bg-rose-50/40 w-[90px] font-bold">Tổng</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ÄH 1</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ÄH 2</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ÄH 3</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ÄH 1</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ÄH 2</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ÄH 3</TableHead>
+                                                <TableHead className="text-center bg-rose-50/40 w-[90px] font-bold">Tá»•ng</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -2509,10 +2509,10 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                 />
                                                             </TableCell>
                                                         ))}
-                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh1 > 0 ? row.kwh1.toLocaleString('en-US', {maximumFractionDigits: 0}) : '—'}</TableCell>
-                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh2 > 0 ? row.kwh2.toLocaleString('en-US', {maximumFractionDigits: 0}) : '—'}</TableCell>
-                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh3 > 0 ? row.kwh3.toLocaleString('en-US', {maximumFractionDigits: 0}) : '—'}</TableCell>
-                                                        <TableCell className="p-1 text-right font-black text-rose-700 bg-rose-50/20">{row.total_kwh > 0 ? row.total_kwh.toLocaleString('en-US', {maximumFractionDigits: 0}) : '—'}</TableCell>
+                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh1 > 0 ? row.kwh1.toLocaleString('en-US', {maximumFractionDigits: 0}) : 'â€”'}</TableCell>
+                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh2 > 0 ? row.kwh2.toLocaleString('en-US', {maximumFractionDigits: 0}) : 'â€”'}</TableCell>
+                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh3 > 0 ? row.kwh3.toLocaleString('en-US', {maximumFractionDigits: 0}) : 'â€”'}</TableCell>
+                                                        <TableCell className="p-1 text-right font-black text-rose-700 bg-rose-50/20">{row.total_kwh > 0 ? row.total_kwh.toLocaleString('en-US', {maximumFractionDigits: 0}) : 'â€”'}</TableCell>
                                                     </TableRow>
                                                 );
                                             })}
@@ -2529,7 +2529,7 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                         <div className="rounded-xl border bg-card text-card-foreground shadow">
                             <div className="p-6">
                                 <h3 className="text-lg font-semibold mb-6 flex justify-between items-center text-amber-800">
-                                    <span>⚡ Nhập liệu Chỉ số Điện Shelling (Toàn tháng)</span>
+                                    <span>âš¡ Nháº­p liá»‡u Chá»‰ sá»‘ Äiá»‡n Shelling (ToÃ n thÃ¡ng)</span>
                                     <span className="text-sm font-normal text-muted-foreground">{date ? format(date, "MM/yyyy") : ''}</span>
                                 </h3>
 
@@ -2537,11 +2537,11 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                     <Table className="min-w-[500px]">
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead className="border-r w-[80px] text-center bg-gray-50 uppercase text-gray-500 font-semibold text-xs">Ngày</TableHead>
-                                                <TableHead className="border-r text-center w-[120px] bg-amber-50/50 text-amber-700">Công tơ điện</TableHead>
-                                                <TableHead className="border-r text-center w-[100px] bg-amber-50/50 text-amber-700 border-r-amber-100">Tiêu thụ (Lùi)</TableHead>
-                                                <TableHead className="border-r text-center w-[120px] bg-gray-50 text-gray-700">Sản lượng <br /><span className="text-[10px] font-normal leading-none">(Ngày trước)</span></TableHead>
-                                                <TableHead className="text-center w-[100px] bg-gray-50 text-gray-700">kWh / Tấn</TableHead>
+                                                <TableHead className="border-r w-[80px] text-center bg-gray-50 uppercase text-gray-500 font-semibold text-xs">NgÃ y</TableHead>
+                                                <TableHead className="border-r text-center w-[120px] bg-amber-50/50 text-amber-700">CÃ´ng tÆ¡ Ä‘iá»‡n</TableHead>
+                                                <TableHead className="border-r text-center w-[100px] bg-amber-50/50 text-amber-700 border-r-amber-100">TiÃªu thá»¥ (LÃ¹i)</TableHead>
+                                                <TableHead className="border-r text-center w-[120px] bg-gray-50 text-gray-700">Sáº£n lÆ°á»£ng <br /><span className="text-[10px] font-normal leading-none">(NgÃ y trÆ°á»›c)</span></TableHead>
+                                                <TableHead className="text-center w-[100px] bg-gray-50 text-gray-700">kWh / Táº¥n</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -2572,7 +2572,7 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
                                                                     handleMeterChange(val);
                                                                 }} />
-                                                            {prevRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Trừ từ trước: {prevRowElec}</div>}
+                                                            {prevRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Trá»« tá»« trÆ°á»›c: {prevRowElec}</div>}
                                                         </TableCell>
                                                         <TableCell className="border-r border-r-amber-100 p-1 text-right bg-amber-50 font-bold text-amber-800 align-middle">
                                                             {row.electricity_kwh.toLocaleString()}
@@ -2593,7 +2593,7 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                                 <div className="mt-6 flex justify-end">
                                     <Button onClick={saveShellingEnergy} disabled={isSaving} className="bg-amber-600 hover:bg-amber-700 text-white">
                                         <Save className="mr-2 h-4 w-4" />
-                                        {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Điện Shelling'}
+                                        {isSaving ? 'Äang lÆ°u...' : 'LÆ°u ToÃ n Bá»™ Äiá»‡n Shelling'}
                                     </Button>
                                 </div>
                             </div>
@@ -2602,31 +2602,31 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
                 )}
 
                 {/* OTHER ELECTRICITY METER TAB */}
-                {(role === 'admin' || role === 'HSE' || role === 'maint') && <TabsContent value="other-elec" className="space-y-4">
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsContent value="other-elec" className="space-y-4">
                     <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative">
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-semibold text-lg text-emerald-800">⚡ Điện Khác (HCA) — Nhập Chỉ số KWh: Tháng {format(date, "MM/yyyy")}</h3>
+                                <h3 className="font-semibold text-lg text-emerald-800">âš¡ Äiá»‡n KhÃ¡c (HCA) â€” Nháº­p Chá»‰ sá»‘ KWh: ThÃ¡ng {format(date, "MM/yyyy")}</h3>
                                 <Button onClick={saveOtherElec} disabled={isSaving} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
                                     <Save className="mr-2 h-4 w-4" />
-                                    {isSaving ? 'Đang lưu...' : 'Lưu toàn bộ tháng'}
+                                    {isSaving ? 'Äang lÆ°u...' : 'LÆ°u toÃ n bá»™ thÃ¡ng'}
                                 </Button>
                                 <div className="text-xs text-muted-foreground italic mb-2 absolute top-2 right-4">
-                                    * Nhập CHỈ SỐ kwh trên các đồng hồ con. Hệ thống sẽ tự động trừ lùi để ra mức Tiêu thụ.
+                                    * Nháº­p CHá»ˆ Sá» kwh trÃªn cÃ¡c Ä‘á»“ng há»“ con. Há»‡ thá»‘ng sáº½ tá»± Ä‘á»™ng trá»« lÃ¹i Ä‘á»ƒ ra má»©c TiÃªu thá»¥.
                                 </div>
                             </div>
                             <div className="overflow-x-auto w-full relative h-[650px] custom-scrollbar border bg-slate-50/50 rounded-lg">
                                 <Table className="w-full border-collapse">
                                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                                         <TableRow className="border-b bg-emerald-50">
-                                            <TableHead className="w-24 whitespace-nowrap text-emerald-800 font-bold border-r">Ngày</TableHead>
+                                            <TableHead className="w-24 whitespace-nowrap text-emerald-800 font-bold border-r">NgÃ y</TableHead>
                                             <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Cooling Fan</TableHead>
                                             <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Boiler</TableHead>
                                             <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Office</TableHead>
                                             <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">DB-AC HCA</TableHead>
                                             <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">ECO2</TableHead>
                                             <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Canteen</TableHead>
-                                            <TableHead className="font-bold min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">ĐH Maint (HCA+Shell)</TableHead>
+                                            <TableHead className="font-bold min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">ÄH Maint (HCA+Shell)</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -2701,3 +2701,6 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
         </div>
     );
 }
+
+
+
