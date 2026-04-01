@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // AI cascade: Gemini 2.5 Flash (smart) → Gemini 3.1 Flash Lite (high quota) → Groq (fallback)
 const GEMINI_MODEL_SMART = 'gemini-2.5-flash'              // Tier 1: thông minh hơn, 20 RPD
-const GEMINI_MODEL_QUOTA = 'gemini-3.1-flash-lite-latest'  // Tier 2: quota cao (500 RPD), fallback khi 2.5 hết
+const GEMINI_MODEL_QUOTA = 'gemini-2.0-flash-lite'  // fallback khi 2.5 hết quota
 const GROQ_MODEL         = 'llama-3.3-70b-versatile'       // Tier 3: Groq, last resort
 
 
@@ -207,8 +207,8 @@ export async function POST(req: NextRequest) {
         if (geminiKey) {
             const result = await callGemini(filtered, geminiKey, GEMINI_MODEL_SMART)
             if ('status429' in result) {
-                console.warn('[parse-meal-ai] Gemini 2.5 Flash 429 – trying gemini-3.1-flash-lite')
-                provider = 'gemini-3.1-flash-lite'
+                console.warn('[parse-meal-ai] Gemini 2.5 Flash 429 – trying gemini-2.0-flash-lite')
+                provider = 'gemini-2.0-flash-lite'
             } else {
                 rawContent = result.raw
             }
@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 2️⃣ Tier 2: Gemini 3.1 Flash Lite (500 RPD)
-        if (provider === 'gemini-3.1-flash-lite') {
+        if (provider === 'gemini-2.0-flash-lite') {
             const result = await callGemini(filtered, geminiKey!, GEMINI_MODEL_QUOTA)
             if ('status429' in result) {
                 console.warn('[parse-meal-ai] Gemini 3.1 Flash Lite 429 – falling back to Groq')
