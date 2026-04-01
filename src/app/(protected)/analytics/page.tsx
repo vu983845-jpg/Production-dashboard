@@ -6,7 +6,7 @@ import { format, startOfMonth, endOfMonth, subMonths, parseISO, getDaysInMonth, 
 import { vi } from "date-fns/locale"
 import {
     TrendingUp, TrendingDown, BarChart3, Target, Zap, AlertTriangle, Award,
-    ChevronDown, RefreshCw, Calendar, Activity, Layers
+    ChevronDown, ChevronLeft, RefreshCw, Calendar, Activity, Layers
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -75,13 +75,36 @@ function getDowntimeColor(mins: number): string {
     return "bg-red-100 text-red-700"
 }
 
-function getDowntimeIntensity(mins: number): string {
-    if (mins === 0) return "bg-slate-100"
-    if (mins < 30) return "bg-emerald-200"
-    if (mins < 60) return "bg-yellow-200"
-    if (mins < 120) return "bg-orange-300"
-    if (mins < 240) return "bg-red-400"
-    return "bg-red-600"
+function getDowntimeStyle(mins: number, maxMins: number): React.CSSProperties {
+    if (mins <= 0) return { backgroundColor: '#f1f5f9' }
+    // Normalize 0..1 relative to the month's max value (min floor = 60 mins)
+    const cap = Math.max(maxMins, 60)
+    const t = Math.min(1, mins / cap)
+    // Gradient stops: green(low) → yellow → orange → red → deep crimson(high)
+    // We interpolate through 4 color segments
+    let r: number, g: number, b: number
+    if (t < 0.25) {
+        const p = t / 0.25
+        r = Math.round(134 + (250 - 134) * p)
+        g = Math.round(239 + (204 - 239) * p)
+        b = Math.round(172 + (21  - 172) * p)
+    } else if (t < 0.5) {
+        const p = (t - 0.25) / 0.25
+        r = Math.round(250 + (249 - 250) * p)
+        g = Math.round(204 + (115 - 204) * p)
+        b = Math.round(21  + (22  - 21)  * p)
+    } else if (t < 0.75) {
+        const p = (t - 0.5) / 0.25
+        r = Math.round(249 + (239 - 249) * p)
+        g = Math.round(115 + (68  - 115) * p)
+        b = Math.round(22  + (68  - 22)  * p)
+    } else {
+        const p = (t - 0.75) / 0.25
+        r = Math.round(239 + (153 - 239) * p)
+        g = Math.round(68  + (0   - 68)  * p)
+        b = Math.round(68  + (7   - 68)  * p)
+    }
+    return { backgroundColor: `rgb(${r},${g},${b})` }
 }
 
 // ── Custom Tooltip ─────────────────────────────────────────────────────────
@@ -158,6 +181,9 @@ export default function AnalyticsPage() {
     const [selectedDept, setSelectedDept] = useState("SHELL")
     const [monthRange, setMonthRange] = useState(6)
     const [loading, setLoading] = useState(false)
+    const [heatmapMonth, setHeatmapMonth] = useState<Date>(new Date(now.getFullYear(), now.getMonth(), 1))
+    const [heatmapEvents, setHeatmapEvents] = useState<Record<string, number>>({})
+    const [heatmapLoading, setHeatmapLoading] = useState(false)
 
     // Data states
     const [trendData, setTrendData] = useState<MonthlyKPI[]>([])
@@ -307,6 +333,35 @@ export default function AnalyticsPage() {
         if (departments.length > 0) fetchAnalytics()
     }, [departments, selectedDept, monthRange])
 
+    // ── Fetch heatmap downtime for selected heatmap month ────────────────────
+    useEffect(() => {
+        const deptObj = departments.find(d => d.code === selectedDept)
+        if (!deptObj) return
+        setHeatmapLoading(true)
+        const start = format(startOfMonth(heatmapMonth), "yyyy-MM-dd")
+        const end = format(endOfMonth(heatmapMonth), "yyyy-MM-dd")
+        supabase
+            .from("downtime_events")
+            .select("work_date,duration_mins,start_time,end_time,is_ongoing")
+            .eq("department_id", deptObj.id)
+            .eq("exclude_downtime", false)
+            .gte("work_date", start)
+            .lte("work_date", end)
+            .then(({ data }) => {
+                const map: Record<string, number> = {}
+                ;(data ?? []).forEach((evt: any) => {
+                    let mins = Number(evt.duration_mins || 0)
+                    if (evt.is_ongoing && evt.start_time) {
+                        const endT = evt.end_time ? new Date(evt.end_time) : new Date()
+                        mins = Math.max(0, Math.round((endT.getTime() - new Date(evt.start_time).getTime()) / 60000))
+                    }
+                    map[evt.work_date] = (map[evt.work_date] || 0) + mins
+                })
+                setHeatmapEvents(map)
+                setHeatmapLoading(false)
+            })
+    }, [heatmapMonth, selectedDept, departments])
+
     // ── Derived: MTD Projection ──────────────────────────────────────────────
     const mtdProjection = useMemo(() => {
         const today = now.getDate()
@@ -328,27 +383,40 @@ export default function AnalyticsPage() {
     }, [currentMonthDaily])
 
     // ── Derived: Heatmap data ────────────────────────────────────────────────
+    const isHeatmapCurrentMonth = heatmapMonth.getFullYear() === now.getFullYear() && heatmapMonth.getMonth() === now.getMonth()
+
     const heatmapData = useMemo(() => {
-        const daysInMonth = getDaysInMonth(now)
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+        const daysInMonth = getDaysInMonth(heatmapMonth)
+        const firstDay = new Date(heatmapMonth.getFullYear(), heatmapMonth.getMonth(), 1)
         const startDow = getDay(firstDay) // 0=Sun
 
+        // Merge: heatmapEvents (downtime_events) takes priority; fall back to v_dashboard_daily for current month
         const dayMap: Record<string, number> = {}
-        currentMonthDaily.forEach(r => {
-            dayMap[r.work_date] = Number(r.downtime_min || 0)
+        if (isHeatmapCurrentMonth) {
+            currentMonthDaily.forEach(r => {
+                dayMap[r.work_date] = Number(r.downtime_min || 0)
+            })
+        }
+        // Overlay with actual events (always wins)
+        Object.entries(heatmapEvents).forEach(([date, mins]) => {
+            dayMap[date] = mins
         })
 
         const cells = []
-        // Padding cells for first week
         for (let i = 0; i < startDow; i++) {
             cells.push({ day: null, mins: 0 })
         }
         for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = format(new Date(now.getFullYear(), now.getMonth(), d), "yyyy-MM-dd")
-            cells.push({ day: d, date: dateStr, mins: dayMap[dateStr] ?? -1 })
+            const dateStr = format(new Date(heatmapMonth.getFullYear(), heatmapMonth.getMonth(), d), "yyyy-MM-dd")
+            // -1 = no data; only mark as no-data for future dates in current month
+            const isFuture = isHeatmapCurrentMonth && d > now.getDate()
+            cells.push({ day: d, date: dateStr, mins: isFuture ? -1 : (dayMap[dateStr] ?? 0) })
         }
-        return cells
-    }, [currentMonthDaily])
+
+        // Compute max for dynamic scaling
+        const maxMins = Math.max(...cells.filter(c => c.mins > 0).map(c => c.mins), 60)
+        return { cells, maxMins }
+    }, [heatmapMonth, heatmapEvents, currentMonthDaily, isHeatmapCurrentMonth])
 
     // ── Derived: Summary stats ────────────────────────────────────────────────
     const summaryStats = useMemo(() => {
@@ -544,11 +612,34 @@ export default function AnalyticsPage() {
                 {/* Heatmap */}
                 <Card className="rounded-2xl border-slate-100 shadow-sm">
                     <CardHeader className="pb-2">
-                        <SectionHeader
-                            icon={Calendar}
-                            title={`Heatmap Downtime — ${format(now, "MM/yyyy")}`}
-                            desc="Cường độ dừng máy theo ngày trong tháng"
-                        />
+                        <div className="flex items-start justify-between gap-2">
+                            <SectionHeader
+                                icon={Calendar}
+                                title={`Heatmap Downtime — ${format(heatmapMonth, "MM/yyyy")}${heatmapLoading ? " ⏳" : ""}`}
+                                desc="Cường độ dừng máy theo ngày trong tháng"
+                            />
+                            {/* Month navigator */}
+                            <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                                <button
+                                    onClick={() => setHeatmapMonth(m => subMonths(m, 1))}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+                                    title="Tháng trước"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={() => setHeatmapMonth(m => {
+                                        const next = new Date(m.getFullYear(), m.getMonth() + 1, 1)
+                                        return next > new Date(now.getFullYear(), now.getMonth(), 1) ? m : next
+                                    })}
+                                    disabled={isHeatmapCurrentMonth}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Tháng sau"
+                                >
+                                    <ChevronLeft className="h-4 w-4 rotate-180" />
+                                </button>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {/* Day of week headers */}
@@ -558,17 +649,18 @@ export default function AnalyticsPage() {
                             ))}
                         </div>
                         <div className="grid grid-cols-7 gap-1">
-                            {heatmapData.map((cell, i) => (
+                            {heatmapData.cells.map((cell, i) => (
                                 <div
                                     key={i}
-                                    title={cell.day ? (cell.mins >= 0 ? `Ngày ${cell.day}: ${cell.mins} phút` : `Ngày ${cell.day}: Chưa có dữ liệu`) : ""}
+                                    title={cell.day ? (cell.mins >= 0 ? `Ngày ${cell.day}: ${(cell.mins / 60).toFixed(1)}h (${cell.mins} phút)` : `Ngày ${cell.day}: Chưa có dữ liệu`) : ""}
                                     className={`aspect-square rounded-lg flex flex-col items-center justify-center text-[10px] font-bold transition-transform hover:scale-110 cursor-default
-                                        ${!cell.day ? "bg-transparent" : cell.mins < 0 ? "bg-slate-50 text-slate-300" : getDowntimeIntensity(cell.mins) + " text-white"}`}
+                                        ${!cell.day ? "" : cell.mins < 0 ? "bg-slate-50" : ""}`}
+                                    style={cell.day && cell.mins >= 0 ? getDowntimeStyle(cell.mins, heatmapData.maxMins) : {}}
                                 >
                                     {cell.day && (
                                         <>
-                                            <span className={cell.mins >= 0 ? "text-white/90 font-black" : "text-slate-300"}>{cell.day}</span>
-                                            {cell.mins > 0 && <span className="text-[8px] opacity-80">{cell.mins >= 60 ? `${(cell.mins / 60).toFixed(0)}h` : `${cell.mins}'`}</span>}
+                                            <span className={cell.mins > 0 ? "text-white font-black drop-shadow" : cell.mins === 0 ? "text-slate-400" : "text-slate-300"}>{cell.day}</span>
+                                            {cell.mins > 0 && <span className="text-[8px] text-white/90 font-semibold">{cell.mins >= 60 ? `${(cell.mins / 60).toFixed(0)}h` : `${cell.mins}'`}</span>}
                                         </>
                                     )}
                                 </div>
@@ -578,11 +670,12 @@ export default function AnalyticsPage() {
                         <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-500 flex-wrap">
                             <span>Downtime:</span>
                             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-slate-100 inline-block"></span> 0</span>
-                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-200 inline-block"></span> &lt;30'</span>
-                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-200 inline-block"></span> &lt;60'</span>
-                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-orange-300 inline-block"></span> &lt;2h</span>
-                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-400 inline-block"></span> &lt;4h</span>
-                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-600 inline-block"></span> ≥4h</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded inline-block" style={{backgroundColor:'rgb(134,239,172)'}}></span> Ít</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded inline-block" style={{backgroundColor:'rgb(250,204,21)'}}></span> TB</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded inline-block" style={{backgroundColor:'rgb(249,115,22)'}}></span> Nhiều</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded inline-block" style={{backgroundColor:'rgb(239,68,68)'}}></span> Cao</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded inline-block" style={{backgroundColor:'rgb(153,0,7)'}}></span> Rất cao</span>
+                            {heatmapData.maxMins > 0 && <span className="text-slate-400 ml-1">(max tháng: {(heatmapData.maxMins/60).toFixed(0)}h)</span>}
                         </div>
                     </CardContent>
                 </Card>
