@@ -105,6 +105,55 @@ Người dùng hiện tại: ${ctx.fullName} | Bộ phận: ${ctx.deptName} (${c
 Ngày hôm nay: ${ctx.today}
 Department ID (dùng khi ghi DB): ${ctx.deptId}
 
+## KIẾN THỨC NGHIỆP VỤ TỪNG BỘ PHẬN (QUAN TRỌNG - ĐỌC KỸ):
+
+### SHELL (Shelling - Bóc vỏ cứng):
+- Sản lượng tính bằng **TẤN** (actual_ton)
+- Có input nguyên liệu (input_ton) và output thành phẩm (actual_ton)
+- Theo dõi: broken (%), unpeel (%), điện tiêu thụ (kWh)
+- Kế hoạch tháng: tổng sản lượng (tấn) + cutoff ngày
+
+### STEAM (Hấp - Steaming):
+- Sản lượng tính bằng **TẤN**
+- Theo dõi WIP (Work In Progress): WIP đầu ca và WIP cuối ca
+- Kế hoạch tháng: tổng sản lượng (tấn) + cutoff ngày
+
+### PEEL_MC (Bóc vỏ máy - Machine Peeling):
+- Sản lượng tính bằng **TẤN** (actual_ton)
+- Theo dõi yield (%), broken (%)
+
+### CS (Color Sorting - Phân màu):
+- Sản lượng chính tính bằng **TẤN**
+- Có thêm **ISP ton** (loại hàng đặc biệt) tính bằng tấn
+- Theo dõi: ISP (%), SW (%)
+
+### HAND (Hand Peeling - Bóc tay):
+- Sản lượng tính bằng **TẤN**
+- Có ISP ton tính bằng tấn
+- Phụ thuộc nhân công nhiều
+
+### BORMA:
+- Sản lượng tính bằng **TẤN**
+
+### PACK (Packing - Đóng gói xuất khẩu): ⚠️ ĐẶC BIỆT - KHÁC CÁC BỘ PHẬN KHÁC
+- **KHÔNG dùng đơn vị Tấn** cho kế hoạch container
+- **Container (actual_container)** tính bằng **CONT** (số lượng container xuất khẩu)
+  - Ví dụ: "kế hoạch 17 cont tháng này" = plan_container = 17
+  - 1 cont thường chứa khoảng 20-25 tấn hàng
+- **actual_ton** là sản lượng đóng gói (tấn) - dùng khi user hỏi về sản lượng
+- **plan_container** là kế hoạch container (cont) - dùng khi user hỏi về container
+- ⚠️ TUYỆT ĐỐI KHÔNG hỏi "bao nhiêu tấn container" - container đếm bằng CONT không phải tấn
+- Khi user nói "kế hoạch X cont": gọi update_plan với totalContainer = X (KHÔNG nhập vào totalTon)
+
+### FGWH (Finished Goods Warehouse - Kho thành phẩm):
+- Theo dõi ISP ton và Non-ISP ton (xuất nhập kho)
+- Không có sản xuất, chỉ có xuất/nhập
+
+## HƯỚNG DẪN ĐẶT CÂU HỎI ĐÚNG:
+- Với PACK: "Kế hoạch tháng này bao nhiêu **cont**?" (KHÔNG hỏi tấn)
+- Với các bộ phận khác: "Kế hoạch tháng này bao nhiêu **tấn**?"
+- Nếu user bộ phận PACK nói nhập plan: chỉ hỏi số cont + cutoff ngày
+
 ## NHIỆM VỤ CỦA BẠN:
 1. Trả lời các câu hỏi về sản xuất, kế hoạch, downtime
 2. Thu thập thông tin từ user để chuẩn bị các action ghi DB
@@ -112,9 +161,9 @@ Department ID (dùng khi ghi DB): ${ctx.deptId}
 4. QUAN TRỌNG: User chỉ được ghi dữ liệu cho bộ phận của họ (dept_id: ${ctx.deptId}${isAdmin ? " - admin có thể ghi mọi bộ phận" : ""})
 
 ## CÁC ACTION CÓ THỂ THỰC HIỆN:
-- **update_plan**: Nhập kế hoạch tháng (tổng tấn, cutoff ngày, targets)
+- **update_plan**: Nhập kế hoạch tháng (tổng tấn hoặc cont, cutoff ngày, targets)
 - **log_downtime**: Ghi downtime (ngày, thời gian phút, lý do, khu vực máy)
-- **update_actual**: Cập nhật sản lượng thực tế (ngày, actual_ton, input_ton, downtime_min)
+- **update_actual**: Cập nhật sản lượng thực tế (ngày, actual_ton, actual_container, input_ton, downtime_min)
 - **get_summary**: Lấy tóm tắt sản xuất MTD
 
 ## QUY TẮC QUAN TRỌNG:
@@ -133,13 +182,15 @@ Department ID (dùng khi ghi DB): ${ctx.deptId}
 </ACTION>
 
 ### update_plan params:
-{ "deptId": "${ctx.deptId}", "month": "YYYY-MM", "totalTon": number, "cutoffDay": number, "targetBroken"?: number, "targetUnpeel"?: number }
+{ "deptId": "${ctx.deptId}", "month": "YYYY-MM", "totalTon": number, "cutoffDay": number, "totalContainer"?: number, "targetBroken"?: number, "targetUnpeel"?: number }
+- Với PACK: dùng totalContainer (số cont), totalTon để 0 nếu không có
 
 ### log_downtime params:
 { "deptId": "${ctx.deptId}", "date": "YYYY-MM-DD", "durationMins": number, "cause": string, "machineArea"?: string }
 
 ### update_actual params:
-{ "deptId": "${ctx.deptId}", "date": "YYYY-MM-DD", "actualTon": number, "inputTon"?: number, "downtimeMin"?: number, "note"?: string }
+{ "deptId": "${ctx.deptId}", "date": "YYYY-MM-DD", "actualTon": number, "actualContainer"?: number, "inputTon"?: number, "downtimeMin"?: number, "note"?: string }
+- Với PACK: actualContainer là số cont xuất được
 
 ### get_summary params:
 { "deptId": "${ctx.deptId}", "month": "YYYY-MM" }
@@ -148,7 +199,7 @@ Department ID (dùng khi ghi DB): ${ctx.deptId}
 
 // ── Supabase action handlers ─────────────────────────────────────────────────
 async function handleUpdatePlan(params: any, supabase: any) {
-    const { deptId, month, totalTon, cutoffDay, targetBroken, targetUnpeel } = params
+    const { deptId, month, totalTon, cutoffDay, totalContainer, targetBroken, targetUnpeel } = params
     const monthDate = new Date(month + "-01")
     const start = startOfMonth(monthDate)
     const end = endOfMonth(monthDate)
@@ -183,6 +234,9 @@ async function handleUpdatePlan(params: any, supabase: any) {
         .eq("department_id", deptId).in("work_date", allDays)
     const existingMap = new Map((existing || []).map((r: any) => [r.work_date, r]))
 
+    const hasTon = totalTon != null && totalTon > 0
+    const hasCont = totalContainer != null && totalContainer > 0
+
     const payload = allDays.map((dateStr, _i) => {
         const ex = (existingMap.get(dateStr) || {}) as any
         const wIdx = workingDays.indexOf(dateStr)
@@ -190,8 +244,9 @@ async function handleUpdatePlan(params: any, supabase: any) {
         return {
             department_id: deptId,
             work_date: dateStr,
-            plan_ton: isWorking ? distributeExact(totalTon, workingDays.length, wIdx) : 0,
-            plan_container: ex.plan_container || 0,
+            plan_ton: hasTon && isWorking ? distributeExact(totalTon, workingDays.length, wIdx) : (ex.plan_ton || 0),
+            // Distribute containers evenly across working days for PACK
+            plan_container: hasCont && isWorking ? distributeExact(totalContainer!, workingDays.length, wIdx) : (ex.plan_container || 0),
             plan_isp_ton: ex.plan_isp_ton || 0,
             target_broken_pct: isWorking && targetBroken != null ? targetBroken : (ex.target_broken_pct || 0),
             target_unpeel_pct: isWorking && targetUnpeel != null ? targetUnpeel : (ex.target_unpeel_pct || 0),
@@ -205,9 +260,13 @@ async function handleUpdatePlan(params: any, supabase: any) {
 
     const { error } = await supabase.from("daily_plan").upsert(payload, { onConflict: "department_id,work_date" })
     if (error) return { success: false, message: error.message }
+
+    const msgParts: string[] = []
+    if (hasTon) msgParts.push(`**${totalTon} tấn** → ≈${(totalTon / workingDays.length).toFixed(2)} tấn/ngày`)
+    if (hasCont) msgParts.push(`**${totalContainer} cont** → ≈${(totalContainer! / workingDays.length).toFixed(2)} cont/ngày`)
     return {
         success: true,
-        message: `✅ Đã chia đều **${totalTon} tấn** vào **${workingDays.length} ngày làm việc** của tháng ${month} (cutoff ngày ${effectiveCutoff}). Mỗi ngày ≈ ${(totalTon / workingDays.length).toFixed(2)} tấn.`
+        message: `✅ Đã chia đều ${msgParts.join(' | ')} vào **${workingDays.length} ngày làm việc** của tháng ${month} (cutoff ngày ${effectiveCutoff}).`
     }
 }
 
@@ -231,15 +290,18 @@ async function handleLogDowntime(params: any, supabase: any) {
 }
 
 async function handleUpdateActual(params: any, supabase: any) {
-    const { deptId, date, actualTon, inputTon, downtimeMin, note } = params
+    const { deptId, date, actualTon, actualContainer, inputTon, downtimeMin, note } = params
 
     const actualPayload: any = {
         department_id: deptId,
         work_date: date,
-        actual_ton: actualTon,
+        actual_ton: actualTon ?? 0,
         note: note || null,
         updated_at: new Date().toISOString(),
     }
+    // Include actual_container for PACK dept
+    if (actualContainer != null) actualPayload.actual_container = actualContainer
+
     const { error: e1 } = await supabase.from("daily_actual").upsert(actualPayload, { onConflict: "department_id,work_date" })
     if (e1) return { success: false, message: e1.message }
 
@@ -247,7 +309,7 @@ async function handleUpdateActual(params: any, supabase: any) {
         const kpiPayload: any = {
             department_id: deptId,
             work_date: date,
-            good_output_ton: actualTon,
+            good_output_ton: actualTon ?? 0,
             updated_at: new Date().toISOString(),
         }
         if (inputTon != null) kpiPayload.input_ton = inputTon
@@ -255,9 +317,14 @@ async function handleUpdateActual(params: any, supabase: any) {
         await supabase.from("daily_kpi").upsert(kpiPayload, { onConflict: "department_id,work_date" })
     }
 
+    const msgParts: string[] = []
+    if (actualTon) msgParts.push(`**${actualTon} tấn**`)
+    if (actualContainer != null) msgParts.push(`**${actualContainer} cont**`)
+    if (inputTon) msgParts.push(`Input: ${inputTon}T`)
+    if (downtimeMin) msgParts.push(`Downtime: ${downtimeMin} phút`)
     return {
         success: true,
-        message: `✅ Đã cập nhật sản lượng ngày ${date}: **${actualTon} tấn**${inputTon ? ` | Input: ${inputTon}T` : ""}${downtimeMin ? ` | Downtime: ${downtimeMin} phút` : ""}.`
+        message: `✅ Đã cập nhật sản lượng ngày ${date}: ${msgParts.join(' | ')}.`
     }
 }
 
