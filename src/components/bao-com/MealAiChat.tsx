@@ -58,6 +58,25 @@ function isSameData(row: MealRow, existing: Record<string, number>) {
     return NUM_FIELDS.every(f => (row[f] ?? 0) === (existing[f] ?? 0))
 }
 
+// Validation helpers
+function isFutureDate(dateStr: string): boolean {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const d = new Date(dateStr)
+    d.setHours(0, 0, 0, 0)
+    return d > today
+}
+
+function getShiftWarning(row: MealRow): string | null {
+    const code = (row.dept_lookup ?? row.dept_code).toUpperCase()
+    const shift = row.shift
+    if (code === 'OFFICE' && shift !== '1')
+        return `⚠️ Office chỉ làm Ca 1 — Ca ${shift} có vẻ sai`
+    if (code === 'FGWH' && shift !== '1' && shift !== 'OT')
+        return `⚠️ FGWH chỉ Ca 1 (hoặc OT) — Ca ${shift} có vẻ sai`
+    return null
+}
+
 export function MealAiChat({ deptList, onSaveSuccess }: Props) {
     const supabase = createClient()
     const [input, setInput] = useState("")
@@ -309,6 +328,15 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                         <p className="text-xs text-orange-500">Kiểm tra trước khi lưu</p>
                                     </div>
                                     <div className="overflow-x-auto">
+                                        {msg.rows.some(r => isFutureDate(r.date)) && (
+                                            <div className="mx-4 mt-3 mb-1 flex items-start gap-2 bg-red-50 border border-red-300 rounded-xl px-4 py-2.5 text-sm text-red-700 font-semibold">
+                                                <span className="text-lg">🚨</span>
+                                                <div>
+                                                    <div>Phát hiện ngày trong tương lai!</div>
+                                                    <div className="font-normal text-xs text-red-500 mt-0.5">Bạn không bao giờ báo trước 1 ngày — hãy kiểm tra lại ngày tháng.</div>
+                                                </div>
+                                            </div>
+                                        )}
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-slate-50/80 text-slate-500 text-xs font-bold uppercase tracking-wide">
@@ -322,22 +350,37 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {msg.rows.map((r, ri) => (
-                                                    <tr key={ri} className={`border-t border-slate-100 ${ri % 2 === 0 ? "bg-white" : "bg-slate-50/40"} hover:bg-orange-50/50`}>
-                                                        <td className="px-4 py-3 font-mono text-slate-600 font-medium">{format(new Date(r.date), "dd/MM/yyyy")}</td>
+                                                {msg.rows.map((r, ri) => {
+                                                    const futureDate = isFutureDate(r.date)
+                                                    const shiftWarn = getShiftWarning(r)
+                                                    const rowBg = futureDate
+                                                        ? 'bg-red-50 border-l-4 border-red-400'
+                                                        : shiftWarn
+                                                        ? 'bg-amber-50 border-l-4 border-amber-400'
+                                                        : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                                                    return (
+                                                    <tr key={ri} className={`border-t border-slate-100 ${rowBg} hover:opacity-90`}>
+                                                        <td className={`px-4 py-3 font-mono font-medium ${futureDate ? 'text-red-600 font-bold' : 'text-slate-600'}`}>
+                                                            {format(new Date(r.date), "dd/MM/yyyy")}
+                                                            {futureDate && <span className="ml-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">TƯƠNG LAI ⚠️</span>}
+                                                        </td>
                                                         <td className="px-4 py-3">
                                                             <span className="font-semibold text-slate-800">{r.dept_display}</span>
                                                             <span className="ml-2 text-xs text-slate-400 font-mono">({r.dept_code})</span>
                                                         </td>
                                                         <td className="px-4 py-3 text-center">
-                                                            <span className="bg-orange-100 text-orange-700 rounded-lg px-2.5 py-1 font-bold text-xs">Ca {r.shift}</span>
+                                                            <span className={`rounded-lg px-2.5 py-1 font-bold text-xs ${shiftWarn ? 'bg-amber-100 text-amber-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                                Ca {r.shift}
+                                                            </span>
+                                                            {shiftWarn && <div className="text-[10px] text-amber-600 mt-0.5">{shiftWarn}</div>}
                                                         </td>
                                                         <td className="px-4 py-3 text-center font-bold text-slate-800 text-base">{r.official_present ?? 0}</td>
                                                         <td className="px-4 py-3 text-center text-slate-600">{r.seasonal_present ?? 0}</td>
                                                         <td className="px-4 py-3 text-center text-slate-600">{r.ot_count ?? 0}</td>
                                                         <td className="px-4 py-3 text-center text-green-600 font-medium">{r.vegetarian ?? 0}</td>
                                                     </tr>
-                                                ))}
+                                                    )
+                                                })}
                                             </tbody>
                                             <tfoot>
                                                 <tr className="border-t-2 border-orange-200 bg-orange-50/80">

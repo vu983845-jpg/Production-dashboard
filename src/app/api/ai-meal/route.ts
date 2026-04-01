@@ -75,6 +75,10 @@ CA LÀM VIỆC:
 - "Ca 3", "S3", "shift 3", "ca đêm" → "3"
 - "hành chánh", "HC" → "1"
 
+QUY TẮC CA ĐẶC BIỆT (QUAN TRỌNG):
+- OFFICE: CHỈ làm Ca 1. Nếu user nhập OFFICE ca 2 hoặc ca 3 → vẫn dùng shift="1" và ghi chú cảnh báo.
+- FGWH (Loading/WH): Chỉ Ca 1 và OT. Nếu nhập Ca 2 hoặc Ca 3 → dùng shift="1" và ghi chú.
+
 NGÀY:
 - Nếu không nói → mặc định hôm nay ${todayDisplay}
 - "hôm qua" → ngày hôm qua
