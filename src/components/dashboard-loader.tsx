@@ -17,7 +17,7 @@ const DEPT_GREETINGS: Record<string, { salute: string; emoji: string }> = {
 
 export function DashboardLoader({
     isLoading,
-    deptCode,
+    deptCode: deptCodeProp,
     userName,
 }: {
     isLoading: boolean
@@ -28,6 +28,10 @@ export function DashboardLoader({
     const [fadeOut, setFadeOut] = useState(false)
     const isFirstLoad = useRef(true)
 
+    // Read from sessionStorage synchronously so greeting shows instantly on F5
+    // (AppLayout saves deptCode to sessionStorage on every render)
+    const resolvedDeptCode = deptCodeProp ||
+        (typeof window !== "undefined" ? sessionStorage.getItem("vicc_dept_code") || "" : "")
 
     useEffect(() => {
         if (isLoading) {
@@ -46,7 +50,7 @@ export function DashboardLoader({
     if (!visible) return null
 
     const isRefresh = !isFirstLoad.current
-    const greeting = deptCode ? DEPT_GREETINGS[deptCode] : null
+    const greeting = resolvedDeptCode ? DEPT_GREETINGS[resolvedDeptCode] : null
 
 
     return (

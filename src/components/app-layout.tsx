@@ -1,6 +1,6 @@
 "use client"
 
-import { ReactNode } from "react"
+import { ReactNode, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -52,6 +52,12 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
         await supabase.auth.signOut()
         router.push("/login")
     }
+
+    // Cache user info for instant access by DashboardLoader
+    useEffect(() => {
+        if (deptCode) sessionStorage.setItem("vicc_dept_code", deptCode)
+        if (fullName) sessionStorage.setItem("vicc_user_name", fullName)
+    }, [deptCode, fullName])
 
     const { t } = useLanguage()
 
