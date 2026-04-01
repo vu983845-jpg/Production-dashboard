@@ -68,12 +68,16 @@ export function AIChatWidget({ userContext }: AIChatWidgetProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
 
-    // Build history for Gemini (exclude greeting)
+    // Build history for Gemini (keep all messages, clean ACTION tags)
     const getHistory = () =>
         messages
-            .filter((m) => !m.isAction) // skip action-result messages from history
-            .map((m) => ({ role: m.role, text: m.text }))
-            .slice(-12) // last 12 turns for context
+            .map((m) => ({
+                role: m.role,
+                // Strip <ACTION>...</ACTION> block so Gemini history stays clean
+                text: m.text.replace(/<ACTION>[\s\S]*?<\/ACTION>/g, "").trim(),
+            }))
+            .filter((m) => m.text.length > 0) // skip empty entries after stripping
+            .slice(-20) // last 20 turns for full context
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
