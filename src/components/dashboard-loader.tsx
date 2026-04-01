@@ -10,6 +10,7 @@ const DEPT_GREETINGS: Record<string, { salute: string; emoji: string }> = {
     SHELL:   { salute: "Chào Mr. Song Duy!",   emoji: "🤝" },
     STEAM:   { salute: "Chào Mr. Thần Nổ Hủ!", emoji: "💥" },
     PACK:    { salute: "Chào Anh Shipper!",    emoji: "📦" },
+    FGWH:   { salute: "Chào Tú!",             emoji: "📫" },
 }
 
 export function DashboardLoader({
