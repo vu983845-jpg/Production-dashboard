@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { format, startOfMonth, endOfMonth, getDaysInMonth, addDays } from "date-fns"
 
-const GEMINI_MODEL = "gemini-3.1-flash-lite"
+const GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 // ── Dept greeting & feature map ────────────────────────────────────────────
