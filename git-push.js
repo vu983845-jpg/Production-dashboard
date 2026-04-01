@@ -1,16 +1,16 @@
 const { execSync } = require('child_process');
 
 try {
-  console.log('Adding files...');
-  execSync('git add src/app/(protected)/dashboard/page.tsx', { stdio: 'inherit' });
-  
-  console.log('Committing changes...');
-  execSync('git commit -m "style: optimize mobile dashboard text sizes"', { stdio: 'inherit' });
-  
-  console.log('Pushing to GitHub...');
+  console.log('Staging...');
+  execSync('git add "src/app/(protected)/input/page.tsx"', { stdio: 'inherit' });
+
+  console.log('Committing...');
+  execSync('git commit -m "fix: water meter recalc bug - wrong row assignment + missing day-1 baseline from prev month"', { stdio: 'inherit' });
+
+  console.log('Pushing...');
   execSync('git push', { stdio: 'inherit' });
-  
-  console.log('Done! Deploy to Vercel triggered.');
+
+  console.log('Done!');
 } catch (err) {
-  console.error('Error during git push:', err.message);
+  console.error('Error:', err.message);
 }

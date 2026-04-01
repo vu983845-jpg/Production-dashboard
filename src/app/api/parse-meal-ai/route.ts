@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// llama-3.1-8b-instant: 20,000 TPM free tier (cao hơn 70b-versatile)
-const MODEL = 'llama-3.1-8b-instant'
+// gemini-2.5-flash — free tier, model mới nhất của Google
+const GEMINI_MODEL = 'gemini-2.5-flash'
 
-// System prompt v4 – HeadcountRecord format, concise to fit 16k context
+// System prompt – HeadcountRecord format
 const BASE_SYSTEM_PROMPT = `You parse Vietnamese factory Zalo shift reports into JSON.
 
 ## OUTPUT FORMAT
@@ -79,7 +79,7 @@ Ex7 Handpeeling Dung Ca2:
 IN: Dung. Date 26/03/2026\nKhu vực: Handpeeling (Dung),\nCa: 2\nChính thức hiện diện: 65( 46chay)\nChính thức vắng: 4\nOT.
 OUT: [{"date":"26/03/2026","area":"Handpeeling (Dung)","shift":"2","officialPresent":65,"officialAbsent":4,"seasonalPresent":null,"seasonalAbsent":null,"ot":"","vegetarian":46,"senderHint":"Dung","raw":""}]
 
-Ex8 Packing with seasonal zeros + Dự trù at end (ignore from Dự trù onward; "Chay : Np" = standalone vegetarian line):
+Ex8 Packing with seasonal zeros + Dự trù at end:
 IN: Date: 30/03/2026\nKhu vực : Packing\nCa: 2\nChính thức hiện diện:13(9chay)\nChính thức vắng: 0\nThời vụ hiện diện: 0\nThời vụ vắng: 0\nOT:\nDự trù : 31/03/2026(ca 2)\nChay : 9p
 OUT: [{"date":"30/03/2026","area":"Packing","shift":"2","officialPresent":13,"officialAbsent":0,"seasonalPresent":0,"seasonalAbsent":0,"ot":"","vegetarian":9,"senderHint":"","raw":""}]
 
@@ -122,9 +122,9 @@ function preFilterText(text: string): string {
 
 // POST handler
 export async function POST(req: NextRequest) {
-    const apiKey = process.env.GROQ_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-        return NextResponse.json({ error: 'GROQ_API_KEY not configured' }, { status: 500 })
+        return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
     }
 
     let body: { text?: string }
@@ -134,45 +134,47 @@ export async function POST(req: NextRequest) {
     const rawInput = body.text?.trim()
     if (!rawInput) return NextResponse.json({ error: 'No text provided' }, { status: 400 })
 
-    // Bước 1: lọc trước để bỏ dòng không cần thiết
+    // Lọc trước để bỏ dòng không cần thiết
     let filtered = preFilterText(rawInput)
 
-    // Bước 2: hard cap 8000 ký tự
+    // Hard cap 8000 ký tự
     const MAX_CHARS = 8000
     const truncated = filtered.length > MAX_CHARS
     if (truncated) {
         filtered = filtered.slice(0, MAX_CHARS)
     }
 
-    const systemPrompt = BASE_SYSTEM_PROMPT
-
     try {
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`
+
+        const geminiRes = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: MODEL,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: filtered },
-                ],
-                temperature: 0.1,
-                max_tokens: 3000,
+                system_instruction: {
+                    parts: [{ text: BASE_SYSTEM_PROMPT }]
+                },
+                contents: [{
+                    role: 'user',
+                    parts: [{ text: filtered }]
+                }],
+                generationConfig: {
+                    temperature: 0.1,
+                    maxOutputTokens: 3000,
+                    responseMimeType: 'application/json',
+                },
             }),
         })
 
-        if (!groqRes.ok) {
-            const err = await groqRes.text()
-            return NextResponse.json({ error: `Groq API error: ${groqRes.status} – ${err}` }, { status: 502 })
+        if (!geminiRes.ok) {
+            const err = await geminiRes.text()
+            return NextResponse.json({ error: `Gemini API error: ${geminiRes.status} – ${err}` }, { status: 502 })
         }
 
-        const groqData = await groqRes.json()
-        const rawContent: string = groqData.choices?.[0]?.message?.content ?? ''
+        const geminiData = await geminiRes.json()
+        const rawContent: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 
-        // ── Robust JSON extraction ──────────────────────────────────────────────
+        // Robust JSON extraction
         function extractJsonArray(text: string): unknown[] | null {
             let s = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
             const start = s.indexOf('[')
@@ -186,7 +188,7 @@ export async function POST(req: NextRequest) {
         const parsed = extractJsonArray(rawContent)
 
         if (!parsed) {
-            console.error('[parse-meal-ai] Invalid JSON from AI:', rawContent.slice(0, 500))
+            console.error('[parse-meal-ai] Invalid JSON from Gemini:', rawContent.slice(0, 500))
             return NextResponse.json({
                 records: [],
                 truncated,

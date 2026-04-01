@@ -797,12 +797,11 @@ export default function BaoCom() {
         async function init() {
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
-                // Try profiles table first; fallback to JWT user_metadata (for hse_admin, qa_qc created via SQL)
+                // Try profiles table first; fallback to JWT user_metadata
                 const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
                 if (profile?.role) {
                     setUserRole(profile.role)
                 } else {
-                    // Fallback: read role from JWT user metadata
                     const metaRole = user.user_metadata?.role as string | undefined
                     if (metaRole) setUserRole(metaRole)
                 }
@@ -813,7 +812,7 @@ export default function BaoCom() {
         init()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const canEdit = ["hr_admin", "hse_admin"].includes(userRole)
+    const canEdit = ["hr_admin", "hse_admin", "admin"].includes(userRole)
     const canSave = canEdit
 
     // ─── Build summary text for kitchen ───

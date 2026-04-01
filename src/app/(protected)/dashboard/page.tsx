@@ -1795,7 +1795,7 @@ export default function DashboardPage() {
                             </TableHeader>
                             <TableBody>
                                 {selectedDept === 'all' ? (
-                                    deptData.map((d) => {
+                                    deptData.filter(d => d.Actual > 0 || d.Plan > 0).map((d) => {
                                         const pct = d.Plan > 0 ? ((d.Actual / d.Plan) * 100).toFixed(1) : "0.0";
                                         const variance = (d.Actual - d.Plan).toFixed(2);
                                         return (
