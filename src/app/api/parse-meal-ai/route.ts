@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// gemini-2.5-flash — free tier, model mới nhất của Google
-const GEMINI_MODEL = 'gemini-2.5-flash'
+// AI cascade: Gemini primary → Groq fallback (nếu Gemini 429)
+const GEMINI_MODEL = 'gemini-2.0-flash'   // 200 RPD free tier
+const GROQ_MODEL   = 'gemma2-9b-it'       // 15,000 TPM free tier fallback
 
 // System prompt – HeadcountRecord format
 const BASE_SYSTEM_PROMPT = `You parse Vietnamese factory Zalo shift reports into JSON.
@@ -97,7 +98,7 @@ OUT: [{"date":"31/03/2026","area":"Color sorter","shift":"2","officialPresent":1
 
 Return ONLY a valid JSON array. No markdown, no explanation. Dự trù only → return [].`
 
-// Lọc bỏ các dòng không liên quan để tiết kiệm token
+// ── Pre-filter: bỏ dòng không liên quan để tiết kiệm token ──────────────
 function preFilterText(text: string): string {
     const lines = text.split('\n')
     const relevant: string[] = []
@@ -120,11 +121,62 @@ function preFilterText(text: string): string {
     return relevant.join('\n').trim()
 }
 
-// POST handler
+// ── JSON extractor ────────────────────────────────────────────────────────
+function extractJsonArray(text: string): unknown[] | null {
+    let s = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+    const start = s.indexOf('[')
+    const end   = s.lastIndexOf(']')
+    if (start === -1 || end === -1 || end < start) return null
+    s = s.slice(start, end + 1)
+    try { return JSON.parse(s) }
+    catch { return null }
+}
+
+// ── Gemini call ───────────────────────────────────────────────────────────
+async function callGemini(filtered: string, apiKey: string): Promise<{ raw: string } | { status429: true }> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            system_instruction: { parts: [{ text: BASE_SYSTEM_PROMPT }] },
+            contents: [{ role: 'user', parts: [{ text: filtered }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 3000, responseMimeType: 'application/json' },
+        }),
+    })
+    if (res.status === 429) return { status429: true }
+    if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`)
+    const data = await res.json()
+    return { raw: data.candidates?.[0]?.content?.parts?.[0]?.text ?? '' }
+}
+
+// ── Groq fallback call ────────────────────────────────────────────────────
+async function callGroq(filtered: string, apiKey: string): Promise<{ raw: string }> {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: GROQ_MODEL,
+            messages: [
+                { role: 'system', content: BASE_SYSTEM_PROMPT },
+                { role: 'user',   content: filtered },
+            ],
+            temperature: 0.1,
+            max_tokens: 3000,
+        }),
+    })
+    if (!res.ok) throw new Error(`Groq ${res.status}: ${await res.text()}`)
+    const data = await res.json()
+    return { raw: data.choices?.[0]?.message?.content ?? '' }
+}
+
+// ── POST handler ──────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-        return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
+    const geminiKey = process.env.GEMINI_API_KEY
+    const groqKey   = process.env.GROQ_API_KEY
+
+    if (!geminiKey && !groqKey) {
+        return NextResponse.json({ error: 'Không tìm thấy API key (GEMINI_API_KEY hoặc GROQ_API_KEY)' }, { status: 500 })
     }
 
     let body: { text?: string }
@@ -134,70 +186,50 @@ export async function POST(req: NextRequest) {
     const rawInput = body.text?.trim()
     if (!rawInput) return NextResponse.json({ error: 'No text provided' }, { status: 400 })
 
-    // Lọc trước để bỏ dòng không cần thiết
     let filtered = preFilterText(rawInput)
-
-    // Hard cap 8000 ký tự
     const MAX_CHARS = 8000
     const truncated = filtered.length > MAX_CHARS
-    if (truncated) {
-        filtered = filtered.slice(0, MAX_CHARS)
-    }
+    if (truncated) filtered = filtered.slice(0, MAX_CHARS)
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`
+        let rawContent = ''
+        let provider = 'gemini'
 
-        const geminiRes = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                system_instruction: {
-                    parts: [{ text: BASE_SYSTEM_PROMPT }]
-                },
-                contents: [{
-                    role: 'user',
-                    parts: [{ text: filtered }]
-                }],
-                generationConfig: {
-                    temperature: 0.1,
-                    maxOutputTokens: 3000,
-                    responseMimeType: 'application/json',
-                },
-            }),
-        })
-
-        if (!geminiRes.ok) {
-            const err = await geminiRes.text()
-            return NextResponse.json({ error: `Gemini API error: ${geminiRes.status} – ${err}` }, { status: 502 })
+        // 1️⃣ Thử Gemini trước
+        if (geminiKey) {
+            const result = await callGemini(filtered, geminiKey)
+            if ('status429' in result) {
+                console.warn('[parse-meal-ai] Gemini 429 – falling back to Groq')
+                provider = 'groq'
+            } else {
+                rawContent = result.raw
+            }
+        } else {
+            provider = 'groq'
         }
 
-        const geminiData = await geminiRes.json()
-        const rawContent: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-
-        // Robust JSON extraction
-        function extractJsonArray(text: string): unknown[] | null {
-            let s = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-            const start = s.indexOf('[')
-            const end   = s.lastIndexOf(']')
-            if (start === -1 || end === -1 || end < start) return null
-            s = s.slice(start, end + 1)
-            try { return JSON.parse(s) }
-            catch { return null }
+        // 2️⃣ Fallback Groq nếu cần
+        if (provider === 'groq') {
+            if (!groqKey) {
+                return NextResponse.json({ error: 'Gemini quota exceeded và không có GROQ_API_KEY' }, { status: 429 })
+            }
+            const result = await callGroq(filtered, groqKey)
+            rawContent = result.raw
         }
 
         const parsed = extractJsonArray(rawContent)
 
         if (!parsed) {
-            console.error('[parse-meal-ai] Invalid JSON from Gemini:', rawContent.slice(0, 500))
+            console.error(`[parse-meal-ai][${provider}] Invalid JSON:`, rawContent.slice(0, 300))
             return NextResponse.json({
                 records: [],
                 truncated,
-                warning: 'AI không trả về JSON hợp lệ — thử lại hoặc dùng nút "Phân tích ngay".',
+                warning: 'AI không trả về JSON hợp lệ — thử lại.',
                 raw: rawContent.slice(0, 300),
             })
         }
 
-        return NextResponse.json({ records: parsed, truncated })
+        return NextResponse.json({ records: parsed, truncated, provider })
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         return NextResponse.json({ error: msg }, { status: 500 })
