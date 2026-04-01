@@ -1,19 +1,74 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+import { createClient } from "@/lib/supabase/client"
+
+// ── Personalized greetings per dept code ────────────────────────────────────
+const DEPT_GREETINGS: Record<string, { salute: string; joke: string; emoji: string }> = {
+    CS: {
+        salute: "Chào chị Kiều! 👸",
+        joke: "Hôm nay hạt điều đẹp màu như chị vậy 🌈",
+        emoji: "🎨",
+    },
+    PEEL_MC: {
+        salute: "Chào Mr. Triều! 💪",
+        joke: "Bóc vỏ giỏi như anh, chắc về nhà bóc vỏ tôm cũng số 1 🦐",
+        emoji: "⚙️",
+    },
+    SHELL: {
+        salute: "Chào Mr. Song Duy! 🤝",
+        joke: "Shelling nhanh như anh, mai mốt làm thêm nghề... tách vỏ sò nhé 🐚",
+        emoji: "🔩",
+    },
+    STEAM: {
+        salute: "Chào Mr. Thần Nổ Hủ! 💥",
+        joke: "Hấp đều thì tốt, nhưng đừng để nổ hủ thật nha anh ơi 😅",
+        emoji: "♨️",
+    },
+    PACK: {
+        salute: "Chào Anh Shipper! 📦",
+        joke: "Container nào qua tay anh cũng giao đúng hạn — xuất sắc hơn Shopee Express 🚢",
+        emoji: "🚀",
+    },
+}
+
+const DEFAULT_JOKES = [
+    "Chúc cả team làm việc năng suất như máy... nhưng đừng downtime nhé! ⚡",
+    "Hôm nay trời đẹp — hạt điều cũng đẹp — năng suất cũng đẹp! 🌞",
+    "Chúc một ngày sản xuất suôn sẻ, đạt plan, zero downtime! 🎯",
+]
 
 export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
     const [visible, setVisible] = useState(true)
     const [fadeOut, setFadeOut] = useState(false)
     const isFirstLoad = useRef(true)
+    const [deptCode, setDeptCode] = useState<string | null>(null)
+    const [userName, setUserName] = useState<string | null>(null)
+    const profileFetched = useRef(false)
+
+    // Fetch profile once on mount for personalized greeting
+    useEffect(() => {
+        if (profileFetched.current) return
+        profileFetched.current = true
+        const supabase = createClient()
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return
+            supabase.from("profiles").select("full_name, departments(code)")
+                .eq("id", user.id).single()
+                .then(({ data }) => {
+                    if (data) {
+                        setUserName((data as any).full_name || null)
+                        setDeptCode((data as any).departments?.code || null)
+                    }
+                })
+        })
+    }, [])
 
     useEffect(() => {
         if (isLoading) {
-            // Show loader again on every load (month switch, dept switch, etc.)
             setVisible(true)
             setFadeOut(false)
         } else {
-            // Fade out then hide
             setFadeOut(true)
             const t = setTimeout(() => {
                 setVisible(false)
@@ -25,8 +80,9 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
 
     if (!visible) return null
 
-    // Subsequent loads: lighter semi-transparent overlay (not full white)
     const isRefresh = !isFirstLoad.current
+    const greeting = deptCode ? DEPT_GREETINGS[deptCode] : null
+    const randomJoke = DEFAULT_JOKES[Math.floor(Date.now() / 86400000) % DEFAULT_JOKES.length]
 
     return (
         <div
@@ -53,7 +109,7 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
             )}
 
             {/* Logo + pulse rings */}
-            <div className="relative flex items-center justify-center mb-8">
+            <div className="relative flex items-center justify-center mb-6">
                 <span
                     className="absolute rounded-[28px]"
                     style={{
@@ -72,7 +128,6 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
                         animation: "pulse-ring 2s ease-out infinite 0.6s",
                     }}
                 />
-
                 <div
                     className="relative rounded-[24px] overflow-hidden bg-white"
                     style={{
@@ -90,8 +145,8 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
                 </div>
             </div>
 
-            {/* Text */}
-            <div className="text-center mb-10">
+            {/* Brand text */}
+            <div className="text-center mb-5">
                 <p className="text-2xl font-black tracking-wide" style={{ color: "#5a3825", letterSpacing: "0.04em" }}>
                     Intersnack
                 </p>
@@ -99,6 +154,41 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
                     {isRefresh ? "Đang cập nhật..." : "Factory Dashboard"}
                 </p>
             </div>
+
+            {/* ── Personalized greeting (first load only) ── */}
+            {!isRefresh && greeting && (
+                <div
+                    className="mx-4 mb-5 px-5 py-3 rounded-2xl text-center max-w-xs"
+                    style={{
+                        background: "linear-gradient(135deg, rgba(192,57,43,0.06) 0%, rgba(192,57,43,0.02) 100%)",
+                        border: "1px solid rgba(192,57,43,0.12)",
+                        animation: "slide-up 0.5s ease 0.3s both",
+                    }}
+                >
+                    <p className="text-lg font-bold mb-1" style={{ color: "#C0392B" }}>
+                        {greeting.emoji} {greeting.salute}
+                    </p>
+                    <p className="text-[12px] text-slate-500 leading-relaxed italic">
+                        "{greeting.joke}"
+                    </p>
+                </div>
+            )}
+
+            {/* Default fun message for depts without a specific greeting */}
+            {!isRefresh && !greeting && (
+                <div
+                    className="mx-4 mb-5 px-5 py-3 rounded-2xl text-center max-w-xs"
+                    style={{
+                        background: "linear-gradient(135deg, rgba(192,57,43,0.04) 0%, rgba(192,57,43,0.01) 100%)",
+                        border: "1px solid rgba(192,57,43,0.08)",
+                        animation: "slide-up 0.5s ease 0.3s both",
+                    }}
+                >
+                    <p className="text-[12px] text-slate-500 leading-relaxed italic">
+                        "{randomJoke}"
+                    </p>
+                </div>
+            )}
 
             {/* Progress bar */}
             <div className="w-48 h-[3px] bg-slate-100 rounded-full overflow-hidden">
@@ -130,6 +220,10 @@ export function DashboardLoader({ isLoading }: { isLoading: boolean }) {
                     50%  { width: 70%;  margin-left: 0; }
                     80%  { width: 70%;  margin-left: 30%; }
                     100% { width: 0%;   margin-left: 100%; }
+                }
+                @keyframes slide-up {
+                    from { opacity: 0; transform: translateY(12px); }
+                    to   { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
         </div>
