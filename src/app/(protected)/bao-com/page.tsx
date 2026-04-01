@@ -907,8 +907,10 @@ export default function BaoCom() {
     }
 
     // Thứ tự bộ phận theo layout Excel
-    const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','PACK','BOILER','MAINT_HCA','CLEAN','QC','OFFICE']
+    const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','HAND','PACK','BOILER','MAINT_HCA','CLEAN','QC','OFFICE']
     const SHIFT_ORDER = ['1','2','3','OT']
+    // Alias: these dept codes are merged into another group in the monthly report
+    const DEPT_CODE_ALIAS: Record<string, string> = { PEEL_MC: 'PEEL' }
 
     // Tên hiển thị đẹp như trong Excel
     const DEPT_DISPLAY: Record<string, string> = {
@@ -959,7 +961,8 @@ export default function BaoCom() {
         // 2. Map section_name → SectionRow
         const sectionMap = new Map<string, SectionRow>()
         rows.forEach(r => {
-            const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
+            let deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
+            deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC → PEEL
             let sectionName = r.department_name   // e.g. "Loading S1", "Shelling S2"
             const shift = r.shift ?? '1'
             // Normalize: if sectionName is not a known section for this dept (e.g. kitchen tab saves
@@ -995,8 +998,9 @@ export default function BaoCom() {
         // 3. Build shift-level pivot (for OT) — same as before
         const shiftMap = new Map<string, ShiftEntry>()
         rows.forEach(r => {
-            const deptKey  = r.department_id ?? r.department_name
-            const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
+            let deptCode  = deptList.find(d => d.id === r.department_id)?.code ?? ''
+            deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC → PEEL
+            const deptKey  = (DEPT_CODE_ALIAS[deptList.find(d => d.id === r.department_id)?.code ?? ''] ? deptList.find(d => d.code === deptCode)?.id : r.department_id) ?? r.department_id ?? r.department_name
             const deptName = DEPT_DISPLAY[deptCode] ?? r.department_name
             const shift = r.shift ?? '1'
             const mapKey = `${deptKey}|${shift}`
