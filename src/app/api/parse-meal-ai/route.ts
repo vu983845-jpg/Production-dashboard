@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // AI cascade: Gemini primary → Groq fallback (nếu Gemini 429)
 const GEMINI_MODEL = 'gemini-2.0-flash'   // 200 RPD free tier
-const GROQ_MODEL   = 'gemma2-9b-it'       // 15,000 TPM free tier fallback
+const GROQ_MODEL   = 'llama-3.3-70b-versatile'  // Groq fallback (active model)
 
 // System prompt – HeadcountRecord format
 const BASE_SYSTEM_PROMPT = `You parse Vietnamese factory Zalo shift reports into JSON.
