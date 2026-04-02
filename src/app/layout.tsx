@@ -7,7 +7,7 @@ import { QueryProvider } from "@/components/providers/query-provider"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin', 'vietnamese'] })
 
 export const metadata: Metadata = {
   title: 'Dashboard VICC LA',
