@@ -66,7 +66,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: t("nav.dashboard"),
             href: "/dashboard",
             icon: LayoutDashboard,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin"],
         },
         {
             title: t("nav.input"),
@@ -84,13 +84,13 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: "Production Report",
             href: "/report",
             icon: FileText,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin"],
         },
         {
             title: "Analytics",
             href: "/analytics",
             icon: BarChart3,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin"],
         },
         {
             title: t("nav.users"),
@@ -102,13 +102,13 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: "Energy Hub",
             href: "/energy",
             icon: Zap,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint", "hr_admin"],
         },
         {
             title: "Báo Cơm",
             href: "/bao-com",
             icon: UtensilsCrossed,
-            roles: ["admin", "dept_user", "viewer", "hr", "HSE", "hse", "hse_admin"],
+            roles: ["admin", "dept_user", "viewer", "hr", "HSE", "hse", "hse_admin", "hr_admin"],
         },
     ]
 
