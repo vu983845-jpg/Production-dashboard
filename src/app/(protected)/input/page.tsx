@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect, useRef } from "react"
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
@@ -71,10 +71,10 @@ const recalcEnergyData = (data: MonthlyEnergyRecord[], prevMonth: any) => {
             today.electricity_offpeak_kwh = Math.max(0, today.meter_offpeak - yesterday.meter_offpeak);
         }
 
-        // Water: consumption = today's meter - yesterday's meter
-        // yesterday is prevMonth object on day 0 (e.g. March 31 reading used for April 1)
-        if (today.water_meter_reading != null && yesterday.water_meter_reading != null) {
-            today.water_m3 = Math.max(0, today.water_meter_reading - yesterday.water_meter_reading);
+        // Water: nhập đầu buổi sáng → số ngày_i+1 - số ngày_i = tiêu thụ ngày_i
+        // Look-ahead: khi đang ở i, gán water_m3 cho ngày TRƯỚC (i-1)
+        if (i > 0 && today.water_meter_reading != null && data[i - 1].water_meter_reading != null) {
+            data[i - 1].water_m3 = Math.max(0, today.water_meter_reading - (data[i - 1].water_meter_reading as number));
         }
 
         // Override total if any sub-meters are calculated
