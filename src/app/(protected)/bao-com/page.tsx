@@ -88,6 +88,7 @@ interface SavedRecord {
 }
 
 interface MealStatRow {
+    id: string
     work_date: string
     department_id: string | null
     department_name: string
@@ -883,6 +884,10 @@ export default function BaoCom() {
     const [statsData, setStatsData] = useState<MealStatRow[] | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
     const [statsError, setStatsError] = useState<string | null>(null)
+    // Inline edit cell state (monthly table)
+    const [monthlyEditingCell, setMonthlyEditingCell] = useState<{ sectionName: string; shift: string; date: string } | null>(null)
+    const [cellEditValue, setCellEditValue] = useState<string>("")
+    const [cellSaving, setCellSaving] = useState(false)
 
     const fetchMonthStats = async () => {
         setStatsLoading(true)
@@ -893,7 +898,7 @@ export default function BaoCom() {
             const { from, to } = getBillingCycle(statsMonth)
             const { data, error } = await supabase
                 .from("meal_headcount")
-                .select("work_date, department_id, department_name, shift, official_present, seasonal_present, ot_count, vegetarian")
+                .select("id, work_date, department_id, department_name, shift, official_present, seasonal_present, ot_count, vegetarian")
                 .gte("work_date", from)
                 .lte("work_date", to)
                 .order("work_date")
@@ -946,7 +951,7 @@ export default function BaoCom() {
         MAINT_HCA:  ['Maintenance S1','Maintenance S2','Maintenance S3'],
         CLEAN:      ['Cleaning worker','Cleaning worker S2','Cleaning worker S3'],
         QC:         ['QC','QC S2','QC S3'],
-        OFFICE:     ['Office 1','Office 2','Office 3'],
+        OFFICE:     ['Office S1','Office S2','Office S3'],
     }
 
     type ShiftEntry = { deptKey: string; deptName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; otDays: Map<string, number> }
@@ -2005,11 +2010,62 @@ export default function BaoCom() {
                                                                 </td>
                                                                 {days.map(d => {
                                                                     const v = sr.days.get(d) ?? 0
+                                                                    const isEditing = monthlyEditingCell?.sectionName === sr.sectionName && monthlyEditingCell?.shift === sr.shift && monthlyEditingCell?.date === d
                                                                     return (
-                                                                        <td key={d} className={`px-1.5 py-1 text-center text-xs ${
-                                                                            v > 0 ? (isTV ? 'text-blue-600 font-semibold' : 'font-semibold text-slate-800') : 'text-slate-200'
-                                                                        }`}>
-                                                                            {v > 0 ? v : '—'}
+                                                                        <td key={d}
+                                                                            className={`px-0 py-0 text-center text-xs ${
+                                                                                isEditing ? 'bg-yellow-50' :
+                                                                                v > 0 ? (isTV ? 'text-blue-600 font-semibold' : 'font-semibold text-slate-800') : 'text-slate-200'
+                                                                            } ${canEdit && !isEditing ? 'cursor-pointer group relative' : ''}`}
+                                                                            onClick={() => {
+                                                                                if (!canEdit || isEditing) return
+                                                                                setMonthlyEditingCell({ sectionName: sr.sectionName, shift: sr.shift, date: d })
+                                                                                setCellEditValue(String(v || ''))
+                                                                            }}
+                                                                        >
+                                                                            {isEditing ? (
+                                                                                <input
+                                                                                    autoFocus
+                                                                                    type="number"
+                                                                                    min={0}
+                                                                                    value={cellEditValue}
+                                                                                    onChange={e => setCellEditValue(e.target.value)}
+                                                                                    onBlur={async () => {
+                                                                                        if (cellSaving) return
+                                                                                        setCellSaving(true)
+                                                                                        const newVal = parseInt(cellEditValue) || 0
+                                                                                        // Find matching records in statsData
+                                                                                        const matches = (statsData ?? []).filter(r =>
+                                                                                            r.work_date === d && r.shift === sr.shift &&
+                                                                                            r.department_name.toLowerCase() === sr.sectionName.toLowerCase()
+                                                                                        )
+                                                                                        if (matches.length > 0) {
+                                                                                            const rec = matches[0]
+                                                                                            const oldTotal = (rec.official_present ?? 0) + (rec.seasonal_present ?? 0)
+                                                                                            const diff = newVal - oldTotal
+                                                                                            const newOfficial = Math.max(0, (rec.official_present ?? 0) + diff)
+                                                                                            await supabase.from('meal_headcount').update({
+                                                                                                official_present: newOfficial
+                                                                                            }).eq('id', rec.id)
+                                                                                            // Update local statsData
+                                                                                            setStatsData(prev => prev ? prev.map(r =>
+                                                                                                r.id === rec.id ? { ...r, official_present: newOfficial } : r
+                                                                                            ) : prev)
+                                                                                        }
+                                                                                        setCellSaving(false)
+                                                                                        setMonthlyEditingCell(null)
+                                                                                    }}
+                                                                                    onKeyDown={e => {
+                                                                                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                                                                        if (e.key === 'Escape') { setMonthlyEditingCell(null); setCellEditValue('') }
+                                                                                    }}
+                                                                                    className="w-10 h-6 text-center text-xs border-2 border-yellow-400 rounded bg-yellow-50 outline-none font-semibold"
+                                                                                />
+                                                                            ) : (
+                                                                                <span className={`block px-1.5 py-1 ${canEdit ? 'hover:bg-yellow-100 transition-colors rounded' : ''}`}>
+                                                                                    {v > 0 ? v : '—'}
+                                                                                </span>
+                                                                            )}
                                                                         </td>
                                                                     )
                                                                 })}

@@ -1,105 +1,67 @@
-/**
- * Fix double-mojibake (Windows-1252 variant) in bao-com/page.tsx
- *
- * Most Vietnamese encoding issues stem from UTF-8 bytes being interpreted as
- * Windows-1252 (cp1252), which is a superset of Latin-1. The range 0x80-0x9F
- * differs between Latin-1 and cp1252.
- */
+// Fix double-encoded UTF-8 using Windows-1252 mapping
+// File bytes are: UTF-8 encoding of Windows-1252 interpretation of original UTF-8 bytes
+// Fix: read raw bytes, decode as win1252 text (gets back original UTF-8 byte values as a string),
+//      then re-encode as UTF-8
+
 const fs = require('fs');
 const path = require('path');
+const iconv = require('iconv-lite');
 
-// Windows-1252 codepoint mapping for 0x80-0x9F (the part that differs from Latin-1)
-const cp1252 = {
-    0x80: 0x20AC, // €
-    0x81: 0x0081, 
-    0x82: 0x201A, // ‚
-    0x83: 0x0192, // ƒ
-    0x84: 0x201E, // „
-    0x85: 0x2026, // …
-    0x86: 0x2020, // †
-    0x87: 0x2021, // ‡
-    0x88: 0x02C6, // ˆ
-    0x89: 0x2030, // ‰
-    0x8A: 0x0160, // Š
-    0x8B: 0x2039, // ‹
-    0x8C: 0x0152, // Œ
-    0x8D: 0x008D,
-    0x8E: 0x017D, // Ž
-    0x8F: 0x008F,
-    0x90: 0x0090,
-    0x91: 0x2018, // '
-    0x92: 0x2019, // '
-    0x93: 0x201C, // "
-    0x94: 0x201D, // "
-    0x95: 0x2022, // •
-    0x96: 0x2013, // –
-    0x97: 0x2014, // —
-    0x98: 0x02DC, // ˜
-    0x99: 0x2122, // ™
-    0x9A: 0x0161, // š
-    0x9B: 0x203A, // ›
-    0x9C: 0x0153, // œ
-    0x9D: 0x009D,
-    0x9E: 0x017E, // ž
-    0x9F: 0x0178, // Ÿ
-};
+const FILES_TO_FIX = [
+  'src/app/(protected)/input/page.tsx',
+];
 
-// Build reverse map: Unicode codepoint → cp1252 byte
-const unicodeToCp1252 = {};
-for (const [byte, code] of Object.entries(cp1252)) {
-    unicodeToCp1252[code] = parseInt(byte);
-}
-// Also add standard Latin-1 range (identical to cp1252 for 0x00-0x7F and 0xA0-0xFF)
-for (let i = 0; i <= 0xFF; i++) {
-    if (!(i in cp1252)) {
-        unicodeToCp1252[i] = i;
+FILES_TO_FIX.forEach(filePath => {
+  const fullPath = path.join(__dirname, filePath);
+
+  if (!fs.existsSync(fullPath)) {
+    console.log(`Not found: ${filePath}`);
+    return;
+  }
+
+  // Read raw bytes
+  const rawBytes = fs.readFileSync(fullPath);
+
+  // Strip BOM if present
+  let startOffset = 0;
+  if (rawBytes[0] === 0xEF && rawBytes[1] === 0xBB && rawBytes[2] === 0xBF) {
+    startOffset = 3;
+    console.log('BOM detected, stripping...');
+  }
+  const contentBytes = rawBytes.slice(startOffset);
+
+  // Decode as UTF-8 (gives us the garbled string with Windows-1252 chars)
+  const garbledUtf8 = contentBytes.toString('utf8');
+
+  // Each character in garbledUtf8 corresponds to a Windows-1252 char value
+  // We need to re-encode it AS Windows-1252 bytes to recover the original UTF-8 bytes
+  const originalBytes = iconv.encode(garbledUtf8, 'win1252');
+
+  // Now decode those bytes as UTF-8 to get the correct Vietnamese text
+  const fixed = iconv.decode(originalBytes, 'utf8');
+
+  if (fixed === garbledUtf8) {
+    console.log(`Already OK: ${filePath}`);
+    return;
+  }
+
+  // Backup
+  fs.writeFileSync(fullPath + '.bak2', rawBytes);
+  console.log(`Backup saved: ${filePath}.bak2`);
+
+  // Write fixed (no BOM)
+  fs.writeFileSync(fullPath, fixed, 'utf8');
+  console.log(`Fixed: ${filePath}`);
+
+  // Show sample diff
+  const origLines = garbledUtf8.split('\n');
+  const fixedLines = fixed.split('\n');
+  let shown = 0;
+  for (let i = 0; i < origLines.length && shown < 5; i++) {
+    if (origLines[i] !== fixedLines[i]) {
+      console.log(`Line ${i+1} BEFORE: ${origLines[i].trim().slice(0, 80)}`);
+      console.log(`Line ${i+1} AFTER:  ${fixedLines[i].trim().slice(0, 80)}`);
+      shown++;
     }
-}
-
-function unicodeToBytes(str) {
-    const bytes = [];
-    for (let i = 0; i < str.length; i++) {
-        const code = str.charCodeAt(i);
-        if (code <= 0xFF) {
-            bytes.push(code);
-        } else if (code in unicodeToCp1252) {
-            bytes.push(unicodeToCp1252[code]);
-        } else {
-            // Character outside cp1252 range - keep as UTF-8 bytes
-            const encoded = Buffer.from(str[i], 'utf8');
-            for (const b of encoded) bytes.push(b);
-        }
-    }
-    return Buffer.from(bytes);
-}
-
-const FILE = path.join(__dirname, 'src/app/(protected)/bao-com/page.tsx');
-const raw = fs.readFileSync(FILE);
-
-// Skip UTF-8 BOM
-const hasBOM = raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF;
-const content = hasBOM ? raw.slice(3) : raw;
-
-// Step 1: decode current UTF-8 bytes → single mojibake string
-const singleMojibake = content.toString('utf8');
-
-// Step 2: map Unicode chars back to cp1252 bytes, then decode as UTF-8
-const fixedBytes = unicodeToBytes(singleMojibake);
-const fixedContent = fixedBytes.toString('utf8');
-
-// Verify
-const idx = fixedContent.indexOf('Headcount Tracker');
-console.log('Around title:', fixedContent.slice(idx - 60, idx + 30));
-
-const idx2 = fixedContent.indexOf('HPEEL_GRADING');
-console.log('\nHPEEL_GRADING:', fixedContent.slice(idx2, idx2 + 80));
-
-if (fixedContent.includes('Báo Cơm')) {
-    console.log('\n✅ "Báo Cơm" decoded correctly');
-}
-if (fixedContent.includes('–') || fixedContent.includes('\u2013')) {
-    console.log('✅ Em dash decoded correctly');
-}
-
-fs.writeFileSync(FILE, fixedContent, 'utf8');
-console.log('\nFile written. Size:', raw.length, '→', Buffer.byteLength(fixedContent, 'utf8'));
+  }
+});
