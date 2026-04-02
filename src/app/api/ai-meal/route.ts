@@ -149,25 +149,46 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
         const geminiData = await geminiRes.json()
         const text: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
 
-        // Extract JSON rows
+        // Extract JSON rows — handle both ```json blocks and raw JSON
         let parsedRows = null
-        const jsonMatch = text.match(/```json\s*([\s\S]*?)```/)
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) ||
+                          text.match(/```\s*([\s\S]*?)```/)
+        let rawJsonStr: string | null = null
+
         if (jsonMatch) {
+            rawJsonStr = jsonMatch[1]
+        } else {
+            // Gemini sometimes returns raw JSON without code fences
+            const braceStart = text.indexOf('{')
+            const braceEnd = text.lastIndexOf('}')
+            if (braceStart !== -1 && braceEnd > braceStart) {
+                rawJsonStr = text.slice(braceStart, braceEnd + 1)
+            }
+        }
+
+        if (rawJsonStr) {
             try {
-                const parsed = JSON.parse(jsonMatch[1])
+                const parsed = JSON.parse(rawJsonStr)
                 if (parsed.rows && Array.isArray(parsed.rows)) {
                     parsedRows = parsed.rows.map((r: { dept_code: string; [key: string]: unknown }) => ({
                         ...r,
                         dept_display: DEPT_DISPLAY[r.dept_code] ?? r.dept_code,
-                        // Sub-groups resolve to HPEEL dept lookup code
                         dept_lookup: HPEEL_SUBCODES.has(r.dept_code) ? "HPEEL" : r.dept_code,
                     }))
                 }
             } catch { /* ignore */ }
         }
 
-        const cleanText = text.replace(/```json[\s\S]*?```/g, "").trim()
-        return NextResponse.json({ message: cleanText, rows: parsedRows })
+        // Strip any json block or raw JSON from display text
+        const cleanText = text
+            .replace(/```json[\s\S]*?```/g, "")
+            .replace(/```[\s\S]*?```/g, "")
+            .replace(/\{[\s\S]*"rows"[\s\S]*\}/g, "")
+            .trim()
+
+        const displayText = cleanText || (parsedRows ? `Đã parse được ${parsedRows.length} dòng — kiểm tra bảng bên dưới.` : "Đã xử lý.")
+        return NextResponse.json({ message: displayText, rows: parsedRows })
+
 
     } catch (err) {
         console.error("[ai-meal] Unhandled error:", err)
