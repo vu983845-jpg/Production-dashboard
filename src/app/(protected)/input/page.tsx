@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useRef } from "react"
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
@@ -154,9 +154,25 @@ const kpiSchema = z.object({
     note: z.string().optional(),
 })
 
-export default function InputPage() {
-    const supabase = createClient()
-    const [date, setDate] = useState<Date>(new Date())
+// Tính ngày làm việc trước (bỏ qua cuối tuần)
+function getPreviousWorkingDay(): Date {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    // Thứ 2 → lùi về thứ 6 (3 ngày), thứ CN → thứ 6 (2 ngày), còn lại → hôm qua
+    const day = d.getDay() // 0=CN, 1=T2...6=T7
+    if (day === 1) d.setDate(d.getDate() - 3)       // Thứ 2 → Thứ 6
+    else if (day === 0) d.setDate(d.getDate() - 2)  // Chủ nhật → Thứ 6
+    else d.setDate(d.getDate() - 1)                  // Các ngày còn lại → hôm qua
+    return d
+}
+
+export default function InputPage() {
+    const supabase = createClient()
+    const [date, setDate] = useState<Date>(getPreviousWorkingDay())
+    const [todayWarningDialog, setTodayWarningDialog] = useState<{ isOpen: boolean, pendingDate: Date | null }>({
+        isOpen: false,
+        pendingDate: null,
+    })
     const [role, setRole] = useState("")
     const [userId, setUserId] = useState("")
     const [departments, setDepartments] = useState<{ id: string, name_en: string, code: string }[]>([])
@@ -1215,6 +1231,35 @@ export default function InputPage() {
                         }} className="bg-primary hover:bg-primary/90">Đồng ý lưu</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
+            </AlertDialog>
+            {/* Canh bao khi chon ngay hom nay */}
+            <AlertDialog open={todayWarningDialog.isOpen} onOpenChange={(open) => setTodayWarningDialog(prev => ({ ...prev, isOpen: open }))}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+                            ⚠️ Bạn đang chọn ngày hôm nay
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm leading-relaxed">
+                            Ngày được chọn là <strong>hôm nay ({format(new Date(), "dd/MM/yyyy")})</strong>.<br /><br />
+                            Dữ liệu sản xuất thường được nhập vào <strong>ngày hôm sau</strong> của ca làm việc.
+                            Bạn có chắc chắn muốn nhập dữ liệu cho ngày hôm nay không?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setTodayWarningDialog({ isOpen: false, pendingDate: null })}>
+                            ← Quay lại
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                if (todayWarningDialog.pendingDate) setDate(todayWarningDialog.pendingDate)
+                                setTodayWarningDialog({ isOpen: false, pendingDate: null })
+                            }}
+                            className="bg-amber-500 hover:bg-amber-600 text-white"
+                        >
+                            Xác nhận — nhập hôm nay
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
             </AlertDialog>
 
             <div className="flex items-center justify-between space-y-2 border-b pb-4 mb-4">
@@ -1237,13 +1282,25 @@ export default function InputPage() {
                                 {date ? format(date, "PPP", { locale: vi }) : <span>Chọn ngày</span>}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={date}
-                                onSelect={(d) => d && setDate(d)}
-                                initialFocus
-                            />
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={(d) => {
+                                    if (!d) return
+                                    const today = new Date()
+                                    today.setHours(0, 0, 0, 0)
+                                    const selected = new Date(d)
+                                    selected.setHours(0, 0, 0, 0)
+                                    if (selected.getTime() === today.getTime()) {
+                                        // Đang chọn ngày hôm nay → hiện cảnh báo
+                                        setTodayWarningDialog({ isOpen: true, pendingDate: d })
+                                    } else {
+                                        setDate(d)
+                                    }
+                                }}
+                                initialFocus
+                            />
                         </PopoverContent>
                     </Popover>
                 </div>
