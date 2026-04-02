@@ -2006,7 +2006,7 @@ export default function BaoCom() {
                                                                 className={`group border-b border-slate-100 ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
                                                                 <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium text-xs ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/60 italic text-blue-600' : 'bg-white text-slate-600'}`}>
                                                                     <div className="flex items-center gap-1">
-                                                                        <span className="truncate max-w-[120px]">{sr.sectionName}</span>
+                                                                        <span className="whitespace-nowrap">{sr.sectionName}</span>
                                                                         {canEdit && (
                                                                             isRowEditing ? (
                                                                                 <div className="flex gap-1 ml-1 shrink-0">
@@ -2098,29 +2098,94 @@ export default function BaoCom() {
                                                         )
                                                     })}
                                                     {/* OT row for this dept group */}
-                                                    {deptOT && deptOTTotal > 0 && (
-                                                        <tr className="bg-orange-50 border-b border-orange-100">
-                                                            <td className="px-3 py-1 whitespace-nowrap sticky left-0 z-10 bg-orange-50 font-semibold text-orange-700 italic border-r border-orange-100 text-xs">
-                                                                {dept.name} (OT)
-                                                            </td>
-                                                            <td className="px-1 py-1 sticky left-[160px] z-10 text-center bg-orange-50 border-r border-orange-100">
-                                                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">OT</span>
-                                                            </td>
-                                                            {days.map(d => {
-                                                                const v = deptOT.days.get(d) ?? 0
-                                                                return (
-                                                                    <td key={d} className={`px-1.5 py-1 text-center text-xs ${
-                                                                        v > 0 ? 'text-orange-600 font-semibold' : 'text-orange-200'
-                                                                    }`}>
-                                                                        {v > 0 ? v : '—'}
-                                                                    </td>
-                                                                )
-                                                            })}
-                                                            <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100 text-xs">
-                                                                {deptOTTotal}
-                                                            </td>
-                                                        </tr>
-                                                    )}
+                                                    {deptOT && deptOTTotal > 0 && (() => {
+                                                        const otRowKey = `${dept.name}|OT`
+                                                        const isOTEditing = editingRowKey === otRowKey
+                                                        return (
+                                                            <tr className={`group border-b border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
+                                                                <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-orange-100 font-semibold text-xs ${isOTEditing ? 'bg-yellow-50 text-orange-700' : 'bg-orange-50 text-orange-700 italic'}`}>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span className="whitespace-nowrap">{dept.name} (OT)</span>
+                                                                        {canEdit && (
+                                                                            isOTEditing ? (
+                                                                                <div className="flex gap-1 ml-1 shrink-0">
+                                                                                    <button
+                                                                                        disabled={rowSaving}
+                                                                                        onClick={async () => {
+                                                                                            setRowSaving(true)
+                                                                                            for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
+                                                                                                const newVal = parseInt(draftVal) || 0
+                                                                                                const orig = deptOT.days.get(date) ?? 0
+                                                                                                if (newVal === orig) continue
+                                                                                                const matches = (statsData ?? []).filter(r =>
+                                                                                                    r.work_date === date && r.shift === 'OT' &&
+                                                                                                    r.department_name.toLowerCase() === dept.name.toLowerCase()
+                                                                                                )
+                                                                                                if (matches.length > 0) {
+                                                                                                    const rec = matches[0]
+                                                                                                    await supabase.from('meal_headcount').update({ ot_count: newVal }).eq('id', rec.id)
+                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newVal } : r) : prev)
+                                                                                                }
+                                                                                            }
+                                                                                            setRowSaving(false)
+                                                                                            setEditingRowKey(null)
+                                                                                            setRowEditDrafts({})
+                                                                                        }}
+                                                                                        className="px-1.5 py-0.5 bg-green-500 hover:bg-green-600 text-white text-[9px] font-bold rounded disabled:opacity-50 transition-colors"
+                                                                                    >{rowSaving ? '...' : '💾'}</button>
+                                                                                    <button
+                                                                                        onClick={() => { setEditingRowKey(null); setRowEditDrafts({}) }}
+                                                                                        className="px-1.5 py-0.5 bg-slate-400 hover:bg-slate-500 text-white text-[9px] font-bold rounded transition-colors"
+                                                                                    >✕</button>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setEditingRowKey(otRowKey)
+                                                                                        const drafts: Record<string, string> = {}
+                                                                                        days.forEach(d => { drafts[d] = String(deptOT.days.get(d) ?? 0) })
+                                                                                        setRowEditDrafts(drafts)
+                                                                                    }}
+                                                                                    className="shrink-0 px-2 py-0.5 bg-orange-100 hover:bg-orange-400 hover:text-white text-orange-700 text-[10px] font-bold rounded border border-orange-300 transition-colors"
+                                                                                >✏️ Sửa</button>
+                                                                            )
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className={`px-1 py-1 sticky left-[160px] z-10 text-center border-r border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
+                                                                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">OT</span>
+                                                                </td>
+                                                                {days.map(d => {
+                                                                    const origV = deptOT.days.get(d) ?? 0
+                                                                    const changed = isOTEditing && parseInt(rowEditDrafts[d] ?? '') !== origV
+                                                                    return (
+                                                                        <td key={d} className={`px-0 py-0 text-center text-xs ${
+                                                                            isOTEditing ? (changed ? 'bg-yellow-100' : 'bg-yellow-50') :
+                                                                            origV > 0 ? 'text-orange-600 font-semibold' : 'text-orange-200'
+                                                                        }`}>
+                                                                            {isOTEditing ? (
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min={0}
+                                                                                    value={rowEditDrafts[d] ?? ''}
+                                                                                    onChange={e => setRowEditDrafts(prev => ({ ...prev, [d]: e.target.value }))}
+                                                                                    onKeyDown={e => { if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
+                                                                                    className={`w-10 h-6 text-center text-xs rounded outline-none font-semibold ${
+                                                                                        changed ? 'border-2 border-amber-400 bg-amber-50' : 'border border-slate-200 bg-yellow-50'
+                                                                                    }`}
+                                                                                />
+                                                                            ) : (
+                                                                                <span className="block px-1.5 py-1">{origV > 0 ? origV : '—'}</span>
+                                                                            )}
+                                                                        </td>
+                                                                    )
+                                                                })}
+                                                                <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100 text-xs">
+                                                                    {deptOTTotal}
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    })()}
                                                 </Fragment>
                                                 )
                                             })}
