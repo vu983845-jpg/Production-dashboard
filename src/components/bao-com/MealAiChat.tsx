@@ -17,6 +17,7 @@ interface MealRow {
     seasonal_absent: number
     ot_count: number
     vegetarian: number
+    ot_vegetarian: number
 }
 
 interface DiffRow {
@@ -52,7 +53,7 @@ const INITIAL_MSG: Message = {
     content: "Xin chào! Nhập báo cơm bằng ngôn ngữ tự nhiên — tôi sẽ parse và hiển thị bảng để bạn xác nhận trước khi lưu.\n\nVí dụ: *Ca 1 hôm nay: SHELL 45, STEAM 30, PEEL 20 chính thức*",
 }
 
-const NUM_FIELDS = ["official_present", "seasonal_present", "official_absent", "seasonal_absent", "ot_count", "vegetarian"] as const
+const NUM_FIELDS = ["official_present", "seasonal_present", "official_absent", "seasonal_absent", "ot_count", "vegetarian", "ot_vegetarian"] as const
 
 function isSameData(row: MealRow, existing: Record<string, number>) {
     return NUM_FIELDS.every(f => (row[f] ?? 0) === (existing[f] ?? 0))
@@ -107,6 +108,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
         seasonal_absent: row.seasonal_absent ?? 0,
         ot_count: row.ot_count ?? 0,
         vegetarian: row.vegetarian ?? 0,
+        ot_vegetarian: row.ot_vegetarian ?? 0,
     })
 
     const doInsert = async (row: MealRow, deptId: string) =>
@@ -350,6 +352,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                     <th className="px-4 py-2.5 text-center">Thời vụ</th>
                                                     <th className="px-4 py-2.5 text-center">OT</th>
                                                     <th className="px-4 py-2.5 text-center">🥬 Chay</th>
+                                                    <th className="px-4 py-2.5 text-center">🥬 Chay OT</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -381,6 +384,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                         <td className="px-4 py-3 text-center text-slate-600">{r.seasonal_present ?? 0}</td>
                                                         <td className="px-4 py-3 text-center text-slate-600">{r.ot_count ?? 0}</td>
                                                         <td className="px-4 py-3 text-center text-green-600 font-medium">{r.vegetarian ?? 0}</td>
+                                                        <td className="px-4 py-3 text-center text-emerald-700 font-medium">{r.ot_vegetarian ?? 0}</td>
                                                     </tr>
                                                     )
                                                 })}
@@ -392,6 +396,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                     <td className="px-4 py-2 text-center font-bold text-orange-800">{msg.rows.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
                                                     <td className="px-4 py-2 text-center font-bold text-orange-800">{msg.rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)}</td>
                                                     <td className="px-4 py-2 text-center font-bold text-green-700">{msg.rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
+                                                    <td className="px-4 py-2 text-center font-bold text-emerald-700">{msg.rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)}</td>
                                                 </tr>
                                             </tfoot>
                                         </table>

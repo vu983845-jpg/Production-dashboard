@@ -89,6 +89,7 @@ HEADCOUNT:
 - "thời vụ" = seasonal_present
 - Nếu chỉ nói 1 số → coi là official_present
 - OT = ot_count, "chay" = vegetarian
+- "chay OT", "OT chay", "ot ăn chay", "chay tăng ca" = ot_vegetarian
 
 OUTPUT FORMAT khi có data:
 Trả lời text ngắn + JSON block:
@@ -105,7 +106,8 @@ Trả lời text ngắn + JSON block:
       "official_absent": 0,
       "seasonal_absent": 0,
       "ot_count": 0,
-      "vegetarian": 0
+      "vegetarian": 0,
+      "ot_vegetarian": 0
     }
   ]
 }
