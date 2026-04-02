@@ -1223,6 +1223,8 @@ export default function BaoCom() {
     }
 
     const handleSaveEdit = async (id: string) => {
+        // Tìm tất cả ids trong summaryData có cùng department_id (vì HPEEL aggregate)
+        // Cần update record gốc trong DB — id ở đây là id của aggregate row (first sub-record)
         const { error } = await supabase.from("meal_headcount").update({
             official_present: editFields.official_present,
             seasonal_present: editFields.seasonal_present,
@@ -1230,22 +1232,14 @@ export default function BaoCom() {
             ot_count: editFields.ot_count,
             updated_at: new Date().toISOString(),
         }).eq("id", id)
-        if (!error) {
-            setSummaryData(prev => prev ? prev.map(r => r.id === id ? { ...r, ...editFields } : r) : prev)
-            // Đồng bộ: cập nhật luôn trong historyRecords nếu đang giữ record đó
-            setHistoryRecords(prev => prev.map(r =>
-                r.id === id
-                    ? { ...r,
-                        official_present: editFields.official_present,
-                        seasonal_present: editFields.seasonal_present,
-                        vegetarian: editFields.vegetarian,
-                        ot_count: editFields.ot_count,
-                      }
-                    : r
-            ))
-            setHistoryRefreshKey(k => k + 1)
-            setEditingRowId(null)
+        if (error) {
+            alert("Lỗi lưu: " + error.message)
+            return
         }
+        setEditingRowId(null)
+        // Re-fetch để đảm bảo hiển thị đúng data từ DB
+        await fetchSummaryFromDB()
+        setHistoryRefreshKey(k => k + 1)
     }
 
     const handleAddRowSave = async () => {
