@@ -884,10 +884,10 @@ export default function BaoCom() {
     const [statsData, setStatsData] = useState<MealStatRow[] | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
     const [statsError, setStatsError] = useState<string | null>(null)
-    // Inline edit cell state (monthly table)
-    const [monthlyEditingCell, setMonthlyEditingCell] = useState<{ sectionName: string; shift: string; date: string } | null>(null)
-    const [cellEditValue, setCellEditValue] = useState<string>("")
-    const [cellSaving, setCellSaving] = useState(false)
+    // Row-level edit mode state (monthly table)
+    const [editingRowKey, setEditingRowKey] = useState<string | null>(null)
+    const [rowEditDrafts, setRowEditDrafts] = useState<Record<string, string>>({})
+    const [rowSaving, setRowSaving] = useState(false)
 
     const fetchMonthStats = async () => {
         setStatsLoading(true)
@@ -949,8 +949,8 @@ export default function BaoCom() {
         PACK:       ['Packing S1','Packing thời vụ S1','Packing S2','Packing thời vụ S2','Packing S3'],
         BOILER:     ['Boiler worker S1','Boiler worker S2','Boiler worker S3'],
         MAINT_HCA:  ['Maintenance S1','Maintenance S2','Maintenance S3'],
-        CLEAN:      ['Cleaning worker','Cleaning worker S2','Cleaning worker S3'],
-        QC:         ['QC','QC S2','QC S3'],
+        CLEAN:      ['Cleaning worker S1','Cleaning worker S2','Cleaning worker S3'],
+        QC:         ['QC S1','QC S2','QC S3'],
         OFFICE:     ['Office S1','Office S2','Office S3'],
     }
 
@@ -1997,73 +1997,93 @@ export default function BaoCom() {
                                                     {dept.sectionRows.filter(sr => sr.shift !== 'OT').map((sr, sIdx) => {
                                                         const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
                                                         const isTV = /thời vụ/i.test(sr.sectionName)
-                                                        const shiftLabel = sr.shift === 'OT' ? 'OT' : `Ca ${sr.shift}`
+                                                        const shiftLabel = sr.shift === 'OT' ? 'OT' : `S${sr.shift}`
                                                         const shiftColor = sr.shift === '1' ? 'bg-blue-100 text-blue-700' : sr.shift === '2' ? 'bg-emerald-100 text-emerald-700' : sr.shift === '3' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
+                                                        const rowKey = `${sr.sectionName}|${sr.shift}`
+                                                        const isRowEditing = editingRowKey === rowKey
                                                         return (
-                                                            <tr key={`${sr.sectionName}|${sr.shift}`}
-                                                                className={`border-b border-slate-100 ${isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
-                                                                <td className={`px-3 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium text-xs ${isTV ? 'bg-blue-50/60 italic text-blue-600' : 'bg-white text-slate-600'}`}>
-                                                                    {sr.sectionName}
+                                                            <tr key={rowKey}
+                                                                className={`border-b border-slate-100 ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
+                                                                <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium text-xs ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/60 italic text-blue-600' : 'bg-white text-slate-600'}`}>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span className="truncate max-w-[120px]">{sr.sectionName}</span>
+                                                                        {canEdit && (
+                                                                            isRowEditing ? (
+                                                                                <div className="flex gap-1 ml-1 shrink-0">
+                                                                                    <button
+                                                                                        disabled={rowSaving}
+                                                                                        onClick={async () => {
+                                                                                            setRowSaving(true)
+                                                                                            // Batch save all changed cells
+                                                                                            for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
+                                                                                                const newVal = parseInt(draftVal) || 0
+                                                                                                const orig = sr.days.get(date) ?? 0
+                                                                                                if (newVal === orig) continue
+                                                                                                const matches = (statsData ?? []).filter(r =>
+                                                                                                    r.work_date === date && r.shift === sr.shift &&
+                                                                                                    r.department_name.toLowerCase() === sr.sectionName.toLowerCase()
+                                                                                                )
+                                                                                                if (matches.length > 0) {
+                                                                                                    const rec = matches[0]
+                                                                                                    const diff = newVal - orig
+                                                                                                    const newOfficial = Math.max(0, (rec.official_present ?? 0) + diff)
+                                                                                                    await supabase.from('meal_headcount').update({ official_present: newOfficial }).eq('id', rec.id)
+                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, official_present: newOfficial } : r) : prev)
+                                                                                                }
+                                                                                            }
+                                                                                            setRowSaving(false)
+                                                                                            setEditingRowKey(null)
+                                                                                            setRowEditDrafts({})
+                                                                                        }}
+                                                                                        className="px-1.5 py-0.5 bg-green-500 hover:bg-green-600 text-white text-[9px] font-bold rounded disabled:opacity-50 transition-colors"
+                                                                                    >{rowSaving ? '...' : '💾'}</button>
+                                                                                    <button
+                                                                                        onClick={() => { setEditingRowKey(null); setRowEditDrafts({}) }}
+                                                                                        className="px-1.5 py-0.5 bg-slate-400 hover:bg-slate-500 text-white text-[9px] font-bold rounded transition-colors"
+                                                                                    >✕</button>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setEditingRowKey(rowKey)
+                                                                                        const drafts: Record<string, string> = {}
+                                                                                        days.forEach(d => { drafts[d] = String(sr.days.get(d) ?? 0) })
+                                                                                        setRowEditDrafts(drafts)
+                                                                                    }}
+                                                                                    className="shrink-0 px-1.5 py-0.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-700 text-slate-400 text-[9px] font-bold rounded border border-slate-200 transition-colors opacity-0 group-hover:opacity-100"
+                                                                                >✏️</button>
+                                                                            )
+                                                                        )}
+                                                                    </div>
                                                                 </td>
-                                                                <td className={`px-1 py-1 sticky left-[160px] z-10 text-center bg-white border-r border-slate-200`}>
+                                                                <td className={`px-1 py-1 sticky left-[160px] z-10 text-center border-r border-slate-200 ${isRowEditing ? 'bg-yellow-50' : 'bg-white'}`}>
                                                                     <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${shiftColor}`}>{shiftLabel}</span>
                                                                 </td>
                                                                 {days.map(d => {
-                                                                    const v = sr.days.get(d) ?? 0
-                                                                    const isEditing = monthlyEditingCell?.sectionName === sr.sectionName && monthlyEditingCell?.shift === sr.shift && monthlyEditingCell?.date === d
+                                                                    const v = isRowEditing ? (parseInt(rowEditDrafts[d]) || 0) : (sr.days.get(d) ?? 0)
+                                                                    const origV = sr.days.get(d) ?? 0
+                                                                    const changed = isRowEditing && parseInt(rowEditDrafts[d] ?? '') !== origV
                                                                     return (
                                                                         <td key={d}
                                                                             className={`px-0 py-0 text-center text-xs ${
-                                                                                isEditing ? 'bg-yellow-50' :
-                                                                                v > 0 ? (isTV ? 'text-blue-600 font-semibold' : 'font-semibold text-slate-800') : 'text-slate-200'
-                                                                            } ${canEdit && !isEditing ? 'cursor-pointer group relative' : ''}`}
-                                                                            onClick={() => {
-                                                                                if (!canEdit || isEditing) return
-                                                                                setMonthlyEditingCell({ sectionName: sr.sectionName, shift: sr.shift, date: d })
-                                                                                setCellEditValue(String(v || ''))
-                                                                            }}
+                                                                                isRowEditing ? (changed ? 'bg-yellow-100' : 'bg-yellow-50') :
+                                                                                origV > 0 ? (isTV ? 'text-blue-600 font-semibold' : 'font-semibold text-slate-800') : 'text-slate-200'
+                                                                            }`}
                                                                         >
-                                                                            {isEditing ? (
+                                                                            {isRowEditing ? (
                                                                                 <input
-                                                                                    autoFocus
                                                                                     type="number"
                                                                                     min={0}
-                                                                                    value={cellEditValue}
-                                                                                    onChange={e => setCellEditValue(e.target.value)}
-                                                                                    onBlur={async () => {
-                                                                                        if (cellSaving) return
-                                                                                        setCellSaving(true)
-                                                                                        const newVal = parseInt(cellEditValue) || 0
-                                                                                        // Find matching records in statsData
-                                                                                        const matches = (statsData ?? []).filter(r =>
-                                                                                            r.work_date === d && r.shift === sr.shift &&
-                                                                                            r.department_name.toLowerCase() === sr.sectionName.toLowerCase()
-                                                                                        )
-                                                                                        if (matches.length > 0) {
-                                                                                            const rec = matches[0]
-                                                                                            const oldTotal = (rec.official_present ?? 0) + (rec.seasonal_present ?? 0)
-                                                                                            const diff = newVal - oldTotal
-                                                                                            const newOfficial = Math.max(0, (rec.official_present ?? 0) + diff)
-                                                                                            await supabase.from('meal_headcount').update({
-                                                                                                official_present: newOfficial
-                                                                                            }).eq('id', rec.id)
-                                                                                            // Update local statsData
-                                                                                            setStatsData(prev => prev ? prev.map(r =>
-                                                                                                r.id === rec.id ? { ...r, official_present: newOfficial } : r
-                                                                                            ) : prev)
-                                                                                        }
-                                                                                        setCellSaving(false)
-                                                                                        setMonthlyEditingCell(null)
-                                                                                    }}
-                                                                                    onKeyDown={e => {
-                                                                                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                                                                                        if (e.key === 'Escape') { setMonthlyEditingCell(null); setCellEditValue('') }
-                                                                                    }}
-                                                                                    className="w-10 h-6 text-center text-xs border-2 border-yellow-400 rounded bg-yellow-50 outline-none font-semibold"
+                                                                                    value={rowEditDrafts[d] ?? ''}
+                                                                                    onChange={e => setRowEditDrafts(prev => ({ ...prev, [d]: e.target.value }))}
+                                                                                    onKeyDown={e => { if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
+                                                                                    className={`w-10 h-6 text-center text-xs rounded outline-none font-semibold ${
+                                                                                        changed ? 'border-2 border-amber-400 bg-amber-50' : 'border border-slate-200 bg-yellow-50'
+                                                                                    }`}
                                                                                 />
                                                                             ) : (
-                                                                                <span className={`block px-1.5 py-1 ${canEdit ? 'hover:bg-yellow-100 transition-colors rounded' : ''}`}>
-                                                                                    {v > 0 ? v : '—'}
+                                                                                <span className="block px-1.5 py-1">
+                                                                                    {origV > 0 ? origV : '—'}
                                                                                 </span>
                                                                             )}
                                                                         </td>
