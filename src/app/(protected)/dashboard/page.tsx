@@ -828,14 +828,14 @@ export default function DashboardPage() {
                     <CardContent className="p-3 pt-3 md:p-5 md:pt-4 flex-1 flex flex-col">
                         <ChartWrapper className="flex-1">
                             <ResponsiveContainer width="100%" height={220}>
-                                <ComposedChart data={displayHistory} margin={{ top: 8, right: 8, left: -10, bottom: 20 }}>
+                                <ComposedChart data={displayHistory} margin={{ top: 8, right: 8, left: 0, bottom: 20 }}>
                                     <defs>
 <linearGradient id="fgwhGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.75}/></linearGradient>
 <linearGradient id="fgwhRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.75}/></linearGradient>
 </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
 <XAxis dataKey="name" tick={{ fontSize: 11, dy: 4, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} height={28} minTickGap={12} tickMargin={5} />
-                                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)} width={32} />
+                                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)} width={40} />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
                                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', paddingTop: '6px', fontWeight: 500 }} />
                                     <Bar dataKey="Actual" name={t('legend.actual')} radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out">
@@ -1188,7 +1188,7 @@ export default function DashboardPage() {
                     ) : ['CS', 'HAND'].includes(deptCode) && deptViewModes[id] === 'isp' ? (
                         <ChartWrapper className={`w-full rounded-xl border-t h-[160px] md:h-[200px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={displayHistory} margin={{ top: 8, right: 6, left: -12, bottom: 5 }}>
+                                <ComposedChart data={displayHistory} margin={{ top: 8, right: 6, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                                     <XAxis 
                                         dataKey="name" 
@@ -1255,7 +1255,7 @@ export default function DashboardPage() {
                     ) : (
                     <ChartWrapper className={`w-full rounded-xl border-t ${deptCode === 'STEAM' ? 'flex-1 min-h-[220px]' : 'h-[140px] md:h-[160px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: -10, bottom: 5 }}>
+                            <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: 0, bottom: 5 }}>
                                 <defs>
 <linearGradient id="mainGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.75}/></linearGradient>
 <linearGradient id="mainRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.75}/></linearGradient>
@@ -1277,7 +1277,7 @@ export default function DashboardPage() {
                                     interval={0}
                                     tickMargin={5} 
                                 />
-                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)} width={32} />
+                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)} width={40} />
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name={t('legend.daily_needed')} connectNulls={false} animationDuration={600} />
