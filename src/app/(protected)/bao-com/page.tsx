@@ -2003,7 +2003,7 @@ export default function BaoCom() {
                                                         const isRowEditing = editingRowKey === rowKey
                                                         return (
                                                             <tr key={rowKey}
-                                                                className={`border-b border-slate-100 ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
+                                                                className={`group border-b border-slate-100 ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
                                                                 <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium text-xs ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/60 italic text-blue-600' : 'bg-white text-slate-600'}`}>
                                                                     <div className="flex items-center gap-1">
                                                                         <span className="truncate max-w-[120px]">{sr.sectionName}</span>
@@ -2050,8 +2050,8 @@ export default function BaoCom() {
                                                                                         days.forEach(d => { drafts[d] = String(sr.days.get(d) ?? 0) })
                                                                                         setRowEditDrafts(drafts)
                                                                                     }}
-                                                                                    className="shrink-0 px-1.5 py-0.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-700 text-slate-400 text-[9px] font-bold rounded border border-slate-200 transition-colors opacity-0 group-hover:opacity-100"
-                                                                                >✏️</button>
+                                                                                    className="shrink-0 px-2 py-0.5 bg-amber-100 hover:bg-amber-400 hover:text-white text-amber-700 text-[10px] font-bold rounded border border-amber-300 transition-colors"
+                                                                                >✏️ Sửa</button>
                                                                             )
                                                                         )}
                                                                     </div>
