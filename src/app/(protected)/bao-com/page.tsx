@@ -1223,24 +1223,26 @@ export default function BaoCom() {
     }
 
     const handleSaveEdit = async (id: string) => {
-        // Supabase RLS có thể block silently (không có error, nhưng trả về 0 rows)
-        // Phải dùng .select() để detect trường hợp này
-        const { error, data: updated } = await supabase.from("meal_headcount").update({
-            official_present: editFields.official_present,
-            seasonal_present: editFields.seasonal_present,
-            vegetarian: editFields.vegetarian,
-            ot_count: editFields.ot_count,
-        }).eq("id", id).select("id")
-        if (error) {
-            alert("Lỗi lưu: " + error.message)
-            return
-        }
-        if (!updated || updated.length === 0) {
-            alert("Không có quyền chỉnh sửa bản ghi này (RLS). Kiểm tra lại role tài khoản.")
+        // Gọi server-side API để bypass RLS (service role key)
+        // Server vẫn verify role của user trước khi update
+        const res = await fetch('/api/meal-headcount', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id,
+                official_present: editFields.official_present,
+                seasonal_present: editFields.seasonal_present,
+                vegetarian: editFields.vegetarian,
+                ot_count: editFields.ot_count,
+            })
+        })
+        const json = await res.json()
+        if (!res.ok) {
+            alert('Lỗi lưu: ' + (json.error || res.statusText))
             return
         }
         setEditingRowId(null)
-        // Re-fetch để đảm bảo hiển thị đúng data từ DB
+        // Re-fetch để hiển thị đúng data từ DB
         await fetchSummaryFromDB()
         setHistoryRefreshKey(k => k + 1)
     }
