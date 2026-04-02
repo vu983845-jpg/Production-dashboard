@@ -87,9 +87,20 @@ NGÀY:
 HEADCOUNT:
 - "chính thức" = official_present
 - "thời vụ" = seasonal_present
-- Nếu chỉ nói 1 số → coi là official_present
+- Nếu chỉ nói 1 số (không có từ khóa OT) → coi là official_present
 - OT = ot_count, "chay" = vegetarian
 - "chay OT", "OT chay", "ot ăn chay", "chay tăng ca" = ot_vegetarian
+
+QUAN TRỌNG - TIN NHẮN BÁO OT:
+Khi tin nhắn có dạng "OT X p" hoặc bắt đầu bằng "OT" → đây là báo cáo OT riêng:
+- official_present = 0 (KHÔNG phải X)
+- ot_count = X (số người OT)
+- Nếu có "(Y chay)" sau "OT X p" → ot_vegetarian = Y, KHÔNG phải vegetarian
+Ví dụ: "OT 25 p(16 chay) ăn 14h" → ot_count=25, ot_vegetarian=16, official_present=0
+Ví dụ: "@Tổ Liên (ca 2) OT 25 p(16 chay)" → shift="2", ot_count=25, ot_vegetarian=16, official_present=0
+
+QUAN TRỌNG - "ĂN Xh":
+"ăn 14h", "ăn 11h30"... là giờ ăn — KHÔNG phải headcount, bỏ qua hoàn toàn.
 
 OUTPUT FORMAT khi có data:
 Trả lời text ngắn + JSON block:
@@ -114,6 +125,7 @@ Trả lời text ngắn + JSON block:
 \`\`\`
 
 Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
+
 
         // Build contents array for multi-turn
         const contents = [
