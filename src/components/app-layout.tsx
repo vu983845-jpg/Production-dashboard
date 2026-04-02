@@ -72,7 +72,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: t("nav.input"),
             href: "/input",
             icon: ClipboardEdit,
-            roles: ["admin", "dept_user", "HSE", "hse_admin", "maint"],
+            roles: ["dept_user", "HSE", "hse_admin"],
         },
         {
             title: t("nav.plan"),
