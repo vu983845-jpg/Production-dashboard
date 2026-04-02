@@ -33,8 +33,10 @@ const OT_HOUR: Record<string, string> = { "1": "14h", "2": "18h", "3": "6h" }
 
 // Các bộ phận cần báo cơm theo code trong DB
 const EXPECTED_DEPTS = [
-    "PEEL", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA", "OFFICE"
+    "PEEL", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA", "OFFICE", "CLEAN"
 ]
+// These depts only work Ca 1 — no need to report Ca 2 / Ca 3
+const CA1_ONLY_DEPTS = new Set(["FGWH", "OFFICE"])
 
 // ─────────────────────────────────────────────
 // Billing cycle helper: chọn tháng M/YYYY → chu kỳ 26/(M-1) → 25/M
@@ -1283,7 +1285,7 @@ export default function BaoCom() {
         return msg
     }
 
-    const getDBMissingDepts = (rows: SavedRecord[]): { code: string; name: string }[] => {
+    const getDBMissingDepts = (rows: SavedRecord[], shift: string): { code: string; name: string }[] => {
         // PEEL_MC is an alias for PEEL — treat them as the same dept for missing-check
         const DEPT_MISSING_ALIAS: Record<string, string> = { PEEL_MC: 'PEEL' }
         const reported = new Set(rows.map(r => {
@@ -1292,7 +1294,11 @@ export default function BaoCom() {
                 : ""
             return DEPT_MISSING_ALIAS[code] ?? code
         }))
-        return EXPECTED_DEPTS
+        // For Ca 2 and Ca 3, FGWH and OFFICE don't operate — skip them
+        const effectiveDepts = shift === '1'
+            ? EXPECTED_DEPTS
+            : EXPECTED_DEPTS.filter(code => !CA1_ONLY_DEPTS.has(code))
+        return effectiveDepts
             .filter(code => !reported.has(code))
             .map(code => {
                 const dept = deptList.find(d => d.code === code)
@@ -1732,7 +1738,7 @@ export default function BaoCom() {
                             </div>
                         )
                         const msgText = buildDBSummaryText(summaryData)
-                        const missingDepts = getDBMissingDepts(summaryData)
+                        const missingDepts = getDBMissingDepts(summaryData, summaryShift)
                         return (
                             <div className="space-y-4">
                                 {/* Kitchen message box */}
@@ -2413,7 +2419,7 @@ export default function BaoCom() {
                                             </div>
                                         )
                                         const msgText = buildDBSummaryText(summaryData)
-                                        const missingDepts = getDBMissingDepts(summaryData)
+                                        const missingDepts = getDBMissingDepts(summaryData, summaryShift)
                                         return (
                                             <div className="space-y-3">
                                                 {/* Kitchen message */}
