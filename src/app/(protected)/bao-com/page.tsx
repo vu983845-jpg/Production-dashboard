@@ -907,10 +907,11 @@ export default function BaoCom() {
     }
 
     // Thứ tự bộ phận theo layout Excel
-    const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','HAND','PACK','BOILER','MAINT_HCA','CLEAN','QC','OFFICE']
+    const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','PACK','BOILER','MAINT_HCA','CLEAN','QC','OFFICE']
     const SHIFT_ORDER = ['1','2','3','OT']
     // Alias: these dept codes are merged into another group in the monthly report
-    const DEPT_CODE_ALIAS: Record<string, string> = { PEEL_MC: 'PEEL' }
+    // HAND (HANDPEELING) contains sub-supervisors Liên/Dung → merge into HPEEL group
+    const DEPT_CODE_ALIAS: Record<string, string> = { PEEL_MC: 'PEEL', HAND: 'HPEEL' }
 
     // Tên hiển thị đẹp như trong Excel
     const DEPT_DISPLAY: Record<string, string> = {
@@ -958,6 +959,29 @@ export default function BaoCom() {
         // 1. All unique days sorted
         const days = [...new Set(rows.map(r => r.work_date))].sort()
 
+        // Helper: normalize HPEEL non-canonical section names → canonical SECTION_ORDER name
+        const normalizeHpeelSectionName = (name: string, shift: string): string => {
+            const n = name.toLowerCase()
+            const s = /^[123]$/.test(shift) ? shift : '1'
+            // Ms Huệ / Grading → Manual Grading -Shift N (Ms Huệ)
+            if (/hu[eệ]/i.test(n) || /grading/i.test(n)) {
+                return `Manual Grading -Shift ${s} (Ms Huệ)`
+            }
+            // Liên → Manual peeling SN - Liên
+            if (/li[êẻen]n/i.test(n)) {
+                return `Manual peeling S${s} - Liên`
+            }
+            // Dung → Manual peeling SN - Dung
+            if (/dung/i.test(n)) {
+                return `Manual peeling S${s} - Dung`
+            }
+            // Generic hand peeling / manual peeling without supervisor → map to Liên (ca1 default)
+            if (/hand.?peel|manual.?peel/i.test(n)) {
+                return `Manual peeling S${s} - Liên`
+            }
+            return name
+        }
+
         // 2. Map section_name → SectionRow
         const sectionMap = new Map<string, SectionRow>()
         rows.forEach(r => {
@@ -971,16 +995,20 @@ export default function BaoCom() {
             const knownSections = SECTION_ORDER[deptCode] ?? []
             const isKnownSection = knownSections.some(s => s.toLowerCase() === sectionName.toLowerCase())
             if (!isKnownSection && deptCode) {
-                const displayName = DEPT_DISPLAY[deptCode] ?? sectionName
-                if (shift === 'OT') {
-                    sectionName = `${displayName} OT`
+                if (deptCode === 'HPEEL') {
+                    // For HPEEL: normalize to canonical section name based on supervisor clues
+                    sectionName = normalizeHpeelSectionName(sectionName, shift)
                 } else {
-                    sectionName = `${displayName} S${shift}`  // e.g. 'Loading S2', 'Shelling S2'
+                    const displayName = DEPT_DISPLAY[deptCode] ?? sectionName
+                    if (shift === 'OT') {
+                        sectionName = `${displayName} OT`
+                    } else {
+                        sectionName = `${displayName} S${shift}`  // e.g. 'Loading S2', 'Shelling S2'
+                    }
                 }
             }
-            // Vegetarian meals are included in the total (chay + mặn không phân biệt)
-            // OT count is NOT included here — it belongs to the OT row
-            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0)
+            // Total = official + seasonal (vegetarian is a SUBSET of official/seasonal, NOT additive)
+            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
             // Only create section row if there is actual headcount data (skip zero-only records)
             if (total > 0) {
                 const key = `${sectionName}|${shift}`
@@ -1006,7 +1034,8 @@ export default function BaoCom() {
             const mapKey = `${deptKey}|${shift}`
             if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey, deptName, deptCode, shift, days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map() })
             const entry = shiftMap.get(mapKey)!
-            const count = (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.vegetarian ?? 0)
+            // Total = official + seasonal (vegetarian is subset, NOT additive)
+            const count = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
             if (count > 0) entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + count)
             if ((r.official_present ?? 0) > 0) entry.officialDays.set(r.work_date, (entry.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
             if ((r.seasonal_present ?? 0) > 0) entry.seasonalDays.set(r.work_date, (entry.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
