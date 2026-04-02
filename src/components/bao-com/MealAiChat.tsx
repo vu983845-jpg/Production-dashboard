@@ -110,7 +110,10 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
     })
 
     const doInsert = async (row: MealRow, deptId: string) =>
-        supabase.from("meal_headcount").insert(buildPayload(row, deptId))
+        supabase.from("meal_headcount").upsert(buildPayload(row, deptId), {
+            onConflict: "work_date,department_name,shift",
+            ignoreDuplicates: false,
+        })
 
     const doUpdate = async (row: MealRow, deptId: string) =>
         supabase.from("meal_headcount")
