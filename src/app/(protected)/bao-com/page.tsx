@@ -2097,8 +2097,8 @@ export default function BaoCom() {
                                                             </tr>
                                                         )
                                                     })}
-                                                    {/* OT row for this dept group */}
-                                                    {deptOT && deptOTTotal > 0 && (() => {
+                                                    {/* OT row for this dept group - always show */}
+                                                    {(() => {
                                                         const otRowKey = `${dept.name}|OT`
                                                         const isOTEditing = editingRowKey === otRowKey
                                                         return (
@@ -2115,7 +2115,7 @@ export default function BaoCom() {
                                                                                             setRowSaving(true)
                                                                                             for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                 const newVal = parseInt(draftVal) || 0
-                                                                                                const orig = deptOT.days.get(date) ?? 0
+                                                                                                const orig = deptOT?.days.get(date) ?? 0
                                                                                                 if (newVal === orig) continue
                                                                                                 const matches = (statsData ?? []).filter(r =>
                                                                                                     r.work_date === date && r.shift === 'OT' &&
@@ -2143,7 +2143,7 @@ export default function BaoCom() {
                                                                                     onClick={() => {
                                                                                         setEditingRowKey(otRowKey)
                                                                                         const drafts: Record<string, string> = {}
-                                                                                        days.forEach(d => { drafts[d] = String(deptOT.days.get(d) ?? 0) })
+                                                                                        days.forEach(d => { drafts[d] = String(deptOT?.days.get(d) ?? 0) })
                                                                                         setRowEditDrafts(drafts)
                                                                                     }}
                                                                                     className="shrink-0 px-2 py-0.5 bg-orange-100 hover:bg-orange-400 hover:text-white text-orange-700 text-[10px] font-bold rounded border border-orange-300 transition-colors"
@@ -2156,7 +2156,7 @@ export default function BaoCom() {
                                                                     <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">OT</span>
                                                                 </td>
                                                                 {days.map(d => {
-                                                                    const origV = deptOT.days.get(d) ?? 0
+                                                                    const origV = deptOT?.days.get(d) ?? 0
                                                                     const changed = isOTEditing && parseInt(rowEditDrafts[d] ?? '') !== origV
                                                                     return (
                                                                         <td key={d} className={`px-0 py-0 text-center text-xs ${
