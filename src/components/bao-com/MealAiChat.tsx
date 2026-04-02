@@ -18,6 +18,7 @@ interface MealRow {
     ot_count: number
     vegetarian: number
     ot_vegetarian: number
+    ot_only?: boolean      // True when message only reports OT headcount
 }
 
 interface DiffRow {
@@ -168,7 +169,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
             const deptId = findDeptId(row)
             if (!deptId) { notFound.push(row.dept_code); continue }
 
-            // Check existing record — include department_name for HPEEL sub-groups
+            // Check existing record
             const { data: existing } = await supabase
                 .from("meal_headcount")
                 .select("official_present,seasonal_present,official_absent,seasonal_absent,ot_count,vegetarian")
@@ -180,6 +181,21 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
 
             if (!existing) {
                 toInsert.push({ row, deptId })
+            } else if (row.ot_only) {
+                // OT-only update: merge with existing, only overwrite OT fields
+                const merged: MealRow = {
+                    ...row,
+                    official_present: (existing as Record<string, number>).official_present ?? 0,
+                    seasonal_present: (existing as Record<string, number>).seasonal_present ?? 0,
+                    official_absent: (existing as Record<string, number>).official_absent ?? 0,
+                    seasonal_absent: (existing as Record<string, number>).seasonal_absent ?? 0,
+                    vegetarian: (existing as Record<string, number>).vegetarian ?? 0,
+                }
+                if (isSameData(merged, existing as Record<string, number>)) {
+                    alreadySame.push(`${row.dept_display} Ca${row.shift}`)
+                } else {
+                    toUpdate.push({ row: merged, existing: existing as Record<string, number>, deptId })
+                }
             } else if (isSameData(row, existing as Record<string, number>)) {
                 alreadySame.push(`${row.dept_display} Ca${row.shift}`)
             } else {
@@ -384,7 +400,10 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                         <td className="px-4 py-3 text-center text-slate-600">{r.seasonal_present ?? 0}</td>
                                                         <td className="px-4 py-3 text-center text-slate-600">{r.ot_count ?? 0}</td>
                                                         <td className="px-4 py-3 text-center text-green-600 font-medium">{r.vegetarian ?? 0}</td>
-                                                        <td className="px-4 py-3 text-center text-emerald-700 font-medium">{r.ot_vegetarian ?? 0}</td>
+                                                        <td className="px-4 py-3 text-center text-emerald-700 font-medium">
+                                                             {r.ot_vegetarian ?? 0}
+                                                             {r.ot_only && <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold align-middle">OT only</span>}
+                                                         </td>
                                                     </tr>
                                                     )
                                                 })}

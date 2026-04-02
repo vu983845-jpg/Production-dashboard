@@ -182,11 +182,18 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
             try {
                 const parsed = JSON.parse(rawJsonStr)
                 if (parsed.rows && Array.isArray(parsed.rows)) {
-                    parsedRows = parsed.rows.map((r: { dept_code: string; [key: string]: unknown }) => ({
-                        ...r,
-                        dept_display: DEPT_DISPLAY[r.dept_code] ?? r.dept_code,
-                        dept_lookup: HPEEL_SUBCODES.has(r.dept_code) ? "HPEEL" : r.dept_code,
-                    }))
+                    parsedRows = parsed.rows.map((r: { dept_code: string; official_present?: number; seasonal_present?: number; ot_count?: number; [key: string]: unknown }) => {
+                        // Auto-detect OT-only: no regular headcount but has OT
+                        const isOtOnly = (r.official_present ?? 0) === 0
+                            && (r.seasonal_present ?? 0) === 0
+                            && (r.ot_count ?? 0) > 0
+                        return {
+                            ...r,
+                            dept_display: DEPT_DISPLAY[r.dept_code] ?? r.dept_code,
+                            dept_lookup: HPEEL_SUBCODES.has(r.dept_code) ? "HPEEL" : r.dept_code,
+                            ot_only: isOtOnly,
+                        }
+                    })
                 }
             } catch { /* ignore */ }
         }
