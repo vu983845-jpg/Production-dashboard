@@ -1223,17 +1223,20 @@ export default function BaoCom() {
     }
 
     const handleSaveEdit = async (id: string) => {
-        // Tìm tất cả ids trong summaryData có cùng department_id (vì HPEEL aggregate)
-        // Cần update record gốc trong DB — id ở đây là id của aggregate row (first sub-record)
-        const { error } = await supabase.from("meal_headcount").update({
+        // Supabase RLS có thể block silently (không có error, nhưng trả về 0 rows)
+        // Phải dùng .select() để detect trường hợp này
+        const { error, data: updated } = await supabase.from("meal_headcount").update({
             official_present: editFields.official_present,
             seasonal_present: editFields.seasonal_present,
             vegetarian: editFields.vegetarian,
             ot_count: editFields.ot_count,
-            updated_at: new Date().toISOString(),
-        }).eq("id", id)
+        }).eq("id", id).select("id")
         if (error) {
             alert("Lỗi lưu: " + error.message)
+            return
+        }
+        if (!updated || updated.length === 0) {
+            alert("Không có quyền chỉnh sửa bản ghi này (RLS). Kiểm tra lại role tài khoản.")
             return
         }
         setEditingRowId(null)
