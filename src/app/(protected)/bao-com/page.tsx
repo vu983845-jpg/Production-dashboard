@@ -175,6 +175,8 @@ const DEPT_MAP: Record<string, string> = {
     "manual grading -shift 3 (ms huệ)": "HPEEL_GRADING",
     "manual grading thời vụ -shift 3 (ms huệ)": "HPEEL_GRADING",
     "manual grading": "HPEEL_GRADING",
+    "manual grading (ms huệ)": "HPEEL_GRADING",
+    "manual grading (ms hue)": "HPEEL_GRADING",
     "manual peeling s1 - liên": "HPEEL_LIEN",
     "manual peeling s1 thời vụ - liên": "HPEEL_LIEN",
     "manual peeling s1 - dung": "HPEEL_DUNG",
@@ -187,6 +189,10 @@ const DEPT_MAP: Record<string, string> = {
     "manual peeling s3 thời vụ - liên": "HPEEL_LIEN",
     "manual peeling s3 - dung": "HPEEL_DUNG",
     "manual peeling s3 thời vụ - dung": "HPEEL_DUNG",
+    // parenthesis format from AI/manual entry: "Manual Peeling (Dung)" etc.
+    "manual peeling (dung)": "HPEEL_DUNG",
+    "manual peeling (liên)": "HPEEL_LIEN",
+    "manual peeling (lien)": "HPEEL_LIEN",
     "manual peeling": "HPEEL",
     "handpeeling": "HPEEL",
     // Zalo aliases (grading → handpeeling)
@@ -209,6 +215,7 @@ const DEPT_MAP: Record<string, string> = {
     "maintenance s1": "MAINT_HCA",
     "maintenance s2": "MAINT_HCA",
     "maintenance s3": "MAINT_HCA",
+    "maintenance": "MAINT_HCA",
     "maint hca": "MAINT_HCA",
     "maint highcare": "MAINT_HCA",
     "maintenance highcare": "MAINT_HCA",
