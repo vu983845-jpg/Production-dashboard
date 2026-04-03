@@ -446,7 +446,7 @@ async function handleGetAllProduction(params: any, supabase: any) {
 
     const label = date ? `ngày ${date}` : `tháng ${month}`
     let text = `📊 **Sản lượng toàn nhà máy — ${label}:**\n\n`
-    rows.forEach(r => {
+    rows.forEach((r: { dept: string; planTon: number; actualTon: number; actualContainer: number; downtimeMin: number; pct: string }) => {
         const contInfo = r.actualContainer > 0 ? ` | ${r.actualContainer} cont` : ""
         const dtInfo = r.downtimeMin > 0 ? ` | DT: ${r.downtimeMin}p` : ""
         text += `• **${r.dept}**: ${r.actualTon}T / KH ${r.planTon}T (${r.pct})${contInfo}${dtInfo}\n`

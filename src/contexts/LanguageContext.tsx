@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react"
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from "react"
 
 export type Language = "vi" | "en"
 
@@ -190,20 +190,26 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
-    const handleSetLanguage = (lang: Language) => {
+    const handleSetLanguage = useCallback((lang: Language) => {
         setLanguage(lang)
         localStorage.setItem("app_lang", lang)
-    }
+    }, [])
 
-    const t = (key: string): string => {
+    const t = useCallback((key: string): string => {
         if (translations[key] && translations[key][language]) {
             return translations[key][language]
         }
         return key // Fallback to key if not found
-    }
+    }, [language])
+
+    const contextValue = useMemo(() => ({
+        language,
+        setLanguage: handleSetLanguage,
+        t
+    }), [language, handleSetLanguage, t])
 
     return (
-        <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
+        <LanguageContext.Provider value={contextValue}>
             {children}
         </LanguageContext.Provider>
     )

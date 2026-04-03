@@ -10,6 +10,16 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useLanguage } from "@/contexts/LanguageContext"
 
+interface DowntimeEvent {
+    id: string
+    start_time: string | null
+    end_time: string | null
+    duration_mins: number | null
+    exclude_downtime: boolean
+    is_ongoing: boolean
+    [key: string]: unknown
+}
+
 // ── REASON CODES (matching DDS Meeting exactly) ──────────────────────────────
 const REASON_CODES = [
     { code: "BD", label: "BD – Breakdown", planned: false, desc: "Hư hỏng sửa chữa" },
@@ -867,7 +877,7 @@ export default function DowntimePage() {
                                                 <PieChart>
                                                     <Pie data={pieData.map(d => ({ ...d, value: +(d.value / 60).toFixed(2) }))}
                                                         dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85}
-                                                        label={({ name, percent }) => percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ""}
+                                                        label={({ name, percent }: { name?: string; percent?: number }) => percent != null && percent > 0.05 ? `${name ?? ''} ${(percent * 100).toFixed(0)}%` : ""}
                                                         labelLine={false}>
                                                         {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                                                     </Pie>

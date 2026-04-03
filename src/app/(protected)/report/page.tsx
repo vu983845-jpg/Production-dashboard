@@ -1279,6 +1279,7 @@ export default function ReportPage() {
                             shellingLineMP: number        // sum of on-line manpower (SHELL only)
                             gap: number                   // dept HC – line HC
                             noProductionData: boolean     // true nếu ko có row trong records
+                            isWeekStart: boolean          // true nếu là thứ Hai (ngăn cách tuần)
                         }[] = Array.from(allDates)
                             .sort()
                             .map(date => {

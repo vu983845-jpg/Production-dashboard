@@ -52,6 +52,12 @@ function buildGreeting(ctx: UserContext): Message {
 // ── Simple markdown renderer ─────────────────────────────────────────────────
 function renderMarkdown(text: string) {
     return text
+        // Escape HTML entities first to prevent XSS
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        // Then apply markdown (safe tags inserted after escaping)
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.*?)\*/g, "<em>$1</em>")
         .replace(/\n/g, "<br/>")

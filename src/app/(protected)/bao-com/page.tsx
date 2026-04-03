@@ -2263,7 +2263,7 @@ export default function BaoCom() {
             {/* ═══════════════════════════════════════════ */}
             {/* TAB 1: PARSE & SAVE                        */}
             {/* ═══════════════════════════════════════════ */}
-            {false && activeTab === "parse" && (
+            {false && (
                 <>
                     {/* Paste area */}
                     {!parsed && (
@@ -2417,13 +2417,13 @@ export default function BaoCom() {
                                     )}
 
                                     {summaryData !== null && (() => {
-                                        if (summaryData.length === 0) return (
+                                        if (summaryData!.length === 0) return (
                                             <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                                                 Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
                                             </div>
                                         )
-                                        const msgText = buildDBSummaryText(summaryData)
-                                        const missingDepts = getDBMissingDepts(summaryData, summaryShift)
+                                        const msgText = buildDBSummaryText(summaryData!)
+                                        const missingDepts = getDBMissingDepts(summaryData!, summaryShift)
                                         return (
                                             <div className="space-y-3">
                                                 {/* Kitchen message */}
@@ -2457,7 +2457,7 @@ export default function BaoCom() {
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y">
-                                                            {summaryData.map(r => (
+                                                            {summaryData!.map(r => (
                                                                 <tr key={r.id} className="hover:bg-orange-50">
                                                                     <td className="px-2 py-1 font-medium">
                                                                         {r.department_id
@@ -2497,11 +2497,11 @@ export default function BaoCom() {
                             {/* Save message */}
                             {saveMsg && (
                                 <div className={`rounded-lg px-4 py-2.5 text-sm font-medium ${
-                                    saveMsg.type === "ok"
+                                    saveMsg!.type === "ok"
                                         ? "bg-green-50 text-green-700 border border-green-200"
                                         : "bg-red-50 text-red-700 border border-red-200"
                                 }`}>
-                                    {saveMsg.text}
+                                    {saveMsg!.text}
                                 </div>
                             )}
 

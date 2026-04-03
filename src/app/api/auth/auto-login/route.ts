@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -29,7 +30,14 @@ export async function POST(request: Request) {
         const secret = decodedToken.substring(lastColonIdx + 1)
 
         // Verify the secret matches our server's SSO secret
-        if (secret !== process.env.SSO_SECRET_KEY) {
+        const ssoSecretKey = process.env.SSO_SECRET_KEY
+        if (!ssoSecretKey) {
+            console.error('SSO_SECRET_KEY environment variable is not set')
+            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+        }
+        const secretMatches = secret.length === ssoSecretKey.length &&
+            timingSafeEqual(Buffer.from(secret), Buffer.from(ssoSecretKey))
+        if (!secretMatches) {
             console.error('SSO Login attempt failed: Invalid Secret Key')
             return NextResponse.json(
                 { error: 'Unauthorized: Invalid secret key' },

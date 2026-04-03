@@ -40,7 +40,7 @@ export function StaggerList({
 
   const item = {
     hidden: { opacity: 0, y: 16 },
-    show:   { opacity: 1, y: 0, transition: { ease: 'easeOut', duration: 0.35 } },
+    show:   { opacity: 1, y: 0, transition: { ease: 'easeOut' as const, duration: 0.35 } },
   };
 
   return (

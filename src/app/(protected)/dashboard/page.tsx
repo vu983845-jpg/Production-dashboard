@@ -1,7 +1,7 @@
 "use client"
 import { DashboardLoader } from "@/components/dashboard-loader"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react"
 import { format, startOfMonth, startOfWeek, isSunday, endOfMonth, addDays, subDays } from "date-fns"
 import { vi } from "date-fns/locale"
 import {
@@ -28,7 +28,7 @@ import { AnimatedNumber } from "@/components/magicui/animated-number"
 import { BadgePulse } from "@/components/magicui/badge-pulse"
 import { OverviewTab } from "@/components/dashboard/OverviewTab"
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = memo(({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
         return (
             <div className="bg-white/98 backdrop-blur-xl border border-slate-100 rounded-2xl shadow-2xl p-4 z-50 ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150 min-w-[140px]">
@@ -54,10 +54,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         )
     }
     return null;
-}
+})
 
 // ChartWrapper: dismisses tooltip reliably on mobile touch-end
-const ChartWrapper = ({ children, className }: { children: React.ReactNode; className?: string }) => {
+const ChartWrapper = memo(({ children, className }: { children: React.ReactNode; className?: string }) => {
     const ref = useRef<HTMLDivElement>(null);
     const handleTouchEnd = () => {
         setTimeout(() => {
@@ -73,8 +73,119 @@ const ChartWrapper = ({ children, className }: { children: React.ReactNode; clas
             {children}
         </div>
     );
+})
+
+
+// ── Pure helper functions (module-level, not recreated on render) ─────────────
+
+const getRemainingWorkingDays = (monthDate: Date) => {
+    const today = new Date();
+    const startOfSelected = startOfMonth(monthDate);
+    const endOfSelected = endOfMonth(monthDate);
+    if (today > endOfSelected) return 0;
+    let current = today < startOfSelected ? startOfSelected : today;
+    let remainingDays = 0;
+    while (current <= endOfSelected) {
+        if (!isSunday(current)) remainingDays++;
+        current = addDays(current, 1);
+    }
+    return remainingDays;
 }
 
+const buildSummary = (records: any[], isTotal: boolean) => {
+    let tPlan = 0, tActual = 0, tDown = 0, tInput = 0, tOutput = 0, tWip = 0;
+    let tPlanCont = 0, tActualCont = 0;
+    let tPlanIsp = 0, tActualIsp = 0, tPlanNonIsp = 0, tActualNonIsp = 0;
+    let sumBroken = 0, countBroken = 0;
+    let sumUnpeel = 0, countUnpeel = 0;
+    let sumIsp = 0, countIsp = 0;
+    let sumSw = 0, countSw = 0;
+    let tElecCons = 0, tElecTarget = 0;
+    let tActualIspCS = 0;
+
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    let cutoffDate = "";
+    records.forEach(r => {
+        const actT = Number(isTotal ? r.total_actual_ton : r.actual_ton || 0);
+        const actC = Number(isTotal ? r.total_actual_container : r.actual_container || 0);
+        if (actT > 0 || actC > 0) {
+            if (!cutoffDate || r.work_date > cutoffDate) cutoffDate = r.work_date;
+        }
+    });
+    if (!cutoffDate || cutoffDate > todayStr) cutoffDate = todayStr;
+
+    let tPlanMTD = 0, tPlanContMTD = 0, remainingWorkingDays = 0, remainingContWorkingDays = 0;
+
+    records.forEach(r => {
+        const planVal = Number(isTotal ? r.total_plan_ton : r.plan_ton || 0);
+        const planContVal = Number(isTotal ? r.total_plan_container : r.plan_container || 0);
+        tPlan += planVal;
+        tPlanCont += planContVal;
+        if (r.work_date <= cutoffDate) { tPlanMTD += planVal; tPlanContMTD += planContVal; }
+        if (r.work_date >= todayStr) {
+            if (planVal > 0) remainingWorkingDays++;
+            if (planContVal > 0) remainingContWorkingDays++;
+        }
+        tActual += Number(isTotal ? r.total_actual_ton : r.actual_ton || 0);
+        tActualCont += Number(isTotal ? r.total_actual_container : r.actual_container || 0);
+        tDown += Number(isTotal ? r.total_downtime_min : r.downtime_min || 0);
+        tInput += Number(isTotal ? r.total_input_ton : r.input_ton || 0);
+        tOutput += Number(isTotal ? r.total_good_output_ton : r.good_output_ton || 0);
+        tWip = Number(isTotal ? r.total_wip_close_ton : r.wip_close_ton || 0);
+        tElecCons += Number(r.electricity_consumption_kwh || 0);
+        tElecTarget += Number(r.target_electricity_kwh || 0);
+        if (isTotal) {
+            tPlanIsp += Number(r.total_plan_isp_ton || 0);
+            tActualIsp += Number(r.total_actual_isp_ton || 0);
+            tPlanNonIsp += Number(r.total_plan_non_isp_ton || 0);
+            tActualNonIsp += Number(r.total_actual_non_isp_ton || 0);
+        }
+        if (!isTotal) {
+            if (Number(r.broken_pct) > 0) { sumBroken += Number(r.broken_pct); countBroken++; }
+            if (Number(r.unpeel_pct) > 0) { sumUnpeel += Number(r.unpeel_pct); countUnpeel++; }
+            if (Number(r.isp_pct) > 0) { sumIsp += Number(r.isp_pct); countIsp++; }
+            if (Number(r.sw_pct) > 0) { sumSw += Number(r.sw_pct); countSw++; }
+            tActualIspCS += Number(r.isp_ton || 0);
+            tPlanIsp += Number(r.plan_isp_ton || 0);
+        } else {
+            if (Number(r.avg_broken_pct) > 0) { sumBroken += Number(r.avg_broken_pct); countBroken++; }
+            if (Number(r.avg_unpeel_pct) > 0) { sumUnpeel += Number(r.avg_unpeel_pct); countUnpeel++; }
+            if (Number(r.avg_isp_pct) > 0) { sumIsp += Number(r.avg_isp_pct); countIsp++; }
+            if (Number(r.avg_sw_pct) > 0) { sumSw += Number(r.avg_sw_pct); countSw++; }
+        }
+    });
+
+    const latestRecord = records[records.length - 1] || {};
+    const latestPlan = Number(isTotal ? latestRecord.total_plan_ton : latestRecord.plan_ton || 0);
+    const latestActual = Number(isTotal ? latestRecord.total_actual_ton : latestRecord.actual_ton || 0);
+    const latestPlanCont = Number(isTotal ? latestRecord.total_plan_container : latestRecord.plan_container || 0);
+    const latestActualCont = Number(isTotal ? latestRecord.total_actual_container : latestRecord.actual_container || 0);
+    const latestActualIsp_val = Number(latestRecord.total_actual_isp_ton || 0);
+    const latestPlanIsp_val = Number(latestRecord.total_plan_isp_ton || 0);
+    const latestActualNonIsp_val = Number(latestRecord.total_actual_non_isp_ton || 0);
+    const latestPlanNonIsp_val = Number(latestRecord.total_plan_non_isp_ton || 0);
+
+    return {
+        totalPlan: tPlan, totalPlanCont: tPlanCont, totalActual: tActual, totalActualCont: tActualCont,
+        totalPlanMTD: tPlanMTD, totalPlanContMTD: tPlanContMTD, latestPlan, latestActual,
+        latestPlanCont, latestActualCont, latestActualIsp: latestActualIsp_val, latestPlanIsp: latestPlanIsp_val,
+        latestActualNonIsp: latestActualNonIsp_val, latestPlanNonIsp: latestPlanNonIsp_val,
+        achivementPct: tPlanMTD > 0 ? (tActual / tPlanMTD) * 100 : 0,
+        achivementContPct: tPlanContMTD > 0 ? (tActualCont / tPlanContMTD) * 100 : 0,
+        variance: tActual - tPlanMTD, downtime: tDown, wipClose: tWip,
+        yieldPct: tInput > 0 ? (tOutput / tInput) * 100 : 0,
+        brokenPct: countBroken > 0 ? sumBroken / countBroken : 0,
+        unpeelPct: countUnpeel > 0 ? sumUnpeel / countUnpeel : 0,
+        ispPct: countIsp > 0 ? sumIsp / countIsp : 0,
+        swPct: countSw > 0 ? sumSw / countSw : 0,
+        totalPlanIsp: tPlanIsp, totalActualIsp: tActualIsp,
+        totalPlanNonIsp: tPlanNonIsp, totalActualNonIsp: tActualNonIsp,
+        totalActualIspCS: tActualIspCS,
+        totalActualNonIspCS: Math.max(0, tActual - tActualIspCS),
+        totalElectricityConsumption: tElecCons, totalTargetElectricityKwh: tElecTarget,
+        remainingWorkingDays, remainingContWorkingDays
+    };
+};
 
 export default function DashboardPage() {
     const supabase = createClient()
@@ -104,6 +215,8 @@ export default function DashboardPage() {
     const [showCo2Intensity, setShowCo2Intensity] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
     const [userProfile, setUserProfile] = useState<{ deptCode: string; userName: string } | null>(null)
+    const [tablePage, setTablePage] = useState(0)
+    const TABLE_PAGE_SIZE = 20
 
 
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
@@ -144,166 +257,6 @@ export default function DashboardPage() {
         loadDepts()
     }, [])
 
-
-    // Optional helper to get working days left this month (excluding Sundays)
-    const getRemainingWorkingDays = (monthDate: Date) => {
-        const today = new Date();
-        const startOfSelected = startOfMonth(monthDate);
-        const endOfSelected = endOfMonth(monthDate);
-
-        // If viewing a past month, no remaining days
-        if (today > endOfSelected) return 0;
-
-        // If viewing a future month, start from the 1st of that month
-        let current = today < startOfSelected ? startOfSelected : today;
-        let remainingDays = 0;
-
-        while (current <= endOfSelected) {
-            if (!isSunday(current)) {
-                remainingDays++;
-            }
-            current = addDays(current, 1);
-        }
-        return remainingDays;
-    }
-
-    // Helper function to build summary object
-    const buildSummary = (records: any[], isTotal: boolean) => {
-        let tPlan = 0, tActual = 0, tDown = 0, tInput = 0, tOutput = 0, tWip = 0;
-        let tPlanCont = 0, tActualCont = 0;
-        let tPlanIsp = 0, tActualIsp = 0, tPlanNonIsp = 0, tActualNonIsp = 0;
-
-        let sumBroken = 0, countBroken = 0;
-        let sumUnpeel = 0, countUnpeel = 0;
-        let sumIsp = 0, countIsp = 0;
-        let sumSw = 0, countSw = 0;
-        let tElecCons = 0, tElecTarget = 0;
-        let tActualIspCS = 0;
-
-        // MTD (Month To Date) Calculation Logic
-        const todayStr = format(new Date(), "yyyy-MM-dd");
-
-        // 1. Find Cutoff Date (The latest date that has any actual production)
-        let cutoffDate = "";
-        records.forEach(r => {
-            const actT = Number(isTotal ? r.total_actual_ton : r.actual_ton || 0);
-            const actC = Number(isTotal ? r.total_actual_container : r.actual_container || 0);
-            if (actT > 0 || actC > 0) {
-                if (!cutoffDate || r.work_date > cutoffDate) {
-                    cutoffDate = r.work_date;
-                }
-            }
-        });
-
-        // Default cutoff to today if no actuals found (e.g. start of month) or if cutoff is in the future
-        if (!cutoffDate || cutoffDate > todayStr) {
-            cutoffDate = todayStr;
-        }
-
-        let tPlanMTD = 0;
-        let tPlanContMTD = 0;
-        let remainingWorkingDays = 0;
-        let remainingContWorkingDays = 0;
-
-        records.forEach(r => {
-            const planVal = Number(isTotal ? r.total_plan_ton : r.plan_ton || 0);
-            const planContVal = Number(isTotal ? r.total_plan_container : r.plan_container || 0);
-
-            tPlan += planVal;
-            tPlanCont += planContVal;
-
-            // Only add to MTD if the date is within the cutoff period
-            if (r.work_date <= cutoffDate) {
-                tPlanMTD += planVal;
-                tPlanContMTD += planContVal;
-            }
-
-            // Count remaining planned days to naturally respect the cutoff date from Admin Plan
-            if (r.work_date >= todayStr) {
-                if (planVal > 0) remainingWorkingDays++;
-                if (planContVal > 0) remainingContWorkingDays++;
-            }
-
-            tActual += Number(isTotal ? r.total_actual_ton : r.actual_ton || 0);
-            tActualCont += Number(isTotal ? r.total_actual_container : r.actual_container || 0);
-            tDown += Number(isTotal ? r.total_downtime_min : r.downtime_min || 0);
-            tInput += Number(isTotal ? r.total_input_ton : r.input_ton || 0);
-            tOutput += Number(isTotal ? r.total_good_output_ton : r.good_output_ton || 0);
-            tWip = Number(isTotal ? r.total_wip_close_ton : r.wip_close_ton || 0);
-            tElecCons += Number(r.electricity_consumption_kwh || 0);
-            tElecTarget += Number(r.target_electricity_kwh || 0);
-
-            // FGWH ISP / Non-ISP (only available on total records from v_dashboard_total_daily)
-            if (isTotal) {
-                tPlanIsp += Number(r.total_plan_isp_ton || 0);
-                tActualIsp += Number(r.total_actual_isp_ton || 0);
-                tPlanNonIsp += Number(r.total_plan_non_isp_ton || 0);
-                tActualNonIsp += Number(r.total_actual_non_isp_ton || 0);
-            }
-
-            if (!isTotal) {
-                if (Number(r.broken_pct) > 0) { sumBroken += Number(r.broken_pct); countBroken++; }
-                if (Number(r.unpeel_pct) > 0) { sumUnpeel += Number(r.unpeel_pct); countUnpeel++; }
-                if (Number(r.isp_pct) > 0) { sumIsp += Number(r.isp_pct); countIsp++; }
-                if (Number(r.sw_pct) > 0) { sumSw += Number(r.sw_pct); countSw++; }
-                tActualIspCS += Number(r.isp_ton || 0);
-                tPlanIsp += Number(r.plan_isp_ton || 0);
-            } else {
-                if (Number(r.avg_broken_pct) > 0) { sumBroken += Number(r.avg_broken_pct); countBroken++; }
-                if (Number(r.avg_unpeel_pct) > 0) { sumUnpeel += Number(r.avg_unpeel_pct); countUnpeel++; }
-                if (Number(r.avg_isp_pct) > 0) { sumIsp += Number(r.avg_isp_pct); countIsp++; }
-                if (Number(r.avg_sw_pct) > 0) { sumSw += Number(r.avg_sw_pct); countSw++; }
-            }
-        });
-
-        const latestRecord = records[records.length - 1] || {};
-        const latestPlan = Number(isTotal ? latestRecord.total_plan_ton : latestRecord.plan_ton || 0);
-        const latestActual = Number(isTotal ? latestRecord.total_actual_ton : latestRecord.actual_ton || 0);
-        const latestPlanCont = Number(isTotal ? latestRecord.total_plan_container : latestRecord.plan_container || 0);
-        const latestActualCont = Number(isTotal ? latestRecord.total_actual_container : latestRecord.actual_container || 0);
-
-        const latestActualIsp_val = Number(latestRecord.total_actual_isp_ton || 0);
-        const latestPlanIsp_val = Number(latestRecord.total_plan_isp_ton || 0);
-        const latestActualNonIsp_val = Number(latestRecord.total_actual_non_isp_ton || 0);
-        const latestPlanNonIsp_val = Number(latestRecord.total_plan_non_isp_ton || 0);
-
-        return {
-            totalPlan: tPlan,
-            totalPlanCont: tPlanCont,
-            totalActual: tActual,
-            totalActualCont: tActualCont,
-            totalPlanMTD: tPlanMTD,
-            totalPlanContMTD: tPlanContMTD,
-            latestPlan,
-            latestActual,
-            latestPlanCont,
-            latestActualCont,
-            latestActualIsp: latestActualIsp_val,
-            latestPlanIsp: latestPlanIsp_val,
-            latestActualNonIsp: latestActualNonIsp_val,
-            latestPlanNonIsp: latestPlanNonIsp_val,
-            achivementPct: tPlanMTD > 0 ? (tActual / tPlanMTD) * 100 : 0,
-            achivementContPct: tPlanContMTD > 0 ? (tActualCont / tPlanContMTD) * 100 : 0,
-            variance: tActual - tPlanMTD, // Variance compared to MTD plan
-            downtime: tDown,
-            wipClose: tWip,
-            yieldPct: tInput > 0 ? (tOutput / tInput) * 100 : 0,
-            brokenPct: countBroken > 0 ? sumBroken / countBroken : 0,
-            unpeelPct: countUnpeel > 0 ? sumUnpeel / countUnpeel : 0,
-            ispPct: countIsp > 0 ? sumIsp / countIsp : 0,
-            swPct: countSw > 0 ? sumSw / countSw : 0,
-            totalPlanIsp: tPlanIsp,
-            totalActualIsp: tActualIsp,
-            totalPlanNonIsp: tPlanNonIsp,
-            totalActualNonIsp: tActualNonIsp,
-            totalActualIspCS: tActualIspCS,
-            totalActualNonIspCS: Math.max(0, tActual - tActualIspCS),
-            totalElectricityConsumption: tElecCons,
-            totalTargetElectricityKwh: tElecTarget,
-            remainingWorkingDays,
-            remainingContWorkingDays
-        };
-    };
 
     // Load Dashboard Data
     useEffect(() => {
@@ -707,6 +660,7 @@ export default function DashboardPage() {
 
                 if (selectedDept !== 'all') {
                     setDailyRecords(dData.filter(d => d.department_id === selectedDept));
+                    setTablePage(0);
                 }
             }
 
@@ -726,7 +680,7 @@ export default function DashboardPage() {
         fetchDashboard()
     }, [selectedDept, selectedMonth])
 
-    const handleExportCSV = () => {
+    const handleExportCSV = useCallback(() => {
         let headers = [];
         let rows = [];
 
@@ -761,7 +715,7 @@ export default function DashboardPage() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    }
+    }, [selectedDept, deptData, dailyRecords, departments])
 
 
     const renderMiniDashboard = (id: string, name: string, isTotal: boolean = false) => {
@@ -1854,7 +1808,7 @@ export default function DashboardPage() {
                                         )
                                     })
                                 ) : (
-                                    dailyRecords.map((d) => (
+                                    dailyRecords.slice(tablePage * TABLE_PAGE_SIZE, (tablePage + 1) * TABLE_PAGE_SIZE).map((d) => (
                                         <TableRow key={d.work_date}>
                                             <TableCell className="font-medium">{format(new Date(d.work_date), 'dd/MM/yyyy')}</TableCell>
                                             <TableCell className="text-right">{Number(d.plan_ton).toFixed(2)}</TableCell>
@@ -1880,6 +1834,15 @@ export default function DashboardPage() {
                             </TableBody>
                         </Table>
                         </div>
+                        {selectedDept !== 'all' && dailyRecords.length > TABLE_PAGE_SIZE && (
+                            <div className="flex items-center justify-between px-4 py-2 border-t text-sm text-muted-foreground">
+                                <span>{tablePage * TABLE_PAGE_SIZE + 1}–{Math.min((tablePage + 1) * TABLE_PAGE_SIZE, dailyRecords.length)} / {dailyRecords.length} dòng</span>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setTablePage(p => Math.max(0, p - 1))} disabled={tablePage === 0} className="px-2 py-1 rounded border disabled:opacity-40 hover:bg-slate-50">←</button>
+                                    <button onClick={() => setTablePage(p => p + 1)} disabled={(tablePage + 1) * TABLE_PAGE_SIZE >= dailyRecords.length} className="px-2 py-1 rounded border disabled:opacity-40 hover:bg-slate-50">→</button>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
