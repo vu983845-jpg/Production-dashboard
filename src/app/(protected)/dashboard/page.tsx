@@ -312,14 +312,59 @@ export default function DashboardPage() {
             const dashboards: any = {};
             const startFilter = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
             const endFilter = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
+            const prevMonthDateStr = format(subDays(startOfMonth(selectedMonth), 1), "yyyy-MM-dd");
 
-            // 0. Fetch Native Downtime Data
-            const { data: dtEvents } = await supabase
-                .from('downtime_events')
-                .select('department_id, work_date, duration_mins, start_time, end_time, is_ongoing')
-                .eq('exclude_downtime', false)
-                .gte('work_date', startFilter)
-                .lte('work_date', endFilter);
+            // Parallel fetch all data for better performance
+            const [
+                { data: dtEvents },
+                { data: eData },
+                { data: totalData },
+                { data: dData },
+                { data: compData },
+                { data: shellLineData },
+                { data: deptRows },
+            ] = await Promise.all([
+                supabase
+                    .from('downtime_events')
+                    .select('department_id, work_date, duration_mins, start_time, end_time, is_ongoing')
+                    .eq('exclude_downtime', false)
+                    .gte('work_date', startFilter)
+                    .lte('work_date', endFilter),
+                supabase
+                    .from('daily_energy')
+                    .select('*')
+                    .gte('work_date', startFilter)
+                    .lte('work_date', endFilter)
+                    .order('work_date'),
+                supabase
+                    .from("v_dashboard_total_daily")
+                    .select("*")
+                    .gte("work_date", startFilter)
+                    .lte("work_date", endFilter)
+                    .order("work_date"),
+                supabase
+                    .from("v_dashboard_daily")
+                    .select("*")
+                    .gte("work_date", startFilter)
+                    .lte("work_date", endFilter)
+                    .order("work_date"),
+                supabase
+                    .from('daily_compressor')
+                    .select('*')
+                    .gte('work_date', prevMonthDateStr)
+                    .lte('work_date', endFilter)
+                    .order('work_date'),
+                supabase
+                    .from('shelling_line_daily')
+                    .select('line_code, actual_ton, run_hours')
+                    .gte('work_date', startFilter)
+                    .lte('work_date', endFilter),
+                supabase
+                    .from('departments')
+                    .select('id, code')
+                    .in('code', ['SHELL', 'PEEL_MC']),
+            ]);
+
 
             const nativeDownTimeSum: Record<string, number> = {};
             const nativeTotalDownTimeSum: Record<string, number> = {};
@@ -343,13 +388,6 @@ export default function DashboardPage() {
 
 
 
-            // 0.5 Fetch Energy Data (needed for Total Emission injected into Total Factory history)
-            const { data: eData } = await supabase
-                .from('daily_energy')
-                .select('*')
-                .gte('work_date', startFilter)
-                .lte('work_date', endFilter)
-                .order('work_date');
 
             let elecActual = 0, elecTarget = 0, waterActual = 0, waterTarget = 0, woodActual = 0, woodTarget = 0;
             let totalEmissionTons = 0;
@@ -389,13 +427,6 @@ export default function DashboardPage() {
                 })));
             }
 
-            // 1. Fetch Total Factory Data
-            const { data: totalData } = await supabase
-                .from("v_dashboard_total_daily")
-                .select("*")
-                .gte("work_date", startFilter)
-                .lte("work_date", endFilter)
-                .order("work_date")
 
             if (totalData) {
                 // Pre-process and inject native downtime mappings 
@@ -424,13 +455,6 @@ export default function DashboardPage() {
                 dashboards["fgwh"] = { summary: fgwhSummary, history: fgwhIspHistory };
             }
 
-            // 2. Fetch All Individual Dept Data
-            const { data: dData } = await supabase
-                .from("v_dashboard_daily")
-                .select("*")
-                .gte("work_date", startFilter)
-                .lte("work_date", endFilter)
-                .order("work_date")
 
             if (dData) {
                 // Map the downloaded native Downtime values
@@ -440,10 +464,7 @@ export default function DashboardPage() {
 
                 // --- Build dailyElecVsProd chart data ---
                 // Fetch dept IDs inline to avoid race condition with departments state
-                const { data: deptRows } = await supabase
-                    .from('departments')
-                    .select('id, code')
-                    .in('code', ['SHELL', 'PEEL_MC']);
+
                 const shellDeptObj = deptRows?.find((d: any) => d.code === 'SHELL');
                 const peelDeptObj = deptRows?.find((d: any) => d.code === 'PEEL_MC');
                 const SHELL_RECOVERY_FETCH = 0.22;
@@ -580,14 +601,6 @@ export default function DashboardPage() {
                     };
                 }
 
-                // 2.5 Fetch Compressor MTD Data for PEEL_MC and CS
-                const prevMonthDateStr = format(subDays(startOfMonth(selectedMonth), 1), "yyyy-MM-dd");
-                const { data: compData } = await supabase
-                    .from('daily_compressor')
-                    .select('*')
-                    .gte('work_date', prevMonthDateStr) // Get from prev day to calculate first day diff
-                    .lte('work_date', endFilter)
-                    .order('work_date');
 
                 let totalCompressorKwhMtd = 0;
                 let dailyCompressorKwhMap: Record<string, number> = {};
@@ -697,12 +710,7 @@ export default function DashboardPage() {
                 }
             }
 
-            // Fetch Shelling Line Data for the month
-            const { data: shellLineData } = await supabase
-                .from('shelling_line_daily')
-                .select('line_code, actual_ton, run_hours')
-                .gte('work_date', startFilter)
-                .lte('work_date', endFilter)
+            // Shelling Line Data (pre-fetched in parallel above)
 
             if (shellLineData) {
                 const aggregated: Record<string, { actual_ton: number; run_hours: number }> = {}
@@ -796,10 +804,6 @@ export default function DashboardPage() {
         const variance = actualNum - planNum;
 
 
-        if (deptCode === 'PEEL_MC') {
-            console.log("PEEL_MC Dashboard Summary:", summary);
-            console.log("Total Compressor KPI:", summary.totalCompressorKwhMtd);
-        }
 
         if (isFgwh) {
             return (

@@ -37,33 +37,11 @@ export async function POST(request: Request) {
             )
         }
 
-        // The secret is valid, bypass password check and create a session for this user
+        // The secret is valid — generate magic link directly.
+        // Skipping listUsers() to avoid pagination issues (default page size = 50 users).
+        // generateLink will fail if the user doesn't exist, which we handle below.
         const adminSupabase = await createAdminClient()
 
-        // 1. Get the user by email using the admin api
-        const { data: usersData, error: userError } = await adminSupabase.auth.admin.listUsers()
-
-        if (userError) {
-            console.error('Error fetching users:', userError)
-            return NextResponse.json(
-                { error: 'Server error verifying user' },
-                { status: 500 }
-            )
-        }
-
-        // Find the user with this email
-        const user = usersData.users.find(u => u.email === email)
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'User not found' },
-                { status: 404 }
-            )
-        }
-
-        // 2. We now need to sign the user in.
-        // There is no direct "impersonate" or "create session" admin method that sets cookies in newer supabase-js easily.
-        // We will generate an OTP / Magic Link programatically using admin API, then exchange it immediately to log the user in.
         const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
             type: 'magiclink',
             email: email,
@@ -71,10 +49,10 @@ export async function POST(request: Request) {
 
         if (linkError || !linkData?.properties?.action_link) {
             console.error('Error generating auth link:', linkError)
-            return NextResponse.json(
-                { error: 'Could not generate session' },
-                { status: 500 }
-            )
+            // Supabase returns 422 when user is not found
+            const status = linkError?.status === 422 ? 404 : 500
+            const message = status === 404 ? 'User not found' : 'Could not generate session'
+            return NextResponse.json({ error: message }, { status })
         }
 
         // Return the action link back to the browser so it can establish the session
