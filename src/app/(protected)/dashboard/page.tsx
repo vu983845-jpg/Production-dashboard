@@ -948,7 +948,7 @@ export default function DashboardPage() {
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                             {deptCode === 'SHELL' && summary.brokenPct > 0 && (
                                 <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-normal normal-case border ${summary.brokenPct <= 6 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                                    🥜 {summary.brokenPct.toFixed(1)}%<span className="font-normal opacity-70"> bể</span>
+                                    💔 {summary.brokenPct.toFixed(1)}%<span className="font-normal opacity-70"> bể</span>
                                 </span>
                             )}
                         </span>
