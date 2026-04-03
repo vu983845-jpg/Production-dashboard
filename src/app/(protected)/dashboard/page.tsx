@@ -309,7 +309,7 @@ export default function DashboardPage() {
                     .order('work_date'),
                 supabase
                     .from('shelling_line_daily')
-                    .select('line_code, actual_ton, run_hours')
+                    .select('line_code, actual_ton, run_hours, broken_pct')
                     .gte('work_date', startFilter)
                     .lte('work_date', endFilter),
                 supabase
@@ -668,12 +668,36 @@ export default function DashboardPage() {
 
             if (shellLineData) {
                 const aggregated: Record<string, { actual_ton: number; run_hours: number }> = {}
+                let totalBrokenWeight = 0, totalBrokenTon = 0;
                 shellLineData.forEach((r: any) => {
                     if (!aggregated[r.line_code]) aggregated[r.line_code] = { actual_ton: 0, run_hours: 0 }
                     aggregated[r.line_code].actual_ton += Number(r.actual_ton || 0)
                     aggregated[r.line_code].run_hours += Number(r.run_hours || 0)
+                    // Weighted average broken pct
+                    const brk = Number(r.broken_pct || 0);
+                    const ton = Number(r.actual_ton || 0);
+                    if (brk > 0 && ton > 0) { totalBrokenWeight += brk * ton; totalBrokenTon += ton; }
                 })
                 setShellingLineMonthData(aggregated)
+
+                // Inject avg broken_pct into SHELL dashboard summary
+                const avgBrokenPct = totalBrokenTon > 0 ? totalBrokenWeight / totalBrokenTon : 0;
+                if (avgBrokenPct > 0) {
+                    setDashboardsData(prev => {
+                        const shellKey = Object.keys(prev).find(k => {
+                            const recs = (dData || []).filter((r: any) => r.department_id === k);
+                            return recs.length > 0 && recs[0].dept_code === 'SHELL';
+                        });
+                        if (!shellKey) return prev;
+                        return {
+                            ...prev,
+                            [shellKey]: {
+                                ...prev[shellKey],
+                                summary: { ...prev[shellKey].summary, brokenPct: avgBrokenPct }
+                            }
+                        };
+                    });
+                }
             }
             setPageLoading(false);
         }
