@@ -2163,6 +2163,12 @@ export default function BaoCom() {
                                                                                                 d.code === dept.code ||
                                                                                                 (DEPT_CODE_ALIAS[d.code] ?? d.code) === dept.code
                                                                                             )?.id
+                                                                                            // DEBUG
+                                                                                            const changedEntries = Object.entries(rowEditDrafts).filter(([date, v]) => (parseInt(v)||0) !== (sr.days.get(date) ?? 0))
+                                                                                            if (changedEntries.length === 0) {
+                                                                                                alert(`DEBUG: Không có ô nào thay đổi.\ndeptCode=${dept.code} shift=${sr.shift}\ndraftKeys=${Object.keys(rowEditDrafts).length}`)
+                                                                                                setRowSaving(false); setEditingRowKey(null); setRowEditDrafts({}); return
+                                                                                            }
                                                                                             for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                 const newVal = parseInt(draftVal) || 0
                                                                                                 const orig = sr.days.get(date) ?? 0
@@ -2172,6 +2178,10 @@ export default function BaoCom() {
                                                                                                     r.work_date === date && r.shift === sr.shift &&
                                                                                                     (deptId ? r.department_id === deptId : r.department_name.toLowerCase() === sr.sectionName.toLowerCase())
                                                                                                 )
+                                                                                                if (matches.length === 0) {
+                                                                                                    alert(`DEBUG: Không tìm thấy record!\ndate=${date} shift=${sr.shift} deptId=${deptId}\ndeptCode=${dept.code}\nstatsData có ${statsData?.length} rows\nSample IDs: ${statsData?.slice(0,3).map(r=>r.department_id).join(',')}`)
+                                                                                                    continue
+                                                                                                }
                                                                                                 if (matches.length > 0) {
                                                                                                     const rec = matches[0]
                                                                                                     const diff = newVal - orig
