@@ -969,10 +969,11 @@ export default function BaoCom() {
         OFFICE:     ['Office S1','Office S2','Office S3'],
     }
 
-    type ShiftEntry = { deptKey: string; deptName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; otDays: Map<string, number> }
+    type ShiftEntry = { deptKey: string; deptName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; otDays: Map<string, number>; dayRowIds: Map<string, string[]> }
     type DeptGroup  = { deptKey: string; name: string; code: string; shifts: ShiftEntry[]; sectionRows: SectionRow[] }
     // SectionRow: 1 row per department_name (the Excel "Section" name)
-    type SectionRow = { sectionName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number> }
+    // dayRowIds: date → list of statsData row IDs (used for direct save without UUID re-lookup)
+    type SectionRow = { sectionName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; dayRowIds: Map<string, string[]> }
 
     // Build pivot: group by department_name ("Section" in Excel)
     const buildMonthlyPivot = (rows: MealStatRow[]) => {
@@ -1029,21 +1030,23 @@ export default function BaoCom() {
             }
             // Total = official + seasonal (vegetarian is a SUBSET of official/seasonal, NOT additive)
             const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
-            // Only create section row if there is actual headcount data (skip zero-only records)
+            // Always track dayRowIds (even for zero-count rows) so we can update them
+            const key = `${sectionName}|${shift}`
+            if (!sectionMap.has(key)) sectionMap.set(key, {
+                sectionName, deptCode, shift,
+                days: new Map(), officialDays: new Map(), seasonalDays: new Map(), dayRowIds: new Map()
+            })
+            const e = sectionMap.get(key)!
+            // Track row ID for direct save
+            if (!e.dayRowIds.has(r.work_date)) e.dayRowIds.set(r.work_date, [])
+            e.dayRowIds.get(r.work_date)!.push(r.id)
             if (total > 0) {
-                const key = `${sectionName}|${shift}`
-                if (!sectionMap.has(key)) sectionMap.set(key, {
-                    sectionName, deptCode, shift,
-                    days: new Map(), officialDays: new Map(), seasonalDays: new Map()
-                })
-                const e = sectionMap.get(key)!
                 e.days.set(r.work_date, (e.days.get(r.work_date) ?? 0) + total)
                 if ((r.official_present ?? 0) > 0)  e.officialDays.set(r.work_date, (e.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
                 if ((r.seasonal_present ?? 0) > 0)  e.seasonalDays.set(r.work_date, (e.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
             }
         })
 
-        // 3. Build shift-level pivot (for OT) — same as before
         const shiftMap = new Map<string, ShiftEntry>()
         rows.forEach(r => {
             let deptCode  = deptList.find(d => d.id === r.department_id)?.code ?? ''
@@ -1052,8 +1055,11 @@ export default function BaoCom() {
             const deptName = DEPT_DISPLAY[deptCode] ?? r.department_name
             const shift = r.shift ?? '1'
             const mapKey = `${deptKey}|${shift}`
-            if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey, deptName, deptCode, shift, days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map() })
+            if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey, deptName, deptCode, shift, days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map(), dayRowIds: new Map() })
             const entry = shiftMap.get(mapKey)!
+            // Track row IDs for direct save
+            if (!entry.dayRowIds.has(r.work_date)) entry.dayRowIds.set(r.work_date, [])
+            entry.dayRowIds.get(r.work_date)!.push(r.id)
             // Total = official + seasonal (vegetarian is subset, NOT additive)
             const count = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
             if (count > 0) entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + count)
@@ -1063,9 +1069,12 @@ export default function BaoCom() {
             // (kitchen tab records store OT workers in ot_count alongside regular shifts)
             if ((r.ot_count ?? 0) > 0 && shift !== 'OT') {
                 const otMapKey = `${deptKey}|OT`
-                if (!shiftMap.has(otMapKey)) shiftMap.set(otMapKey, { deptKey, deptName, deptCode, shift: 'OT', days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map() })
+                if (!shiftMap.has(otMapKey)) shiftMap.set(otMapKey, { deptKey, deptName, deptCode, shift: 'OT', days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map(), dayRowIds: new Map() })
                 const otEntry = shiftMap.get(otMapKey)!
                 otEntry.days.set(r.work_date, (otEntry.days.get(r.work_date) ?? 0) + (r.ot_count ?? 0))
+                // Track which row has OT for this date
+                if (!otEntry.dayRowIds.has(r.work_date)) otEntry.dayRowIds.set(r.work_date, [])
+                otEntry.dayRowIds.get(r.work_date)!.push(r.id)
             }
         })
 
@@ -2156,44 +2165,37 @@ export default function BaoCom() {
                                                                                         onClick={async () => {
                                                                                             setRowSaving(true)
                                                                                             // Batch save all changed cells via API (bypasses RLS)
-                                                                                            const deptId = deptList.find(d =>
-                                                                                                d.code === dept.code ||
-                                                                                                (DEPT_CODE_ALIAS[d.code] ?? d.code) === dept.code
-                                                                                            )?.id
-                                                                                            // DEBUG
+                                                                                            // Use sr.dayRowIds to directly find the correct DB row IDs
+                                                                                            // (avoids UUID mismatch between deptList and meal_headcount)
                                                                                             const changedEntries = Object.entries(rowEditDrafts).filter(([date, v]) => (parseInt(v)||0) !== (sr.days.get(date) ?? 0))
                                                                                             if (changedEntries.length === 0) {
-                                                                                                alert(`DEBUG: Không có ô nào thay đổi.\ndeptCode=${dept.code} shift=${sr.shift}\ndraftKeys=${Object.keys(rowEditDrafts).length}`)
                                                                                                 setRowSaving(false); setEditingRowKey(null); setRowEditDrafts({}); return
                                                                                             }
                                                                                             for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                 const newVal = parseInt(draftVal) || 0
                                                                                                 const orig = sr.days.get(date) ?? 0
                                                                                                 if (newVal === orig) continue
-                                                                                                // Match by department_id (or fallback by name) + shift + date
-                                                                                                const matches = (statsData ?? []).filter(r =>
-                                                                                                    r.work_date === date && r.shift === sr.shift &&
-                                                                                                    (deptId ? r.department_id === deptId : r.department_name.toLowerCase() === sr.sectionName.toLowerCase())
-                                                                                                )
-                                                                                                if (matches.length === 0) {
-                                                                                                    alert(`DEBUG: Không tìm thấy record!\ndate=${date} shift=${sr.shift} deptId=${deptId}\ndeptCode=${dept.code}\nstatsData có ${statsData?.length} rows\nSample IDs: ${statsData?.slice(0,3).map(r=>r.department_id).join(',')}`)
+                                                                                                // Directly use row IDs from pivot (no UUID re-lookup needed)
+                                                                                                const rowIds = sr.dayRowIds.get(date) ?? []
+                                                                                                if (rowIds.length === 0) {
+                                                                                                    alert(`Không tìm thấy record cho ngày ${date} (ca ${sr.shift})`)
                                                                                                     continue
                                                                                                 }
-                                                                                                if (matches.length > 0) {
-                                                                                                    const rec = matches[0]
-                                                                                                    const diff = newVal - orig
-                                                                                                    const newOfficial = Math.max(0, (rec.official_present ?? 0) + diff)
-                                                                                                    const res = await fetch('/api/meal-headcount', {
-                                                                                                        method: 'PATCH',
-                                                                                                        headers: { 'Content-Type': 'application/json' },
-                                                                                                        body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: rec.ot_count ?? 0 })
-                                                                                                    })
-                                                                                                    if (res.ok) {
-                                                                                                        setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, official_present: newOfficial } : r) : prev)
-                                                                                                    } else {
-                                                                                                        const j = await res.json()
-                                                                                                        alert('Lỗi lưu: ' + (j.error || res.statusText))
-                                                                                                    }
+                                                                                                // If multiple rows for this date (e.g. HPEEL sub-sections), update the first one
+                                                                                                const rec = (statsData ?? []).find(r => r.id === rowIds[0])
+                                                                                                if (!rec) continue
+                                                                                                const diff = newVal - orig
+                                                                                                const newOfficial = Math.max(0, (rec.official_present ?? 0) + diff)
+                                                                                                const res = await fetch('/api/meal-headcount', {
+                                                                                                    method: 'PATCH',
+                                                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                                                    body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: rec.ot_count ?? 0 })
+                                                                                                })
+                                                                                                if (res.ok) {
+                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, official_present: newOfficial } : r) : prev)
+                                                                                                } else {
+                                                                                                    const j = await res.json()
+                                                                                                    alert('Lỗi lưu: ' + (j.error || res.statusText))
                                                                                                 }
                                                                                             }
                                                                                             setRowSaving(false)
@@ -2278,31 +2280,25 @@ export default function BaoCom() {
                                                                                         disabled={rowSaving}
                                                                                         onClick={async () => {
                                                                                             setRowSaving(true)
-                                                                                            const deptIdOT = deptList.find(d =>
-                                                                                                d.code === dept.code ||
-                                                                                                (DEPT_CODE_ALIAS[d.code] ?? d.code) === dept.code
-                                                                                            )?.id
                                                                                             for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                 const newVal = parseInt(draftVal) || 0
                                                                                                 const orig = deptOT?.days.get(date) ?? 0
                                                                                                 if (newVal === orig) continue
-                                                                                                const matches = (statsData ?? []).filter(r =>
-                                                                                                    r.work_date === date && r.shift === 'OT' &&
-                                                                                                    (deptIdOT ? r.department_id === deptIdOT : r.department_name.toLowerCase() === dept.name.toLowerCase())
-                                                                                                )
-                                                                                                if (matches.length > 0) {
-                                                                                                    const rec = matches[0]
-                                                                                                    const res = await fetch('/api/meal-headcount', {
-                                                                                                        method: 'PATCH',
-                                                                                                        headers: { 'Content-Type': 'application/json' },
-                                                                                                        body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newVal })
-                                                                                                    })
-                                                                                                    if (res.ok) {
-                                                                                                        setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newVal } : r) : prev)
-                                                                                                    } else {
-                                                                                                        const j = await res.json()
-                                                                                                        alert('Lỗi lưu OT: ' + (j.error || res.statusText))
-                                                                                                    }
+                                                                                                // Use dayRowIds from OT ShiftEntry
+                                                                                                const rowIds = deptOT?.dayRowIds.get(date) ?? []
+                                                                                                if (rowIds.length === 0) continue
+                                                                                                const rec = (statsData ?? []).find(r => r.id === rowIds[0])
+                                                                                                if (!rec) continue
+                                                                                                const res = await fetch('/api/meal-headcount', {
+                                                                                                    method: 'PATCH',
+                                                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                                                    body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newVal })
+                                                                                                })
+                                                                                                if (res.ok) {
+                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newVal } : r) : prev)
+                                                                                                } else {
+                                                                                                    const j = await res.json()
+                                                                                                    alert('Lỗi lưu OT: ' + (j.error || res.statusText))
                                                                                                 }
                                                                                             }
                                                                                             setRowSaving(false)
