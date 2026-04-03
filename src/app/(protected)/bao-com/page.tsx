@@ -2164,26 +2164,27 @@ export default function BaoCom() {
                                                                                         disabled={rowSaving}
                                                                                         onClick={async () => {
                                                                                             setRowSaving(true)
-                                                                                            // Batch save all changed cells via API (bypasses RLS)
-                                                                                            // Use sr.dayRowIds to directly find the correct DB row IDs
-                                                                                            // (avoids UUID mismatch between deptList and meal_headcount)
-                                                                                            const changedEntries = Object.entries(rowEditDrafts).filter(([date, v]) => (parseInt(v)||0) !== (sr.days.get(date) ?? 0))
-                                                                                            if (changedEntries.length === 0) {
-                                                                                                setRowSaving(false); setEditingRowKey(null); setRowEditDrafts({}); return
-                                                                                            }
+                                                                                            let savedCount = 0
                                                                                             for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                 const newVal = parseInt(draftVal) || 0
                                                                                                 const orig = sr.days.get(date) ?? 0
                                                                                                 if (newVal === orig) continue
-                                                                                                // Directly use row IDs from pivot (no UUID re-lookup needed)
+                                                                                                // Find the DB record: prefer dayRowIds (direct), fallback to statsData search by date+shift+name
+                                                                                                let rec: MealStatRow | undefined
                                                                                                 const rowIds = sr.dayRowIds.get(date) ?? []
-                                                                                                if (rowIds.length === 0) {
-                                                                                                    alert(`Không tìm thấy record cho ngày ${date} (ca ${sr.shift})`)
-                                                                                                    continue
+                                                                                                if (rowIds.length > 0) {
+                                                                                                    rec = (statsData ?? []).find(r => r.id === rowIds[0])
                                                                                                 }
-                                                                                                // If multiple rows for this date (e.g. HPEEL sub-sections), update the first one
-                                                                                                const rec = (statsData ?? []).find(r => r.id === rowIds[0])
-                                                                                                if (!rec) continue
+                                                                                                if (!rec) {
+                                                                                                    // Fallback: search by date + shift, matching department_name roughly
+                                                                                                    rec = (statsData ?? []).find(r =>
+                                                                                                        r.work_date === date && r.shift === sr.shift && (
+                                                                                                            r.department_name.toLowerCase().includes(sr.sectionName.split(' ')[0].toLowerCase()) ||
+                                                                                                            sr.sectionName.toLowerCase().includes(r.department_name.toLowerCase().split(' ')[0])
+                                                                                                        )
+                                                                                                    )
+                                                                                                }
+                                                                                                if (!rec) continue  // No record to update, skip
                                                                                                 const diff = newVal - orig
                                                                                                 const newOfficial = Math.max(0, (rec.official_present ?? 0) + diff)
                                                                                                 const res = await fetch('/api/meal-headcount', {
@@ -2192,11 +2193,15 @@ export default function BaoCom() {
                                                                                                     body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: rec.ot_count ?? 0 })
                                                                                                 })
                                                                                                 if (res.ok) {
-                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, official_present: newOfficial } : r) : prev)
+                                                                                                    savedCount++
+                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec!.id ? { ...r, official_present: newOfficial } : r) : prev)
                                                                                                 } else {
                                                                                                     const j = await res.json()
                                                                                                     alert('Lỗi lưu: ' + (j.error || res.statusText))
                                                                                                 }
+                                                                                            }
+                                                                                            if (savedCount === 0) {
+                                                                                                alert('Không có thay đổi nào được lưu — vui lòng đổi số trước khi bấm 💾')
                                                                                             }
                                                                                             setRowSaving(false)
                                                                                             setEditingRowKey(null)
