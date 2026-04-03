@@ -973,7 +973,7 @@ export default function BaoCom() {
     type DeptGroup  = { deptKey: string; name: string; code: string; shifts: ShiftEntry[]; sectionRows: SectionRow[] }
     // SectionRow: 1 row per department_name (the Excel "Section" name)
     // dayRowIds: date → list of statsData row IDs (used for direct save without UUID re-lookup)
-    type SectionRow = { sectionName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; dayRowIds: Map<string, string[]> }
+    type SectionRow = { sectionName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; dayRowIds: Map<string, string[]>; departmentIds: Set<string> }
 
     // Build pivot: group by department_name ("Section" in Excel)
     const buildMonthlyPivot = (rows: MealStatRow[]) => {
@@ -1034,10 +1034,11 @@ export default function BaoCom() {
             const key = `${sectionName}|${shift}`
             if (!sectionMap.has(key)) sectionMap.set(key, {
                 sectionName, deptCode, shift,
-                days: new Map(), officialDays: new Map(), seasonalDays: new Map(), dayRowIds: new Map()
+                days: new Map(), officialDays: new Map(), seasonalDays: new Map(), dayRowIds: new Map(), departmentIds: new Set()
             })
             const e = sectionMap.get(key)!
-            // Track row ID for direct save
+            // Track department_id and row ID for direct save (avoids UUID mismatch)
+            if (r.department_id) e.departmentIds.add(r.department_id)
             if (!e.dayRowIds.has(r.work_date)) e.dayRowIds.set(r.work_date, [])
             e.dayRowIds.get(r.work_date)!.push(r.id)
             if (total > 0) {
@@ -2176,12 +2177,13 @@ export default function BaoCom() {
                                                                                                     rec = (statsData ?? []).find(r => r.id === rowIds[0])
                                                                                                 }
                                                                                                 if (!rec) {
-                                                                                                    // Fallback: search by date + shift, matching department_name roughly
+                                                                                                    // Fallback: search by date + shift + any department_id that contributed to this section
+                                                                                                    // This handles UUID mismatch (old records with different department_id but same section)
                                                                                                     rec = (statsData ?? []).find(r =>
-                                                                                                        r.work_date === date && r.shift === sr.shift && (
-                                                                                                            r.department_name.toLowerCase().includes(sr.sectionName.split(' ')[0].toLowerCase()) ||
-                                                                                                            sr.sectionName.toLowerCase().includes(r.department_name.toLowerCase().split(' ')[0])
-                                                                                                        )
+                                                                                                        r.work_date === date && r.shift === sr.shift &&
+                                                                                                        ((r.department_id != null && sr.departmentIds.has(r.department_id)) ||
+                                                                                                         r.department_name.toLowerCase().includes(sr.sectionName.split(' ')[0].toLowerCase()) ||
+                                                                                                         sr.sectionName.toLowerCase().startsWith(r.department_name.toLowerCase().split(' ')[0]))
                                                                                                     )
                                                                                                 }
                                                                                                 if (!rec) continue  // No record to update, skip
