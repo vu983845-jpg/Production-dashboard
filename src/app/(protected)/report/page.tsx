@@ -227,13 +227,14 @@ export default function ReportPage() {
             const cleanedLD = (ld ?? []).map((r: any) => {
                 let name = (r.shift_leader || "").trim();
                 if (name) {
-                    const lower = name.toLowerCase();
-                    // Explicitly map to canonical names based on keywords
-                    if (lower.includes("trí")) name = "Mr. Trí";
-                    else if (lower.includes("tâm")) name = "Mrs. Tâm";
-                    else if (lower.includes("linh")) name = "Ms. Linh";
+                    // Strip diacritics for robust comparison (handles mojibake/encoding issues)
+                    const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                    if (normalized.includes("tri")) name = "Mr. Trí";
+                    else if (normalized.includes("tam")) name = "Mrs. Tâm";
+                    else if (normalized.includes("linh")) name = "Ms. Linh";
+                    else if (normalized.includes("tra")) name = "Mr. Trà";
                     else {
-                        // Fallback for any other names
+                        // Standardize prefix only
                         name = name.replace(/^(mrs|mr|ms)\.?\s*/i, (m: string, p: string) => {
                             const pre = p.toLowerCase();
                             if (pre === 'mrs') return 'Mrs. ';
