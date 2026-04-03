@@ -2158,21 +2158,35 @@ export default function BaoCom() {
                                                                                         disabled={rowSaving}
                                                                                         onClick={async () => {
                                                                                             setRowSaving(true)
-                                                                                            // Batch save all changed cells
+                                                                                            // Batch save all changed cells via API (bypasses RLS)
+                                                                                            const deptId = deptList.find(d =>
+                                                                                                d.code === dept.code ||
+                                                                                                (DEPT_CODE_ALIAS[d.code] ?? d.code) === dept.code
+                                                                                            )?.id
                                                                                             for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                 const newVal = parseInt(draftVal) || 0
                                                                                                 const orig = sr.days.get(date) ?? 0
                                                                                                 if (newVal === orig) continue
+                                                                                                // Match by department_id (or fallback by name) + shift + date
                                                                                                 const matches = (statsData ?? []).filter(r =>
                                                                                                     r.work_date === date && r.shift === sr.shift &&
-                                                                                                    r.department_name.toLowerCase() === sr.sectionName.toLowerCase()
+                                                                                                    (deptId ? r.department_id === deptId : r.department_name.toLowerCase() === sr.sectionName.toLowerCase())
                                                                                                 )
                                                                                                 if (matches.length > 0) {
                                                                                                     const rec = matches[0]
                                                                                                     const diff = newVal - orig
                                                                                                     const newOfficial = Math.max(0, (rec.official_present ?? 0) + diff)
-                                                                                                    await supabase.from('meal_headcount').update({ official_present: newOfficial }).eq('id', rec.id)
-                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, official_present: newOfficial } : r) : prev)
+                                                                                                    const res = await fetch('/api/meal-headcount', {
+                                                                                                        method: 'PATCH',
+                                                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                                                        body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: rec.ot_count ?? 0 })
+                                                                                                    })
+                                                                                                    if (res.ok) {
+                                                                                                        setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, official_present: newOfficial } : r) : prev)
+                                                                                                    } else {
+                                                                                                        const j = await res.json()
+                                                                                                        alert('Lỗi lưu: ' + (j.error || res.statusText))
+                                                                                                    }
                                                                                                 }
                                                                                             }
                                                                                             setRowSaving(false)
@@ -2257,18 +2271,31 @@ export default function BaoCom() {
                                                                                         disabled={rowSaving}
                                                                                         onClick={async () => {
                                                                                             setRowSaving(true)
+                                                                                            const deptIdOT = deptList.find(d =>
+                                                                                                d.code === dept.code ||
+                                                                                                (DEPT_CODE_ALIAS[d.code] ?? d.code) === dept.code
+                                                                                            )?.id
                                                                                             for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                 const newVal = parseInt(draftVal) || 0
                                                                                                 const orig = deptOT?.days.get(date) ?? 0
                                                                                                 if (newVal === orig) continue
                                                                                                 const matches = (statsData ?? []).filter(r =>
                                                                                                     r.work_date === date && r.shift === 'OT' &&
-                                                                                                    r.department_name.toLowerCase() === dept.name.toLowerCase()
+                                                                                                    (deptIdOT ? r.department_id === deptIdOT : r.department_name.toLowerCase() === dept.name.toLowerCase())
                                                                                                 )
                                                                                                 if (matches.length > 0) {
                                                                                                     const rec = matches[0]
-                                                                                                    await supabase.from('meal_headcount').update({ ot_count: newVal }).eq('id', rec.id)
-                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newVal } : r) : prev)
+                                                                                                    const res = await fetch('/api/meal-headcount', {
+                                                                                                        method: 'PATCH',
+                                                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                                                        body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newVal })
+                                                                                                    })
+                                                                                                    if (res.ok) {
+                                                                                                        setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newVal } : r) : prev)
+                                                                                                    } else {
+                                                                                                        const j = await res.json()
+                                                                                                        alert('Lỗi lưu OT: ' + (j.error || res.statusText))
+                                                                                                    }
                                                                                                 }
                                                                                             }
                                                                                             setRowSaving(false)
