@@ -85,6 +85,7 @@ interface SavedRecord {
     seasonal_absent: number
     ot_count: number
     vegetarian: number
+    ot_vegetarian: number
     note: string | null
     created_at: string
 }
@@ -1148,7 +1149,11 @@ export default function BaoCom() {
     }
 
     // ─── DB-based summary state ───
-    const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
+    const [summaryDate, setSummaryDate] = useState<string>(() => {
+        const d = new Date()
+        d.setDate(d.getDate() - 1)  // default: hôm qua
+        return d.toISOString().slice(0, 10)
+    })
     const [summaryShift, setSummaryShift] = useState<string>("2")
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryData, setSummaryData] = useState<SavedRecord[] | null>(null)
@@ -1158,6 +1163,64 @@ export default function BaoCom() {
     const [editFields, setEditFields] = useState<{ official_present: number; seasonal_present: number; vegetarian: number; ot_count: number }>({ official_present: 0, seasonal_present: 0, vegetarian: 0, ot_count: 0 })
     // Add-row state
     const [addRow, setAddRow] = useState<{ deptId: string; officialPresent: number; seasonalPresent: number; vegetarian: number; otCount: number } | null>(null)
+
+    // ─── Daily summary state (chốt số gửi nhà ăn) ───
+    // Ngày hôm qua — tính trực tiếp, không lưu state để tránh chọn nhầm ngày
+    const getYesterday = () => {
+        const d = new Date()
+        d.setDate(d.getDate() - 1)
+        return d.toISOString().slice(0, 10)
+    }
+    const [dailyLoading, setDailyLoading] = useState(false)
+    const [dailyMsg, setDailyMsg] = useState<string | null>(null)
+    const [dailyError, setDailyError] = useState<string | null>(null)
+    const [copiedDaily, setCopiedDaily] = useState(false)
+
+    const fetchDailySummary = async () => {
+        const yesterday = getYesterday()   // luôn dùng hôm qua
+        setDailyLoading(true)
+        setDailyError(null)
+        setDailyMsg(null)
+        try {
+            const { data, error } = await supabase
+                .from("meal_headcount")
+                .select("shift, official_present, seasonal_present, ot_count, vegetarian, ot_vegetarian")
+                .eq("work_date", yesterday)
+            if (error) throw error
+            const rows = (data ?? []) as { shift: string; official_present: number; seasonal_present: number; ot_count: number; vegetarian: number; ot_vegetarian: number }[]
+            // Tổng theo từng ca
+            const ca1 = rows.filter(r => r.shift === '1').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
+            const ca2 = rows.filter(r => r.shift === '2').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
+            const ca3 = rows.filter(r => r.shift === '3').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
+            // OT: tổng ot_count từ tất cả ca + shift='OT' riêng
+            const otFromShifts = rows.filter(r => r.shift !== 'OT').reduce((s, r) => s + (r.ot_count ?? 0), 0)
+            const otShiftRows  = rows.filter(r => r.shift === 'OT').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.ot_count ?? 0), 0)
+            const totalOT = otFromShifts + otShiftRows
+            // Chay OT
+            const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
+            const grand = ca1 + ca2 + ca3 + totalOT
+            const dateDisplay = format(parseISO(yesterday), "d/M/yyyy")
+            let msg = `Ngày ${dateDisplay}\n`
+            if (ca1 > 0) msg += `Ca 1: ${ca1}\n`
+            if (ca2 > 0) msg += `Ca 2: ${ca2}\n`
+            if (ca3 > 0) msg += `Ca 3: ${ca3}\n`
+            if (totalOT > 0) {
+                msg += `OT: ${totalOT}`
+                if (totalOTVeg > 0) msg += ` (${totalOTVeg} chay)`
+                msg += `\n`
+            }
+            msg += `Tổng: ${grand}`
+            if (grand === 0) {
+                setDailyError("⚠️ Không có dữ liệu cho ngày " + dateDisplay + " — hãy kiểm tra lại.")
+            } else {
+                setDailyMsg(msg)
+            }
+        } catch (e: unknown) {
+            setDailyError(e instanceof Error ? e.message : String(e))
+        } finally {
+            setDailyLoading(false)
+        }
+    }
 
     const fetchSummaryFromDB = async () => {
         setSummaryLoading(true)
@@ -1191,6 +1254,7 @@ export default function BaoCom() {
                     base.seasonal_absent   = (base.seasonal_absent   ?? 0) + (r.seasonal_absent   ?? 0)
                     base.vegetarian        = (base.vegetarian        ?? 0) + (r.vegetarian        ?? 0)
                     base.ot_count          = (base.ot_count          ?? 0) + (r.ot_count          ?? 0)
+                    base.ot_vegetarian     = (base.ot_vegetarian     ?? 0) + (r.ot_vegetarian     ?? 0)
                 }
             })
             setSummaryData([...aggMap.values()].sort((a, b) => a.department_name.localeCompare(b.department_name)))
@@ -1282,10 +1346,16 @@ export default function BaoCom() {
         const totalPresent = rows.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
         const totalVeg = rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)
         const totalOT = rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)
+        const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
         const man = totalPresent - totalVeg
         const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
         const otHour = OT_HOUR[summaryShift] ?? ""
-        const msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}; số phần OT là ${totalOT} (ăn lúc ${otHour})`
+        let msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}`
+        if (totalOT > 0) {
+            msg += `; số phần OT là ${totalOT}`
+            if (totalOTVeg > 0) msg += ` (${totalOTVeg} chay)`
+            msg += ` (ăn lúc ${otHour})`
+        }
         return msg
     }
 
@@ -1694,6 +1764,62 @@ export default function BaoCom() {
                         Tổng hợp báo cơm nhà ăn
                     </div>
 
+                    {/* ── CHỐT SỐ GỬI NHÀ ĂN (tất cả ca trong ngày hôm qua) ── */}
+                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Bell className="h-5 w-5 text-orange-500" />
+                            <span className="font-bold text-orange-700 text-base">Chốt số gửi nhà ăn</span>
+                            <span className="text-xs text-orange-500">(tổng hợp tất cả ca) — luôn chọn ngày hôm qua</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4">
+                            {/* Hiển thị ngày hôm qua dạng read-only */}
+                            <div className="flex items-center gap-2 bg-orange-100 border border-orange-300 rounded-lg px-4 py-2">
+                                <CalendarDays className="h-4 w-4 text-orange-500" />
+                                <span className="text-sm font-bold text-orange-700">
+                                    {format(parseISO(getYesterday()), "EEEE, d/M/yyyy", { locale: undefined })}
+                                </span>
+                                <span className="text-xs text-orange-400 italic">(hôm qua)</span>
+                            </div>
+                            <button
+                                onClick={fetchDailySummary}
+                                disabled={dailyLoading}
+                                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-all shadow-sm disabled:opacity-50"
+                            >
+                                <Bell className="h-4 w-4" />
+                                {dailyLoading ? "Đang tổng hợp..." : "Tổng hợp & Chốt số"}
+                            </button>
+                        </div>
+                        {dailyError && (
+                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{dailyError}</div>
+                        )}
+                        {dailyMsg && (
+                            <div className="bg-white rounded-xl border-2 border-orange-300 shadow-sm p-4">
+                                <div className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2">📋 Tin nhắn chốt số — copy gửi nhà ăn</div>
+                                <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed text-base">{dailyMsg}</pre>
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(dailyMsg)
+                                        setCopiedDaily(true)
+                                        setTimeout(() => setCopiedDaily(false), 2000)
+                                    }}
+                                    className={`mt-3 flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                                        copiedDaily ? "bg-orange-500 text-white" : "bg-orange-100 hover:bg-orange-200 text-orange-700"
+                                    }`}
+                                >
+                                    {copiedDaily ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                    {copiedDaily ? "Đã copy!" : "Copy tin nhắn"}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Chi tiết theo ca (per-shift) ── */}
+                    <div className="border-t border-dashed border-green-200 pt-4">
+                    <div className="flex items-center gap-2 font-semibold text-green-600 text-sm mb-3">
+                        <BarChart3 className="h-4 w-4" />
+                        Chi tiết từng ca (để kiểm tra)
+                    </div>
+
                     {/* Date + Shift selectors */}
                     <div className="flex flex-wrap items-end gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
                         <div className="flex flex-col gap-1">
@@ -1729,6 +1855,7 @@ export default function BaoCom() {
                             <BarChart3 className="h-4 w-4" />
                             {summaryLoading ? "Đang tải..." : "Tổng hợp"}
                         </button>
+                    </div>
                     </div>
 
                     {summaryError && (
