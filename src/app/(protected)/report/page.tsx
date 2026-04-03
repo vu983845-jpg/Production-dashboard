@@ -223,25 +223,21 @@ export default function ReportPage() {
                 .order("work_date", { ascending: true })
                 .order("line_code", { ascending: true })
             
-            // Canonical normalization of shift leader names (Unify all variations into exactly 3 leaders)
+            // Canonical normalization of shift leader names (only 3 valid: Mr. Trí, Mrs. Tâm, Ms. Linh)
             const cleanedLD = (ld ?? []).map((r: any) => {
                 let name = (r.shift_leader || "").trim();
                 if (name) {
                     // Strip diacritics for robust comparison (handles mojibake/encoding issues)
                     const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-                    if (normalized.includes("tri")) name = "Mr. Trí";
-                    else if (normalized.includes("tam")) name = "Mrs. Tâm";
-                    else if (normalized.includes("linh")) name = "Ms. Linh";
-                    else if (normalized.includes("tra")) name = "Mr. Trà";
-                    else {
-                        // Standardize prefix only
-                        name = name.replace(/^(mrs|mr|ms)\.?\s*/i, (m: string, p: string) => {
-                            const pre = p.toLowerCase();
-                            if (pre === 'mrs') return 'Mrs. ';
-                            if (pre === 'mr') return 'Mr. ';
-                            if (pre === 'ms') return 'Ms. ';
-                            return m;
-                        }).replace(/\s+/g, ' ').trim();
+                    // Check raw name too for mojibake patterns
+                    const raw = name.toLowerCase();
+                    if (raw.includes("linh") || normalized.includes("linh")) {
+                        name = "Ms. Linh";
+                    } else if (raw.includes("tâm") || raw.includes("tam") || raw.includes("tã¢m") || normalized.includes("tam")) {
+                        name = "Mrs. Tâm";
+                    } else {
+                        // Everything else (Mr. Trí, corrupted Trí, TrÃ­, etc.) → Mr. Trí
+                        name = "Mr. Trí";
                     }
                 }
                 return { ...r, shift_leader: name };
