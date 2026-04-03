@@ -1148,12 +1148,8 @@ export default function BaoCom() {
         XLSX.writeFile(wb, `bao-com-${statsMonth}.xlsx`)
     }
 
-    // ─── DB-based summary state ───
-    const [summaryDate, setSummaryDate] = useState<string>(() => {
-        const d = new Date()
-        d.setDate(d.getDate() - 1)  // default: hôm qua
-        return d.toISOString().slice(0, 10)
-    })
+    // ─── DB-based summary state (Chi tiết từng ca) ───
+    const [summaryDate, setSummaryDate] = useState<string>(new Date().toISOString().slice(0, 10))  // default: hôm nay
     const [summaryShift, setSummaryShift] = useState<string>("2")
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryData, setSummaryData] = useState<SavedRecord[] | null>(null)
@@ -1164,20 +1160,19 @@ export default function BaoCom() {
     // Add-row state
     const [addRow, setAddRow] = useState<{ deptId: string; officialPresent: number; seasonalPresent: number; vegetarian: number; otCount: number } | null>(null)
 
-    // ─── Daily summary state (chốt số gửi nhà ăn) ───
-    // Ngày hôm qua — tính trực tiếp, không lưu state để tránh chọn nhầm ngày
-    const getYesterday = () => {
+    // ─── Daily summary state (Chốt số gửi nhà ăn) ───
+    // Có thể chọn ngày, default hôm qua
+    const [dailyDate, setDailyDate] = useState<string>(() => {
         const d = new Date()
         d.setDate(d.getDate() - 1)
         return d.toISOString().slice(0, 10)
-    }
+    })
     const [dailyLoading, setDailyLoading] = useState(false)
     const [dailyMsg, setDailyMsg] = useState<string | null>(null)
     const [dailyError, setDailyError] = useState<string | null>(null)
     const [copiedDaily, setCopiedDaily] = useState(false)
 
     const fetchDailySummary = async () => {
-        const yesterday = getYesterday()   // luôn dùng hôm qua
         setDailyLoading(true)
         setDailyError(null)
         setDailyMsg(null)
@@ -1185,7 +1180,7 @@ export default function BaoCom() {
             const { data, error } = await supabase
                 .from("meal_headcount")
                 .select("shift, official_present, seasonal_present, ot_count, vegetarian, ot_vegetarian")
-                .eq("work_date", yesterday)
+                .eq("work_date", dailyDate)
             if (error) throw error
             const rows = (data ?? []) as { shift: string; official_present: number; seasonal_present: number; ot_count: number; vegetarian: number; ot_vegetarian: number }[]
             // Tổng theo từng ca
@@ -1199,7 +1194,7 @@ export default function BaoCom() {
             // Chay OT
             const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
             const grand = ca1 + ca2 + ca3 + totalOT
-            const dateDisplay = format(parseISO(yesterday), "d/M/yyyy")
+            const dateDisplay = format(parseISO(dailyDate), "d/M/yyyy")
             let msg = `Ngày ${dateDisplay}\n`
             if (ca1 > 0) msg += `Ca 1: ${ca1}\n`
             if (ca2 > 0) msg += `Ca 2: ${ca2}\n`
@@ -1769,16 +1764,18 @@ export default function BaoCom() {
                         <div className="flex items-center gap-2">
                             <Bell className="h-5 w-5 text-orange-500" />
                             <span className="font-bold text-orange-700 text-base">Chốt số gửi nhà ăn</span>
-                            <span className="text-xs text-orange-500">(tổng hợp tất cả ca) — luôn chọn ngày hôm qua</span>
+                            <span className="text-xs text-orange-500">(tổng hợp tất cả ca)</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-4">
-                            {/* Hiển thị ngày hôm qua dạng read-only */}
-                            <div className="flex items-center gap-2 bg-orange-100 border border-orange-300 rounded-lg px-4 py-2">
-                                <CalendarDays className="h-4 w-4 text-orange-500" />
-                                <span className="text-sm font-bold text-orange-700">
-                                    {format(parseISO(getYesterday()), "EEEE, d/M/yyyy", { locale: undefined })}
-                                </span>
-                                <span className="text-xs text-orange-400 italic">(hôm qua)</span>
+                            {/* Date picker cho chốt số — default hôm qua, có thể chọn */}
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-medium text-orange-600">Ngày chốt</label>
+                                <input
+                                    type="date"
+                                    value={dailyDate}
+                                    onChange={e => { setDailyDate(e.target.value); setDailyMsg(null) }}
+                                    className="border border-orange-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                />
                             </div>
                             <button
                                 onClick={fetchDailySummary}
