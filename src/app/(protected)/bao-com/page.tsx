@@ -2165,25 +2165,30 @@ export default function BaoCom() {
                                                                                         disabled={rowSaving}
                                                                                         onClick={async () => {
                                                                                             setRowSaving(true)
+                                                                                            // Rebuild pivot fresh from latest statsData to avoid stale closure issue
+                                                                                            // (sr captured in closure may have outdated dayRowIds after prior saves)
+                                                                                            const freshPivot = buildMonthlyPivot(statsData ?? [])
+                                                                                            const freshSr = freshPivot.deptGroups
+                                                                                                .flatMap(dg => dg.sectionRows)
+                                                                                                .find(s => s.sectionName === sr.sectionName && s.shift === sr.shift) ?? sr
                                                                                             let savedCount = 0
                                                                                             for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                 const newVal = parseInt(draftVal) || 0
-                                                                                                const orig = sr.days.get(date) ?? 0
+                                                                                                const orig = freshSr.days.get(date) ?? 0
                                                                                                 if (newVal === orig) continue
-                                                                                                // Find the DB record: prefer dayRowIds (direct), fallback to statsData search by date+shift+name
+                                                                                                // Find the DB record: prefer dayRowIds (direct), fallback to statsData search
                                                                                                 let rec: MealStatRow | undefined
-                                                                                                const rowIds = sr.dayRowIds.get(date) ?? []
+                                                                                                const rowIds = freshSr.dayRowIds.get(date) ?? []
                                                                                                 if (rowIds.length > 0) {
                                                                                                     rec = (statsData ?? []).find(r => r.id === rowIds[0])
                                                                                                 }
                                                                                                 if (!rec) {
                                                                                                     // Fallback: search by date + shift + any department_id that contributed to this section
-                                                                                                    // This handles UUID mismatch (old records with different department_id but same section)
                                                                                                     rec = (statsData ?? []).find(r =>
-                                                                                                        r.work_date === date && r.shift === sr.shift &&
-                                                                                                        ((r.department_id != null && sr.departmentIds.has(r.department_id)) ||
-                                                                                                         r.department_name.toLowerCase().includes(sr.sectionName.split(' ')[0].toLowerCase()) ||
-                                                                                                         sr.sectionName.toLowerCase().startsWith(r.department_name.toLowerCase().split(' ')[0]))
+                                                                                                        r.work_date === date && r.shift === freshSr.shift &&
+                                                                                                        ((r.department_id != null && freshSr.departmentIds.has(r.department_id)) ||
+                                                                                                         r.department_name.toLowerCase().includes(freshSr.sectionName.split(' ')[0].toLowerCase()) ||
+                                                                                                         freshSr.sectionName.toLowerCase().startsWith(r.department_name.toLowerCase().split(' ')[0]))
                                                                                                     )
                                                                                                 }
                                                                                                 if (!rec) continue  // No record to update, skip
