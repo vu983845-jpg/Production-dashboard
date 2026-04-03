@@ -172,7 +172,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
             // Check existing record
             const { data: existing } = await supabase
                 .from("meal_headcount")
-                .select("official_present,seasonal_present,official_absent,seasonal_absent,ot_count,vegetarian")
+                .select("official_present,seasonal_present,official_absent,seasonal_absent,ot_count,vegetarian,ot_vegetarian")
                 .eq("work_date", row.date)
                 .eq("department_id", deptId)
                 .eq("shift", row.shift)
@@ -182,7 +182,9 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
             if (!existing) {
                 toInsert.push({ row, deptId })
             } else if (row.ot_only) {
-                // OT-only update: merge with existing, only overwrite OT fields
+                // OT-only update: keep all non-OT fields from existing, ACCUMULATE OT fields
+                const existingOtCount = (existing as Record<string, number>).ot_count ?? 0
+                const existingOtVeg = (existing as Record<string, number>).ot_vegetarian ?? 0
                 const merged: MealRow = {
                     ...row,
                     official_present: (existing as Record<string, number>).official_present ?? 0,
@@ -190,6 +192,9 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                     official_absent: (existing as Record<string, number>).official_absent ?? 0,
                     seasonal_absent: (existing as Record<string, number>).seasonal_absent ?? 0,
                     vegetarian: (existing as Record<string, number>).vegetarian ?? 0,
+                    // Accumulate OT fields instead of overwriting
+                    ot_count: existingOtCount + (row.ot_count ?? 0),
+                    ot_vegetarian: existingOtVeg + (row.ot_vegetarian ?? 0),
                 }
                 if (isSameData(merged, existing as Record<string, number>)) {
                     alreadySame.push(`${row.dept_display} Ca${row.shift}`)

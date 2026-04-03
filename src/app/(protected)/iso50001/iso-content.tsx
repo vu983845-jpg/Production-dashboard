@@ -85,6 +85,10 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                     <p className="text-muted-foreground text-xs mt-0.5">
                         Performance monitoring and energy baseline tracking.
                     </p>
+                    {/* DEBUG: xóa sau khi fix xong */}
+                    <p className="text-xs mt-1 font-mono bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded inline-block">
+                        🔍 role=&quot;{userRole}&quot; | email=&quot;{userEmail}&quot;
+                    </p>
                 </div>
 
                 {/* Month selector */}
@@ -108,10 +112,10 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                 <TabsList className="grid grid-cols-4 w-full h-9">
                     <TabsTrigger value="dashboard" className="text-xs">📊 Dashboard</TabsTrigger>
                     <TabsTrigger value="seu" className="text-xs">⚡ SEU Tracking</TabsTrigger>
-                    {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
+                    {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
                         <TabsTrigger value="input" className="text-xs">✏️ Data Input</TabsTrigger>
                     )}
-                    {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
+                    {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
                         <TabsTrigger value="baseline" className="text-xs">📐 Baseline Model</TabsTrigger>
                     )}
                 </TabsList>
@@ -136,13 +140,13 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                     )}
                 </TabsContent>
 
-                {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
+                {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
                     <TabsContent value="input">
                         <TabInput seus={seus} currentMonth={currentMonth} onSaved={handleRefresh} />
                     </TabsContent>
                 )}
 
-                {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse') && userEmail !== 'admin@dds.com' && (
+                {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
                     <TabsContent value="baseline">
                         {blLoading ? (
                             <div className="flex justify-center items-center h-48">

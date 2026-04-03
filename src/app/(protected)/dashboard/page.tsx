@@ -220,6 +220,11 @@ export default function DashboardPage() {
 
 
     const [energyHistory, setEnergyHistory] = useState<any[]>([])
+    const [shellingElecHistory, setShellingElecHistory] = useState<any[]>([])
+    const [compressorHistory, setCompressorHistory] = useState<any[]>([])
+    const [compressorMtd, setCompressorMtd] = useState({ total: 0, m1: 0, m2: 0, m3: 0 })
+    const [otherElecSummary, setOtherElecSummary] = useState({ shellingKwh: 0, compressorKwh: 0, peelingCompKwh: 0, woodKg: 0 })
+    const [otherElecMtd, setOtherElecMtd] = useState<Record<string, number>>({})
     const [dailyElecVsProd, setDailyElecVsProd] = useState<any[]>([]) // kWh/T daily breakdown
     const [kpiSummary, setKpiSummary] = useState({
         steamActual: 0, steamTarget: 0,
@@ -266,6 +271,7 @@ export default function DashboardPage() {
             const startFilter = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
             const endFilter = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
             const prevMonthDateStr = format(subDays(startOfMonth(selectedMonth), 1), "yyyy-MM-dd");
+            const nextDayStr = format(addDays(endOfMonth(selectedMonth), 1), "yyyy-MM-dd");
 
             // Parallel fetch all data for better performance
             const [
@@ -276,6 +282,8 @@ export default function DashboardPage() {
                 { data: compData },
                 { data: shellLineData },
                 { data: deptRows },
+                { data: shellKpiRaw },
+                { data: othersRaw },
             ] = await Promise.all([
                 supabase
                     .from('downtime_events')
@@ -305,7 +313,7 @@ export default function DashboardPage() {
                     .from('daily_compressor')
                     .select('*')
                     .gte('work_date', prevMonthDateStr)
-                    .lte('work_date', endFilter)
+                    .lte('work_date', nextDayStr)
                     .order('work_date'),
                 supabase
                     .from('shelling_line_daily')
@@ -316,6 +324,24 @@ export default function DashboardPage() {
                     .from('departments')
                     .select('id, code')
                     .in('code', ['SHELL', 'PEEL_MC']),
+                // Shelling electricity (meter index) - need +1 day for delta
+                (async () => {
+                    const { data: shellDept } = await supabase.from('departments').select('id').eq('code', 'SHELL').single()
+                    if (!shellDept) return { data: [] }
+                    return supabase.from('daily_kpi')
+                        .select('work_date, electricity_meter_reading')
+                        .eq('department_id', shellDept.id)
+                        .gte('work_date', prevMonthDateStr)
+                        .lte('work_date', nextDayStr)
+                        .order('work_date')
+                })(),
+                // daily_electricity_others (sub-meters: contains peeling info via db_ac_hca)
+                supabase
+                    .from('daily_electricity_others')
+                    .select('*')
+                    .gte('work_date', prevMonthDateStr)
+                    .lte('work_date', nextDayStr)
+                    .order('work_date'),
             ]);
 
 
@@ -557,12 +583,13 @@ export default function DashboardPage() {
 
                 let totalCompressorKwhMtd = 0;
                 let dailyCompressorKwhMap: Record<string, number> = {};
+                const compChartPoints: any[] = [];
                 
                 if (compData && compData.length > 0) {
-                    const mapByDate = Object.fromEntries(compData.map(c => [c.work_date, c]));
-                    const daysInSelectedMonth = compData.filter(c => c.work_date >= startFilter);
+                    const mapByDate = Object.fromEntries(compData.map((c: any) => [c.work_date, c]));
+                    const daysInSelectedMonth = compData.filter((c: any) => c.work_date >= startFilter);
                     
-                    daysInSelectedMonth.forEach(curr => {
+                    daysInSelectedMonth.forEach((curr: any) => {
                         // Try to find previous day
                         const prevDateStr = format(subDays(new Date(curr.work_date), 1), "yyyy-MM-dd");
                         const prev = mapByDate[prevDateStr];
@@ -574,8 +601,77 @@ export default function DashboardPage() {
                             const normalizedDate = format(new Date(curr.work_date), 'yyyy-MM-dd');
                             dailyCompressorKwhMap[normalizedDate] = dailyTotal;
                             totalCompressorKwhMtd += dailyTotal;
+                            compChartPoints.push({
+                                name: format(new Date(curr.work_date), 'dd/MM'),
+                                work_date: normalizedDate,
+                                MNK1: Math.round(m1),
+                                MNK2: Math.round(m2),
+                                MNK3: Math.round(m3),
+                                Total: Math.round(dailyTotal),
+                            });
                         }
                     });
+                }
+                setCompressorHistory(compChartPoints);
+
+                // Capture per-meter MTD totals for the new dashboard section
+                const mtdM1 = compChartPoints.reduce((s: number, d: any) => s + (d.MNK1 || 0), 0);
+                const mtdM2 = compChartPoints.reduce((s: number, d: any) => s + (d.MNK2 || 0), 0);
+                const mtdM3 = compChartPoints.reduce((s: number, d: any) => s + (d.MNK3 || 0), 0);
+                setCompressorMtd({ m1: Math.round(mtdM1), m2: Math.round(mtdM2), m3: Math.round(mtdM3), total: Math.round(mtdM1 + mtdM2 + mtdM3) });
+
+                // Process Shelling electricity deltas
+                const shellKpiArr = (shellKpiRaw as any[]) || [];
+                let totalShellingKwh = 0;
+                const shellElecPoints: any[] = [];
+                for (let i = 1; i < shellKpiArr.length; i++) {
+                    const prev = shellKpiArr[i - 1];
+                    const curr = shellKpiArr[i];
+                    if (curr.work_date >= startFilter && curr.work_date <= endFilter) {
+                        const delta = Math.max(0, (curr.electricity_meter_reading || 0) - (prev.electricity_meter_reading || 0));
+                        totalShellingKwh += delta;
+                        shellElecPoints.push({
+                            name: format(new Date(prev.work_date), 'dd/MM'),
+                            work_date: prev.work_date,
+                            kWh: Math.round(delta),
+                        });
+                    }
+                }
+                setShellingElecHistory(shellElecPoints);
+
+                // Process Others electricity (peeling = db_ac_hca proxy) 
+                const othersArr = (othersRaw as any[]) || [];
+                let peelingCompKwhMtd = 0;
+                for (let i = 1; i < othersArr.length; i++) {
+                    const prev = othersArr[i - 1];
+                    const curr = othersArr[i];
+                    if (curr.work_date >= startFilter && curr.work_date <= endFilter) {
+                        peelingCompKwhMtd += Math.max(0, (curr.db_ac_hca || 0) - (prev.db_ac_hca || 0));
+                    }
+                }
+
+                setOtherElecSummary({
+                    shellingKwh: Math.round(totalShellingKwh),
+                    compressorKwh: Math.round(totalCompressorKwhMtd),
+                    peelingCompKwh: Math.round(peelingCompKwhMtd),
+                    woodKg: 0, // will be updated below
+                });
+
+                // ── Compute per-key MTD sums for auxiliary electricity mini-cards ──
+                if (othersRaw && othersRaw.length > 1) {
+                    const KEYS = ['cooling_fan','boiler','office','db_ac_hca','eco2','canteen','transformer','maintenance'];
+                    const sums: Record<string, number> = {};
+                    KEYS.forEach(k => sums[k] = 0);
+                    for (let i = 1; i < othersRaw.length; i++) {
+                        const prevR = othersRaw[i - 1] as any;
+                        const currR = othersRaw[i] as any;
+                        if (currR.work_date >= startFilter && currR.work_date <= endFilter) {
+                            KEYS.forEach(k => {
+                                sums[k] += Math.max(0, (currR[k] || 0) - (prevR[k] || 0));
+                            });
+                        }
+                    }
+                    setOtherElecMtd(sums);
                 }
 
                 Object.keys(dashboards).forEach(key => {
@@ -1733,6 +1829,199 @@ export default function DashboardPage() {
                     </Card>
                 )
             }
+
+            {/* ⚡ Sub-Energy Summary: Điện Shelling / MNK / Củi / Peeling */}
+            {selectedDept === 'all' && (shellingElecHistory.length > 0 || compressorHistory.length > 0) && (
+                <div className="mt-3 md:mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                    {/* KPI Cards — top row: 4 energy items */}
+                    <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {/* Điện Shelling */}
+                        <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
+                            <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">⚡ Điện Shelling</span>
+                            <span className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter">
+                                {otherElecSummary.shellingKwh.toLocaleString('vi-VN')}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">kWh MTD</span>
+                            <div className="h-1.5 bg-orange-100 rounded-full overflow-hidden mt-1">
+                                <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-500" style={{ width: '100%' }} />
+                            </div>
+                        </div>
+
+                        {/* Máy nén khí total */}
+                        <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
+                            <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🔧 Máy nén khí</span>
+                            <span className="text-xl md:text-2xl font-black text-purple-700 tracking-tighter">
+                                {otherElecSummary.compressorKwh.toLocaleString('vi-VN')}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">kWh MTD (3 cụm)</span>
+                            <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden mt-1">
+                                <div className="h-full rounded-full bg-gradient-to-r from-purple-400 to-violet-500" style={{ width: '100%' }} />
+                            </div>
+                        </div>
+
+                        {/* Củi */}
+                        <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
+                            <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🪵 Củi (Biomass)</span>
+                            <span className="text-xl md:text-2xl font-black text-orange-700 tracking-tighter">
+                                {(kpiSummary.woodActual / 1000).toFixed(1)}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                                Tấn MTD / {(kpiSummary.woodTarget / 1000).toFixed(1)} T KH
+                            </span>
+                            <div className="h-1.5 bg-orange-100 rounded-full overflow-hidden mt-1">
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-600"
+                                    style={{ width: `${Math.min(kpiSummary.woodTarget > 0 ? (kpiSummary.woodActual / kpiSummary.woodTarget) * 100 : 0, 100)}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Peeling Compressor */}
+                        <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
+                            <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🧊 Điện Peeling</span>
+                            <span className="text-xl md:text-2xl font-black text-cyan-700 tracking-tighter">
+                                {otherElecSummary.peelingCompKwh > 0 ? otherElecSummary.peelingCompKwh.toLocaleString('vi-VN') : '—'}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">kWh MTD (DB-AC HCA)</span>
+                            <div className="h-1.5 bg-cyan-100 rounded-full overflow-hidden mt-1">
+                                <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-teal-500" style={{ width: '100%' }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Điện Shelling Chart */}
+                    {shellingElecHistory.length > 0 && (
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
+                            <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-3">⚡ Điện Shelling (kWh/ngày)</p>
+                            <ChartWrapper className="h-[180px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={shellingElecHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="shellElecGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#f97316" stopOpacity={0.9}/>
+                                                <stop offset="100%" stopColor="#ea580c" stopOpacity={0.7}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(shellingElecHistory.length / 6)} />
+                                        <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v)} width={32} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(249,115,22,0.08)' }} />
+                                        <Bar dataKey="kWh" name="Điện Shelling" fill="url(#shellElecGrad)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </ChartWrapper>
+                        </div>
+                    )}
+
+                    {/* Máy nén khí chart */}
+                    {compressorHistory.length > 0 && (
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
+                            <p className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3">🔧 Máy Nén Khí – 3 Cụm (kWh/ngày)</p>
+                            <ChartWrapper className="h-[180px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={compressorHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="mnk1Grad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.6}/>
+                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.05}/>
+                                            </linearGradient>
+                                            <linearGradient id="mnk2Grad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#ec4899" stopOpacity={0.6}/>
+                                                <stop offset="95%" stopColor="#ec4899" stopOpacity={0.05}/>
+                                            </linearGradient>
+                                            <linearGradient id="mnk3Grad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.6}/>
+                                                <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.05}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(compressorHistory.length / 6)} />
+                                        <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v)} width={32} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
+                                        <Area type="monotone" dataKey="MNK1" name="Cụm #1" stroke="#8b5cf6" fill="url(#mnk1Grad)" strokeWidth={2} dot={false} />
+                                        <Area type="monotone" dataKey="MNK2" name="Cụm #2,4" stroke="#ec4899" fill="url(#mnk2Grad)" strokeWidth={2} dot={false} />
+                                        <Area type="monotone" dataKey="MNK3" name="Cụm #3,5,6" stroke="#14b8a6" fill="url(#mnk3Grad)" strokeWidth={2} dot={false} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </ChartWrapper>
+                        </div>
+                    )}
+
+                    {/* Củi chart */}
+                    {energyHistory.length > 0 && (
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
+                            <p className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-3">🪵 Củi Biomass (kg/ngày)</p>
+                            <ChartWrapper className="h-[180px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={energyHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#f97316" stopOpacity={0.85}/>
+                                                <stop offset="100%" stopColor="#c2410c" stopOpacity={0.6}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(energyHistory.length / 6)} />
+                                        <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} width={32} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(249,115,22,0.08)' }} />
+                                        <Bar dataKey="WoodActual" name="Củi (kg)" fill="url(#woodGrad)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                        <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={1.5} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </ChartWrapper>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── Auxiliary Electricity Mini-Cards (per sub-meter MTD) ── */}
+            {selectedDept === 'all' && Object.keys(otherElecMtd).some(k => (otherElecMtd[k] || 0) > 0) && (
+                <div className="mt-3 md:mt-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-500" />
+                        <span className="text-xs font-bold text-slate-700 uppercase tracking-widest">Điện Phụ Trợ — Đồng hồ phụ (MTD)</span>
+                        <span className="ml-auto text-[10px] text-slate-400 font-medium">
+                            Tổng: <span className="font-black text-slate-700">{Math.round(Object.values(otherElecMtd).reduce((s, v) => s + v, 0)).toLocaleString('vi-VN')} kWh</span>
+                        </span>
+                    </div>
+                    <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                            { key: 'cooling_fan',  name: 'Cooling Fan', color: '#f97316', icon: '🌀' },
+                            { key: 'boiler',       name: 'Boiler',      color: '#eab308', icon: '🔥' },
+                            { key: 'db_ac_hca',   name: 'AC / DB HCA', color: '#3b82f6', icon: '❄️' },
+                            { key: 'eco2',        name: 'ECO2',        color: '#10b981', icon: '🌿' },
+                            { key: 'canteen',     name: 'Canteen',     color: '#f43f5e', icon: '🍽️' },
+                            { key: 'office',      name: 'Office',      color: '#64748b', icon: '🏢' },
+                            { key: 'transformer', name: 'Transformer', color: '#8b5cf6', icon: '⚡' },
+                            { key: 'maintenance', name: 'Maintenance', color: '#06b6d4', icon: '🔧' },
+                        ].map(meter => {
+                            const val = Math.round(otherElecMtd[meter.key] || 0)
+                            const totalOther = Object.values(otherElecMtd).reduce((s, v) => s + v, 0)
+                            const pct = totalOther > 0 ? Math.round((val / totalOther) * 100) : 0
+                            return (
+                                <div key={meter.key} className="relative p-3 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-0.5" style={{ backgroundColor: meter.color }} />
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1">
+                                            <span>{meter.icon}</span> {meter.name}
+                                        </span>
+                                        <span className="text-[10px] font-black" style={{ color: meter.color }}>{pct}%</span>
+                                    </div>
+                                    <div className="text-base font-black text-slate-800 tabular-nums leading-tight">
+                                        {val > 0 ? val.toLocaleString('vi-VN') : <span className="text-slate-300 text-sm font-medium">Chưa có</span>}
+                                        {val > 0 && <span className="text-[10px] font-normal text-slate-400 ml-1">kWh</span>}
+                                    </div>
+                                    <div className="mt-1.5 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: meter.color }} />
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* ⚡ Daily Electricity Intensity vs Shell+Peel Output — moved below energy card */}
             {dailyElecVsProd.length > 0 && (
