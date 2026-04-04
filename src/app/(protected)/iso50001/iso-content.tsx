@@ -127,12 +127,12 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                 </TabsContent>
 
                 <TabsContent value="seu">
-                    {isLoading ? (
+                    {blLoading ? (
                         <div className="flex justify-center items-center h-48">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                         </div>
                     ) : (
-                        <TabAnalysis summaries={summaries} historical={dashboardHistorical} currentMonth={currentMonth} />
+                        <TabAnalysis summaries={summaries} historical={historical} currentMonth={currentMonth} />
                     )}
                 </TabsContent>
 
