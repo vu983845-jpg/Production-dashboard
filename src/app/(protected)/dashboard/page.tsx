@@ -590,13 +590,16 @@ export default function DashboardPage() {
                     const daysInSelectedMonth = compData.filter((c: any) => c.work_date >= startFilter);
                     
                     daysInSelectedMonth.forEach((curr: any) => {
-                        // Try to find previous day
+                        // Find previous available reading (handles gaps in data)
                         const prevDateStr = format(subDays(new Date(curr.work_date), 1), "yyyy-MM-dd");
                         const prev = mapByDate[prevDateStr];
                         if (prev && prev.meter1 != null && prev.meter2 != null && prev.meter3 != null) {
-                            const m1 = Math.max(0, (curr.meter1||0) - prev.meter1) * 1000;
-                            const m2 = Math.max(0, (curr.meter2||0) - prev.meter2) * 1000;
-                            const m3 = Math.max(0, (curr.meter3||0) - prev.meter3) * 1000;
+                            const diffDays = 1; // prev is always 1 day before (guaranteed by prevDateStr lookup)
+                            // meter unit = MWh → multiply by 1000 to get kWh (same as energy page computeDeltas multiplier=1000)
+                            const m1 = Math.max(0, ((curr.meter1||0) - prev.meter1) / diffDays) * 1000;
+                            const m2 = Math.max(0, ((curr.meter2||0) - prev.meter2) / diffDays) * 1000;
+                            const m3 = Math.max(0, ((curr.meter3||0) - prev.meter3) / diffDays) * 1000;
+                            // Total = tổng 3 cụm MNK (#1 + #2,4 + #3,5,6)
                             const dailyTotal = m1 + m2 + m3;
                             const normalizedDate = format(new Date(curr.work_date), 'yyyy-MM-dd');
                             dailyCompressorKwhMap[normalizedDate] = dailyTotal;
@@ -604,9 +607,9 @@ export default function DashboardPage() {
                             compChartPoints.push({
                                 name: format(new Date(curr.work_date), 'dd/MM'),
                                 work_date: normalizedDate,
-                                MNK1: Math.round(m1),
-                                MNK2: Math.round(m2),
-                                MNK3: Math.round(m3),
+                                MNK1: Math.round(m1),  // Cụm #1
+                                MNK2: Math.round(m2),  // Cụm #2, #4
+                                MNK3: Math.round(m3),  // Cụm #3, #5, #6
                                 Total: Math.round(dailyTotal),
                             });
                         }

@@ -30,6 +30,9 @@ export default function EnergyDashboardPage() {
     const [compressorData, setCompressorData] = useState<any[]>([])
     const [otherElecData, setOtherElecData] = useState<any[]>([])
     const [shellingData, setShellingData] = useState<any[]>([])
+    // SEU multi-month trend
+    const [seuTrend, setSeuTrend] = useState<any[]>([])
+    const [seuLoading, setSeuLoading] = useState(false)
 
     const goToPreviousMonth = () => setCurrentMonth(prev => subMonths(prev, 1))
     const goToNextMonth = () => setCurrentMonth(prev => addMonths(prev, 1))
@@ -200,6 +203,133 @@ export default function EnergyDashboardPage() {
         fetchDashboardData()
     }, [currentMonth, supabase])
 
+    // ── SEU Multi-month trend fetch (independent of selected month) ──────────
+    useEffect(() => {
+        const fetchSeuTrend = async () => {
+            setSeuLoading(true)
+            try {
+                const today = new Date()
+                const NUM_MONTHS = 12
+                // Build array of month start/end dates for last 12 months
+                const months: { label: string; start: string; end: string; prevEnd: string }[] = []
+                for (let i = NUM_MONTHS - 1; i >= 0; i--) {
+                    const d = subMonths(startOfMonth(today), i)
+                    months.push({
+                        label: format(d, 'MM/yyyy'),
+                        start: format(startOfMonth(d), 'yyyy-MM-dd'),
+                        end:   format(endOfMonth(d), 'yyyy-MM-dd'),
+                        prevEnd: format(subDays(startOfMonth(d), 1), 'yyyy-MM-dd'),
+                    })
+                }
+
+                // Fetch shell dept id once
+                const { data: shellDept } = await supabase.from('departments').select('id').eq('code', 'SHELL').single()
+
+                // Fetch all raw data in parallel covering the full range
+                const rangeStart = months[0].prevEnd   // day before first month
+                const rangeEnd   = months[months.length - 1].end
+
+                const [
+                    { data: energyRaw },
+                    { data: compRaw },
+                    { data: shellKpiRaw },
+                ] = await Promise.all([
+                    supabase.from('daily_energy')
+                        .select('work_date, electricity_kwh, wood_kg')
+                        .gte('work_date', rangeStart)
+                        .lte('work_date', rangeEnd)
+                        .order('work_date'),
+                    supabase.from('daily_compressor')
+                        .select('work_date, meter1, meter2, meter3')
+                        .gte('work_date', rangeStart)
+                        .lte('work_date', rangeEnd)
+                        .order('work_date'),
+                    shellDept
+                        ? supabase.from('daily_kpi')
+                            .select('work_date, electricity_meter_reading')
+                            .eq('department_id', shellDept.id)
+                            .gte('work_date', rangeStart)
+                            .lte('work_date', rangeEnd)
+                            .order('work_date')
+                        : Promise.resolve({ data: [] }),
+                ])
+
+                // Build lookup maps by date
+                const energyMap: Record<string, { kwh: number; wood: number }> = {}
+                ;(energyRaw || []).forEach((r: any) => {
+                    energyMap[r.work_date] = { kwh: Number(r.electricity_kwh || 0), wood: Number(r.wood_kg || 0) }
+                })
+
+                const compMap: Record<string, { m1: number; m2: number; m3: number }> = {}
+                ;(compRaw || []).forEach((r: any) => {
+                    compMap[r.work_date] = { m1: Number(r.meter1 || 0), m2: Number(r.meter2 || 0), m3: Number(r.meter3 || 0) }
+                })
+
+                const shellMap: Record<string, number> = {}
+                ;(shellKpiRaw || []).forEach((r: any) => {
+                    shellMap[r.work_date] = Number(r.electricity_meter_reading || 0)
+                })
+
+                // Helper: find closest available reading on or before a given date
+                const findReading = (map: Record<string, any>, dateStr: string) => {
+                    if (map[dateStr]) return map[dateStr]
+                    // Walk back up to 5 days
+                    for (let d = 1; d <= 5; d++) {
+                        const prev = format(subDays(new Date(dateStr), d), 'yyyy-MM-dd')
+                        if (map[prev] !== undefined) return map[prev]
+                    }
+                    return null
+                }
+
+                // Aggregate per month
+                const trendPoints = months.map(m => {
+                    // Factory electricity: sum all days in month
+                    let factoryKwh = 0
+                    let woodKg = 0
+                    const dates = Object.keys(energyMap).filter(d => d >= m.start && d <= m.end)
+                    dates.forEach(d => {
+                        factoryKwh += energyMap[d].kwh
+                        woodKg += energyMap[d].wood
+                    })
+
+                    // Compressor: last reading in month minus last reading of prev month
+                    const compEnd = findReading(compMap, m.end)
+                    const compPrev = findReading(compMap, m.prevEnd)
+                    let compKwh = 0
+                    if (compEnd && compPrev) {
+                        compKwh = Math.max(0,
+                            ((compEnd.m1 - compPrev.m1) + (compEnd.m2 - compPrev.m2) + (compEnd.m3 - compPrev.m3)) * 1000
+                        )
+                    }
+
+                    // Shelling: last reading in month minus last reading of prev month
+                    const shellEnd = findReading(shellMap, m.end)
+                    const shellPrev = findReading(shellMap, m.prevEnd)
+                    let shellingKwh = 0
+                    if (shellEnd !== null && shellPrev !== null) {
+                        shellingKwh = Math.max(0, (shellEnd as number) - (shellPrev as number))
+                    }
+
+                    return {
+                        label: m.label,
+                        factoryKwh: Math.round(factoryKwh),
+                        compKwh: Math.round(compKwh),
+                        shellingKwh: Math.round(shellingKwh),
+                        woodTons: Math.round((woodKg / 1000) * 10) / 10,  // kg → Tons, 1 decimal
+                    }
+                }).filter(m => m.factoryKwh > 0 || m.compKwh > 0 || m.shellingKwh > 0 || m.woodTons > 0)
+
+                setSeuTrend(trendPoints)
+            } catch (e) {
+                console.error('SEU trend fetch error:', e)
+            } finally {
+                setSeuLoading(false)
+            }
+        }
+        fetchSeuTrend()
+    }, [supabase]) // runs once on mount
+    // ─────────────────────────────────────────────────────────────────────────
+
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
@@ -277,6 +407,9 @@ export default function EnergyDashboardPage() {
                 <TabsList className="bg-white/60 backdrop-blur-md border border-slate-200/60 shadow-sm rounded-xl p-1 w-full justify-start h-auto flex flex-wrap gap-1">
                     <TabsTrigger value="energy_dashboard" className="data-[state=active]:bg-[#e63121] data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
                         <Zap className="h-4 w-4 mr-2" /> Energy Dashboard
+                    </TabsTrigger>
+                    <TabsTrigger value="seu_trend" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
+                        📊 SEU — Xu hướng
                     </TabsTrigger>
                     <TabsTrigger value="iso50001" className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
                         <ShieldCheck className="h-4 w-4 mr-2" /> ISO 50001 EnMS
@@ -691,6 +824,200 @@ export default function EnergyDashboardPage() {
                 </div>
             )}
                 </TabsContent>
+
+                {/* ══════════════════════════════════════════════════════════════════
+                    SEU TREND TAB — 4 Significant Energy Uses across months
+                ══════════════════════════════════════════════════════════════════ */}
+                <TabsContent value="seu_trend" className="m-0 mt-0">
+                    {seuLoading ? (
+                        <div className="flex flex-col items-center justify-center h-[400px] gap-4">
+                            <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
+                            <p className="text-muted-foreground font-medium animate-pulse">Đang tổng hợp dữ liệu SEU...</p>
+                        </div>
+                    ) : seuTrend.length === 0 ? (
+                        <div className="flex items-center justify-center h-[300px] text-slate-400 font-medium">Chưa có đủ dữ liệu để hiển thị xu hướng SEU</div>
+                    ) : (
+                        <div className="space-y-4">
+
+                            {/* Header */}
+                            <div className="flex flex-col gap-1">
+                                <h3 className="text-xl font-black text-slate-800">SEU — Sử dụng Năng lượng Đáng kể</h3>
+                                <p className="text-xs text-slate-500">4 nguồn SEU &bull; {seuTrend.length} tháng gần nhất &bull; So sánh theo tháng</p>
+                            </div>
+
+                            {/* Summary KPI cards — latest month vs prev month */}
+                            {(() => {
+                                const last = seuTrend[seuTrend.length - 1]
+                                const prev = seuTrend.length > 1 ? seuTrend[seuTrend.length - 2] : null
+                                const cards = [
+                                    { label: 'Điện Tổng NM', value: last.factoryKwh, prev: prev?.factoryKwh, unit: 'kWh', color: '#e63121', icon: '⚡' },
+                                    { label: 'Điện Máy Nén Khí', value: last.compKwh, prev: prev?.compKwh, unit: 'kWh', color: '#8b5cf6', icon: '🔧' },
+                                    { label: 'Điện Shelling', value: last.shellingKwh, prev: prev?.shellingKwh, unit: 'kWh', color: '#f97316', icon: '🌀' },
+                                    { label: 'Củi Lò Hơi', value: last.woodTons, prev: prev?.woodTons, unit: 'Tấn', color: '#ca8a04', icon: '🪵' },
+                                ]
+                                return (
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                        {cards.map(c => {
+                                            const chg = prev && c.prev > 0 ? ((c.value - c.prev) / c.prev) * 100 : null
+                                            return (
+                                                <div key={c.label} className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-full h-0.5" style={{ backgroundColor: c.color }} />
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.icon} {c.label}</span>
+                                                        {chg !== null && (
+                                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                                                                Math.abs(chg) < 1 ? 'bg-slate-100 text-slate-500'
+                                                                : chg < 0 ? 'bg-emerald-50 text-emerald-700'
+                                                                : 'bg-red-50 text-red-600'
+                                                            }`}>
+                                                                {chg > 0 ? '+' : ''}{chg.toFixed(1)}%
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-2xl font-black tabular-nums" style={{ color: c.color }}>
+                                                        {c.value.toLocaleString('vi-VN')}
+                                                        <span className="text-xs font-normal text-slate-400 ml-1">{c.unit}</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 mt-1">{last.label} &bull; trước: {prev ? (c.unit === 'Tấn' ? c.prev?.toLocaleString('vi-VN') : (c.prev as number)?.toLocaleString('vi-VN')) : '—'} {c.unit}</p>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )
+                            })()}
+
+                            {/* Main SEU Chart — grouped bar + line (wood on right axis) */}
+                            <Card className="shadow-xl shadow-emerald-900/5 bg-white/70 backdrop-blur-xl border-white/60">
+                                <CardHeader className="pb-3 border-b border-slate-100">
+                                    <CardTitle className="text-lg font-bold text-slate-800">Biểu đồ SEU — {seuTrend.length} tháng gần nhất</CardTitle>
+                                    <CardDescription className="text-xs font-medium mt-1">
+                                        Cột: Điện tổng NM / Máy nén khí / Shelling (kWh) &bull; Đường: Củi lò hơi (Tấn)
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="pt-6 h-[420px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={seuTrend} margin={{ top: 10, right: 60, left: 10, bottom: 20 }}>
+                                            <defs>
+                                                <linearGradient id="gradFactory" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/>
+                                                    <stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/>
+                                                </linearGradient>
+                                                <linearGradient id="gradComp" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9}/>
+                                                    <stop offset="100%" stopColor="#6d28d9" stopOpacity={0.7}/>
+                                                </linearGradient>
+                                                <linearGradient id="gradShell" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#f97316" stopOpacity={0.9}/>
+                                                    <stop offset="100%" stopColor="#ea580c" stopOpacity={0.7}/>
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis
+                                                dataKey="label"
+                                                tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }}
+                                                tickLine={false} axisLine={false} dy={8}
+                                            />
+                                            <YAxis
+                                                yAxisId="kwh"
+                                                tickLine={false} axisLine={false}
+                                                tick={{ fontSize: 10, fill: '#64748b' }}
+                                                tickFormatter={v => v >= 100000 ? `${(v/1000).toFixed(0)}k` : v.toLocaleString('vi-VN')}
+                                                label={{ value: 'kWh', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10, fill: '#94a3b8' } }}
+                                                width={60}
+                                            />
+                                            <YAxis
+                                                yAxisId="wood"
+                                                orientation="right"
+                                                tickLine={false} axisLine={false}
+                                                tick={{ fontSize: 10, fill: '#ca8a04' }}
+                                                tickFormatter={v => `${v.toFixed(0)}T`}
+                                                width={50}
+                                                label={{ value: 'Củi (T)', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10, fill: '#ca8a04' } }}
+                                            />
+                                            <Tooltip
+                                                content={({ active, payload, label }) => {
+                                                    if (!active || !payload?.length) return null
+                                                    return (
+                                                        <div className="bg-white/95 border border-slate-100 rounded-xl shadow-xl p-3 text-xs min-w-[200px]">
+                                                            <p className="font-black text-slate-700 mb-2 border-b pb-1">📅 {label}</p>
+                                                            {payload.map((p: any, i: number) => (
+                                                                <div key={i} className="flex justify-between gap-4 py-0.5">
+                                                                    <span className="flex items-center gap-1.5 text-slate-600">
+                                                                        <span className="w-2.5 h-2.5 rounded-sm" style={{ background: p.color }} />
+                                                                        {p.name}
+                                                                    </span>
+                                                                    <span className="font-bold text-slate-800 tabular-nums">
+                                                                        {Number(p.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}
+                                                                        <span className="text-slate-400 ml-1">{p.name.includes('Củi') ? 'T' : 'kWh'}</span>
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )
+                                                }}
+                                            />
+                                            <Legend
+                                                iconType="circle" iconSize={10}
+                                                wrapperStyle={{ fontSize: 11, fontWeight: 600, paddingTop: 12 }}
+                                            />
+                                            <Bar yAxisId="kwh" dataKey="factoryKwh" name="⚡ Điện Tổng NM" fill="url(#gradFactory)" radius={[4,4,0,0]} maxBarSize={28} />
+                                            <Bar yAxisId="kwh" dataKey="compKwh" name="🔧 Máy Nén Khí" fill="url(#gradComp)" radius={[4,4,0,0]} maxBarSize={28} />
+                                            <Bar yAxisId="kwh" dataKey="shellingKwh" name="🌀 Điện Shelling" fill="url(#gradShell)" radius={[4,4,0,0]} maxBarSize={28} />
+                                            <Line
+                                                yAxisId="wood"
+                                                type="monotone"
+                                                dataKey="woodTons"
+                                                name="🪵 Củi Lò Hơi"
+                                                stroke="#ca8a04"
+                                                strokeWidth={3}
+                                                dot={{ r: 5, fill: '#ca8a04', strokeWidth: 0 }}
+                                                activeDot={{ r: 7, strokeWidth: 0 }}
+                                            />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </CardContent>
+                            </Card>
+
+                            {/* Data Table */}
+                            <Card className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-sm">
+                                <CardHeader className="pb-2 border-b border-slate-100">
+                                    <CardTitle className="text-sm font-bold text-slate-600">Bảng tổng hợp SEU theo tháng</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-slate-50 border-b border-slate-200">
+                                                <tr>
+                                                    <th className="text-left p-3 font-bold text-slate-600">Tháng</th>
+                                                    <th className="text-right p-3 font-bold" style={{ color: '#e63121' }}>⚡ Điện Tổng (kWh)</th>
+                                                    <th className="text-right p-3 font-bold" style={{ color: '#8b5cf6' }}>🔧 MNK (kWh)</th>
+                                                    <th className="text-right p-3 font-bold" style={{ color: '#f97316' }}>🌀 Shelling (kWh)</th>
+                                                    <th className="text-right p-3 font-bold" style={{ color: '#ca8a04' }}>🪵 Củi (Tấn)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {[...seuTrend].reverse().map((row, i) => {
+                                                    const isLatest = i === 0
+                                                    return (
+                                                        <tr key={row.label} className={`transition-colors ${ isLatest ? 'bg-emerald-50/60 font-bold' : 'hover:bg-slate-50' }`}>
+                                                            <td className="p-3 font-bold text-slate-800">{row.label}{isLatest && <span className="ml-2 text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-black">Hiện tại</span>}</td>
+                                                            <td className="p-3 text-right tabular-nums" style={{ color: '#e63121' }}>{row.factoryKwh > 0 ? row.factoryKwh.toLocaleString('vi-VN') : <span className="text-slate-300">—</span>}</td>
+                                                            <td className="p-3 text-right tabular-nums" style={{ color: '#8b5cf6' }}>{row.compKwh > 0 ? row.compKwh.toLocaleString('vi-VN') : <span className="text-slate-300">—</span>}</td>
+                                                            <td className="p-3 text-right tabular-nums" style={{ color: '#f97316' }}>{row.shellingKwh > 0 ? row.shellingKwh.toLocaleString('vi-VN') : <span className="text-slate-300">—</span>}</td>
+                                                            <td className="p-3 text-right tabular-nums" style={{ color: '#ca8a04' }}>{row.woodTons > 0 ? row.woodTons.toLocaleString('vi-VN') : <span className="text-slate-300">—</span>}</td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                        </div>
+                    )}
+                </TabsContent>
+
                 <TabsContent value="iso50001" className="m-0 mt-4">
                     <ISO50001Content userRole={userRole} userEmail={userEmail} />
                 </TabsContent>

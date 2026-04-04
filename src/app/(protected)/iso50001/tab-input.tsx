@@ -1,13 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { format, parseISO } from "date-fns"
-import { vi } from "date-fns/locale"
+import { useState, useEffect, useCallback } from "react"
+import {
+    format, parseISO, getDaysInMonth, startOfMonth,
+    addDays, isToday, isFuture
+} from "date-fns"
+import { vi as viLocale } from "date-fns/locale"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Zap, Flame, Plus, Trash2 } from "lucide-react"
+import { Loader2, Zap, Flame, CheckCircle2, XCircle, Pencil, Trash2, X, Save } from "lucide-react"
 import { SeuMaster, DailyEntry, fmtNum } from "./types"
 
 interface Props {
@@ -16,67 +19,108 @@ interface Props {
     onSaved: () => void
 }
 
-const EMPTY_ROW = { entry_date: '', actual_energy: {} as Record<number, string>, rcn_hap_duoc_kg: {} as Record<number, string>, notes: '' }
+interface CellData {
+    id: number
+    actual_energy: number
+    rcn_hap_duoc_kg: number
+    notes?: string
+}
+
+// Map: "yyyy-MM-dd" -> { [seu_id]: CellData }
+type GridData = Record<string, Record<number, CellData>>
+
+interface EditState {
+    date: string
+    seuId: number
+    energy: string
+    rcn: string
+    notes: string
+    existingId?: number
+}
 
 export function TabInput({ seus, currentMonth, onSaved }: Props) {
-    const [form, setForm] = useState({ ...EMPTY_ROW })
+    const [gridData, setGridData] = useState<GridData>({})
+    const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [edit, setEdit] = useState<EditState | null>(null)
     const [error, setError] = useState<string | null>(null)
-    const [success, setSuccess] = useState(false)
-
-    // Recent entries state
-    const [recentEntries, setRecentEntries] = useState<DailyEntry[]>([])
-    const [loadingRecent, setLoadingRecent] = useState(false)
-
-    const elecSeu = seus.find(s => s.energy_type === 'electricity')
-    const woodSeu = seus.find(s => s.energy_type === 'wood')
+    const [successCell, setSuccessCell] = useState<string | null>(null) // "date|seuId"
 
     const monthStr = format(currentMonth, 'yyyy-MM')
+    const daysInMonth = getDaysInMonth(currentMonth)
 
-    const fetchRecent = async () => {
-        setLoadingRecent(true)
-        const res = await fetch(`/api/iso50001/daily-input?month=${monthStr}`)
-        const json = await res.json()
-        setRecentEntries(json.data || [])
-        setLoadingRecent(false)
+    // Build list of days for this month
+    const days = Array.from({ length: daysInMonth }, (_, i) => {
+        const d = addDays(startOfMonth(currentMonth), i)
+        return format(d, 'yyyy-MM-dd')
+    })
+
+    const fetchData = useCallback(async () => {
+        setLoading(true)
+        try {
+            const res = await fetch(`/api/iso50001/daily-input?month=${monthStr}`)
+            const json = await res.json()
+            const entries: DailyEntry[] = json.data || []
+            const grid: GridData = {}
+            for (const e of entries) {
+                const dk = e.entry_date.slice(0, 10)
+                if (!grid[dk]) grid[dk] = {}
+                grid[dk][e.seu_id] = {
+                    id: e.id,
+                    actual_energy: e.actual_energy,
+                    rcn_hap_duoc_kg: e.rcn_hap_duoc_kg,
+                    notes: e.notes,
+                }
+            }
+            setGridData(grid)
+        } finally {
+            setLoading(false)
+        }
+    }, [monthStr])
+
+    useEffect(() => { fetchData() }, [fetchData])
+
+    const openEdit = (date: string, seu: SeuMaster) => {
+        const existing = gridData[date]?.[seu.seu_id]
+        setEdit({
+            date,
+            seuId: seu.seu_id,
+            energy: existing ? String(existing.actual_energy) : '',
+            rcn: existing ? String(existing.rcn_hap_duoc_kg) : '',
+            notes: existing?.notes || '',
+            existingId: existing?.id,
+        })
+        setError(null)
     }
 
-    // Toggle show recent on mount effect replacement — called when tab renders
-    useState(() => { fetchRecent() })
-
-    const handleSave = async (seuId: number) => {
-        const targetEnergy = form.actual_energy[seuId]
-        const targetRcn = form.rcn_hap_duoc_kg[seuId]
-        if (!form.entry_date || !targetEnergy || !targetRcn) {
-            setError('Vui lòng điền đầy đủ ngày, năng lượng và Sản lượng cho trạm này.')
+    const handleSave = async () => {
+        if (!edit) return
+        if (!edit.energy || !edit.rcn) {
+            setError('Vui lòng nhập đầy đủ Tiêu thụ và Sản lượng')
             return
         }
         setSaving(true)
         setError(null)
-        setSuccess(false)
         try {
             const res = await fetch('/api/iso50001/daily-input', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    entry_date: form.entry_date,
-                    seu_id: seuId,
-                    actual_energy: Number(targetEnergy),
-                    rcn_hap_duoc_kg: Number(targetRcn),
-                    notes: form.notes,
+                    entry_date: edit.date,
+                    seu_id: edit.seuId,
+                    actual_energy: Number(edit.energy),
+                    rcn_hap_duoc_kg: Number(edit.rcn),
+                    notes: edit.notes,
                 }),
             })
             const json = await res.json()
             if (!res.ok) throw new Error(json.error)
-            setSuccess(true)
-            setForm(prev => ({ 
-                ...prev, 
-                actual_energy: { ...prev.actual_energy, [seuId]: '' },
-                rcn_hap_duoc_kg: { ...prev.rcn_hap_duoc_kg, [seuId]: '' }
-            }))
-            fetchRecent()
+            const cellKey = `${edit.date}|${edit.seuId}`
+            setSuccessCell(cellKey)
+            setTimeout(() => setSuccessCell(null), 2000)
+            setEdit(null)
+            await fetchData()
             onSaved()
-            setTimeout(() => setSuccess(false), 3000)
         } catch (e: any) {
             setError(e.message)
         } finally {
@@ -84,148 +128,256 @@ export function TabInput({ seus, currentMonth, onSaved }: Props) {
         }
     }
 
-    const handleDelete = async (id: number) => {
-        if (!confirm('Xóa dòng này?')) return
-        await fetch(`/api/iso50001/daily-input?id=${id}`, { method: 'DELETE' })
-        fetchRecent()
+    const handleDelete = async (date: string, seuId: number) => {
+        const cell = gridData[date]?.[seuId]
+        if (!cell) return
+        if (!confirm(`Xóa dữ liệu ngày ${date} cho SEU này?`)) return
+        await fetch(`/api/iso50001/daily-input?id=${cell.id}`, { method: 'DELETE' })
+        await fetchData()
         onSaved()
     }
 
+    // Stats
+    const totalCells = days.filter(d => !isFuture(parseISO(d))).length * seus.length
+    const filledCells = Object.values(gridData).reduce((a, v) => a + Object.keys(v).length, 0)
+    const missingCells = totalCells - filledCells
+
+    const seuColor = (eu: SeuMaster) =>
+        eu.energy_type === 'electricity'
+            ? { header: 'bg-blue-600', light: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: <Zap className="h-3 w-3 inline mr-0.5" /> }
+            : { header: 'bg-orange-600', light: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', icon: <Flame className="h-3 w-3 inline mr-0.5" /> }
+
     return (
         <div className="space-y-4">
-            <p className="text-xs text-muted-foreground">
-                Nhập dữ liệu năng lượng thực tế hàng ngày. Một dữ liệu cho mỗi SEU mỗi ngày.
-            </p>
+            {/* Summary bar */}
+            <div className="flex items-center gap-4 text-xs">
+                <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {filledCells} ô đã có data
+                </span>
+                <span className="flex items-center gap-1.5 text-red-500 font-medium">
+                    <XCircle className="h-3.5 w-3.5" />
+                    {missingCells} ô còn thiếu
+                </span>
+                <span className="text-muted-foreground ml-auto">
+                    Click ô để nhập / sửa — ô 🟢 đã có, ô 🔴 còn trống
+                </span>
+            </div>
 
-            {/* Input Form */}
-            <Card className="shadow-sm">
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Nhập dữ liệu mới</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Common Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <Label className="text-xs">Ngày *</Label>
-                            <Input
-                                type="date"
-                                value={form.entry_date}
-                                onChange={e => setForm(f => ({ ...f, entry_date: e.target.value }))}
-                                min={format(currentMonth, 'yyyy-MM') + '-01'}
-                                max={format(currentMonth, 'yyyy-MM') + '-31'}
-                                className="h-9 text-sm"
-                            />
-                        </div>
-                        <div>
-                            <Label className="text-xs">Ghi chú (áp dụng chung)</Label>
-                            <Input
-                                placeholder="Ghi chú..."
-                                value={form.notes}
-                                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                                className="h-9 text-sm"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Error / Success */}
-                    {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>}
-                    {success && <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">✓ Đã lưu thành công!</p>}
-
-                    {/* Save buttons: one per SEU */}
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                        {seus.map(s => {
-                            const isElec = s.energy_type === 'electricity'
-                            const bg = isElec ? 'bg-blue-50/30 border-blue-100' : 'bg-orange-50/30 border-orange-100'
-                            const text = isElec ? 'text-blue-700' : 'text-orange-700'
-                            const btnBg = isElec ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'
-                            const Icon = isElec ? Zap : Flame
-
-                            return (
-                                <div key={s.seu_id} className={`border rounded-lg p-3 space-y-2 ${bg}`}>
-                                    <p className={`text-xs font-semibold flex items-center gap-1.5 ${text}`}>
-                                        <Icon className="h-3.5 w-3.5" /> {s.name}
-                                    </p>
-                                    <div>
-                                        <Label className="text-xs">Tiêu thụ ({s.unit}) *</Label>
-                                        <Input
-                                            type="number" placeholder={`e.g. ${isElec ? '12500' : '8000'}`}
-                                            value={form.actual_energy[s.seu_id] || ''}
-                                            onChange={e => setForm(f => ({ 
-                                                ...f, 
-                                                actual_energy: { ...f.actual_energy, [s.seu_id]: e.target.value }
-                                            }))}
-                                            className="h-9 text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-xs">Sản lượng (kg) *</Label>
-                                        <Input
-                                            type="number" placeholder="e.g. 25000"
-                                            value={form.rcn_hap_duoc_kg[s.seu_id] || ''}
-                                            onChange={e => setForm(f => ({ 
-                                                ...f, 
-                                                rcn_hap_duoc_kg: { ...f.rcn_hap_duoc_kg, [s.seu_id]: e.target.value }
-                                            }))}
-                                            className="h-9 text-sm"
-                                        />
-                                    </div>
-                                    <Button size="sm" className={`w-full h-8 text-xs ${btnBg}`}
-                                        onClick={() => handleSave(s.seu_id)} disabled={saving}>
-                                        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="h-3.5 w-3.5 mr-1" />Lưu dữ liệu</>}
-                                    </Button>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Recent Entries */}
             <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Dữ liệu đã nhập — {format(currentMonth, 'MM/yyyy')}</CardTitle>
+                    <CardTitle className="text-sm flex items-center justify-between">
+                        <span>Bảng dữ liệu tháng {format(currentMonth, 'MM/yyyy')}</span>
+                        {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                    </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    {loadingRecent ? (
-                        <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                    ) : recentEntries.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-6">Chưa có dữ liệu</p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                                <thead>
-                                    <tr className="border-b text-muted-foreground">
-                                        <th className="text-left py-1.5 pr-3">Ngày</th>
-                                        <th className="text-left py-1.5 pr-3">SEU</th>
-                                        <th className="text-right py-1.5 pr-3">Năng lượng</th>
-                                        <th className="text-right py-1.5 pr-3">Sản lượng (kg)</th>
-                                        <th className="text-left py-1.5 pr-3">Ghi chú</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {recentEntries.map(e => (
-                                        <tr key={e.id} className="border-b hover:bg-muted/30">
-                                            <td className="py-1.5 pr-3 font-mono">{format(parseISO(e.entry_date), 'dd/MM/yyyy')}</td>
-                                            <td className="py-1.5 pr-3">{e.seu?.name}</td>
-                                            <td className="py-1.5 pr-3 text-right font-mono">
-                                                {fmtNum(e.actual_energy)} {e.seu?.unit}
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse">
+                            <thead>
+                                <tr>
+                                    {/* Day column */}
+                                    <th className="text-left px-3 py-2 bg-slate-100 border border-slate-200 font-semibold text-slate-600 sticky left-0 z-10 min-w-[80px]">
+                                        Ngày
+                                    </th>
+                                    {seus.map(s => {
+                                        const c = seuColor(s)
+                                        return (
+                                            <th key={s.seu_id} colSpan={2}
+                                                className={`text-center px-2 py-2 border border-slate-200 font-semibold text-white ${c.header}`}>
+                                                {c.icon}{s.name}
+                                            </th>
+                                        )
+                                    })}
+                                </tr>
+                                <tr>
+                                    <th className="px-3 py-1 bg-slate-50 border border-slate-200 sticky left-0 z-10 text-slate-500"></th>
+                                    {seus.map(s => {
+                                        const c = seuColor(s)
+                                        return (
+                                            <>
+                                                <th key={`${s.seu_id}-e`}
+                                                    className={`text-center px-2 py-1 border border-slate-200 font-medium ${c.text} bg-white`}>
+                                                    Tiêu thụ ({s.unit})
+                                                </th>
+                                                <th key={`${s.seu_id}-r`}
+                                                    className="text-center px-2 py-1 border border-slate-200 font-medium text-slate-500 bg-white">
+                                                    SL (kg)
+                                                </th>
+                                            </>
+                                        )
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {days.map((dateStr, idx) => {
+                                    const dayNum = idx + 1
+                                    const dowLabel = format(parseISO(dateStr), 'EEE', { locale: viLocale })
+                                    const isWeekend = [0, 6].includes(parseISO(dateStr).getDay())
+                                    const isTodayRow = isToday(parseISO(dateStr))
+                                    const future = isFuture(parseISO(dateStr))
+                                    const rowBg = isTodayRow
+                                        ? 'bg-yellow-50'
+                                        : isWeekend
+                                            ? 'bg-slate-50/70'
+                                            : 'bg-white'
+
+                                    return (
+                                        <tr key={dateStr}
+                                            className={`${rowBg} hover:brightness-95 transition-all`}>
+                                            {/* Day label */}
+                                            <td className={`px-3 py-1.5 border border-slate-200 sticky left-0 z-10 font-mono ${rowBg} ${isTodayRow ? 'font-bold text-yellow-700' : 'text-slate-600'}`}>
+                                                <span className="font-semibold">{String(dayNum).padStart(2, '0')}</span>
+                                                <span className={`ml-1 text-[10px] ${isWeekend ? 'text-red-400' : 'text-slate-400'}`}>{dowLabel}</span>
                                             </td>
-                                            <td className="py-1.5 pr-3 text-right font-mono">{fmtNum(e.rcn_hap_duoc_kg)}</td>
-                                            <td className="py-1.5 pr-3 text-muted-foreground">{e.notes || '—'}</td>
-                                            <td className="py-1.5">
-                                                <button onClick={() => handleDelete(e.id)} className="text-red-400 hover:text-red-600">
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                            </td>
+
+                                            {seus.map(s => {
+                                                const cell = gridData[dateStr]?.[s.seu_id]
+                                                const hasData = !!cell
+                                                const cellKey = `${dateStr}|${s.seu_id}`
+                                                const justSaved = successCell === cellKey
+                                                const c = seuColor(s)
+
+                                                if (future) {
+                                                    return (
+                                                        <>
+                                                            <td key={`${cellKey}-e`} className="border border-slate-100 text-center text-slate-300 py-1.5 px-2">—</td>
+                                                            <td key={`${cellKey}-r`} className="border border-slate-100 text-center text-slate-300 py-1.5 px-2">—</td>
+                                                        </>
+                                                    )
+                                                }
+
+                                                return (
+                                                    <>
+                                                        <td key={`${cellKey}-e`}
+                                                            onClick={() => openEdit(dateStr, s)}
+                                                            className={`border py-1.5 px-2 text-right cursor-pointer transition-all group relative
+                                                                ${justSaved ? 'bg-emerald-100 border-emerald-300' : ''}
+                                                                ${hasData && !justSaved ? `${c.light} border-slate-200` : ''}
+                                                                ${!hasData && !justSaved ? 'border-red-100 bg-red-50/40 hover:bg-red-50' : 'hover:opacity-80'}
+                                                            `}>
+                                                            {hasData ? (
+                                                                <span className={`font-mono font-medium ${c.text}`}>
+                                                                    {fmtNum(cell.actual_energy, 0)}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-red-300 group-hover:text-red-500 text-[10px] flex items-center justify-end gap-0.5">
+                                                                    <Pencil className="h-2.5 w-2.5" /> nhập
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td key={`${cellKey}-r`}
+                                                            onClick={() => openEdit(dateStr, s)}
+                                                            className={`border py-1.5 px-2 text-right cursor-pointer transition-all group
+                                                                ${justSaved ? 'bg-emerald-100 border-emerald-300' : ''}
+                                                                ${hasData && !justSaved ? 'bg-white border-slate-200' : ''}
+                                                                ${!hasData && !justSaved ? 'border-red-100 bg-red-50/40 hover:bg-red-50' : 'hover:opacity-80'}
+                                                            `}>
+                                                            {hasData ? (
+                                                                <span className="font-mono text-slate-600">
+                                                                    {fmtNum(cell.rcn_hap_duoc_kg, 0)}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-red-200 text-[10px]">—</span>
+                                                            )}
+                                                        </td>
+                                                    </>
+                                                )
+                                            })}
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </CardContent>
             </Card>
+
+            {/* Floating Edit Modal */}
+            {edit && (() => {
+                const seu = seus.find(s => s.seu_id === edit.seuId)!
+                const c = seuColor(seu)
+                const dayLabel = format(parseISO(edit.date), 'dd/MM/yyyy (EEEE)', { locale: viLocale })
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+                        onClick={e => { if (e.target === e.currentTarget) setEdit(null) }}>
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+                            {/* Modal Header */}
+                            <div className={`${c.header} px-5 py-3 flex items-center justify-between`}>
+                                <div>
+                                    <p className="text-white font-semibold text-sm flex items-center gap-1.5">
+                                        {c.icon}{seu.name}
+                                    </p>
+                                    <p className="text-white/80 text-xs mt-0.5">{format(parseISO(edit.date), 'dd/MM/yyyy (EEEE)', { locale: viLocale })}</p>
+                                </div>
+                                <button onClick={() => setEdit(null)}
+                                    className="text-white/70 hover:text-white transition-colors">
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="p-5 space-y-3">
+                                {error && (
+                                    <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                                        {error}
+                                    </p>
+                                )}
+                                <div>
+                                    <Label className="text-xs font-medium">Tiêu thụ ({seu.unit}) *</Label>
+                                    <Input
+                                        autoFocus
+                                        type="number"
+                                        placeholder={seu.energy_type === 'electricity' ? 'e.g. 12500' : 'e.g. 8000'}
+                                        value={edit.energy}
+                                        onChange={e => setEdit(prev => prev ? { ...prev, energy: e.target.value } : null)}
+                                        className="h-10 mt-1 font-mono text-sm"
+                                        onKeyDown={e => e.key === 'Enter' && handleSave()}
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-medium">Sản lượng (kg) *</Label>
+                                    <Input
+                                        type="number"
+                                        placeholder="e.g. 25000"
+                                        value={edit.rcn}
+                                        onChange={e => setEdit(prev => prev ? { ...prev, rcn: e.target.value } : null)}
+                                        className="h-10 mt-1 font-mono text-sm"
+                                        onKeyDown={e => e.key === 'Enter' && handleSave()}
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-medium text-muted-foreground">Ghi chú</Label>
+                                    <Input
+                                        placeholder="Ghi chú (tuỳ chọn)..."
+                                        value={edit.notes}
+                                        onChange={e => setEdit(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                                        className="h-9 mt-1 text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="px-5 pb-5 flex gap-2">
+                                {edit.existingId && (
+                                    <Button variant="outline" size="sm"
+                                        className="text-red-600 border-red-200 hover:bg-red-50 h-9"
+                                        onClick={() => { handleDelete(edit.date, edit.seuId); setEdit(null) }}>
+                                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Xóa
+                                    </Button>
+                                )}
+                                <Button size="sm" className={`flex-1 h-9 text-white ${c.header} hover:opacity-90`}
+                                    onClick={handleSave} disabled={saving}>
+                                    {saving
+                                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                                        : <><Save className="h-3.5 w-3.5 mr-1.5" />Lưu dữ liệu</>
+                                    }
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            })()}
         </div>
     )
 }
