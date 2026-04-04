@@ -1198,11 +1198,10 @@ export default function BaoCom() {
             const ca2 = rows.filter(r => r.shift === '2').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
             const ca3 = rows.filter(r => r.shift === '3').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
             // OT: tổng ot_count từ tất cả ca + shift='OT' riêng
-            const otFromShifts = rows.filter(r => r.shift !== 'OT').reduce((s, r) => s + (r.ot_count ?? 0), 0)
-            const otShiftRows  = rows.filter(r => r.shift === 'OT').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.ot_count ?? 0), 0)
-            const totalOT = otFromShifts + otShiftRows
-            // Chay OT
+            const totalOTMan = rows.filter(r => r.shift !== 'OT').reduce((s, r) => s + (r.ot_count ?? 0), 0)
+                             + rows.filter(r => r.shift === 'OT').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.ot_count ?? 0), 0)
             const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
+            const totalOT = totalOTMan + totalOTVeg
             const grand = ca1 + ca2 + ca3 + totalOT
             const dateDisplay = format(parseISO(dailyDate), "d/M/yyyy")
             let msg = `Ngày ${dateDisplay}\n`
@@ -1210,9 +1209,8 @@ export default function BaoCom() {
             if (ca2 > 0) msg += `Ca 2: ${ca2}\n`
             if (ca3 > 0) msg += `Ca 3: ${ca3}\n`
             if (totalOT > 0) {
-                const otMan = totalOT - totalOTVeg
                 if (totalOTVeg > 0) {
-                    msg += `OT: ${totalOT} (${otMan} mặn, ${totalOTVeg} chay)\n`
+                    msg += `OT: ${totalOT} (${totalOTMan} mặn, ${totalOTVeg} chay)\n`
                 } else {
                     msg += `OT: ${totalOT}\n`
                 }
@@ -1354,16 +1352,17 @@ export default function BaoCom() {
     const buildDBSummaryText = (rows: SavedRecord[]): string => {
         const totalPresent = rows.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
         const totalVeg = rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)
-        const totalOT = rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)
+        // ot_count = số phần MẶN OT, ot_vegetarian = số phần CHAY OT
+        const totalOTMan = rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)
         const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
+        const totalOT = totalOTMan + totalOTVeg
         const man = totalPresent - totalVeg
         const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
         const otHour = OT_HOUR[summaryShift] ?? ""
-        const otMan = totalOT - totalOTVeg
         let msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}`
         if (totalOT > 0) {
             if (totalOTVeg > 0) {
-                msg += `; số phần OT là ${totalOT} (${otMan} mặn, ${totalOTVeg} chay)`
+                msg += `; số phần OT là ${totalOT} (${totalOTMan} mặn, ${totalOTVeg} chay)`
             } else {
                 msg += `; số phần OT là ${totalOT}`
             }
