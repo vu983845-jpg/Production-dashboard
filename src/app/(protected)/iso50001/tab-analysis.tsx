@@ -8,47 +8,103 @@ import { MonthlyHistorical, SeuSummary } from "./types"
 // ─── Pure SVG mini bar chart (no Recharts → avoids React error #284) ──
 type BarPoint = { label: string; enpi: number | null; ref: number | null; isCurrent: boolean }
 function MiniBarChart({
-    data, color, refColor, height = 95
+    data, color, refColor, height = 110
 }: {
     data: BarPoint[]; color: string; refColor: string; height?: number
 }) {
-    const W = 260, H = height - 18  // reserve bottom for labels
+    const [hovered, setHovered] = useState<number | null>(null)
+    const PAD_TOP = 18, PAD_BOT = 18
+    const W = 280, H = height - PAD_TOP - PAD_BOT
     const vals = data.map(d => d.enpi).filter((v): v is number => v != null)
-    const refVal = data[0]?.ref
+    const refVal = data.find(d => d.ref != null)?.ref ?? null
     if (!vals.length) return <div style={{ height }} />
-    const minV = Math.min(...vals, refVal ?? Infinity) * 0.97
-    const maxV = Math.max(...vals, refVal ?? -Infinity) * 1.03
+    const minV = Math.min(...vals, refVal ?? Infinity) * 0.95
+    const maxV = Math.max(...vals, refVal ?? -Infinity) * 1.08
     const range = maxV - minV || 1
-    const toY = (v: number) => H - ((v - minV) / range) * H
-    const bw = Math.max(4, Math.floor(W / data.length) - 4)
+    const toY = (v: number) => PAD_TOP + H - ((v - minV) / range) * H
+    const bw = Math.max(6, Math.floor(W / data.length) - 5)
     const gap = (W - bw * data.length) / (data.length + 1)
     const refY = refVal != null ? toY(refVal) : null
+    const gradId = `grad-${color.replace('#', '')}`
+
     return (
-        <svg width="100%" viewBox={`0 0 ${W} ${H + 18}`} style={{ display: 'block' }}>
-            {/* reference line */}
+        <svg
+            width="100%" viewBox={`0 0 ${W} ${height}`}
+            style={{ display: 'block', overflow: 'visible' }}
+        >
+            <defs>
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity="1" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0.5" />
+                </linearGradient>
+            </defs>
+
+            {/* Reference line */}
             {refY != null && (
-                <>
-                    <line x1={0} y1={refY} x2={W} y2={refY}
-                        stroke={refColor} strokeWidth={1.5} strokeDasharray="5 3" />
-                </>
+                <g>
+                    <line x1={0} y1={refY} x2={W - 36} y2={refY}
+                        stroke={refColor} strokeWidth={1.2} strokeDasharray="4 3" opacity={0.8} />
+                    {/* ref label tag */}
+                    <rect x={W - 35} y={refY - 7} width={35} height={13}
+                        rx={3} fill={refColor} opacity={0.15} />
+                    <text x={W - 17} y={refY + 4} fontSize={6.5} fill={refColor}
+                        textAnchor="middle" fontWeight="600">
+                        {refVal!.toFixed(3)}
+                    </text>
+                </g>
             )}
-            {/* bars + labels */}
+
+            {/* Bars */}
             {data.map((d, i) => {
                 const x = gap + i * (bw + gap)
-                const y = d.enpi != null ? toY(d.enpi) : H
-                const bh = d.enpi != null ? H - y : 0
+                const y = d.enpi != null ? toY(d.enpi) : PAD_TOP + H
+                const bh = d.enpi != null ? (PAD_TOP + H) - y : 0
+                const isHov = hovered === i
+                const isCur = d.isCurrent
                 return (
-                    <g key={i}>
+                    <g key={i}
+                        onMouseEnter={() => setHovered(i)}
+                        onMouseLeave={() => setHovered(null)}
+                        style={{ cursor: 'default' }}
+                    >
+                        {/* glow under current bar */}
+                        {isCur && bh > 0 && (
+                            <rect x={x - 1} y={y} width={bw + 2} height={bh}
+                                rx={2} fill={color} opacity={0.15} />
+                        )}
+                        {/* bar */}
                         <rect
                             x={x} y={y} width={bw} height={bh}
-                            fill={d.isCurrent ? color : color + '55'}
-                            rx={1}
+                            fill={isCur ? `url(#${gradId})` : color + '44'}
+                            rx={2}
+                            opacity={isHov ? 1 : (isCur ? 1 : 0.7)}
                         />
-                        <text
-                            x={x + bw / 2} y={H + 13}
-                            fontSize={7} fill="#94A3B8"
-                            textAnchor="middle"
-                        >{d.label}</text>
+                        {/* value label above current bar */}
+                        {isCur && d.enpi != null && (
+                            <text x={x + bw / 2} y={y - 4}
+                                fontSize={7.5} fill={color}
+                                textAnchor="middle" fontWeight="700">
+                                {d.enpi.toFixed(3)}
+                            </text>
+                        )}
+                        {/* hover tooltip box */}
+                        {isHov && d.enpi != null && !isCur && (
+                            <g>
+                                <rect x={x + bw / 2 - 22} y={y - 19} width={44} height={15}
+                                    rx={3} fill="#1E293B" opacity={0.9} />
+                                <text x={x + bw / 2} y={y - 8}
+                                    fontSize={7} fill="#F8FAFC"
+                                    textAnchor="middle">
+                                    {d.enpi.toFixed(4)}
+                                </text>
+                            </g>
+                        )}
+                        {/* x label */}
+                        <text x={x + bw / 2} y={PAD_TOP + H + 12}
+                            fontSize={6.5} fill={isCur ? '#64748B' : '#94A3B8'}
+                            textAnchor="middle" fontWeight={isCur ? '700' : '400'}>
+                            {d.label}
+                        </text>
                     </g>
                 )
             })}
@@ -446,12 +502,12 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             </div>
 
                             {/* Mini chart — pure SVG, no Recharts → no React error #284 */}
-                            <div style={{ height: 95, minWidth: 0, width: '100%' }}>
+                            <div style={{ height: 110, minWidth: 0, width: '100%' }}>
                                 <MiniBarChart
                                     data={trend}
                                     color={cfg.color}
                                     refColor={compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold}
-                                    height={95}
+                                    height={110}
                                 />
                             </div>
                         </div>
