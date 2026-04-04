@@ -322,7 +322,7 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
                             </div>
 
                             {/* Mini chart */}
-                            <div className="flex-1" style={{ minHeight: 0 }}>
+                            <div style={{ height: 95 }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={trend} margin={{ top: 2, right: 6, left: 0, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 2" stroke="#F1F5F9" vertical={false} />
