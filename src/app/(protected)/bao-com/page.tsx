@@ -733,7 +733,50 @@ function exportHistoryCSV(records: SavedRecord[]) {
     URL.revokeObjectURL(url)
 }
 
-// Convert DD/MM/YYYY → YYYY-MM-DD for DB
+// ─────────────────────────────────────────────
+// OT String Parser — handles multiple formats:
+//   "26p (10 chay)"   → mặn=16, chay=10  (X=total, Y=chay, mặn=X-Y)
+//   "13 mặn (2 chay)" → mặn=13, chay=2   (explicit "mặn" → X is already mặn)
+//   "11+8chay"        → mặn=11, chay=8   (explicit split)
+//   "5p mặn"          → mặn=5, chay=0
+//   "6"               → mặn=6, chay=0
+// ─────────────────────────────────────────────
+function parseOTString(ot: string): { otCount: number; otVegetarian: number } {
+    const s = (ot || '').trim()
+    if (!s || s === '0' || s === '—') return { otCount: 0, otVegetarian: 0 }
+
+    // Pattern 1: "X mặn (Y chay)" OR "X mặn Y chay" — X is already mặn
+    const manChayMatch = s.match(/(\d+)\s*(?:p\s*)?m[ặa]n\s*[\s(,]?\s*(\d+)\s*chay/i)
+    if (manChayMatch) {
+        return { otCount: parseInt(manChayMatch[1]), otVegetarian: parseInt(manChayMatch[2]) }
+    }
+
+    // Pattern 2: "X+Ychay" OR "X + Y chay" — explicit split
+    const plusChayMatch = s.match(/(\d+)\s*\+\s*(\d+)\s*chay/i)
+    if (plusChayMatch) {
+        return { otCount: parseInt(plusChayMatch[1]), otVegetarian: parseInt(plusChayMatch[2]) }
+    }
+
+    // Pattern 3: "X p (Y chay)" OR "X (Y chay)" — X is TOTAL, Y is chay
+    const totalChayMatch = s.match(/(\d+)\s*(?:p\s*)?\(?\s*(\d+)\s*chay/i)
+    if (totalChayMatch) {
+        const total = parseInt(totalChayMatch[1])
+        const chay = parseInt(totalChayMatch[2])
+        return { otCount: Math.max(0, total - chay), otVegetarian: chay }
+    }
+
+    // Pattern 4: "Xp mặn" OR "X mặn" — mặn only, no chay
+    const manOnly = s.match(/(\d+)\s*(?:p\s*)?m[ặa]n/i)
+    if (manOnly) {
+        return { otCount: parseInt(manOnly[1]), otVegetarian: 0 }
+    }
+
+    // Fallback: just a number
+    const num = parseInt(s)
+    return { otCount: isNaN(num) ? 0 : num, otVegetarian: 0 }
+}
+
+
 function dateToISO(ddmmyyyy: string): string {
     const parts = ddmmyyyy.split("/")
     if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`
@@ -1454,6 +1497,7 @@ export default function BaoCom() {
                 }
             }
 
+            const { otCount, otVegetarian } = parseOTString(r.ot)
             const payload = {
                 work_date: workDate,
                 department_name: canonicalName,
@@ -1463,7 +1507,8 @@ export default function BaoCom() {
                 official_absent: r.officialAbsent ?? 0,
                 seasonal_present: r.seasonalPresent ?? 0,
                 seasonal_absent: r.seasonalAbsent ?? 0,
-                ot_count: parseInt(r.ot) || 0,
+                ot_count: otCount,
+                ot_vegetarian: otVegetarian,
                 vegetarian: r.vegetarian ?? 0,
                 note: null,
                 created_by: user?.id,
@@ -1612,6 +1657,7 @@ export default function BaoCom() {
                 // Use canonical name_en if dept resolved; otherwise keep raw area string
                 const _area = getEffectiveArea(r, i)
                 const canonicalName = getCanonicalDeptName(r, i, deptId)
+                const { otCount, otVegetarian } = parseOTString(r.ot)
                 return {
                 work_date: dateToISO(r.date),
                 department_name: canonicalName,
@@ -1621,7 +1667,8 @@ export default function BaoCom() {
                 official_absent: r.officialAbsent ?? 0,
                 seasonal_present: r.seasonalPresent ?? 0,
                 seasonal_absent: r.seasonalAbsent ?? 0,
-                ot_count: parseInt(r.ot) || 0,
+                ot_count: otCount,
+                ot_vegetarian: otVegetarian,
                 vegetarian: r.vegetarian ?? 0,
                 note: null,
                 created_by: user?.id,

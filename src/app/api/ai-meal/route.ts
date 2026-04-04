@@ -88,16 +88,28 @@ HEADCOUNT:
 - "chính thức" = official_present
 - "thời vụ" = seasonal_present
 - Nếu chỉ nói 1 số (không có từ khóa OT) → coi là official_present
-- OT = ot_count, "chay" = vegetarian
 - "chay OT", "OT chay", "ot ăn chay", "chay tăng ca" = ot_vegetarian
 
-QUAN TRỌNG - TIN NHẮN BÁO OT:
-Khi tin nhắn có dạng "OT X p" hoặc bắt đầu bằng "OT" → đây là báo cáo OT riêng:
-- official_present = 0 (KHÔNG phải X)
-- ot_count = X (số người OT)
-- Nếu có "(Y chay)" sau "OT X p" → ot_vegetarian = Y, KHÔNG phải vegetarian
-Ví dụ: "OT 25 p(16 chay) ăn 14h" → ot_count=25, ot_vegetarian=16, official_present=0
-Ví dụ: "@Tổ Liên (ca 2) OT 25 p(16 chay)" → shift="2", ot_count=25, ot_vegetarian=16, official_present=0
+QUAN TRỌNG - CÁCH TÍNH OT:
+- ot_count = số phần MẶN OT (KHÔNG phải tổng)
+- ot_vegetarian = số phần CHAY OT
+- Tổng OT = ot_count + ot_vegetarian
+
+PHÂN TÍCH CÁC ĐỊNH DẠNG OT:
+1. "OT: X mặn (Y chay)" → ot_count=X, ot_vegetarian=Y   (X đã là mặn)
+2. "OT: X p (Y chay)" hoặc "OT X (Y chay)" → ot_count=X-Y, ot_vegetarian=Y   (X là tổng, phải trừ chay)
+3. "OT: X+Ychay" → ot_count=X, ot_vegetarian=Y   (tách rõ ràng)
+4. "OT: X" hoặc "OT: X phần" → ot_count=X, ot_vegetarian=0   (chỉ mặn)
+
+QUAN TRỌNG - TIN NHẮN BÁO OT RIÊNG:
+Khi tin nhắn có dạng "OT X p" hoặc "@... OT X p" → báo cáo OT riêng:
+- official_present = 0
+- Áp dụng quy tắc phân tích OT ở trên
+Ví dụ: "OT 25 p(14 chay) ăn 14h" → ot_count=11 (25-14), ot_vegetarian=14, official_present=0
+Ví dụ: "OT 26p (10 chay)" → ot_count=16 (26-10), ot_vegetarian=10
+Ví dụ: "@Tổ Liên (ca 2) OT 25 p(14 chay)" → shift="2", ot_count=11, ot_vegetarian=14, official_present=0
+Ví dụ: "OT: 13 mặn (2 chay)" → ot_count=13, ot_vegetarian=2 (có "mặn" → X đã là mặn)
+Ví dụ: "OT: 11+8chay" → ot_count=11, ot_vegetarian=8
 
 QUAN TRỌNG - "ĂN Xh":
 "ăn 14h", "ăn 11h30"... là giờ ăn — KHÔNG phải headcount, bỏ qua hoàn toàn.
