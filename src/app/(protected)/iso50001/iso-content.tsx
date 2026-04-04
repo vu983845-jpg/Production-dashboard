@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { TabDashboard } from "./tab-dashboard"
-import { TabSeu } from "./tab-seu"
+import { TabAnalysis } from "./tab-analysis"
 import { TabBaseline } from "./tab-baseline"
 import { SeuMaster, MonthlyHistorical, BaselineModel, DailyEntry, SeuSummary } from "./types"
 
@@ -110,7 +110,7 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
             <Tabs defaultValue="dashboard" className="space-y-4">
                 <TabsList className="grid grid-cols-3 w-full h-9">
                     <TabsTrigger value="dashboard" className="text-xs">📊 Dashboard</TabsTrigger>
-                    <TabsTrigger value="seu" className="text-xs">⚡ SEU Tracking</TabsTrigger>
+                    <TabsTrigger value="seu" className="text-xs">📈 Phân Tích</TabsTrigger>
                     {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
                         <TabsTrigger value="baseline" className="text-xs">📐 Baseline Model</TabsTrigger>
                     )}
@@ -132,7 +132,7 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                         </div>
                     ) : (
-                        <TabSeu summaries={summaries} currentMonth={currentMonth} historical={dashboardHistorical} />
+                        <TabAnalysis summaries={summaries} historical={dashboardHistorical} currentMonth={currentMonth} />
                     )}
                 </TabsContent>
 
