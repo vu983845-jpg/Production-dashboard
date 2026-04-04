@@ -14,9 +14,9 @@ async function changePassword() {
         return
     }
 
-    const targetUser = users.users.find(u => u.email === 'shelling@dds.com')
+    const targetUser = users.users.find(u => u.email === 'admin@dds.com')
     if (!targetUser) {
-        console.log('shelling@dds.com not found')
+        console.log('admin@dds.com not found')
         return
     }
 
@@ -24,7 +24,7 @@ async function changePassword() {
 
     const { data: user, error: err2 } = await supabase.auth.admin.updateUserById(
         targetUser.id,
-        { password: 'Passwork789@' }
+        { password: 'Admin@123' }
     )
 
     if (err2) {
@@ -32,7 +32,7 @@ async function changePassword() {
         return
     }
 
-    console.log('Successfully updated password for shelling@dds.com')
+    console.log('Successfully updated password for admin@dds.com')
 }
 
 changePassword()

@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest) {
         
         // 3. Parse body
         const body = await req.json()
-        const { id, official_present, seasonal_present, vegetarian, ot_count } = body
+        const { id, official_present, seasonal_present, vegetarian, ot_count, ot_vegetarian } = body
         
         if (!id) {
             return NextResponse.json({ error: 'Missing id' }, { status: 400 })
@@ -51,10 +51,11 @@ export async function PATCH(req: NextRequest) {
                 seasonal_present: seasonal_present ?? 0,
                 vegetarian: vegetarian ?? 0,
                 ot_count: ot_count ?? 0,
+                ot_vegetarian: ot_vegetarian ?? 0,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)
-            .select('id, official_present, seasonal_present, vegetarian, ot_count')
+            .select('id, official_present, seasonal_present, vegetarian, ot_count, ot_vegetarian')
         
         if (updateError) {
             return NextResponse.json({ error: updateError.message }, { status: 500 })

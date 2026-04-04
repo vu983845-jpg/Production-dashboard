@@ -1166,7 +1166,7 @@ export default function BaoCom() {
     const [summaryError, setSummaryError] = useState<string | null>(null)
     // Edit state
     const [editingRowId, setEditingRowId] = useState<string | null>(null)
-    const [editFields, setEditFields] = useState<{ official_present: number; seasonal_present: number; vegetarian: number; ot_count: number }>({ official_present: 0, seasonal_present: 0, vegetarian: 0, ot_count: 0 })
+    const [editFields, setEditFields] = useState<{ official_present: number; seasonal_present: number; vegetarian: number; ot_count: number; ot_vegetarian: number }>({ official_present: 0, seasonal_present: 0, vegetarian: 0, ot_count: 0, ot_vegetarian: 0 })
     // Add-row state
     const [addRow, setAddRow] = useState<{ deptId: string; officialPresent: number; seasonalPresent: number; vegetarian: number; otCount: number } | null>(null)
 
@@ -1288,7 +1288,7 @@ export default function BaoCom() {
 
     const handleStartEdit = (r: SavedRecord) => {
         setEditingRowId(r.id)
-        setEditFields({ official_present: r.official_present ?? 0, seasonal_present: r.seasonal_present ?? 0, vegetarian: r.vegetarian ?? 0, ot_count: r.ot_count ?? 0 })
+        setEditFields({ official_present: r.official_present ?? 0, seasonal_present: r.seasonal_present ?? 0, vegetarian: r.vegetarian ?? 0, ot_count: r.ot_count ?? 0, ot_vegetarian: r.ot_vegetarian ?? 0 })
     }
 
     const handleSaveEdit = async (id: string) => {
@@ -1303,6 +1303,7 @@ export default function BaoCom() {
                 seasonal_present: editFields.seasonal_present,
                 vegetarian: editFields.vegetarian,
                 ot_count: editFields.ot_count,
+                ot_vegetarian: editFields.ot_vegetarian,
             })
         })
         const json = await res.json()
@@ -1921,6 +1922,7 @@ export default function BaoCom() {
                                                     <th className="px-3 py-2 font-semibold text-right">Tổng</th>
                                                     <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
                                                     <th className="px-3 py-2 font-semibold text-right">OT</th>
+                                                    <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥬 Chay OT</th>
                                                     <th className="px-3 py-2"></th>
                                                 </tr>
                                             </thead>
@@ -1939,6 +1941,7 @@ export default function BaoCom() {
                                                                 <td className="px-3 py-2 text-right font-bold text-blue-600">{editFields.official_present + editFields.seasonal_present}</td>
                                                                 <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.vegetarian} onChange={e => setEditFields(f => ({ ...f, vegetarian: +e.target.value }))} /></td>
                                                                 <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={editFields.ot_count} onChange={e => setEditFields(f => ({ ...f, ot_count: +e.target.value }))} /></td>
+                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.ot_vegetarian} onChange={e => setEditFields(f => ({ ...f, ot_vegetarian: +e.target.value }))} /></td>
                                                                 <td className="px-2 py-1 whitespace-nowrap">
                                                                     <button onClick={() => handleSaveEdit(r.id)} className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 mr-1">Lưu</button>
                                                                     <button onClick={() => setEditingRowId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded hover:bg-gray-300">Hủy</button>
@@ -1949,6 +1952,7 @@ export default function BaoCom() {
                                                                 <td className="px-3 py-2 text-right font-bold">{(r.official_present ?? 0) + (r.seasonal_present ?? 0)}</td>
                                                                 <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
                                                                 <td className="px-3 py-2 text-right">{r.ot_count ?? 0}</td>
+                                                                <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{(r.ot_vegetarian ?? 0) > 0 ? r.ot_vegetarian : <span className="text-gray-300">—</span>}</td>
                                                                 <td className="px-2 py-2 whitespace-nowrap">
                                                                     {canEdit && (
                                                                     <>
@@ -1995,10 +1999,7 @@ export default function BaoCom() {
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0), 0)}</td>
-                                                    <td />
-                                                    <td />
-                                                    <td />
-                                                    <td />
+                                                    <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) > 0 ? summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) : <span className="text-gray-300">—</span>}</td>
                                                     <td />
                                                 </tr>
                                             </tfoot>
