@@ -104,6 +104,62 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ success: true })
     }
 
+    // Sync from daily entries: aggregate iso50001_daily_entry for a month → upsert monthly_historical
+    // Body: { action: 'sync_from_daily', month: 'YYYY-MM' }
+    if (body.action === 'sync_from_daily') {
+        const { month } = body // 'YYYY-MM'
+        if (!month) return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 })
+
+        const [year, mon] = month.split('-').map(Number)
+        const startDate = `${year}-${String(mon).padStart(2, '0')}-01`
+        const endDate = new Date(year, mon, 0).toISOString().slice(0, 10)
+        const monthYear = startDate // 'YYYY-MM-01' for the historical record
+
+        // Fetch all daily entries for this month
+        const { data: entries, error: eErr } = await supabase
+            .from('iso50001_daily_entry')
+            .select('seu_id, actual_energy, rcn_hap_duoc_kg, ck_obtained_mt')
+            .gte('entry_date', startDate)
+            .lte('entry_date', endDate)
+
+        if (eErr) return NextResponse.json({ error: eErr.message }, { status: 500 })
+        if (!entries || entries.length === 0) {
+            return NextResponse.json({ synced: 0, message: 'Không có dữ liệu daily trong tháng này' })
+        }
+
+        // Aggregate by seu_id
+        const agg: Record<number, { actual_energy: number; rcn_hap_duoc_kg: number; ck_obtained_mt: number | null; days: number }> = {}
+        for (const e of entries) {
+            const sid = e.seu_id
+            if (!agg[sid]) agg[sid] = { actual_energy: 0, rcn_hap_duoc_kg: 0, ck_obtained_mt: null, days: 0 }
+            agg[sid].actual_energy += Number(e.actual_energy) || 0
+            agg[sid].rcn_hap_duoc_kg += Number(e.rcn_hap_duoc_kg) || 0
+            if (e.ck_obtained_mt != null) {
+                agg[sid].ck_obtained_mt = (agg[sid].ck_obtained_mt || 0) + Number(e.ck_obtained_mt)
+            }
+            agg[sid].days++
+        }
+
+        // Upsert each SEU
+        const { data: { session } } = await supabase.auth.getSession()
+        const upserts = Object.entries(agg).map(([sid, vals]) => ({
+            seu_id: Number(sid),
+            month_year: monthYear,
+            actual_energy: Math.round(vals.actual_energy),
+            rcn_hap_duoc_kg: Math.round(vals.rcn_hap_duoc_kg),
+            ck_obtained_mt: vals.ck_obtained_mt != null ? Math.round(vals.ck_obtained_mt * 10) / 10 : null,
+            notes: `Auto-sync từ Data Input (${vals.days} ngày)`,
+            created_by: session?.user.id,
+        }))
+
+        const { error: uErr } = await supabase
+            .from('iso50001_monthly_historical')
+            .upsert(upserts, { onConflict: 'seu_id,month_year' })
+
+        if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 })
+        return NextResponse.json({ synced: upserts.length, months: [month], details: upserts })
+    }
+
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }
 

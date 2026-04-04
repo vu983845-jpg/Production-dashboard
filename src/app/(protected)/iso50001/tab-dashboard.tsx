@@ -81,6 +81,7 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                             <tbody className="divide-y">
                                 {summaries.map(s => {
                                     const devPct = s.monthly_deviation_pct
+                                    const noData = s.days === 0
                                     const saving = devPct != null && devPct <= 0
                                     const color = deviationColor(devPct)
                                     const bg = deviationBg(devPct)
@@ -92,20 +93,30 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                                                 {s.seu_name}
                                             </td>
                                             <td className="px-4 py-3 text-right font-mono">
-                                                {fmtNum(s.total_actual)} <span className="text-xs text-muted-foreground">{s.unit}</span>
+                                                {noData
+                                                    ? <span className="text-xs text-muted-foreground italic">Chưa có data</span>
+                                                    : <>{fmtNum(s.total_actual)} <span className="text-xs text-muted-foreground">{s.unit}</span></>
+                                                }
                                             </td>
                                             <td className="px-4 py-3 text-right font-mono">
                                                 {s.has_baseline ? (
-                                                    <>{fmtNum(s.total_expected)} <span className="text-xs text-muted-foreground">{s.unit}</span></>
+                                                    noData
+                                                        ? <span className="text-xs text-muted-foreground italic">— (cần data)</span>
+                                                        : <>{fmtNum(s.total_expected)} <span className="text-xs text-muted-foreground">{s.unit}</span></>
                                                 ) : <span className="text-xs text-muted-foreground italic">N/A</span>}
                                             </td>
                                             <td className="px-4 py-3 text-right">
-                                                {devPct != null ? (
-                                                    <Badge variant="outline" className={`font-mono text-xs ${bg} ${color} border-transparent`}>
-                                                        {saving ? <TrendingDown className="h-3 w-3 mr-1 inline" /> : <TrendingUp className="h-3 w-3 mr-1 inline" />}
-                                                        {saving ? '' : '+'}{fmtNum(devPct)}%
-                                                    </Badge>
-                                                ) : <span className="text-xs text-muted-foreground italic">Chưa có baseline</span>}
+                                                {!s.has_baseline
+                                                    ? <span className="text-xs text-muted-foreground italic">Chưa có baseline</span>
+                                                    : noData
+                                                        ? <span className="text-xs text-muted-foreground italic">—</span>
+                                                        : devPct != null ? (
+                                                            <Badge variant="outline" className={`font-mono text-xs ${bg} ${color} border-transparent`}>
+                                                                {saving ? <TrendingDown className="h-3 w-3 mr-1 inline" /> : <TrendingUp className="h-3 w-3 mr-1 inline" />}
+                                                                {saving ? '' : '+'}{fmtNum(devPct)}%
+                                                            </Badge>
+                                                        ) : <span className="text-xs text-muted-foreground italic">—</span>
+                                                }
                                             </td>
                                         </tr>
                                     )
@@ -138,41 +149,35 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
-                                {historical.slice(0, 100).map(row => {
-                                    // Calculate expected and deviation
+                                {historical.slice(0, 120).map(row => {
+                                    // Use pre-calculated values from API (same source as summary −
+                                    // both now come from iso50001_daily_entry aggregated by month)
                                     const seuSum = summaries.find(s => s.seu_id === row.seu_id)
-                                    const bl = seuSum?.baseline
-                                    const isCk = bl?.label?.includes('[CK]')
-                                    const rcn = row.rcn_hap_duoc_kg || 0
-                                    const ck = row.ck_obtained_mt || 0
-                                    const actual = row.actual_energy || 0
-                                    
-                                    const xVal = isCk ? ck : rcn
-                                    
-                                    let expected = null
-                                    let devPct = null
-                                    if (bl && xVal > 0) {
-                                        expected = Number(bl.slope) * xVal + Number(bl.intercept)
-                                        if (expected > 0) {
-                                            devPct = ((actual - expected) / expected) * 100
-                                        }
-                                    }
-                                    
+                                    const actual  = Number(row.actual_energy) || 0
+                                    const expected = row.expected_energy != null ? Number(row.expected_energy) : null
+                                    const devPct   = (row as any).deviation_pct != null
+                                        ? Number((row as any).deviation_pct)
+                                        : (expected && expected > 0 ? ((actual - expected) / expected) * 100 : null)
+                                    const rcn      = Number(row.rcn_hap_duoc_kg) || 0
+
                                     const saving = devPct != null && devPct <= 0
-                                    const color = deviationColor(devPct)
-                                    const bg = deviationBg(devPct)
-                                    const unit = seuSum?.unit || row.seu?.unit || ''
+                                    const color  = deviationColor(devPct)
+                                    const bg     = deviationBg(devPct)
+                                    const unit   = seuSum?.unit || (row as any).seu?.unit || ''
 
                                     return (
                                         <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-4 py-2 font-mono text-muted-foreground whitespace-nowrap">
                                                 {format(new Date(row.month_year), 'MM/yyyy')}
+                                                {(row as any).days > 0 && (
+                                                    <span className="text-[10px] text-muted-foreground/50 ml-1">({(row as any).days}d)</span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap">
-                                                {seuSum?.energy_type === 'electricity' || row.seu?.energy_type === 'electricity' 
-                                                    ? <Zap className="h-3.5 w-3.5 text-blue-500" /> 
+                                                {seuSum?.energy_type === 'electricity' || (row as any).seu?.energy_type === 'electricity'
+                                                    ? <Zap className="h-3.5 w-3.5 text-blue-500" />
                                                     : <Flame className="h-3.5 w-3.5 text-orange-500" />}
-                                                {seuSum?.seu_name || row.seu?.name}
+                                                {seuSum?.seu_name || (row as any).seu?.name}
                                             </td>
                                             <td className="px-4 py-2 text-right font-mono text-muted-foreground">
                                                 {fmtNum(rcn)} <span className="text-[10px]">kg</span>
