@@ -99,6 +99,7 @@ interface MealStatRow {
     official_present: number | null
     seasonal_present: number | null
     ot_count: number | null
+    ot_vegetarian: number | null
     vegetarian: number | null
 }
 
@@ -913,7 +914,7 @@ export default function BaoCom() {
             const { from, to } = getBillingCycle(statsMonth)
             const { data, error } = await supabase
                 .from("meal_headcount")
-                .select("id, work_date, department_id, department_name, shift, official_present, seasonal_present, ot_count, vegetarian")
+                .select("id, work_date, department_id, department_name, shift, official_present, seasonal_present, ot_count, ot_vegetarian, vegetarian")
                 .gte("work_date", from)
                 .lte("work_date", to)
                 .order("work_date")
@@ -1068,11 +1069,12 @@ export default function BaoCom() {
             if ((r.seasonal_present ?? 0) > 0) entry.seasonalDays.set(r.work_date, (entry.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
             // Route ot_count to a synthetic OT shift entry for this dept
             // (kitchen tab records store OT workers in ot_count alongside regular shifts)
-            if ((r.ot_count ?? 0) > 0 && shift !== 'OT') {
+            const otTotal = (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)
+            if (otTotal > 0 && shift !== 'OT') {
                 const otMapKey = `${deptKey}|OT`
                 if (!shiftMap.has(otMapKey)) shiftMap.set(otMapKey, { deptKey, deptName, deptCode, shift: 'OT', days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map(), dayRowIds: new Map() })
                 const otEntry = shiftMap.get(otMapKey)!
-                otEntry.days.set(r.work_date, (otEntry.days.get(r.work_date) ?? 0) + (r.ot_count ?? 0))
+                otEntry.days.set(r.work_date, (otEntry.days.get(r.work_date) ?? 0) + otTotal)
                 // Track which row has OT for this date
                 if (!otEntry.dayRowIds.has(r.work_date)) otEntry.dayRowIds.set(r.work_date, [])
                 otEntry.dayRowIds.get(r.work_date)!.push(r.id)
@@ -2643,7 +2645,7 @@ export default function BaoCom() {
                                                                     <td className="px-2 py-1 text-right text-green-700 font-semibold">{r.official_present ?? 0}</td>
                                                                     <td className="px-2 py-1 text-right">{r.seasonal_present ?? 0}</td>
                                                                     <td className="px-2 py-1 text-right text-emerald-600">{r.vegetarian ?? 0}</td>
-                                                                    <td className="px-2 py-1 text-right">{r.ot_count ?? 0}</td>
+                                                                    <td className="px-2 py-1 text-right font-semibold">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)}</td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
