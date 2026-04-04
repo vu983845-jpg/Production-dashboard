@@ -1957,7 +1957,7 @@ export default function BaoCom() {
                                                                 <td className="px-3 py-2 text-right">{r.seasonal_present ?? 0}</td>
                                                                 <td className="px-3 py-2 text-right font-bold">{(r.official_present ?? 0) + (r.seasonal_present ?? 0)}</td>
                                                                 <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
-                                                                <td className="px-3 py-2 text-right">{r.ot_count ?? 0}</td>
+                                                                <td className="px-3 py-2 text-right font-semibold">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) > 0 ? (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) : 0}</td>
                                                                 <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{(r.ot_vegetarian ?? 0) > 0 ? r.ot_vegetarian : <span className="text-gray-300">—</span>}</td>
                                                                 <td className="px-2 py-2 whitespace-nowrap">
                                                                     {canEdit && (
@@ -2004,7 +2004,7 @@ export default function BaoCom() {
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
-                                                    <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0), 0)}</td>
+                                                    <td className="px-3 py-2 text-right font-bold">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) > 0 ? summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) : <span className="text-gray-300">—</span>}</td>
                                                     <td />
                                                 </tr>
