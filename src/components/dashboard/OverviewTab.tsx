@@ -17,6 +17,28 @@ interface DashboardSummary {
 
 interface DashboardEntry { summary: DashboardSummary; history: any[] }
 
+interface SeuData {
+    /** kWh total electricity (SEU #1) */
+    elecKwh: number
+    /** kWh compressor / MNK (SEU #2) */
+    mnkKwh: number
+    /** kWh shelling electricity (SEU #3) */
+    shellingKwh: number
+    /** kg wood fuel (SEU #4) — DB stores as kg */
+    woodKg: number
+    /** RCN production tons */
+    rcnTons: number
+    /** Peeling output tons (for MNK intensity) */
+    peelingTons: number
+    /** Shelling output tons */
+    shellingTons: number
+    // Baselines / targets
+    elecTarget: number   // kWh/RCN ton
+    mnkTarget: number    // kWh/RCN ton (peeling)
+    shellingTarget: number // kWh/kg shelling out
+    woodTarget: number   // kg/kg RCN
+}
+
 interface OverviewTabProps {
     selectedMonth: Date
     departments: { id: string; name_en: string; name_vi: string; code: string }[]
@@ -30,6 +52,7 @@ interface OverviewTabProps {
         woodActual: number; woodTarget: number
         totalEmission: number; totalEmissionTarget: number
     }
+    seuData: SeuData
 }
 
 // ─── Tooltip ─────────────────────────────────────────────────────────────────
@@ -89,9 +112,53 @@ function KpiCard({ label, value, unit, sub, pct, icon: Icon, color, inverse }: {
     )
 }
 
+// ─── SEU Card ─────────────────────────────────────────────────────────────────
+function SeuCard({
+    label, icon, intensity, target, unit, color, miss
+}: {
+    label: string; icon: string; intensity: number; target: number
+    unit: string; color: string; miss: boolean
+}) {
+    const pctVsBaseline = target > 0 ? ((intensity / target) - 1) * 100 : 0
+    const isMet = !miss
+    const statusColor = isMet ? '#10b981' : '#E30613'
+    const barFill = Math.min((intensity / (target * 1.3)) * 100, 100)
+    return (
+        <div className="bg-white/85 backdrop-blur-xl border border-white/50 rounded-xl p-3 shadow-sm relative overflow-hidden flex flex-col gap-1.5">
+            <div className="absolute top-0 left-0 bottom-0 w-[4px] rounded-l-xl" style={{ backgroundColor: color }} />
+            <div className="flex items-start justify-between">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">
+                    {icon} {label}
+                </span>
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                    isMet ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                }`}>
+                    {isMet ? '✓ MET' : '✗ MISS'}
+                </span>
+            </div>
+            <div className="flex items-baseline gap-1">
+                <span className="text-[22px] font-black tracking-tighter leading-none" style={{ color }}>
+                    {intensity > 0 ? intensity.toFixed(1) : '—'}
+                </span>
+                <span className="text-[9px] text-slate-400">{unit}</span>
+            </div>
+            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${barFill}%`, backgroundColor: color }} />
+            </div>
+            <div className="flex justify-between items-center">
+                <span className="text-[8px] text-slate-400">Baseline: <strong className="text-slate-600">{target}</strong></span>
+                <span className="text-[9px] font-black" style={{ color: statusColor }}>
+                    {pctVsBaseline >= 0 ? '▲' : '▼'} {Math.abs(pctVsBaseline).toFixed(1)}%
+                </span>
+            </div>
+        </div>
+    )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function OverviewTab({
-    selectedMonth, departments, dashboardsData, kpiSummary
+    selectedMonth, departments, dashboardsData, kpiSummary, seuData
 }: OverviewTabProps) {
     const allSum = dashboardsData['all']?.summary
     const allHistory = dashboardsData['all']?.history || []
@@ -137,6 +204,23 @@ export function OverviewTab({
         { label: 'Electricity', actual: kpiSummary.elecActual, target: kpiSummary.elecTarget, unit: 'kWh', icon: '⚡', color: '#eab308', pct: elecPct },
         { label: 'Water', actual: kpiSummary.waterActual, target: kpiSummary.waterTarget, unit: 'm³', icon: '💧', color: '#3b82f6', pct: waterPct },
         { label: 'Wood Fuel', actual: kpiSummary.woodActual, target: kpiSummary.woodTarget, unit: 'kg', icon: '🪵', color: '#f97316', pct: kpiSummary.woodTarget > 0 ? (kpiSummary.woodActual / kpiSummary.woodTarget) * 100 : 0 },
+    ]
+
+    // SEU intensities
+    const rcnT = seuData.rcnTons || 1
+    const peelT = seuData.peelingTons || 1
+    const shellT = seuData.shellingTons || 1
+
+    const seu1 = rcnT > 0 ? seuData.elecKwh / rcnT : 0           // kWh / RCN ton
+    const seu2 = peelT > 0 ? seuData.mnkKwh / peelT : 0          // kWh / peeling ton
+    const seu3 = shellT > 0 ? seuData.shellingKwh / (shellT * 1000) : 0 // kWh / kg shelling
+    const seu4 = rcnT > 0 ? seuData.woodKg / (rcnT * 1000) : 0   // kg / kg RCN
+
+    const seuCards = [
+        { label: 'SEU #1 — Điện Tổng NM', icon: '⚡', intensity: seu1, target: seuData.elecTarget, unit: 'kWh/RCN', color: '#E30613', miss: seu1 > seuData.elecTarget },
+        { label: 'SEU #2 — Máy Nén Khí', icon: '💨', intensity: seu2, target: seuData.mnkTarget, unit: 'kWh/T Peel', color: '#1D4E8A', miss: seu2 > seuData.mnkTarget },
+        { label: 'SEU #3 — Điện Shelling', icon: '🌀', intensity: seu3 * 1000, target: seuData.shellingTarget * 1000, unit: 'kWh/T Shell', color: '#E18E00', miss: seu3 > seuData.shellingTarget },
+        { label: 'SEU #4 — Lò Hơi (Củi)', icon: '🪵', intensity: seu4 * 1000, target: seuData.woodTarget * 1000, unit: 'g/kg RCN', color: '#89A21D', miss: seu4 > seuData.woodTarget },
     ]
 
     return (
@@ -418,6 +502,31 @@ export function OverviewTab({
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* ── SEU ISO 50001 PANEL ── */}
+            <div className="flex-shrink-0 bg-gradient-to-r from-slate-900/95 to-slate-800/95 backdrop-blur-xl border border-slate-700/50 rounded-xl p-3 shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <span className="w-1 h-4 bg-[#E30613] rounded-full inline-block" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">ISO 50001 — SEU Intensity MTD</span>
+                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold border ${
+                            seuCards.filter(s => s.miss).length === 0
+                                ? 'bg-emerald-900/40 text-emerald-400 border-emerald-700/40'
+                                : 'bg-red-900/40 text-red-400 border-red-700/40'
+                        }`}>
+                            {seuCards.filter(s => s.miss).length === 0 ? 'ALL MET ✓' : `${seuCards.filter(s => s.miss).length} MISS`}
+                        </span>
+                    </div>
+                    <span className="text-[8px] text-slate-500 font-mono">
+                        RCN: {seuData.rcnTons.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} T
+                    </span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                    {seuCards.map((s, i) => (
+                        <SeuCard key={i} {...s} />
+                    ))}
                 </div>
             </div>
         </div>

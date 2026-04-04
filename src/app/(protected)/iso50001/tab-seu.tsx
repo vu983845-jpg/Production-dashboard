@@ -1,7 +1,7 @@
 "use client"
 
 import { format, parseISO } from "date-fns"
-import { Zap, Flame, TrendingDown, TrendingUp, Info } from "lucide-react"
+import { Zap, Flame, Droplets, TrendingDown, TrendingUp, Info } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ResponsiveContainer } from "recharts"
@@ -34,8 +34,9 @@ export function TabSeu({ summaries, historical, currentMonth }: Props) {
 
 function SeuCard({ summary: s, historical, currentMonth }: { summary: SeuSummary, historical: MonthlyHistorical[], currentMonth: Date }) {
     const isElec = s.energy_type === 'electricity'
-    const Icon = isElec ? Zap : Flame
-    const iconColor = isElec ? 'text-blue-600' : 'text-orange-600'
+    const isWater = s.energy_type === 'water'
+    const Icon = isElec ? Zap : isWater ? Droplets : Flame
+    const iconColor = isElec ? 'text-blue-600' : isWater ? 'text-teal-600' : 'text-orange-600'
     const devColor = deviationColor(s.monthly_deviation_pct)
     const devBg = deviationBg(s.monthly_deviation_pct)
     const saving = s.monthly_deviation_pct != null && s.monthly_deviation_pct <= 0
@@ -100,7 +101,7 @@ function SeuCard({ summary: s, historical, currentMonth }: { summary: SeuSummary
                         label="Thực tế (MTD)"
                         value={fmtNum(s.total_actual)}
                         unit={s.unit}
-                        className={isElec ? 'border-blue-100 bg-blue-50/40' : 'border-orange-100 bg-orange-50/40'}
+                        className={isElec ? 'border-blue-100 bg-blue-50/40' : isWater ? 'border-teal-100 bg-teal-50/40' : 'border-orange-100 bg-orange-50/40'}
                     />
                     {/* Expected */}
                     {s.has_baseline && (
@@ -162,7 +163,7 @@ function SeuCard({ summary: s, historical, currentMonth }: { summary: SeuSummary
                                     <YAxis tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(v) => typeof v === 'number' ? new Intl.NumberFormat('en-US', { notation: 'compact' }).format(v) : v} tickLine={false} axisLine={false} />
                                     <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
                                     <Legend wrapperStyle={{ fontSize: '11px', bottom: -5 }} />
-                                    <Bar dataKey="Thực_tế" name="Thực tế" fill={isElec ? '#3b82f6' : '#f97316'} radius={[4, 4, 0, 0]} maxBarSize={45} />
+                                    <Bar dataKey="Thực_tế" name="Thực tế" fill={isElec ? '#3b82f6' : isWater ? '#0d9488' : '#f97316'} radius={[4, 4, 0, 0]} maxBarSize={45} />
                                     {s.has_baseline && (
                                         <Line type="monotone" dataKey="Dự_báo" name="Cơ sở (Baseline)" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
                                     )}

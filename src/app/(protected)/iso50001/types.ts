@@ -3,7 +3,7 @@
 export interface SeuMaster {
     seu_id: number
     name: string
-    energy_type: 'electricity' | 'wood'
+    energy_type: 'electricity' | 'wood' | 'water'
     unit: string
     output_unit: string
 }
@@ -65,6 +65,7 @@ export interface SeuSummary {
     monthly_deviation_pct: number | null
     monthly_enpi_actual: number | null
     monthly_enpi_baseline: number | null
+    data_source?: 'daily' | 'historical' // daily = current month, historical = past month
 }
 
 /** Simple least-squares linear regression: y = slope * x + intercept */

@@ -1714,6 +1714,29 @@ export default function DashboardPage() {
                         departments={departments}
                         dashboardsData={dashboardsData}
                         kpiSummary={kpiSummary}
+                        seuData={{
+                            elecKwh: kpiSummary.elecActual,
+                            mnkKwh: otherElecSummary.compressorKwh,
+                            shellingKwh: otherElecSummary.shellingKwh,
+                            woodKg: kpiSummary.woodActual,
+                            // RCN = Steam department input (total RCN steamed this month)
+                            rcnTons: dashboardsData['all']?.summary?.totalActual || 0,
+                            // Peeling tons = PEEL_MC actual
+                            peelingTons: (() => {
+                                const peelId = departments.find(d => d.code === 'PEEL_MC')?.id
+                                return peelId ? (dashboardsData[peelId]?.summary?.totalActual || 0) : 0
+                            })(),
+                            // Shelling tons = SHELL actual
+                            shellingTons: (() => {
+                                const shellId = departments.find(d => d.code === 'SHELL')?.id
+                                return shellId ? (dashboardsData[shellId]?.summary?.totalActual || 0) : 0
+                            })(),
+                            // ISO 50001 baselines (from natural-resources-report/index.html store object)
+                            elecTarget: 248.94,   // kWh / RCN ton
+                            mnkTarget: 281.4,     // kWh / peeling ton
+                            shellingTarget: 0.0402, // kWh / kg shelling output
+                            woodTarget: 0.08,       // kg wood / kg RCN
+                        }}
                     />
                 </TabsContent>
             </Tabs>

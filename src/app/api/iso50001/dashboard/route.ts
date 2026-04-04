@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
-    const month = searchParams.get('month') // e.g. "2025-03"
+    const month = searchParams.get('month') // e.g. "2026-03"
 
     if (!month) {
         return NextResponse.json({ error: 'month param required (YYYY-MM)' }, { status: 400 })
@@ -16,54 +16,69 @@ export async function GET(request: Request) {
     const startDate = `${year}-${String(mon).padStart(2, '0')}-01`
     const endDate = new Date(year, mon, 0).toISOString().slice(0, 10)
 
+    // Determine if selected month is current or past
+    const now = new Date()
+    const currentYearMon = now.getFullYear() * 100 + (now.getMonth() + 1) // e.g. 202604
+    const selectedYearMon = year * 100 + mon
+    const isCurrentMonth = selectedYearMon === currentYearMon
+    const isPastMonth = selectedYearMon < currentYearMon
+
     try {
-        // 1. Fetch daily entries for the selected month (for summary table)
-        const { data: entries, error: entryErr } = await supabase
-            .from('iso50001_daily_entry')
-            .select('*, seu:iso50001_seu_master(name, energy_type, unit)')
-            .gte('entry_date', startDate)
-            .lte('entry_date', endDate)
-            .order('entry_date', { ascending: true })
-
-        if (entryErr) throw entryErr
-
-        // 2. Fetch active baseline models
+        // 1. Fetch active baseline models
         const { data: baselines, error: blErr } = await supabase
             .from('iso50001_baseline_model')
             .select('*')
             .eq('is_active', true)
-
         if (blErr) throw blErr
 
         const baselineMap: Record<number, any> = {}
         for (const b of (baselines || [])) baselineMap[b.seu_id] = b
 
-        // 3. Fetch ALL SEUs
+        // 2. Fetch ALL SEUs
         const { data: allSeus } = await supabase.from('iso50001_seu_master').select('*')
 
-        // ── Historical: HYBRID approach ──────────────────────────────────────
-        // Step A: Aggregate iso50001_daily_entry by month (last 18 months)
+        // ── Historical chart data (12 months) ────────────────────────────────
+        // Rule: past months → monthly_historical (finalized);
+        //       current month → daily_entry aggregated (in-progress)
         const histStart = (() => {
             const d = new Date(year, mon - 1 - 17, 1)
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
         })()
 
+        // Fetch both sources for historical chart
         const [{ data: dailyHist, error: dHistErr }, { data: monthlyHist, error: mHistErr }] = await Promise.all([
+            // Only fetch daily for current month (past months already use historical)
             supabase
                 .from('iso50001_daily_entry')
                 .select('seu_id, entry_date, actual_energy, rcn_hap_duoc_kg, ck_obtained_mt, seu:iso50001_seu_master(name, energy_type, unit)')
-                .gte('entry_date', histStart)
-                .order('entry_date', { ascending: false }),
+                .gte('entry_date', startDate)  // only current month's daily entries for chart
+                .lte('entry_date', endDate)
+                .order('entry_date', { ascending: true }),
             supabase
                 .from('iso50001_monthly_historical')
                 .select('*, seu:iso50001_seu_master(name, energy_type, unit)')
+                .gte('month_year', histStart)
                 .order('month_year', { ascending: false }),
         ])
 
         if (dHistErr) throw dHistErr
         if (mHistErr) throw mHistErr
 
-        // Aggregate daily by month+seu
+        // Build historical chart: past months from monthly_historical, current month from daily aggregate
+        const mergedMap: Record<string, any> = {}
+
+        // Fill past months from monthly_historical (authoritative for finalized months)
+        for (const h of (monthlyHist || [])) {
+            const mk = h.month_year.slice(0, 7)
+            const hYearMon = Number(mk.replace('-', ''))
+            // For past months, use historical as-is. For current month, skip (will use daily below)
+            if (hYearMon < currentYearMon) {
+                const key = `${mk}|${h.seu_id}`
+                mergedMap[key] = { ...h, month_year: mk + '-01', days: 0, source: 'historical' }
+            }
+        }
+
+        // Aggregate daily entries for current month (in-progress data)
         const dailyAggMap: Record<string, any> = {}
         for (const e of (dailyHist || [])) {
             const mk = e.entry_date.slice(0, 7)
@@ -81,22 +96,12 @@ export async function GET(request: Request) {
             h.days++
         }
 
-        // Merge: daily has priority; monthly_historical fills in gaps (older data)
-        const mergedMap: Record<string, any> = {}
-
-        // First, insert all monthly_historical records
-        for (const h of (monthlyHist || [])) {
-            const mk = h.month_year.slice(0, 7)
-            const key = `${mk}|${h.seu_id}`
-            mergedMap[key] = { ...h, month_year: mk + '-01', days: 0, source: 'historical' }
-        }
-
-        // Then override with daily aggregated where available (more accurate)
+        // Current month daily overwrites (or adds) into merged map
         for (const [key, h] of Object.entries(dailyAggMap)) {
-            mergedMap[key] = h // daily always wins
+            mergedMap[key] = h
         }
 
-        // Enrich merged historical with baseline calculations
+        // Enrich historical with baseline calcs (formula applied once per month)
         const enrichedHistorical = Object.values(mergedMap)
             .sort((a: any, b: any) => b.month_year.localeCompare(a.month_year))
             .map((h: any) => {
@@ -114,67 +119,110 @@ export async function GET(request: Request) {
                 return { ...h, total_energy: actual, expected_energy: expected, deviation_pct: devPct }
             })
 
-        // ── Summary for selected month ────────────────────────────────────────
-        // Compute per-entry KPIs from daily entries
-        const enriched = (entries || []).map((e: any) => {
+        // ── Summary for selected month (MTD table) ────────────────────────────
+        // Current month → aggregate from iso50001_daily_entry (live data)
+        // Past month    → use iso50001_monthly_historical (finalized)
+
+        // Initialize summary slots for all SEUs
+        const summaryBySeu: Record<number, any> = {}
+        for (const seu of (allSeus || [])) {
+            summaryBySeu[seu.seu_id] = {
+                seu_id: seu.seu_id, seu_name: seu.name,
+                energy_type: seu.energy_type, unit: seu.unit,
+                total_actual: 0, total_rcn: 0, total_ck: 0, days: 0,
+                data_source: isCurrentMonth ? 'daily' : 'historical',
+                has_baseline: !!baselineMap[seu.seu_id],
+                baseline: baselineMap[seu.seu_id] || null,
+            }
+        }
+
+        let entries: any[] = [] // daily entries (for per-day chart — current month only)
+
+        if (isCurrentMonth) {
+            // ── CURRENT MONTH: aggregate from daily_entry ──
+            // dailyHist already fetched for current month above
+            entries = dailyHist || []
+            for (const e of entries) {
+                if (!summaryBySeu[e.seu_id]) continue
+                const s = summaryBySeu[e.seu_id]
+                s.total_actual += Number(e.actual_energy) || 0
+                s.total_rcn    += Number(e.rcn_hap_duoc_kg) || 0
+                if (e.ck_obtained_mt != null) s.total_ck = (s.total_ck || 0) + Number(e.ck_obtained_mt)
+                s.days++
+            }
+        } else if (isPastMonth) {
+            // ── PAST MONTH: use iso50001_monthly_historical (finalized) ──
+            const { data: pastMonthHist, error: pmErr } = await supabase
+                .from('iso50001_monthly_historical')
+                .select('*, seu:iso50001_seu_master(name, energy_type, unit)')
+                .eq('month_year', startDate) // 'YYYY-MM-01'
+
+            if (pmErr) throw pmErr
+
+            for (const h of (pastMonthHist || [])) {
+                if (!summaryBySeu[h.seu_id]) continue
+                const s = summaryBySeu[h.seu_id]
+                s.total_actual = Number(h.actual_energy) || 0
+                s.total_rcn = Number(h.rcn_hap_duoc_kg) || 0
+                s.total_ck = h.ck_obtained_mt != null ? Number(h.ck_obtained_mt) : 0
+                s.days = 1 // mark as "has data"
+            }
+        }
+
+        // Enrich per-day entries for chart display (current month only, used by daily chart)
+        const enrichedEntries = entries.map((e: any) => {
             const bl = baselineMap[e.seu_id]
             const isCk = bl?.label?.includes('[CK]')
             const actual = Number(e.actual_energy) || 0
             const rcn = Number(e.rcn_hap_duoc_kg) || 0
             const ck = Number(e.ck_obtained_mt) || 0
             const xVal = isCk ? ck : rcn
-
-            let expected = null, deviation_pct = null, saving = null, enpi_baseline = null
-            if (bl) {
-                // Intercept là hằng số tháng (giống công thức trong Baseline Model tab)
-                // y = slope * x + intercept
-                expected = Number(bl.slope) * xVal + Number(bl.intercept)
-                if (expected > 0) {
-                    deviation_pct = ((actual - expected) / expected) * 100
-                    saving = expected - actual
-                    enpi_baseline = xVal > 0 ? expected / xVal : null
-                }
+            // Chart-only: slope * xDay (no intercept per day to avoid overcounting)
+            return {
+                ...e,
+                expected_energy: bl ? Number(bl.slope) * xVal : null,
+                deviation_pct: null, saving: null,
+                enpi_actual: xVal > 0 ? actual / xVal : null,
+                enpi_baseline: null,
             }
-            return { ...e, expected_energy: expected, deviation_pct, saving, enpi_actual: (xVal > 0 ? actual / xVal : null), enpi_baseline }
         })
 
-        // Aggregate by SEU
-        const summaryBySeu: Record<number, any> = {}
-        for (const seu of (allSeus || [])) {
-            summaryBySeu[seu.seu_id] = {
-                seu_id: seu.seu_id, seu_name: seu.name,
-                energy_type: seu.energy_type, unit: seu.unit,
-                total_actual: 0, total_expected: 0, total_rcn: 0, total_saving: 0, days: 0,
-                has_baseline: !!baselineMap[seu.seu_id],
-                baseline: baselineMap[seu.seu_id] || null,
-            }
-        }
-        for (const e of enriched) {
-            if (!summaryBySeu[e.seu_id]) continue
-            const s = summaryBySeu[e.seu_id]
-            s.total_actual += e.actual_energy || 0
-            s.total_expected += e.expected_energy || 0
-            s.total_rcn += e.rcn_hap_duoc_kg || 0
-            s.total_saving += e.saving || 0
-            s.days++
-        }
-
+        // Compute monthly expected ONCE per SEU: y = slope * total_x + intercept
         const daysInSelectedMonth = new Date(year, mon, 0).getDate()
         const summaries = Object.values(summaryBySeu).map((s: any) => {
-            // If no daily data yet for this month but we have a baseline,
-            // show N/A deviation (not "Chưa có baseline")
+            const bl = baselineMap[s.seu_id]
+            const isCk = bl?.label?.includes('[CK]')
+            const totalX = isCk ? (s.total_ck || 0) : s.total_rcn
+
+            let total_expected: number | null = null
+            let total_saving: number | null = null
+            let monthly_deviation_pct: number | null = null
+
+            if (bl && s.days > 0 && totalX > 0) {
+                total_expected = Number(bl.slope) * totalX + Number(bl.intercept)
+                if (total_expected > 0) {
+                    total_saving = total_expected - s.total_actual
+                    monthly_deviation_pct = ((s.total_actual - total_expected) / total_expected) * 100
+                }
+            }
+
             return {
                 ...s,
-                monthly_deviation_pct: s.days > 0 && s.total_expected > 0
-                    ? ((s.total_actual - s.total_expected) / s.total_expected) * 100
-                    : null,
+                total_expected: total_expected ?? 0,
+                total_saving: total_saving ?? 0,
+                monthly_deviation_pct,
                 monthly_enpi_actual: s.total_rcn > 0 ? s.total_actual / s.total_rcn : null,
-                monthly_enpi_baseline: s.total_rcn > 0 ? s.total_expected / s.total_rcn : null,
+                monthly_enpi_baseline: (total_expected != null && s.total_rcn > 0) ? total_expected / s.total_rcn : null,
                 days_in_month: daysInSelectedMonth,
             }
         })
 
-        return NextResponse.json({ entries: enriched, summaries, historicalData: enrichedHistorical })
+        return NextResponse.json({
+            entries: enrichedEntries,
+            summaries,
+            historicalData: enrichedHistorical,
+            meta: { isCurrentMonth, isPastMonth, dataSource: isCurrentMonth ? 'daily_entry' : 'monthly_historical' }
+        })
 
     } catch (err: any) {
         console.error('ISO 50001 dashboard error:', err)

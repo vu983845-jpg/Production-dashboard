@@ -28,6 +28,7 @@ const SEU_EVN = 1       // Điện toàn nhà máy — rcn = RCN hấp
 const SEU_BOILER = 2    // Củi — rcn = RCN hấp
 const SEU_MNK = 3       // Máy nén khí / Peeling — rcn = SL Peeling
 const SEU_SHELLING = 4  // Shelling — rcn = SL Shelling
+const SEU_WATER = 5     // Nước — rcn = RCN hấp (hoặc CK)
 
 // ─── Inline editable cell ────────────────────────────────────────
 function EditCell({
@@ -75,7 +76,7 @@ function EditCell({
 interface MonthRow {
     month_year: string // 'YYYY-MM-DD'
     // ids for delete/update
-    id_evn?: number; id_boiler?: number; id_mnk?: number; id_shelling?: number
+    id_evn?: number; id_boiler?: number; id_mnk?: number; id_shelling?: number; id_water?: number
     // shared
     rcn_hap?: number   // SEU 1 & 2
     ck?: number        // all
@@ -84,6 +85,9 @@ interface MonthRow {
     kg_boiler?: number
     sl_peeling?: number; kwh_mnk?: number
     sl_shelling?: number; kwh_shelling?: number
+    // water
+    m3_water?: number  // actual water consumption
+    sl_water?: number  // production (rcn or ck) for water
 }
 
 function pivotHistorical(historical: MonthlyHistorical[]): MonthRow[] {
@@ -98,7 +102,6 @@ function pivotHistorical(historical: MonthlyHistorical[]): MonthRow[] {
         }
         if (h.seu_id === SEU_BOILER) {
             r.id_boiler = h.id; r.kg_boiler = h.actual_energy
-            // rcn_hap same — only overwrite if not already set
             if (!r.rcn_hap) r.rcn_hap = h.rcn_hap_duoc_kg
             if (!r.ck) r.ck = (h as any).ck_obtained_mt
         }
@@ -108,6 +111,10 @@ function pivotHistorical(historical: MonthlyHistorical[]): MonthRow[] {
         }
         if (h.seu_id === SEU_SHELLING) {
             r.id_shelling = h.id; r.kwh_shelling = h.actual_energy; r.sl_shelling = h.rcn_hap_duoc_kg
+            if (!r.ck) r.ck = (h as any).ck_obtained_mt
+        }
+        if (h.seu_id === SEU_WATER) {
+            r.id_water = h.id; r.m3_water = h.actual_energy; r.sl_water = h.rcn_hap_duoc_kg
             if (!r.ck) r.ck = (h as any).ck_obtained_mt
         }
     }
@@ -141,6 +148,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
         kwh_evn: '', kg_boiler: '',
         sl_peeling: '', kwh_mnk: '',
         sl_shelling: '', kwh_shelling: '',
+        sl_water: '', m3_water: '',
     })
     const [newRow, setNewRow] = useState(emptyNew())
 
@@ -207,6 +215,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
             upsert(`${m}|2|ck`, 2, m, rowVal(row, 'kg_boiler'), rowVal(row, 'rcn_hap'), n)
             upsert(`${m}|3|ck`, 3, m, rowVal(row, 'kwh_mnk'), rowVal(row, 'sl_peeling'), n)
             upsert(`${m}|4|ck`, 4, m, rowVal(row, 'kwh_shelling'), rowVal(row, 'sl_shelling'), n)
+            upsert(`${m}|5|ck`, 5, m, rowVal(row, 'm3_water'), rowVal(row, 'sl_water'), n)
         }
         if (field === 'kwh_evn') upsert(`${m}|1`, 1, m, n, rowVal(row, 'rcn_hap'), ck)
         if (field === 'kg_boiler') upsert(`${m}|2`, 2, m, n, rowVal(row, 'rcn_hap'), ck)
@@ -214,6 +223,8 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
         if (field === 'kwh_mnk') upsert(`${m}|3`, 3, m, n, rowVal(row, 'sl_peeling'), ck)
         if (field === 'sl_shelling') upsert(`${m}|4|rcn`, 4, m, rowVal(row, 'kwh_shelling'), n, ck)
         if (field === 'kwh_shelling') upsert(`${m}|4`, 4, m, n, rowVal(row, 'sl_shelling'), ck)
+        if (field === 'sl_water') upsert(`${m}|5|rcn`, 5, m, rowVal(row, 'm3_water'), n, ck)
+        if (field === 'm3_water') upsert(`${m}|5`, 5, m, n, rowVal(row, 'sl_water'), ck)
     }
 
     // ── Save new full row ──
@@ -228,6 +239,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
         if (newRow.kg_boiler) saves.push(upsert('new|2', 2, m, Number(newRow.kg_boiler), rcn, ck))
         if (newRow.kwh_mnk) saves.push(upsert('new|3', 3, m, Number(newRow.kwh_mnk), Number(newRow.sl_peeling) || 0, ck))
         if (newRow.kwh_shelling) saves.push(upsert('new|4', 4, m, Number(newRow.kwh_shelling), Number(newRow.sl_shelling) || 0, ck))
+        if (newRow.m3_water) saves.push(upsert('new|5', 5, m, Number(newRow.m3_water), Number(newRow.sl_water) || 0, ck))
         await Promise.all(saves)
         setSaving(null)
         setNewRow(emptyNew())
@@ -237,7 +249,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
     // ── Delete all SEUs for a month ──
     const handleDeleteMonth = async (row: MonthRow) => {
         if (!confirm(`Xóa toàn bộ data tháng ${format(parseISO(row.month_year), 'MM/yyyy')}?`)) return
-        const ids = [row.id_evn, row.id_boiler, row.id_mnk, row.id_shelling].filter(Boolean)
+        const ids = [row.id_evn, row.id_boiler, row.id_mnk, row.id_shelling, row.id_water].filter(Boolean)
         await Promise.all(ids.map(id =>
             fetch(`/api/iso50001/baseline?table=historical&id=${id}`, { method: 'DELETE' })
         ))
@@ -343,7 +355,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0 overflow-x-auto">
-                    <table className="w-full text-xs border-collapse min-w-[900px]">
+                    <table className="w-full text-xs border-collapse min-w-[1100px]">
                         <thead>
                             {/* Group headers */}
                             <tr>
@@ -353,6 +365,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                 <th colSpan={1} className={thGroup('bg-orange-600')}>🔥 Boiler (Củi)</th>
                                 <th colSpan={2} className={thGroup('bg-violet-600')}>⚡ MNK (Máy nén khí)</th>
                                 <th colSpan={2} className={thGroup('bg-cyan-700')}>⚡ Shelling</th>
+                                <th colSpan={2} className={thGroup('bg-teal-600')}>💧 Nước</th>
                                 <th className={`${thBase} w-8`} rowSpan={2}></th>
                             </tr>
                             <tr>
@@ -370,6 +383,9 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                 {/* Shelling */}
                                 <th className={thBase}>SL Shelling (kg)</th>
                                 <th className={`${thBase} text-cyan-700 font-bold`}>Điện Shelling (kWh)</th>
+                                {/* Water */}
+                                <th className={thBase}>SL (kg)</th>
+                                <th className={`${thBase} text-teal-700 font-bold`}>Nước (m³)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -413,6 +429,13 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                         </td>
                                         <td className="px-1 py-0.5 border-r border-slate-100 bg-cyan-50/20">
                                             <EditCell value={row.kwh_shelling} onSave={v => handleCellSave(row, 'kwh_shelling', v)} />
+                                        </td>
+                                        {/* Water */}
+                                        <td className="px-1 py-0.5 border-r border-slate-100 bg-teal-50/20">
+                                            <EditCell value={row.sl_water} onSave={v => handleCellSave(row, 'sl_water', v)} />
+                                        </td>
+                                        <td className="px-1 py-0.5 border-r border-slate-100 bg-teal-50/20">
+                                            <EditCell value={row.m3_water} onSave={v => handleCellSave(row, 'm3_water', v)} />
                                         </td>
                                         <td className="px-2 py-1 text-center">
                                             {isSaving
@@ -480,6 +503,17 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                     <input type="number" placeholder="kWh Shelling" value={newRow.kwh_shelling}
                                         onChange={e => setNewRow(r => ({ ...r, kwh_shelling: e.target.value }))}
                                         className="w-full h-7 px-1 text-xs text-right border border-dashed border-cyan-300 rounded bg-white focus:outline-none font-mono" />
+                                </td>
+                                {/* Water */}
+                                <td className="px-1 py-1 border-r border-slate-100 bg-teal-50/30">
+                                    <input type="number" placeholder="SL (kg)" value={newRow.sl_water}
+                                        onChange={e => setNewRow(r => ({ ...r, sl_water: e.target.value }))}
+                                        className="w-full h-7 px-1 text-xs text-right border border-dashed border-teal-200 rounded bg-white focus:outline-none font-mono" />
+                                </td>
+                                <td className="px-1 py-1 border-r border-slate-100 bg-teal-50/30">
+                                    <input type="number" placeholder="m³ Nước" value={newRow.m3_water}
+                                        onChange={e => setNewRow(r => ({ ...r, m3_water: e.target.value }))}
+                                        className="w-full h-7 px-1 text-xs text-right border border-dashed border-teal-300 rounded bg-white focus:outline-none font-mono" />
                                 </td>
                                 <td className="px-2 py-1 text-center">
                                     {saving === 'new'

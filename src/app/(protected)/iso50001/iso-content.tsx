@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { TabDashboard } from "./tab-dashboard"
 import { TabSeu } from "./tab-seu"
-import { TabInput } from "./tab-input"
 import { TabBaseline } from "./tab-baseline"
 import { SeuMaster, MonthlyHistorical, BaselineModel, DailyEntry, SeuSummary } from "./types"
 
@@ -109,12 +108,9 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
 
             {/* Tabs */}
             <Tabs defaultValue="dashboard" className="space-y-4">
-                <TabsList className="grid grid-cols-4 w-full h-9">
+                <TabsList className="grid grid-cols-3 w-full h-9">
                     <TabsTrigger value="dashboard" className="text-xs">📊 Dashboard</TabsTrigger>
                     <TabsTrigger value="seu" className="text-xs">⚡ SEU Tracking</TabsTrigger>
-                    {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
-                        <TabsTrigger value="input" className="text-xs">✏️ Data Input</TabsTrigger>
-                    )}
                     {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
                         <TabsTrigger value="baseline" className="text-xs">📐 Baseline Model</TabsTrigger>
                     )}
@@ -140,11 +136,7 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                     )}
                 </TabsContent>
 
-                {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
-                    <TabsContent value="input">
-                        <TabInput seus={seus} currentMonth={currentMonth} onSaved={handleRefresh} />
-                    </TabsContent>
-                )}
+
 
                 {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
                     <TabsContent value="baseline">

@@ -9,7 +9,7 @@ import {
 } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, TrendingDown, TrendingUp, Zap, Flame } from "lucide-react"
+import { AlertTriangle, TrendingDown, TrendingUp, Zap, Flame, Droplets } from "lucide-react"
 import { DailyEntry, SeuSummary, MonthlyHistorical, fmtNum, deviationColor, deviationBg } from "./types"
 
 interface Props {
@@ -22,6 +22,7 @@ interface Props {
 export function TabDashboard({ entries, summaries, historical, currentMonth }: Props) {
     const elecSummary = summaries.find(s => s.energy_type === 'electricity')
     const woodSummary = summaries.find(s => s.energy_type === 'wood')
+    const waterSummary = summaries.find(s => s.energy_type === 'water')
 
     const elecEntries = entries.filter(e => e.seu?.energy_type === 'electricity')
     const woodEntries = entries.filter(e => e.seu?.energy_type === 'wood')
@@ -63,8 +64,17 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
             <Card className="shadow-sm border-blue-100">
                 <CardHeader className="bg-slate-50/50 border-b pb-3">
                     <CardTitle className="text-sm">Bảng Tổng Hợp Kết Quả SEU (MTD)</CardTitle>
-                    <CardDescription className="text-xs">
-                        Kết quả thực tế, dự báo dựa vào hồi quy và % tiết kiệm của từng khu vực
+                    <CardDescription className="text-xs flex items-center gap-2 flex-wrap">
+                        <span>Kết quả thực tế, dự báo dựa vào hồi quy và % tiết kiệm của từng khu vực</span>
+                        {summaries.length > 0 && (
+                            summaries[0].data_source === 'historical'
+                                ? <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5 text-[10px] font-semibold">
+                                    📦 Tháng đã qua · Nguồn: Baseline Model (đã chốt)
+                                  </span>
+                                : <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 text-[10px] font-semibold">
+                                    📡 Tháng hiện tại · Nguồn: Data Input (hàng ngày)
+                                  </span>
+                        )}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -89,7 +99,12 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                                     return (
                                         <tr key={s.seu_id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-4 py-3 font-medium flex items-center gap-2">
-                                                {s.energy_type === 'electricity' ? <Zap className="h-4 w-4 text-blue-500" /> : <Flame className="h-4 w-4 text-orange-500" />}
+                                                {s.energy_type === 'electricity'
+                                                    ? <Zap className="h-4 w-4 text-blue-500" />
+                                                    : s.energy_type === 'water'
+                                                        ? <Droplets className="h-4 w-4 text-teal-500" />
+                                                        : <Flame className="h-4 w-4 text-orange-500" />
+                                                }
                                                 {s.seu_name}
                                             </td>
                                             <td className="px-4 py-3 text-right font-mono">
@@ -132,7 +147,7 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                 <CardHeader className="bg-slate-50/50 border-b pb-3">
                     <CardTitle className="text-sm">Lịch Sử Năng Lượng (12 Tháng Gần Nhất)</CardTitle>
                     <CardDescription className="text-xs">
-                        Dữ liệu raw data đã nhập ở tab Baseline Engine, so sánh với đường cơ sở hiện tại
+                        Dữ liệu nhập từ tab Data Input (tổng hợp theo tháng), so sánh với đường cơ sở hiện tại
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -176,7 +191,10 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                                             <td className="px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap">
                                                 {seuSum?.energy_type === 'electricity' || (row as any).seu?.energy_type === 'electricity'
                                                     ? <Zap className="h-3.5 w-3.5 text-blue-500" />
-                                                    : <Flame className="h-3.5 w-3.5 text-orange-500" />}
+                                                    : seuSum?.energy_type === 'water' || (row as any).seu?.energy_type === 'water'
+                                                        ? <Droplets className="h-3.5 w-3.5 text-teal-500" />
+                                                        : <Flame className="h-3.5 w-3.5 text-orange-500" />
+                                                }
                                                 {seuSum?.seu_name || (row as any).seu?.name}
                                             </td>
                                             <td className="px-4 py-2 text-right font-mono text-muted-foreground">
@@ -207,7 +225,7 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
             </Card>
 
             {/* Summary KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 <KpiCard
                     icon={<Zap className="h-4 w-4 text-blue-600" />}
                     label="Điện thực tế (MTD)"
@@ -222,12 +240,24 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                     unit="kg"
                     color="orange"
                 />
+                <KpiCard
+                    icon={<Droplets className="h-4 w-4 text-teal-600" />}
+                    label="Nước thực tế (MTD)"
+                    value={fmtNum(waterSummary?.total_actual)}
+                    unit="m³"
+                    color="teal"
+                />
+            </div>
+
+            {/* Deviation KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 <DeviationCard label="Lệch chuẩn điện" pct={elecSummary?.monthly_deviation_pct} />
                 <DeviationCard label="Lệch chuẩn củi" pct={woodSummary?.monthly_deviation_pct} />
+                <DeviationCard label="Lệch chuẩn nước" pct={waterSummary?.monthly_deviation_pct} />
             </div>
 
             {/* EnPI Cards */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 <EnpiCard
                     title="EnPI — Điện"
                     unit="kWh / kg Sản lượng"
@@ -239,6 +269,12 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
                     unit="kg củi / kg Sản lượng"
                     actual={woodSummary?.monthly_enpi_actual}
                     baseline={woodSummary?.monthly_enpi_baseline}
+                />
+                <EnpiCard
+                    title="EnPI — Nước"
+                    unit="m³ / kg Sản lượng"
+                    actual={waterSummary?.monthly_enpi_actual}
+                    baseline={waterSummary?.monthly_enpi_baseline}
                 />
             </div>
 
@@ -286,9 +322,9 @@ export function TabDashboard({ entries, summaries, historical, currentMonth }: P
 // ─── Sub-components ──────────────────────────────────────────
 
 function KpiCard({ icon, label, value, unit, color }: any) {
-    const borderColor = color === 'blue' ? 'border-blue-100' : 'border-orange-100'
-    const bgColor = color === 'blue' ? 'bg-blue-50/40' : 'bg-orange-50/40'
-    const textColor = color === 'blue' ? 'text-blue-700' : 'text-orange-700'
+    const borderColor = color === 'blue' ? 'border-blue-100' : color === 'teal' ? 'border-teal-100' : 'border-orange-100'
+    const bgColor = color === 'blue' ? 'bg-blue-50/40' : color === 'teal' ? 'bg-teal-50/40' : 'bg-orange-50/40'
+    const textColor = color === 'blue' ? 'text-blue-700' : color === 'teal' ? 'text-teal-700' : 'text-orange-700'
     return (
         <div className={`rounded-xl border ${borderColor} ${bgColor} p-3`}>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">{icon}{label}</div>
