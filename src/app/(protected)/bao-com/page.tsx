@@ -1210,9 +1210,12 @@ export default function BaoCom() {
             if (ca2 > 0) msg += `Ca 2: ${ca2}\n`
             if (ca3 > 0) msg += `Ca 3: ${ca3}\n`
             if (totalOT > 0) {
-                msg += `OT: ${totalOT}`
-                if (totalOTVeg > 0) msg += ` (${totalOTVeg} chay)`
-                msg += `\n`
+                const otMan = totalOT - totalOTVeg
+                if (totalOTVeg > 0) {
+                    msg += `OT: ${totalOT} (${otMan} mặn, ${totalOTVeg} chay)\n`
+                } else {
+                    msg += `OT: ${totalOT}\n`
+                }
             }
             msg += `Tổng: ${grand}`
             if (grand === 0) {
@@ -1356,10 +1359,14 @@ export default function BaoCom() {
         const man = totalPresent - totalVeg
         const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
         const otHour = OT_HOUR[summaryShift] ?? ""
+        const otMan = totalOT - totalOTVeg
         let msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}`
         if (totalOT > 0) {
-            msg += `; số phần OT là ${totalOT}`
-            if (totalOTVeg > 0) msg += ` (${totalOTVeg} chay)`
+            if (totalOTVeg > 0) {
+                msg += `; số phần OT là ${totalOT} (${otMan} mặn, ${totalOTVeg} chay)`
+            } else {
+                msg += `; số phần OT là ${totalOT}`
+            }
             msg += ` (ăn lúc ${otHour})`
         }
         return msg
