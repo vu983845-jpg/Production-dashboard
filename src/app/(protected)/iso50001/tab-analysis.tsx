@@ -145,10 +145,10 @@ export function TabAnalysis({ summaries, historical, currentMonth }: Props) {
                             {/* Card header */}
                             <div className="flex items-center justify-between px-3 pt-2 pb-1">
                                 <div className="flex items-center gap-1.5">
-                                    <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/60">
-                                        <cfg.Icon className="h-3 w-3" style={{ color: cfg.color }} />
+                                    <div className="w-6 h-6 rounded-md flex items-center justify-center bg-white/60">
+                                        <cfg.Icon className="h-3.5 w-3.5" style={{ color: cfg.color }} />
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-700">{cfg.label}</span>
+                                    <span className="text-[13px] font-bold text-slate-700">{cfg.label}</span>
                                 </div>
                                 {delta != null && (
                                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${delta > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
@@ -201,6 +201,59 @@ export function TabAnalysis({ summaries, historical, currentMonth }: Props) {
                         </div>
                     )
                 })}
+
+                {/* ── Slot 6: KPI Summary Card ────────────────────── */}
+                <div className="rounded-xl overflow-hidden flex flex-col p-3 gap-2"
+                    style={{ background: 'linear-gradient(145deg,#0B2545 0%,#1A4A8A 100%)', border: '1.5px solid #1E3A5F' }}>
+                    {/* Title */}
+                    <div>
+                        <div className="text-[10px] font-bold text-blue-200 uppercase tracking-widest">Tổng kết tháng</div>
+                        <div className="text-[22px] font-black text-yellow-400 leading-tight">{format(currentMonth, 'MM/yyyy')}</div>
+                        <div className="text-[9px] text-blue-300">ISO 50001 · Energy KPI</div>
+                    </div>
+                    {/* Per-SEU KPI rows */}
+                    <div className="flex flex-col gap-1 flex-1">
+                        {SEU_IDS.map(id => {
+                            const cfg = SEU_CFG[id]
+                            const h = histMap[currKey]?.[id]
+                            const actual = h?.actual_energy ?? null
+                            const enpi = calcEnpi(h)
+                            const avg = avg2025[id]
+                            const delta = pctChange(enpi, avg)
+                            const prod = h ? (prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : (h.ck_obtained_mt ?? 0) * 1000) : null
+                            const sv = (enpi != null && avg != null && prod != null) ? (avg - enpi) * prod : null
+                            const saved = sv != null && sv >= 0
+                            return (
+                                <div key={id} className="flex items-center justify-between rounded-md px-2 py-1"
+                                    style={{ background: 'rgba(255,255,255,0.08)' }}>
+                                    <div className="flex items-center gap-1.5">
+                                        <cfg.Icon className="h-3 w-3" style={{ color: cfg.color }} />
+                                        <span className="text-[10px] font-semibold text-white/80">{cfg.short}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[11px] font-bold text-white tabular-nums">
+                                            {actual != null ? Math.round(actual).toLocaleString('vi-VN') : '—'}
+                                        </span>
+                                        <span className="text-[8px] text-blue-300 ml-1">{cfg.unit}</span>
+                                    </div>
+                                    {delta != null && (
+                                        <span className={`text-[9px] font-bold ml-2 px-1.5 py-0.5 rounded-full min-w-[52px] text-center ${delta > 0 ? 'bg-red-500/30 text-red-300' : 'bg-emerald-500/30 text-emerald-300'}`}>
+                                            {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
+                                        </span>
+                                    )}
+                                    {sv != null && (
+                                        <span className={`text-[8px] font-semibold ml-1 min-w-[60px] text-right ${saved ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            {saved ? 'TK' : 'VM'} {Math.abs(Math.round(sv)).toLocaleString('vi-VN')}
+                                        </span>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                    <div className="text-[8px] text-blue-300/60 text-center pt-1 border-t border-white/10">
+                        EnPI = {prodBase === 'rcn' ? 'unit / kg RCN' : 'unit / MT CK'}
+                    </div>
+                </div>
             </div>
 
             {/* ══ FOOTER ══════════════════════════════════════════════ */}
