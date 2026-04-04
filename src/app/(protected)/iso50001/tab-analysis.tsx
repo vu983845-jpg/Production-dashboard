@@ -1,13 +1,60 @@
 "use client"
 
-import { useMemo, useState, useEffect, Component, ReactNode } from "react"
+import { useMemo, useState, Component, ReactNode } from "react"
 import { format, parseISO } from "date-fns"
 import { Zap, Flame, Droplets, Globe, AlertCircle } from "lucide-react"
-import {
-    ComposedChart, Bar, ReferenceLine, XAxis, YAxis,
-    ResponsiveContainer, CartesianGrid, Cell, Tooltip,
-} from "recharts"
 import { MonthlyHistorical, SeuSummary } from "./types"
+
+// ─── Pure SVG mini bar chart (no Recharts → avoids React error #284) ──
+type BarPoint = { label: string; enpi: number | null; ref: number | null; isCurrent: boolean }
+function MiniBarChart({
+    data, color, refColor, height = 95
+}: {
+    data: BarPoint[]; color: string; refColor: string; height?: number
+}) {
+    const W = 260, H = height - 18  // reserve bottom for labels
+    const vals = data.map(d => d.enpi).filter((v): v is number => v != null)
+    const refVal = data[0]?.ref
+    if (!vals.length) return <div style={{ height }} />
+    const minV = Math.min(...vals, refVal ?? Infinity) * 0.97
+    const maxV = Math.max(...vals, refVal ?? -Infinity) * 1.03
+    const range = maxV - minV || 1
+    const toY = (v: number) => H - ((v - minV) / range) * H
+    const bw = Math.max(4, Math.floor(W / data.length) - 4)
+    const gap = (W - bw * data.length) / (data.length + 1)
+    const refY = refVal != null ? toY(refVal) : null
+    return (
+        <svg width="100%" viewBox={`0 0 ${W} ${H + 18}`} style={{ display: 'block' }}>
+            {/* reference line */}
+            {refY != null && (
+                <>
+                    <line x1={0} y1={refY} x2={W} y2={refY}
+                        stroke={refColor} strokeWidth={1.5} strokeDasharray="5 3" />
+                </>
+            )}
+            {/* bars + labels */}
+            {data.map((d, i) => {
+                const x = gap + i * (bw + gap)
+                const y = d.enpi != null ? toY(d.enpi) : H
+                const bh = d.enpi != null ? H - y : 0
+                return (
+                    <g key={i}>
+                        <rect
+                            x={x} y={y} width={bw} height={bh}
+                            fill={d.isCurrent ? color : color + '55'}
+                            rx={1}
+                        />
+                        <text
+                            x={x + bw / 2} y={H + 13}
+                            fontSize={7} fill="#94A3B8"
+                            textAnchor="middle"
+                        >{d.label}</text>
+                    </g>
+                )
+            })}
+        </svg>
+    )
+}
 
 // ─── Error Boundary ────────────────────────────────────────────────
 class AnalysisErrorBoundary extends Component<
@@ -43,16 +90,6 @@ class AnalysisErrorBoundary extends Component<
     }
 }
 
-// Guard: only render Recharts on the client (avoids SSR ref errors)
-function SafeChart({ children, height = 95 }: { children: React.ReactNode; height?: number }) {
-    const [mounted, setMounted] = useState(false)
-    useEffect(() => { setMounted(true) }, [])
-    return (
-        <div style={{ height, minWidth: 0, width: '100%' }}>
-            {mounted ? children : null}
-        </div>
-    )
-}
 
 // ─── i18n ─────────────────────────────────────────────────────────────
 type Lang = 'vi' | 'en'
@@ -408,30 +445,15 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                 </div>
                             </div>
 
-                            {/* Mini chart */}
-                            <SafeChart height={95}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={trend} margin={{ top: 2, right: 6, left: 0, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 2" stroke="#F1F5F9" vertical={false} />
-                                        <XAxis dataKey="label" tick={{ fontSize: 8, fill: '#94A3B8' }} tickLine={false} axisLine={false} interval={1} />
-                                        <YAxis hide domain={['auto', 'auto']} />
-                                        <Tooltip
-                                            contentStyle={{ fontSize: '10px', borderRadius: '6px', padding: '4px 8px', border: `1px solid ${cfg.border}` }}
-                                            formatter={(v: any) => [typeof v === 'number' ? v.toFixed(4) : v, 'EnPI']}
-                                        />
-                                        {!noRef && trend[0]?.ref != null && (
-                                            <ReferenceLine y={trend[0].ref}
-                                                stroke={compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold}
-                                                strokeDasharray="5 3" strokeWidth={1.5} />
-                                        )}
-                                        <Bar dataKey="enpi" radius={[2, 2, 0, 0]} maxBarSize={24}>
-                                            {trend.map((d, i) => (
-                                                <Cell key={i} fill={d.isCurrent ? cfg.color : cfg.color + '40'} />
-                                            ))}
-                                        </Bar>
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </SafeChart>
+                            {/* Mini chart — pure SVG, no Recharts → no React error #284 */}
+                            <div style={{ height: 95, minWidth: 0, width: '100%' }}>
+                                <MiniBarChart
+                                    data={trend}
+                                    color={cfg.color}
+                                    refColor={compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold}
+                                    height={95}
+                                />
+                            </div>
                         </div>
                     )
                 })}
