@@ -464,6 +464,7 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                     <th className="px-3 py-2 text-center">Thời vụ</th>
                                                     <th className="px-3 py-2 text-center">OT</th>
                                                     <th className="px-3 py-2 text-center">Chay</th>
+                                                    <th className="px-3 py-2 text-center">Chay OT</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -474,23 +475,16 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                             <span className="ml-1 text-xs bg-orange-100 text-orange-700 rounded px-1.5 py-0.5">Ca {d.row.shift}</span>
                                                             <div className="text-xs text-slate-400">{format(new Date(d.row.date), "dd/MM/yyyy")}</div>
                                                         </td>
-                                                        {(["official_present", "seasonal_present", "ot_count", "vegetarian"] as const).map(f => {
-                                                            const oldVal = d.existing[f] ?? 0
-                                                            const newVal = d.row[f] ?? 0
-                                                            const changed = oldVal !== newVal
-                                                            return (
-                                                                <td key={f} className="px-3 py-2 text-center">
-                                                                    {changed ? (
-                                                                        <div className="flex flex-col items-center gap-0.5">
-                                                                            <span className="line-through text-slate-400 text-xs">{oldVal}</span>
-                                                                            <span className="font-bold text-amber-700 bg-amber-50 rounded px-1.5">{newVal}</span>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span className="text-slate-500">{newVal}</span>
-                                                                    )}
-                                                                </td>
-                                                            )
-                                                        })}
+                                                        {/* Chính thức */}
+                                                        {(() => { const o = d.existing.official_present ?? 0; const n = d.row.official_present ?? 0; const c = o !== n; return (<td className="px-3 py-2 text-center">{c ? <div className="flex flex-col items-center gap-0.5"><span className="line-through text-slate-400 text-xs">{o}</span><span className="font-bold text-amber-700 bg-amber-50 rounded px-1.5">{n}</span></div> : <span className="text-slate-500">{n}</span>}</td>) })()}
+                                                        {/* Thời vụ */}
+                                                        {(() => { const o = d.existing.seasonal_present ?? 0; const n = d.row.seasonal_present ?? 0; const c = o !== n; return (<td className="px-3 py-2 text-center">{c ? <div className="flex flex-col items-center gap-0.5"><span className="line-through text-slate-400 text-xs">{o}</span><span className="font-bold text-amber-700 bg-amber-50 rounded px-1.5">{n}</span></div> : <span className="text-slate-500">{n}</span>}</td>) })()}
+                                                        {/* OT = total (ot_count + ot_vegetarian) */}
+                                                        {(() => { const o = (d.existing.ot_count ?? 0) + (d.existing.ot_vegetarian ?? 0); const n = (d.row.ot_count ?? 0) + (d.row.ot_vegetarian ?? 0); const c = o !== n; return (<td className="px-3 py-2 text-center">{c ? <div className="flex flex-col items-center gap-0.5"><span className="line-through text-slate-400 text-xs">{o}</span><span className="font-bold text-amber-700 bg-amber-50 rounded px-1.5">{n}</span></div> : <span className="text-slate-500">{n}</span>}</td>) })()}
+                                                        {/* Chay */}
+                                                        {(() => { const o = d.existing.vegetarian ?? 0; const n = d.row.vegetarian ?? 0; const c = o !== n; return (<td className="px-3 py-2 text-center">{c ? <div className="flex flex-col items-center gap-0.5"><span className="line-through text-slate-400 text-xs">{o}</span><span className="font-bold text-amber-700 bg-amber-50 rounded px-1.5">{n}</span></div> : <span className="text-slate-500">{n}</span>}</td>) })()}
+                                                        {/* Chay OT */}
+                                                        {(() => { const o = d.existing.ot_vegetarian ?? 0; const n = d.row.ot_vegetarian ?? 0; const c = o !== n; return (<td className="px-3 py-2 text-center text-emerald-700">{c ? <div className="flex flex-col items-center gap-0.5"><span className="line-through text-slate-400 text-xs">{o}</span><span className="font-bold text-emerald-700 bg-emerald-50 rounded px-1.5">{n}</span></div> : <span>{n}</span>}</td>) })()}
                                                     </tr>
                                                 ))}
                                             </tbody>
