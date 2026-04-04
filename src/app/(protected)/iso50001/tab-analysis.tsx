@@ -1,12 +1,30 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import { format, parseISO } from "date-fns"
 import { Zap, Flame, Droplets, Globe } from "lucide-react"
 import {
     ComposedChart, Bar, ReferenceLine, XAxis, YAxis,
     ResponsiveContainer, CartesianGrid, Cell, Tooltip,
 } from "recharts"
+
+// Guard: only render Recharts once the tab has mounted and has valid layout
+function SafeChart({ children, height = 95 }: { children: React.ReactNode; height?: number }) {
+    const [ready, setReady] = useState(false)
+    const ref = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        // Use a small timeout so the tab finishes layout before Recharts measures
+        const timer = setTimeout(() => {
+            if (ref.current && ref.current.offsetWidth > 0) setReady(true)
+        }, 50)
+        return () => clearTimeout(timer)
+    }, [])
+    return (
+        <div ref={ref} style={{ height, minWidth: 0, width: '100%' }}>
+            {ready ? children : null}
+        </div>
+    )
+}
 import { MonthlyHistorical, SeuSummary } from "./types"
 
 // ─── i18n ─────────────────────────────────────────────────────────────
@@ -322,7 +340,7 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
                             </div>
 
                             {/* Mini chart */}
-                            <div style={{ height: 95 }}>
+                            <SafeChart height={95}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={trend} margin={{ top: 2, right: 6, left: 0, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 2" stroke="#F1F5F9" vertical={false} />
@@ -343,7 +361,7 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
                                         </Bar>
                                     </ComposedChart>
                                 </ResponsiveContainer>
-                            </div>
+                            </SafeChart>
                         </div>
                     )
                 })}
