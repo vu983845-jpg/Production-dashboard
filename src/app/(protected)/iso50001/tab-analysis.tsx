@@ -176,7 +176,9 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
     // Index summaries by seu_id
     const summaryMap = useMemo(() => {
         const m: Record<number, SeuSummary> = {}
-        for (const s of summaries) m[s.seu_id] = s
+        for (const s of (summaries ?? [])) {
+            if (s?.seu_id != null) m[s.seu_id] = s
+        }
         return m
     }, [summaries])
 

@@ -92,8 +92,11 @@ interface MonthRow {
 
 function pivotHistorical(historical: MonthlyHistorical[]): MonthRow[] {
     const map: Record<string, MonthRow> = {}
-    for (const h of historical) {
+    for (const h of (historical ?? [])) {
+        // Guard: skip rows with null/invalid month_year
+        if (!h?.month_year || typeof h.month_year !== 'string') continue
         const m = h.month_year.slice(0, 7) + '-01' // normalize
+        if (m.length < 10) continue
         if (!map[m]) map[m] = { month_year: m }
         const r = map[m]
         if (h.seu_id === SEU_EVN) {
@@ -166,7 +169,11 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
 
     const getX = (h: MonthlyHistorical) => xVar === 'ck' ? (h as any).ck_obtained_mt ?? 0 : h.rcn_hap_duoc_kg
     const xLabel = xVar === 'ck' ? 'CK (MT)' : 'Sản lượng (kg)'
-    const scatterData = selectedPoints.map(h => ({ x: getX(h), y: h.actual_energy, label: format(parseISO(h.month_year), 'MM/yyyy') }))
+    const scatterData = selectedPoints.map(h => {
+        let label = h.month_year
+        try { label = format(parseISO(h.month_year), 'MM/yyyy') } catch { /* keep */ }
+        return { x: getX(h), y: h.actual_energy, label }
+    })
 
     const regressionLineData = useMemo(() => {
         if (!regression || selectedPoints.length < 2) return []
@@ -248,7 +255,9 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
 
     // ── Delete all SEUs for a month ──
     const handleDeleteMonth = async (row: MonthRow) => {
-        if (!confirm(`Xóa toàn bộ data tháng ${format(parseISO(row.month_year), 'MM/yyyy')}?`)) return
+        let label = row.month_year
+        try { label = format(parseISO(row.month_year), 'MM/yyyy') } catch { /* keep raw */ }
+        if (!confirm(`Xóa toàn bộ data tháng ${label}?`)) return
         const ids = [row.id_evn, row.id_boiler, row.id_mnk, row.id_shelling, row.id_water].filter(Boolean)
         await Promise.all(ids.map(id =>
             fetch(`/api/iso50001/baseline?table=historical&id=${id}`, { method: 'DELETE' })
@@ -396,7 +405,12 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                         className={`border-b hover:bg-muted/10 transition-colors ${isSaving ? 'bg-blue-50/60' : ''}`}
                                     >
                                         <td className="px-3 py-1 font-mono text-muted-foreground whitespace-nowrap border-r border-slate-100">
-                                            {format(parseISO(row.month_year), 'MM/yyyy')}
+                                            {(() => {
+                                                try {
+                                                    const d = parseISO(row.month_year)
+                                                    return isNaN(d.getTime()) ? row.month_year : format(d, 'MM/yyyy')
+                                                } catch { return row.month_year }
+                                            })()}
                                         </td>
                                         {/* Chung */}
                                         <td className="px-1 py-0.5 border-r border-slate-100">
