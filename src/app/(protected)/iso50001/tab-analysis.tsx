@@ -1,12 +1,13 @@
 "use client"
 
-import { useMemo, useState, useEffect, useRef, Component, ReactNode } from "react"
+import { useMemo, useState, useEffect, Component, ReactNode } from "react"
 import { format, parseISO } from "date-fns"
 import { Zap, Flame, Droplets, Globe, AlertCircle } from "lucide-react"
 import {
     ComposedChart, Bar, ReferenceLine, XAxis, YAxis,
     ResponsiveContainer, CartesianGrid, Cell, Tooltip,
 } from "recharts"
+import { MonthlyHistorical, SeuSummary } from "./types"
 
 // ─── Error Boundary ────────────────────────────────────────────────
 class AnalysisErrorBoundary extends Component<
@@ -42,24 +43,16 @@ class AnalysisErrorBoundary extends Component<
     }
 }
 
-// Guard: only render Recharts once the tab has mounted and has valid layout
+// Guard: only render Recharts on the client (avoids SSR ref errors)
 function SafeChart({ children, height = 95 }: { children: React.ReactNode; height?: number }) {
-    const [ready, setReady] = useState(false)
-    const ref = useRef<HTMLDivElement>(null)
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (ref.current && ref.current.offsetWidth > 0) setReady(true)
-        }, 50)
-        return () => clearTimeout(timer)
-    }, [])
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => { setMounted(true) }, [])
     return (
-        <div ref={ref} style={{ height, minWidth: 0, width: '100%' }}>
-            {ready ? children : null}
+        <div style={{ height, minWidth: 0, width: '100%' }}>
+            {mounted ? children : null}
         </div>
     )
 }
-
-import { MonthlyHistorical, SeuSummary } from "./types"
 
 // ─── i18n ─────────────────────────────────────────────────────────────
 type Lang = 'vi' | 'en'
