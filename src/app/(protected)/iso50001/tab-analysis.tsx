@@ -1,12 +1,46 @@
 "use client"
 
-import { useMemo, useState, useEffect, useRef } from "react"
+import { useMemo, useState, useEffect, useRef, Component, ReactNode } from "react"
 import { format, parseISO } from "date-fns"
-import { Zap, Flame, Droplets, Globe } from "lucide-react"
+import { Zap, Flame, Droplets, Globe, AlertCircle } from "lucide-react"
 import {
     ComposedChart, Bar, ReferenceLine, XAxis, YAxis,
     ResponsiveContainer, CartesianGrid, Cell, Tooltip,
 } from "recharts"
+
+// ─── Error Boundary ────────────────────────────────────────────────
+class AnalysisErrorBoundary extends Component<
+    { children: ReactNode },
+    { hasError: boolean; error: string }
+> {
+    constructor(props: { children: ReactNode }) {
+        super(props)
+        this.state = { hasError: false, error: '' }
+    }
+    static getDerivedStateFromError(err: Error) {
+        return { hasError: true, error: err.message }
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border border-red-200 bg-red-50 text-center">
+                    <AlertCircle className="h-8 w-8 text-red-500" />
+                    <div>
+                        <p className="font-bold text-red-700">Có lỗi khi hiển thị tab Phân Tích</p>
+                        <p className="text-xs text-red-500 mt-1 font-mono">{this.state.error}</p>
+                    </div>
+                    <button
+                        onClick={() => this.setState({ hasError: false, error: '' })}
+                        className="px-4 py-1.5 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700"
+                    >
+                        Thử lại
+                    </button>
+                </div>
+            )
+        }
+        return this.props.children
+    }
+}
 
 // Guard: only render Recharts once the tab has mounted and has valid layout
 function SafeChart({ children, height = 95 }: { children: React.ReactNode; height?: number }) {
@@ -112,17 +146,25 @@ interface Props {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────
-export function TabAnalysis({ summaries, historical, currentMonth, lang: externalLang }: Props) {
+function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalLang }: Props) {
     const [prodBase, setProdBase] = useState<'rcn' | 'ck'>('rcn')
     const [compareMode, setCompareMode] = useState<'avg2025' | 'baseline'>('avg2025')
     const [lang, setLang] = useState<Lang>(externalLang ?? 'vi')
-    const currKey = format(currentMonth, 'yyyy-MM')
+
+    // Guard: ensure currentMonth is a valid Date
+    const safeCurrentMonth = currentMonth instanceof Date && !isNaN(currentMonth.getTime())
+        ? currentMonth
+        : new Date()
+    const currKey = format(safeCurrentMonth, 'yyyy-MM')
 
     // Index historical by month → seu_id
     const histMap = useMemo<Record<string, Record<number, MonthlyHistorical>>>(() => {
         const m: Record<string, Record<number, MonthlyHistorical>> = {}
-        for (const h of historical) {
+        for (const h of (historical ?? [])) {
+            // Guard: month_year must be a non-empty string
+            if (!h?.month_year || typeof h.month_year !== 'string') continue
             const mo = h.month_year.slice(0, 7)
+            if (!mo || mo.length < 7) continue
             if (!m[mo]) m[mo] = {}
             m[mo][h.seu_id] = h
         }
@@ -188,8 +230,14 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
         return allMonths.slice(-10).map(m => {
             const h = histMap[m]?.[seuId]
             const ep = calcEnpi(h)
+            // Safe label: parse 'YYYY-MM' → 'YYYY-MM-01'
+            let label = m
+            try {
+                const parsed = parseISO(m + '-01')
+                if (!isNaN(parsed.getTime())) label = format(parsed, 'MM/yy')
+            } catch { /* keep raw m as label */ }
             return {
-                label: format(parseISO(m + '-01'), 'MM/yy'),
+                label,
                 enpi: ep != null ? +ep.toFixed(6) : null,
                 ref,
                 isCurrent: m === currKey,
@@ -235,7 +283,7 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
                             {t('title', lang)}
                         </div>
                         <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                            {t('subtitle', lang)} · {format(currentMonth, 'MM/yyyy')}
+                            {t('subtitle', lang)} · {format(safeCurrentMonth, 'MM/yyyy')}
                         </div>
                     </div>
                 </div>
@@ -279,7 +327,7 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
 
                     <div className="px-3 py-1 rounded font-black text-xs"
                         style={{ background: 'rgba(255,255,255,0.95)', color: BRAND.darkRed }}>
-                        {t('month', lang)} {format(currentMonth, 'MM/yyyy')}
+                        {t('month', lang)} {format(safeCurrentMonth, 'MM/yyyy')}
                     </div>
                 </div>
             </div>
@@ -347,7 +395,7 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
                                         {actual != null ? Math.round(actual).toLocaleString('vi-VN') : '—'}
                                     </div>
                                     <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 1 }}>
-                                        {cfg.unit} · {format(currentMonth, lang === 'vi' ? 'MM/yyyy' : 'MMM yyyy')}
+                                        {cfg.unit} · {format(safeCurrentMonth, lang === 'vi' ? 'MM/yyyy' : 'MMM yyyy')}
                                     </div>
                                 </div>
                                 <div className="text-right" style={{ fontSize: 9 }}>
@@ -405,7 +453,7 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
                             {t('kpi_title', lang)}
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
-                            {format(currentMonth, 'MM/yyyy')}
+                            {format(safeCurrentMonth, 'MM/yyyy')}
                         </div>
                         <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)' }}>{t('kpi_sub', lang)}</div>
                     </div>
@@ -498,5 +546,14 @@ export function TabAnalysis({ summaries, historical, currentMonth, lang: externa
                 </div>
             </div>
         </div>
+    )
+}
+
+// ─── Public export: wrapped in Error Boundary ──────────────────────
+export function TabAnalysis(props: Props) {
+    return (
+        <AnalysisErrorBoundary>
+            <TabAnalysisInner {...props} />
+        </AnalysisErrorBoundary>
     )
 }
