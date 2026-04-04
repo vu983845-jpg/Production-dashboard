@@ -13,13 +13,13 @@ function MiniBarChart({
     data: BarPoint[]; color: string; refColor: string; height?: number
 }) {
     const [hovered, setHovered] = useState<number | null>(null)
-    const PAD_TOP = 18, PAD_BOT = 18
+    const PAD_TOP = 22, PAD_BOT = 20   // enough room for value label + axis labels
     const W = 280, H = height - PAD_TOP - PAD_BOT
     const vals = data.map(d => d.enpi).filter((v): v is number => v != null)
     const refVal = data.find(d => d.ref != null)?.ref ?? null
     if (!vals.length) return <div style={{ height }} />
     const minV = Math.min(...vals, refVal ?? Infinity) * 0.95
-    const maxV = Math.max(...vals, refVal ?? -Infinity) * 1.08
+    const maxV = Math.max(...vals, refVal ?? -Infinity) * 1.05
     const range = maxV - minV || 1
     const toY = (v: number) => PAD_TOP + H - ((v - minV) / range) * H
     const bw = Math.max(6, Math.floor(W / data.length) - 5)
@@ -30,7 +30,7 @@ function MiniBarChart({
     return (
         <svg
             width="100%" viewBox={`0 0 ${W} ${height}`}
-            style={{ display: 'block', overflow: 'visible' }}
+            style={{ display: 'block' }}
         >
             <defs>
                 <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -501,13 +501,13 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                 </div>
                             </div>
 
-                            {/* Mini chart — pure SVG, no Recharts → no React error #284 */}
-                            <div style={{ height: 110, minWidth: 0, width: '100%' }}>
+                            {/* Mini chart — pure SVG, no Recharts */}
+                            <div style={{ height: 120, minWidth: 0, width: '100%' }}>
                                 <MiniBarChart
                                     data={trend}
                                     color={cfg.color}
                                     refColor={compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold}
-                                    height={110}
+                                    height={120}
                                 />
                             </div>
                         </div>
