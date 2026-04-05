@@ -790,17 +790,61 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                 border: '1.5px solid #4A1C1C',
                                 boxShadow: '0 2px 8px rgba(142,30,25,0.3)',
                             }}>
-                            <div>
-                                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                                    {t('kpi_title', lang)}
-                                </div>
-                                <div style={{ fontSize: 22, fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
-                                    {format(safeCurrentMonth, 'MM/yyyy')}
-                                </div>
-                                <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)' }}>{t('kpi_sub', lang)}</div>
-                            </div>
+                            {/* Title + Overall Status Badge */}
+                            {(() => {
+                                // Compute overall status from all SEUs with data
+                                const deltas = ALL_SEU_IDS.map(id => {
+                                    const h = histMap[currKey]?.[id]
+                                    const enpi = calcEnpi(h)
+                                    const ref = getRef(id)
+                                    return pctChange(enpi, ref)
+                                }).filter((d): d is number => d != null)
+                                const overCount = deltas.filter(d => d > 0).length
+                                const hasData = deltas.length > 0
+                                const avgDelta = hasData ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null
 
-                            <div className="flex flex-col gap-1 flex-1">
+                                let statusLabel = '', statusBg = '', statusColor = '', statusIcon = ''
+                                if (!hasData || avgDelta == null) {
+                                    statusLabel = 'NO DATA'; statusBg = 'rgba(255,255,255,0.12)'; statusColor = 'rgba(255,255,255,0.4)'; statusIcon = '○'
+                                } else if (overCount === 0) {
+                                    statusLabel = lang === 'vi' ? 'TIẾT KIỆM' : 'SAVING'; statusBg = 'rgba(16,185,129,0.25)'; statusColor = '#6EE7B7'; statusIcon = '✓'
+                                } else if (overCount <= 2 && avgDelta < 5) {
+                                    statusLabel = lang === 'vi' ? 'CHÚ Ý' : 'AT RISK'; statusBg = 'rgba(251,191,36,0.25)'; statusColor = '#FCD34D'; statusIcon = '△'
+                                } else {
+                                    statusLabel = lang === 'vi' ? 'VƯỢT MỨC' : 'OVER'; statusBg = 'rgba(239,68,68,0.28)'; statusColor = '#FCA5A5'; statusIcon = '✕'
+                                }
+
+                                return (
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                                                {t('kpi_title', lang)}
+                                            </div>
+                                            <div style={{ fontSize: 22, fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
+                                                {format(safeCurrentMonth, 'MM/yyyy')}
+                                            </div>
+                                            <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)' }}>{t('kpi_sub', lang)}</div>
+                                        </div>
+                                        {/* Overall Status Badge */}
+                                        <div style={{
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                            background: statusBg,
+                                            border: `1px solid ${statusColor}50`,
+                                            borderRadius: 8, padding: '4px 8px', minWidth: 52, gap: 1,
+                                        }}>
+                                            <span style={{ fontSize: 14, lineHeight: 1, color: statusColor }}>{statusIcon}</span>
+                                            <span style={{ fontSize: 7, fontWeight: 800, color: statusColor, letterSpacing: '0.06em', textAlign: 'center' }}>{statusLabel}</span>
+                                            {avgDelta != null && (
+                                                <span style={{ fontSize: 9, fontWeight: 900, color: statusColor }}>
+                                                    {avgDelta > 0 ? '+' : ''}{avgDelta.toFixed(1)}%
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })()}
+
+                            <div className="flex flex-col gap-1.5 flex-1">
                                 {ALL_SEU_IDS.map(id => {
                                     const cfg = SEU_CFG[id]
                                     const h = histMap[currKey]?.[id]
@@ -812,36 +856,76 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     const sv = (enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
                                     const saved = sv != null && sv >= 0
                                     const noRef = isNoRef(id)
+                                    const borderColor = noRef || delta == null
+                                        ? 'rgba(255,255,255,0.12)'
+                                        : delta > 0 ? 'rgba(239,68,68,0.45)' : 'rgba(16,185,129,0.45)'
 
                                     return (
-                                        <div key={id} className="flex flex-col rounded px-2 py-1"
-                                            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', gap: 1 }}>
-                                            {/* Row 1: icon + label + value + delta% */}
-                                            <div className="flex items-center gap-1">
+                                        <div key={id} className="rounded-lg overflow-hidden"
+                                            style={{
+                                                background: 'rgba(255,255,255,0.07)',
+                                                border: `1px solid ${borderColor}`,
+                                            }}>
+                                            {/* Row 1: icon + label + raw value + deviation badge */}
+                                            <div className="flex items-center gap-1.5 px-2 pt-1.5 pb-1">
                                                 <cfg.Icon className="h-3 w-3 flex-shrink-0"
                                                     style={{ color: id === 5 ? '#7DD3FC' : '#FECACA' }} />
-                                                <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.7)', minWidth: 30, flexShrink: 0 }}>{cfg.short}</span>
-                                                <span style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums', flex: 1 }}>
+                                                <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.8)', minWidth: 28, flexShrink: 0 }}>{cfg.short}</span>
+                                                <span style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums', flex: 1 }}>
                                                     {actual != null ? Math.round(actual).toLocaleString('vi-VN') : '—'}
                                                     <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.35)', marginLeft: 2 }}>{cfg.unit}</span>
                                                 </span>
+                                                {/* Deviation % badge — prominent */}
                                                 {noRef ? (
-                                                    <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>—</span>
+                                                    <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>N/A</span>
                                                 ) : delta != null ? (
-                                                    <span className="rounded-full px-1.5 py-0.5 font-bold flex-shrink-0"
+                                                    <span className="flex-shrink-0 font-black rounded"
                                                         style={{
-                                                            fontSize: 8,
-                                                            background: delta > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)',
+                                                            fontSize: 10,
+                                                            padding: '1px 6px',
+                                                            background: delta > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)',
                                                             color: delta > 0 ? '#FCA5A5' : '#6EE7B7',
+                                                            border: `1px solid ${delta > 0 ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)'}`,
                                                         }}>
                                                         {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
                                                     </span>
-                                                ) : null}
+                                                ) : (
+                                                    <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>—</span>
+                                                )}
                                             </div>
-                                            {/* Row 2: saving/over text */}
-                                            {sv != null && !noRef && (
-                                                <div style={{ fontSize: 8, fontWeight: 600, paddingLeft: 16, color: saved ? '#34D399' : '#F87171' }}>
-                                                    {saved ? t('saving_tk', lang) : t('over_vm', lang)} {Math.abs(Math.round(sv)).toLocaleString('vi-VN')} {cfg.unit}
+
+                                            {/* Row 2: deviation bar + EnPI vs ref + saving/over */}
+                                            {!noRef && enpi != null && ref != null && (
+                                                <div style={{ paddingLeft: 8, paddingRight: 8, paddingBottom: 6 }}>
+                                                    {/* deviation progress bar */}
+                                                    {delta != null && (() => {
+                                                        const clampedAbs = Math.min(Math.abs(delta), 20)
+                                                        const barW = (clampedAbs / 20) * 100
+                                                        const barColor = delta > 0 ? '#EF4444' : '#10B981'
+                                                        return (
+                                                            <div style={{ position: 'relative', height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2, marginBottom: 4 }}>
+                                                                <div style={{
+                                                                    position: 'absolute', top: 0, left: 0,
+                                                                    width: `${barW}%`, height: '100%',
+                                                                    background: barColor, borderRadius: 2,
+                                                                }} />
+                                                            </div>
+                                                        )
+                                                    })()}
+                                                    {/* EnPI vs Ref + saving row */}
+                                                    <div className="flex items-center justify-between">
+                                                        <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', fontVariantNumeric: 'tabular-nums' }}>
+                                                            EnPI {enpi.toFixed(4)} / ref {ref.toFixed(4)}
+                                                        </span>
+                                                        {sv != null && (
+                                                            <span style={{
+                                                                fontSize: 8, fontWeight: 800,
+                                                                color: saved ? '#34D399' : '#F87171',
+                                                            }}>
+                                                                {saved ? '↓' : '↑'} {Math.abs(Math.round(sv)).toLocaleString('vi-VN')} {cfg.unit}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
