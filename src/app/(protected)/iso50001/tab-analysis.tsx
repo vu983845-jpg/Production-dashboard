@@ -696,7 +696,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                         </span>
                     </div>
 
-                    <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr 0.8fr' }}>
+                    <div className="grid gap-3 items-stretch" style={{ gridTemplateColumns: '1fr 1fr 0.8fr' }}>
                         {/* KPI cards for MNK & Shelling */}
                         {KPI_CARD_IDS.map(id => {
                             const cfg = SEU_CFG[id]
@@ -770,8 +770,8 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                         </div>
                                     </div>
 
-                                    {/* Mini chart */}
-                                    <div style={{ height: 110, minWidth: 0, width: '100%' }}>
+                                    {/* Mini chart — flex-1 fills remaining height */}
+                                    <div style={{ flex: 1, minHeight: 90, minWidth: 0, width: '100%' }}>
                                         <MiniBarChart
                                             data={trend}
                                             color={cfg.color}
@@ -786,9 +786,9 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                         {/* ── Summary / KPI card ──────────────────────── */}
                         <div className="rounded-xl overflow-hidden flex flex-col p-3 gap-2"
                             style={{
-                                background: `linear-gradient(160deg, ${BRAND.darkRed} 0%, #1A0A08 100%)`,
-                                border: '1.5px solid #4A1C1C',
-                                boxShadow: '0 2px 8px rgba(142,30,25,0.3)',
+                                background: `linear-gradient(160deg, #6B1C1C 0%, #3D1210 100%)`,
+                                border: '1.5px solid #8E3030',
+                                boxShadow: '0 2px 8px rgba(142,30,25,0.35)',
                             }}>
                             {/* Title + Overall Status Badge */}
                             {(() => {
@@ -863,7 +863,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     return (
                                         <div key={id} className="rounded-lg overflow-hidden"
                                             style={{
-                                                background: 'rgba(255,255,255,0.07)',
+                                                background: 'rgba(255,255,255,0.12)',
                                                 border: `1px solid ${borderColor}`,
                                             }}>
                                             {/* Row 1: icon + label + raw value + deviation badge */}
@@ -914,7 +914,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                                     })()}
                                                     {/* EnPI vs Ref + saving row */}
                                                     <div className="flex items-center justify-between">
-                                                        <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', fontVariantNumeric: 'tabular-nums' }}>
+                                                        <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.65)', fontVariantNumeric: 'tabular-nums' }}>
                                                             EnPI {enpi.toFixed(4)} / ref {ref.toFixed(4)}
                                                         </span>
                                                         {sv != null && (
@@ -933,7 +933,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                 })}
                             </div>
 
-                            <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.3)', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 4 }}>
+                            <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.5)', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 4 }}>
                                 EnPI = {prodBase === 'rcn' ? t('enpi_unit', lang) : t('enpi_ck', lang)}
                                 &nbsp;·&nbsp;
                                 <span style={{ color: compareMode === 'avg2025' ? '#34D399' : BRAND.refGold }}>
