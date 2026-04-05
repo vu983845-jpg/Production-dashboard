@@ -446,9 +446,15 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
         return m
     }, [summaries])
 
-    const calcEnpi = (h: MonthlyHistorical | undefined): number | null => {
+    // MNK (3) always per kg RCN peeled; Shelling (4) always per kg RCN; others follow toggle
+    const getProd = (h: MonthlyHistorical, id?: number): number => {
+        if (id === 3 || id === 4) return h.rcn_hap_duoc_kg ?? 0
+        return prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : ((h.ck_obtained_mt ?? 0) * 1000)
+    }
+
+    const calcEnpi = (h: MonthlyHistorical | undefined, id?: number): number | null => {
         if (!h) return null
-        const prod = prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : ((h.ck_obtained_mt ?? 0) * 1000)
+        const prod = getProd(h, id)
         return prod > 0 ? h.actual_energy / prod : null
     }
 
@@ -457,7 +463,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
         for (const id of ALL_SEU_IDS) {
             const vals = allMonths
                 .filter(m => m.startsWith('2025'))
-                .map(m => calcEnpi(histMap[m]?.[id]))
+                .map(m => calcEnpi(histMap[m]?.[id], id))
                 .filter((v): v is number => v != null)
             res[id] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
         }
@@ -472,7 +478,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
             const h = histMap[currKey]?.[id]
             if (!s?.baseline || !h) { res[id] = null; continue }
             const { slope, intercept } = s.baseline
-            const prod = prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : ((h.ck_obtained_mt ?? 0) * 1000)
+            const prod = getProd(h, id)
             if (prod <= 0) { res[id] = null; continue }
             res[id] = (slope * prod + intercept) / prod
         }
@@ -486,7 +492,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
         const ref = getRef(seuId)
         return allMonths.slice(-10).map(m => {
             const h = histMap[m]?.[seuId]
-            const ep = calcEnpi(h)
+            const ep = calcEnpi(h, seuId)
             let label = m
             try {
                 const parsed = parseISO(m + '-01')
@@ -667,9 +673,9 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                         {BIG_CHART_IDS.map(id => {
                             const cfg = SEU_CFG[id]
                             const h = histMap[currKey]?.[id]
-                            const enpi = calcEnpi(h)
+                            const enpi = calcEnpi(h, id)
                             const ref = getRef(id)
-                            const prod = h ? (prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : (h.ck_obtained_mt ?? 0) * 1000) : null
+                            const prod = h ? getProd(h, id) : null
                             const sv = (enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
                             if (sv == null) return null
                             const saved = sv >= 0
@@ -702,10 +708,10 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             const cfg = SEU_CFG[id]
                             const h = histMap[currKey]?.[id]
                             const actual = h?.actual_energy ?? null
-                            const enpi = calcEnpi(h)
+                            const enpi = calcEnpi(h, id)
                             const ref = getRef(id)
                             const delta = pctChange(enpi, ref)
-                            const prod = h ? (prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : (h.ck_obtained_mt ?? 0) * 1000) : null
+                            const prod = h ? getProd(h, id) : null
                             const savingAbs = (enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
                             const saved = savingAbs != null && savingAbs >= 0
                             const trend = trendFor(id)
@@ -849,10 +855,10 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     const cfg = SEU_CFG[id]
                                     const h = histMap[currKey]?.[id]
                                     const actual = h?.actual_energy ?? null
-                                    const enpi = calcEnpi(h)
+                                    const enpi = calcEnpi(h, id)
                                     const ref = getRef(id)
                                     const delta = pctChange(enpi, ref)
-                                    const prod = h ? (prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : (h.ck_obtained_mt ?? 0) * 1000) : null
+                                    const prod = h ? getProd(h, id) : null
                                     const sv = (enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
                                     const saved = sv != null && sv >= 0
                                     const noRef = isNoRef(id)
@@ -956,9 +962,9 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                     {ALL_SEU_IDS.map(id => {
                         const cfg = SEU_CFG[id]
                         const h = histMap[currKey]?.[id]
-                        const enpi = calcEnpi(h)
+                        const enpi = calcEnpi(h, id)
                         const ref = getRef(id)
-                        const prod = h ? (prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : (h.ck_obtained_mt ?? 0) * 1000) : null
+                        const prod = h ? getProd(h, id) : null
                         const sv = (enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
                         if (sv == null) return null
                         return (
