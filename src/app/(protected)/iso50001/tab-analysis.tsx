@@ -525,6 +525,8 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                 display: 'flex', flexDirection: 'column',
                 background: BRAND.bg,
                 border: `1px solid ${BRAND.darkRed}30`,
+                aspectRatio: '16 / 9',
+                minHeight: 540,
             }}
         >
             {/* ══ HEADER ══════════════════════════════════════════════ */}
@@ -593,7 +595,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
             </div>
 
             {/* ══ BODY ═════════════════════════════════════════════════ */}
-            <div className="flex flex-col gap-3 p-3" style={{ flex: 1 }}>
+            <div className="flex flex-col gap-3 p-3" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
 
                 {/* ── BIG CHART: EVN · Củi · Nước ─────────────────────── */}
                 <div className="rounded-xl overflow-hidden"
