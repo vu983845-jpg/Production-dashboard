@@ -696,7 +696,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                         </span>
                     </div>
 
-                    <div className="grid gap-3 items-stretch" style={{ gridTemplateColumns: '1fr 1fr 0.8fr' }}>
+                    <div className="grid gap-3 items-start" style={{ gridTemplateColumns: '1fr 1fr 0.8fr' }}>
                         {/* KPI cards for MNK & Shelling */}
                         {KPI_CARD_IDS.map(id => {
                             const cfg = SEU_CFG[id]
@@ -770,8 +770,8 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                         </div>
                                     </div>
 
-                                    {/* Mini chart — flex-1 fills remaining height */}
-                                    <div style={{ flex: 1, minHeight: 90, minWidth: 0, width: '100%' }}>
+                                    {/* Mini chart */}
+                                    <div style={{ height: 110, minWidth: 0, width: '100%' }}>
                                         <MiniBarChart
                                             data={trend}
                                             color={cfg.color}
