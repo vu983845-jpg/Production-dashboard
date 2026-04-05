@@ -718,7 +718,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             const noRef = isNoRef(id)
 
                             return (
-                                <div key={id} className="rounded-xl overflow-hidden flex flex-col"
+                                <div key={id} className="rounded-xl flex flex-col pb-1"
                                     style={{
                                         background: '#FFFFFF',
                                         border: `1.5px solid ${cfg.border}`,
@@ -777,12 +777,12 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     </div>
 
                                     {/* Mini chart */}
-                                    <div style={{ height: 110, minWidth: 0, width: '100%' }}>
+                                    <div style={{ height: 130, minWidth: 0, width: '100%' }}>
                                         <MiniBarChart
                                             data={trend}
                                             color={cfg.color}
                                             refColor={compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold}
-                                            height={110}
+                                            height={130}
                                         />
                                     </div>
                                 </div>
