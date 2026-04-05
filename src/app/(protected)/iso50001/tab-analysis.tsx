@@ -138,6 +138,7 @@ type BigBarSeries = {
     seuId: number
     color: string
     label: string
+    short: string
     unit: string
     points: { label: string; enpi: number | null; ref: number | null; isCurrent: boolean }[]
 }
