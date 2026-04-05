@@ -814,31 +814,35 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     const noRef = isNoRef(id)
 
                                     return (
-                                        <div key={id} className="flex items-center rounded px-2 py-1 gap-1"
-                                            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                            <cfg.Icon className="h-3 w-3 flex-shrink-0"
-                                                style={{ color: id === 5 ? '#7DD3FC' : '#FECACA' }} />
-                                            <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.7)', minWidth: 34 }}>{cfg.short}</span>
-                                            <span style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums', flex: 1 }}>
-                                                {actual != null ? Math.round(actual).toLocaleString('vi-VN') : '—'}
-                                                <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.35)', marginLeft: 2 }}>{cfg.unit}</span>
-                                            </span>
-                                            {noRef ? (
-                                                <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>—</span>
-                                            ) : delta != null ? (
-                                                <span className="rounded-full px-1.5 py-0.5 font-bold"
-                                                    style={{
-                                                        fontSize: 8, minWidth: 44, textAlign: 'center',
-                                                        background: delta > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)',
-                                                        color: delta > 0 ? '#FCA5A5' : '#6EE7B7',
-                                                    }}>
-                                                    {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
+                                        <div key={id} className="flex flex-col rounded px-2 py-1"
+                                            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', gap: 1 }}>
+                                            {/* Row 1: icon + label + value + delta% */}
+                                            <div className="flex items-center gap-1">
+                                                <cfg.Icon className="h-3 w-3 flex-shrink-0"
+                                                    style={{ color: id === 5 ? '#7DD3FC' : '#FECACA' }} />
+                                                <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.7)', minWidth: 30, flexShrink: 0 }}>{cfg.short}</span>
+                                                <span style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums', flex: 1 }}>
+                                                    {actual != null ? Math.round(actual).toLocaleString('vi-VN') : '—'}
+                                                    <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.35)', marginLeft: 2 }}>{cfg.unit}</span>
                                                 </span>
-                                            ) : null}
+                                                {noRef ? (
+                                                    <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>—</span>
+                                                ) : delta != null ? (
+                                                    <span className="rounded-full px-1.5 py-0.5 font-bold flex-shrink-0"
+                                                        style={{
+                                                            fontSize: 8,
+                                                            background: delta > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)',
+                                                            color: delta > 0 ? '#FCA5A5' : '#6EE7B7',
+                                                        }}>
+                                                        {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                            {/* Row 2: saving/over text */}
                                             {sv != null && !noRef && (
-                                                <span style={{ fontSize: 8, fontWeight: 600, minWidth: 52, textAlign: 'right', color: saved ? '#34D399' : '#F87171' }}>
-                                                    {saved ? t('saved', lang) : t('over', lang)} {Math.abs(Math.round(sv)).toLocaleString('vi-VN')}
-                                                </span>
+                                                <div style={{ fontSize: 8, fontWeight: 600, paddingLeft: 16, color: saved ? '#34D399' : '#F87171' }}>
+                                                    {saved ? t('saving_tk', lang) : t('over_vm', lang)} {Math.abs(Math.round(sv)).toLocaleString('vi-VN')} {cfg.unit}
+                                                </div>
                                             )}
                                         </div>
                                     )
