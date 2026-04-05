@@ -519,7 +519,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
 
     return (
         <div
-            className="w-full rounded-xl overflow-hidden shadow-2xl"
+            className="w-full rounded-xl shadow-2xl"
             style={{
                 fontFamily: "'Inter',system-ui,sans-serif",
                 display: 'flex', flexDirection: 'column',
@@ -598,11 +598,12 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
             <div className="flex flex-col gap-3 p-3" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
 
                 {/* ── BIG CHART: EVN · Củi · Nước ─────────────────────── */}
-                <div className="rounded-xl overflow-hidden"
+                <div className="rounded-xl"
                     style={{
                         background: '#FFFFFF',
                         border: `1.5px solid #FECACA`,
                         boxShadow: '0 2px 8px rgba(142,30,25,0.08)',
+                        flexShrink: 0,
                     }}>
                     {/* Chart header */}
                     <div className="flex items-center justify-between px-4 pt-3 pb-2"
