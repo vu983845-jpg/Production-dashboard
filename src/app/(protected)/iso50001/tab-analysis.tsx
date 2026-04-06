@@ -59,8 +59,12 @@ const T = {
     enpi_ck:   { vi: 'unit / MT CK', en: 'unit / MT CK' },
     footer_co: { vi: 'ISO 50001 EnMS', en: 'ISO 50001 EnMS' },
     no_bl:     { vi: 'Chưa có baseline', en: 'No baseline' },
-    big_chart_title: { vi: 'EnPI Tháng — Điện Tổng · Củi · Nước', en: 'Monthly EnPI — Total Elec · Wood · Water' },
+    big_chart_title_enpi:   { vi: 'EnPI Tháng — Điện Tổng · Củi · Nước', en: 'Monthly EnPI — Total Elec · Wood · Water' },
+    big_chart_title_actual: { vi: 'Actual Tháng — Điện · Củi · Nước (+ RCN kg)', en: 'Monthly Actual — Elec · Wood · Water (+ RCN kg)' },
     kpi_section: { vi: 'KPI TRACKING — SEU PHỤ TRỢ', en: 'KPI TRACKING — AUXILIARY SEUs' },
+    mode_enpi:   { vi: 'EnPI', en: 'EnPI' },
+    mode_actual: { vi: 'Actual', en: 'Actual' },
+    rcn_line:    { vi: 'RCN (kg)', en: 'RCN (kg)' },
 }
 const t = (key: keyof typeof T, lang: Lang) => T[key][lang]
 
@@ -131,8 +135,9 @@ interface Props {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// BIG GROUPED BAR CHART — EVN · Củi · Nước  (EnPI trend, last 10 months)
+// BIG GROUPED BAR CHART — EVN · Củi · Nước  (EnPI or Actual trend, last 10 months)
 // Each month shows 3 adjacent bars + individual dashed reference lines
+// optionally overlays RCN production line
 // ══════════════════════════════════════════════════════════════════════
 type BigBarSeries = {
     seuId: number
@@ -140,17 +145,21 @@ type BigBarSeries = {
     label: string
     short: string
     unit: string
-    points: { label: string; enpi: number | null; ref: number | null; isCurrent: boolean }[]
+    points: { label: string; enpi: number | null; ref: number | null; rcn: number | null; isCurrent: boolean }[]
 }
 
 function BigGroupedChart({
     series,
     refColor,
     height = 240,
+    showRcn = false,
+    showRef = true,
 }: {
     series: BigBarSeries[]
     refColor: string
     height?: number
+    showRcn?: boolean
+    showRef?: boolean
 }) {
     const [hov, setHov] = useState<{ m: number; s: number } | null>(null)
 
@@ -193,6 +202,13 @@ function BigGroupedChart({
 
     const gradIds = series.map(s => `biggrad-${s.color.replace('#', '')}`)
 
+    // RCN line: compute min/max across all points for its own scale
+    const rcnVals = series[0]?.points.map(p => p.rcn).filter((v): v is number => v != null && v > 0) ?? []
+    const rcnMin = rcnVals.length ? Math.min(...rcnVals) * 0.9 : 0
+    const rcnMax = rcnVals.length ? Math.max(...rcnVals) * 1.1 : 1
+    const rcnRange = rcnMax - rcnMin || 1
+    const toRcnY = (v: number) => PAD_TOP + H - ((v - rcnMin) / rcnRange) * H
+
     return (
         <svg
             width="100%"
@@ -223,7 +239,7 @@ function BigGroupedChart({
             })}
 
             {/* Reference lines (dashed) per series */}
-            {series.map((s, si) => {
+            {showRef && series.map((s, si) => {
                 const ref = s.points.find(p => p.ref != null)?.ref ?? null
                 if (ref == null) return null
                 const y = toY(ref, bounds[si])
@@ -316,6 +332,48 @@ function BigGroupedChart({
                     </g>
                 )
             })}
+
+            {/* RCN line overlay */}
+            {showRcn && rcnVals.length > 1 && (() => {
+                const RCN_COLOR = '#0EA5E9'
+                const pts = series[0].points
+                const linePoints = pts
+                    .map((pt, mi) => {
+                        if (pt.rcn == null || pt.rcn <= 0) return null
+                        const groupX = PAD_L + mi * (groupW + GROUP_GAP)
+                        const cx = groupX + groupW / 2
+                        const cy = toRcnY(pt.rcn)
+                        return { cx, cy, rcn: pt.rcn, label: pt.label, isCurrent: pt.isCurrent }
+                    }).filter((p): p is NonNullable<typeof p> => p !== null)
+
+                if (linePoints.length < 2) return null
+                const pathD = linePoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.cx},${p.cy}`).join(' ')
+
+                return (
+                    <g key="rcn-line">
+                        {/* RCN axis label */}
+                        <text x={TOTAL_W - PAD_R} y={PAD_TOP - 10} fontSize={6} fill={RCN_COLOR}
+                            textAnchor="end" fontWeight="700" opacity={0.8}>RCN (kg)</text>
+                        {/* Line path */}
+                        <path d={pathD} fill="none" stroke={RCN_COLOR} strokeWidth={1.5}
+                            strokeDasharray="6 3" opacity={0.75} />
+                        {/* Dots */}
+                        {linePoints.map((p, i) => (
+                            <g key={i}>
+                                <circle cx={p.cx} cy={p.cy} r={p.isCurrent ? 4 : 2.5}
+                                    fill={p.isCurrent ? RCN_COLOR : '#fff'}
+                                    stroke={RCN_COLOR} strokeWidth={1.5} opacity={0.9} />
+                                {p.isCurrent && (
+                                    <text x={p.cx} y={p.cy - 7} fontSize={6.5} fill={RCN_COLOR}
+                                        textAnchor="middle" fontWeight="800">
+                                        {Math.round(p.rcn / 1000)}k
+                                    </text>
+                                )}
+                            </g>
+                        ))}
+                    </g>
+                )
+            })()}
         </svg>
     )
 }
@@ -418,6 +476,7 @@ function MiniBarChart({
 function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalLang }: Props) {
     const [prodBase, setProdBase] = useState<'rcn' | 'ck'>('rcn')
     const [compareMode, setCompareMode] = useState<'avg2025' | 'baseline'>('avg2025')
+    const [viewMode, setViewMode] = useState<'enpi' | 'actual'>('enpi')
     const [lang, setLang] = useState<Lang>(externalLang ?? 'vi')
 
     const safeCurrentMonth = currentMonth instanceof Date && !isNaN(currentMonth.getTime())
@@ -494,12 +553,14 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
         return allMonths.slice(-10).map(m => {
             const h = histMap[m]?.[seuId]
             const ep = calcEnpi(h, seuId)
+            const actual = h?.actual_energy ?? null
+            const rcn = h?.rcn_hap_duoc_kg ?? null
             let label = m
             try {
                 const parsed = parseISO(m + '-01')
                 if (!isNaN(parsed.getTime())) label = format(parsed, 'MM/yy')
             } catch { /* keep raw */ }
-            return { label, enpi: ep != null ? +ep.toFixed(6) : null, ref, isCurrent: m === currKey }
+            return { label, enpi: ep != null ? +ep.toFixed(6) : null, actual, rcn, ref, isCurrent: m === currKey }
         })
     }
 
@@ -507,14 +568,22 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
         compareMode === 'baseline' && id !== 5 && !summaryMap[id]?.baseline
 
     // Build big chart series for EVN (1), Củi (2), Nước (5)
-    const bigSeries: BigBarSeries[] = BIG_CHART_IDS.map(id => ({
-        seuId: id,
-        color: SEU_CFG[id].color,
-        label: SEU_CFG[id].label(lang),
-        short: SEU_CFG[id].short,
-        unit:  SEU_CFG[id].unit,
-        points: trendFor(id),
-    }))
+    const bigSeries: BigBarSeries[] = BIG_CHART_IDS.map(id => {
+        const trend = trendFor(id)
+        return {
+            seuId: id,
+            color: SEU_CFG[id].color,
+            label: SEU_CFG[id].label(lang),
+            short: SEU_CFG[id].short,
+            unit:  SEU_CFG[id].unit,
+            // In actual mode, override enpi field with actual_energy for display
+            points: trend.map(p => ({
+                ...p,
+                enpi: viewMode === 'actual' ? p.actual : p.enpi,
+                ref:  viewMode === 'actual' ? null : p.ref,
+            })),
+        }
+    })
 
     const refColorForBig = compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold
 
@@ -559,7 +628,22 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                         <Globe className="h-3 w-3" /> {lang.toUpperCase()}
                     </button>
 
-                    {/* Compare mode */}
+                    {/* View mode: EnPI ↔ Actual */}
+                    <div className="flex rounded overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.3)', fontSize: 10 }}>
+                        <button onClick={() => setViewMode('enpi')}
+                            className="px-2.5 py-1 font-bold transition-colors"
+                            style={{ background: viewMode === 'enpi' ? 'rgba(255,255,255,0.95)' : 'transparent', color: viewMode === 'enpi' ? BRAND.darkRed : 'rgba(255,255,255,0.8)' }}>
+                            {t('mode_enpi', lang)}
+                        </button>
+                        <button onClick={() => setViewMode('actual')}
+                            className="px-2.5 py-1 font-bold transition-colors"
+                            style={{ background: viewMode === 'actual' ? 'rgba(255,255,255,0.95)' : 'transparent', color: viewMode === 'actual' ? BRAND.darkRed : 'rgba(255,255,255,0.8)', borderLeft: '1px solid rgba(255,255,255,0.3)' }}>
+                            {t('mode_actual', lang)}
+                        </button>
+                    </div>
+
+                    {/* Compare mode (only for EnPI) */}
+                    {viewMode === 'enpi' && (
                     <div className="flex rounded overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.3)', fontSize: 10 }}>
                         <button onClick={() => setCompareMode('avg2025')}
                             className="px-2.5 py-1 font-bold transition-colors"
@@ -572,6 +656,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             {t('vs_bl', lang)}
                         </button>
                     </div>
+                    )}
 
                     {/* Production base */}
                     <div className="flex rounded overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.3)', fontSize: 10 }}>
@@ -614,10 +699,13 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                         style={{ flexShrink: 0, borderBottom: '1.5px solid #FEF2F2' }}>
                         <div className="flex items-center gap-2">
                             <span className="font-black text-slate-800" style={{ fontSize: 13 }}>
-                                {t('big_chart_title', lang)}
+                                {viewMode === 'enpi' ? t('big_chart_title_enpi', lang) : t('big_chart_title_actual', lang)}
                             </span>
                             <span style={{ fontSize: 9, color: '#94A3B8', fontWeight: 500 }}>
-                                — EnPI / {prodBase === 'rcn' ? 'kg RCN' : 'MT CK'} · 10 tháng gần nhất
+                                {viewMode === 'enpi'
+                                    ? `— EnPI / ${prodBase === 'rcn' ? 'kg RCN' : 'MT CK'} · 10 tháng gần nhất`
+                                    : '— Actual: kWh / kg / m³ · 10 tháng gần nhất'
+                                }
                             </span>
                         </div>
                         {/* Legend */}
@@ -628,7 +716,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                 const actual = h?.actual_energy ?? null
                                 const enpi = calcEnpi(h)
                                 const ref = getRef(id)
-                                const delta = pctChange(enpi, ref)
+                                const delta = viewMode === 'enpi' ? pctChange(enpi, ref) : null
                                 return (
                                     <div key={id} className="flex items-center gap-1.5">
                                         <div style={{ width: 10, height: 10, borderRadius: 2, background: cfg.color }} />
@@ -652,16 +740,28 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     </div>
                                 )
                             })}
-                            {/* Reference line legend */}
-                            <div className="flex items-center gap-1" style={{ paddingLeft: 8, borderLeft: '1px solid #E2E8F0' }}>
-                                <svg width="22" height="8">
-                                    <line x1="0" y1="4" x2="22" y2="4"
-                                        stroke={refColorForBig} strokeWidth="1.5" strokeDasharray="4 2" />
-                                </svg>
-                                <span style={{ fontSize: 8, color: '#64748B', fontWeight: 600 }}>
-                                    {compareMode === 'avg2025' ? t('avg2025', lang) : t('baseline', lang)}
-                                </span>
-                            </div>
+                            {/* RCN line legend (only in Actual mode) */}
+                            {viewMode === 'actual' && (
+                                <div className="flex items-center gap-1" style={{ paddingLeft: 8, borderLeft: '1px solid #E2E8F0' }}>
+                                    <svg width="22" height="8">
+                                        <line x1="0" y1="4" x2="22" y2="4"
+                                            stroke="#0EA5E9" strokeWidth="1.5" strokeDasharray="6 3" />
+                                    </svg>
+                                    <span style={{ fontSize: 8, color: '#0EA5E9', fontWeight: 700 }}>RCN (kg)</span>
+                                </div>
+                            )}
+                            {/* Reference line legend (only in EnPI mode) */}
+                            {viewMode === 'enpi' && (
+                                <div className="flex items-center gap-1" style={{ paddingLeft: 8, borderLeft: '1px solid #E2E8F0' }}>
+                                    <svg width="22" height="8">
+                                        <line x1="0" y1="4" x2="22" y2="4"
+                                            stroke={refColorForBig} strokeWidth="1.5" strokeDasharray="4 2" />
+                                    </svg>
+                                    <span style={{ fontSize: 8, color: '#64748B', fontWeight: 600 }}>
+                                        {compareMode === 'avg2025' ? t('avg2025', lang) : t('baseline', lang)}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -671,10 +771,13 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             series={bigSeries}
                             refColor={refColorForBig}
                             height={220}
+                            showRcn={viewMode === 'actual'}
+                            showRef={viewMode === 'enpi'}
                         />
                     </div>
 
-                    {/* Savings summary row */}
+                    {/* Savings summary row — only in EnPI mode */}
+                    {viewMode === 'enpi' && (
                     <div className="flex items-center gap-6 px-4 py-2"
                         style={{ borderTop: '1px solid #F1F5F9', background: '#FAFAFA', flexShrink: 0 }}>
                         {BIG_CHART_IDS.map(id => {
@@ -697,6 +800,41 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             )
                         })}
                     </div>
+                    )}
+                    {/* Actual mode: show RCN + actual summary row */}
+                    {viewMode === 'actual' && (() => {
+                        const h1 = histMap[currKey]?.[1]
+                        const rcn = h1?.rcn_hap_duoc_kg ?? null
+                        return (
+                        <div className="flex items-center gap-6 px-4 py-2"
+                            style={{ borderTop: '1px solid #F1F5F9', background: '#FAFAFA', flexShrink: 0 }}>
+                            {rcn != null && (
+                                <div className="flex items-center gap-1.5">
+                                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0EA5E9' }} />
+                                    <span style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>RCN tháng này:</span>
+                                    <span style={{ fontSize: 9, fontWeight: 800, color: '#0EA5E9' }}>
+                                        {Math.round(rcn).toLocaleString('vi-VN')} kg
+                                    </span>
+                                </div>
+                            )}
+                            {BIG_CHART_IDS.map(id => {
+                                const cfg = SEU_CFG[id]
+                                const h = histMap[currKey]?.[id]
+                                const actual = h?.actual_energy ?? null
+                                if (actual == null) return null
+                                return (
+                                    <div key={id} className="flex items-center gap-1.5">
+                                        <cfg.Icon className="h-3 w-3" style={{ color: cfg.color }} />
+                                        <span style={{ fontSize: 9, color: '#64748B', fontWeight: 600 }}>{cfg.short}:</span>
+                                        <span style={{ fontSize: 9, fontWeight: 800, color: cfg.color }}>
+                                            {Math.round(actual).toLocaleString('vi-VN')} {cfg.unit}
+                                        </span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        )
+                    })()}
                 </div>
 
                 {/* ── BOTTOM: Compact 5-SEU strip ─────────────────────── */}
@@ -740,13 +878,19 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             const h = histMap[currKey]?.[id]
                             const actual = h?.actual_energy ?? null
                             const enpi = calcEnpi(h, id)
-                            const ref = getRef(id)
-                            const delta = pctChange(enpi, ref)
+                            const ref = viewMode === 'actual' ? null : getRef(id)
+                            const delta = viewMode === 'actual' ? null : pctChange(enpi, ref)
                             const prod = h ? getProd(h, id) : null
-                            const sv = (enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
+                            const sv = (viewMode === 'enpi' && enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
                             const saved = sv != null && sv >= 0
-                            const noRef = isNoRef(id)
-                            const trend = trendFor(id)
+                            const noRef = viewMode === 'actual' ? false : isNoRef(id)
+                            const rawTrend = trendFor(id)
+                            // In actual mode, override enpi with actual value so mini charts show actual
+                            const trend = rawTrend.map(p => ({
+                                ...p,
+                                enpi: viewMode === 'actual' ? p.actual : p.enpi,
+                                ref:  viewMode === 'actual' ? null : p.ref,
+                            }))
                             const clampedAbs = delta != null ? Math.min(Math.abs(delta), 25) : 0
                             const barW = (clampedAbs / 25) * 100
 
@@ -789,10 +933,16 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
 
                                     <div className="px-2 pb-1">
                                         <div className="flex items-center justify-between" style={{ fontSize: 7.5, marginTop: 2 }}>
-                                            <span style={{ color: '#64748B' }}>
-                                                EnPI <span style={{ fontWeight: 700, color: '#334155' }}>{enpi != null ? enpi.toFixed(3) : '—'}</span>
-                                            </span>
-                                            {!noRef && ref != null && (
+                                            {viewMode === 'enpi' ? (
+                                                <span style={{ color: '#64748B' }}>
+                                                    EnPI <span style={{ fontWeight: 700, color: '#334155' }}>{enpi != null ? enpi.toFixed(3) : '—'}</span>
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: '#64748B' }}>
+                                                    EnPI <span style={{ fontWeight: 600, color: '#94A3B8' }}>{enpi != null ? enpi.toFixed(3) : '—'}</span>
+                                                </span>
+                                            )}
+                                            {!noRef && ref != null && viewMode === 'enpi' && (
                                                 <span style={{ color: '#94A3B8' }}>ref {ref.toFixed(3)}</span>
                                             )}
                                         </div>
