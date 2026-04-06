@@ -998,15 +998,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                         )}
                                     </div>
 
-                                    {/* Mini sparkline */}
-                                    <div style={{ flex: 1, minHeight: 60, maxHeight: 80 }}>
-                                        <MiniBarChart
-                                            data={trend}
-                                            color={cfg.color}
-                                            refColor={compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold}
-                                            height={70}
-                                        />
-                                    </div>
+
                                 </div>
                             )
                         })}
