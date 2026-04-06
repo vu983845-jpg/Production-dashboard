@@ -196,6 +196,7 @@ function BigGroupedChart({
     return (
         <svg
             width="100%"
+            height="100%"
             viewBox={`0 0 ${TOTAL_W} ${height}`}
             style={{ display: 'block' }}
         >
@@ -342,7 +343,7 @@ function MiniBarChart({
     const gradId = `grad-${color.replace('#', '')}`
 
     return (
-        <svg width="100%" viewBox={`0 0 ${W} ${height}`} style={{ display: 'block' }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${W} ${height}`} style={{ display: 'block' }}>
             <defs>
                 <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%"   stopColor={color} stopOpacity="1" />
@@ -519,7 +520,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
 
     return (
         <div
-            className="w-full rounded-xl shadow-2xl"
+            className="w-full rounded-xl shadow-2xl overflow-hidden"
             style={{
                 fontFamily: "'Inter',system-ui,sans-serif",
                 display: 'flex', flexDirection: 'column',
@@ -595,7 +596,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
             </div>
 
             {/* ══ BODY ═════════════════════════════════════════════════ */}
-            <div className="flex flex-col gap-3 p-3" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div className="flex flex-col gap-3 p-3" style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
 
                 {/* ── BIG CHART: EVN · Củi · Nước ─────────────────────── */}
                 <div className="rounded-xl"
@@ -603,11 +604,14 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                         background: '#FFFFFF',
                         border: `1.5px solid #FECACA`,
                         boxShadow: '0 2px 8px rgba(142,30,25,0.08)',
-                        flexShrink: 0,
+                        flex: 1,
+                        minHeight: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
                     }}>
                     {/* Chart header */}
                     <div className="flex items-center justify-between px-4 pt-3 pb-2"
-                        style={{ borderBottom: '1.5px solid #FEF2F2' }}>
+                        style={{ flexShrink: 0, borderBottom: '1.5px solid #FEF2F2' }}>
                         <div className="flex items-center gap-2">
                             <span className="font-black text-slate-800" style={{ fontSize: 13 }}>
                                 {t('big_chart_title', lang)}
@@ -662,7 +666,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                     </div>
 
                     {/* Chart canvas */}
-                    <div style={{ padding: '6px 8px 4px', minHeight: 200 }}>
+                    <div style={{ flex: 1, minHeight: 0, padding: '4px 8px 2px' }}>
                         <BigGroupedChart
                             series={bigSeries}
                             refColor={refColorForBig}
@@ -672,7 +676,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
 
                     {/* Savings summary row */}
                     <div className="flex items-center gap-6 px-4 py-2"
-                        style={{ borderTop: '1px solid #F1F5F9', background: '#FAFAFA' }}>
+                        style={{ borderTop: '1px solid #F1F5F9', background: '#FAFAFA', flexShrink: 0 }}>
                         {BIG_CHART_IDS.map(id => {
                             const cfg = SEU_CFG[id]
                             const h = histMap[currKey]?.[id]
@@ -696,16 +700,16 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                 </div>
 
                 {/* ── BOTTOM ROW: 2 KPI cards + Summary card ──────────── */}
-                <div>
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {/* Section label */}
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                         <div style={{ width: 3, height: 14, background: BRAND.red, borderRadius: 2 }} />
                         <span style={{ fontSize: 10, fontWeight: 800, color: BRAND.darkRed, letterSpacing: '0.08em' }}>
                             {t('kpi_section', lang)}
                         </span>
                     </div>
 
-                    <div className="grid gap-3 items-start" style={{ gridTemplateColumns: '1fr 1fr 0.8fr' }}>
+                    <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr 0.8fr', alignItems: 'stretch' }}>
                         {/* KPI cards for MNK & Shelling */}
                         {KPI_CARD_IDS.map(id => {
                             const cfg = SEU_CFG[id]
@@ -721,7 +725,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             const noRef = isNoRef(id)
 
                             return (
-                                <div key={id} className="rounded-xl flex flex-col pb-1"
+                                <div key={id} className="rounded-xl flex flex-col pb-1 overflow-hidden"
                                     style={{
                                         background: '#FFFFFF',
                                         border: `1.5px solid ${cfg.border}`,
@@ -780,12 +784,12 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     </div>
 
                                     {/* Mini chart */}
-                                    <div style={{ height: 130, minWidth: 0, width: '100%' }}>
+                                    <div style={{ flex: 1, minHeight: 0, minWidth: 0, width: '100%' }}>
                                         <MiniBarChart
                                             data={trend}
                                             color={cfg.color}
                                             refColor={compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold}
-                                            height={130}
+                                            height={100}
                                         />
                                     </div>
                                 </div>
