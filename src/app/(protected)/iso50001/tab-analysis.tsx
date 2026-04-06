@@ -898,12 +898,13 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             const h = histMap[currKey]?.[id]
                             const actual = h?.actual_energy ?? null
                             const enpi = calcEnpi(h, id)
-                            const ref = viewMode === 'actual' ? null : getRef(id)
-                            const delta = viewMode === 'actual' ? null : pctChange(enpi, ref)
+                            // Always compute ref and saving regardless of view mode
+                            const ref = getRef(id)
+                            const delta = pctChange(enpi, ref)
                             const prod = h ? getProd(h, id) : null
-                            const sv = (viewMode === 'enpi' && enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
+                            const sv = (enpi != null && ref != null && prod != null) ? (ref - enpi) * prod : null
                             const saved = sv != null && sv >= 0
-                            const noRef = viewMode === 'actual' ? false : isNoRef(id)
+                            const noRef = isNoRef(id)
                             const rawTrend = trendFor(id)
                             // In actual mode, override enpi with actual value so mini charts show actual
                             const trend = rawTrend.map(p => ({
@@ -943,7 +944,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                         ) : null}
                                     </div>
 
-                                    {/* Actual value + EnPI */}
+                                    {/* Actual value */}
                                     <div className="px-2 pt-1">
                                         <div style={{ fontSize: 15, fontWeight: 900, color: cfg.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                                             {actual != null ? Math.round(actual).toLocaleString('vi-VN') : '—'}
@@ -952,35 +953,52 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     </div>
 
                                     <div className="px-2 pb-1">
-                                        <div className="flex items-center justify-between" style={{ fontSize: 7.5, marginTop: 2 }}>
-                                            {viewMode === 'enpi' ? (
-                                                <span style={{ color: '#64748B' }}>
-                                                    EnPI <span style={{ fontWeight: 700, color: '#334155' }}>{enpi != null ? enpi.toFixed(3) : '—'}</span>
-                                                </span>
-                                            ) : (
-                                                <span style={{ color: '#64748B' }}>
-                                                    EnPI <span style={{ fontWeight: 600, color: '#94A3B8' }}>{enpi != null ? enpi.toFixed(3) : '—'}</span>
-                                                </span>
-                                            )}
-                                            {!noRef && ref != null && viewMode === 'enpi' && (
-                                                <span style={{ color: '#94A3B8' }}>ref {ref.toFixed(3)}</span>
+                                        {/* EnPI actual vs Baseline – 2 columns */}
+                                        <div className="flex items-center justify-between" style={{ fontSize: 7, marginTop: 3, gap: 4 }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>EnPI</div>
+                                                <div style={{ fontWeight: 800, color: enpi != null && ref != null ? (enpi > ref ? '#DC2626' : '#059669') : '#334155', fontSize: 8.5, fontVariantNumeric: 'tabular-nums' }}>
+                                                    {enpi != null ? enpi.toFixed(3) : '—'}
+                                                </div>
+                                            </div>
+                                            {!noRef && ref != null && (
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Baseline</div>
+                                                    <div style={{ fontWeight: 700, color: '#64748B', fontSize: 8.5, fontVariantNumeric: 'tabular-nums' }}>
+                                                        {ref.toFixed(3)}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
-                                        {/* deviation bar */}
+
+                                        {/* Deviation bar */}
                                         {!noRef && delta != null && (
-                                            <div style={{ height: 2.5, background: '#F1F5F9', borderRadius: 2, marginTop: 3 }}>
+                                            <div style={{ height: 2.5, background: '#F1F5F9', borderRadius: 2, marginTop: 4 }}>
                                                 <div style={{ height: '100%', width: `${barW}%`, borderRadius: 2, background: delta > 0 ? '#EF4444' : '#10B981' }} />
                                             </div>
                                         )}
-                                        {/* saving */}
-                                        {sv != null && !noRef && (
-                                            <div style={{ fontSize: 7, fontWeight: 700, color: saved ? '#059669' : '#DC2626', marginTop: 2 }}>
-                                                {saved ? '↓ ' : '↑ '} {Math.abs(Math.round(sv)).toLocaleString('vi-VN')} {cfg.unit}
+
+                                        {/* Saving / Over */}
+                                        {!noRef && sv != null && (
+                                            <div className="flex items-center gap-1 mt-1 rounded px-1.5 py-0.5"
+                                                style={{ background: saved ? '#D1FAE520' : '#FEE2E220', border: `1px solid ${saved ? '#10B98140' : '#EF444440'}` }}>
+                                                <span style={{ fontSize: 8, fontWeight: 900, color: saved ? '#059669' : '#DC2626' }}>
+                                                    {saved ? '↓ Tiết kiệm' : '↑ Vượt mức'}
+                                                </span>
+                                                <span style={{ fontSize: 8, fontWeight: 800, color: saved ? '#059669' : '#DC2626', marginLeft: 2, fontVariantNumeric: 'tabular-nums' }}>
+                                                    {Math.abs(Math.round(sv)).toLocaleString('vi-VN')}
+                                                </span>
+                                                <span style={{ fontSize: 6.5, color: saved ? '#059669' : '#DC2626', opacity: 0.8 }}>{cfg.unit}</span>
+                                            </div>
+                                        )}
+                                        {noRef && (
+                                            <div style={{ fontSize: 7, color: '#CBD5E1', marginTop: 4, fontStyle: 'italic' }}>
+                                                {lang === 'vi' ? 'Chưa có baseline' : 'No baseline'}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Mini sparkline – flex:1 fills remaining height */}
+                                    {/* Mini sparkline */}
                                     <div style={{ flex: 1, minHeight: 60, maxHeight: 80 }}>
                                         <MiniBarChart
                                             data={trend}
