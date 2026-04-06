@@ -57,7 +57,7 @@ export default function EnergyDashboardPage() {
             const startDateStr = format(startOfMonth(currentMonth), "yyyy-MM-dd")
             const endDateStr = format(endOfMonth(currentMonth), "yyyy-MM-dd")
             
-            // Lấy thêm 1 ngày của tháng sau để tính tiêu thụ cho ngày cuối tháng (reading hôm sau - hôm nay)
+            // Láº¥y thÃªm 1 ngÃ y cá»§a thÃ¡ng sau Ä‘á»ƒ tÃ­nh tiÃªu thá»¥ cho ngÃ y cuá»‘i thÃ¡ng (reading hÃ´m sau - hÃ´m nay)
             const nextDayStr = format(addDays(endOfMonth(currentMonth), 1), "yyyy-MM-dd")
 
             try {
@@ -203,7 +203,7 @@ export default function EnergyDashboardPage() {
         fetchDashboardData()
     }, [currentMonth, supabase])
 
-    // ── SEU Multi-month trend fetch (independent of selected month) ──────────
+    // â”€â”€ SEU Multi-month trend fetch (independent of selected month) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     useEffect(() => {
         const fetchSeuTrend = async () => {
             setSeuLoading(true)
@@ -315,7 +315,7 @@ export default function EnergyDashboardPage() {
                         factoryKwh: Math.round(factoryKwh),
                         compKwh: Math.round(compKwh),
                         shellingKwh: Math.round(shellingKwh),
-                        woodTons: Math.round((woodKg / 1000) * 10) / 10,  // kg → Tons, 1 decimal
+                        woodTons: Math.round((woodKg / 1000) * 10) / 10,  // kg â†’ Tons, 1 decimal
                     }
                 }).filter(m => m.factoryKwh > 0 || m.compKwh > 0 || m.shellingKwh > 0 || m.woodTons > 0)
 
@@ -328,7 +328,7 @@ export default function EnergyDashboardPage() {
         }
         fetchSeuTrend()
     }, [supabase]) // runs once on mount
-    // ─────────────────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -343,7 +343,7 @@ export default function EnergyDashboardPage() {
                                     <span className="font-semibold text-slate-700">{entry.name}</span>
                                 </span>
                                 <span className="font-mono font-black text-slate-800">
-                                    {Number(entry.value).toLocaleString('en-US')} {entry.name.includes('đ') || entry.name.includes('VNĐ') ? 'VND' : (entry.name.includes('%') ? '%' : 'kWh')}
+                                    {Number(entry.value).toLocaleString('en-US')} {entry.name.includes('Ä‘') || entry.name.includes('VNÄ') ? 'VND' : (entry.name.includes('%') ? '%' : 'kWh')}
                                 </span>
                             </div>
                         ))}
@@ -408,9 +408,7 @@ export default function EnergyDashboardPage() {
                     <TabsTrigger value="energy_dashboard" className="data-[state=active]:bg-[#e63121] data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
                         <Zap className="h-4 w-4 mr-2" /> Energy Dashboard
                     </TabsTrigger>
-                    <TabsTrigger value="seu_trend" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
-                        📊 SEU — Xu hướng
-                    </TabsTrigger>
+
                     <TabsTrigger value="iso50001" className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
                         <ShieldCheck className="h-4 w-4 mr-2" /> ISO 50001 EnMS
                     </TabsTrigger>
@@ -421,7 +419,7 @@ export default function EnergyDashboardPage() {
                         <div className="absolute inset-0 z-50 flex items-start justify-center pt-8 bg-white/10 backdrop-blur-[1px] rounded-xl pointer-events-none">
                             <div className="flex items-center gap-3 bg-white/90 px-4 py-2 rounded-full shadow-lg border border-red-100">
                                 <Loader2 className="h-5 w-5 animate-spin text-[#e63121]" />
-                                <span className="text-sm font-semibold text-slate-700 animate-pulse">Đang tải dữ liệu...</span>
+                                <span className="text-sm font-semibold text-slate-700 animate-pulse">Äang táº£i dá»¯ liá»‡u...</span>
                             </div>
                         </div>
                     )}
@@ -441,10 +439,10 @@ export default function EnergyDashboardPage() {
                             <div>
                                 <CardTitle className="text-xl font-bold flex flex-row items-center gap-2 text-slate-800">
                                     <div className="w-2.5 h-2.5 rounded-full bg-[#e63121]"></div>
-                                    {language === 'vi' ? 'Điện năng Toàn Khu vực Chế biến' : 'Factory-wide Energy (Main)'}
+                                    {language === 'vi' ? 'Äiá»‡n nÄƒng ToÃ n Khu vá»±c Cháº¿ biáº¿n' : 'Factory-wide Energy (Main)'}
                                 </CardTitle>
                                 <CardDescription className="text-slate-500 font-medium mt-1 ml-4 text-xs">
-                                    {language === 'vi' ? 'Tiêu thụ / Chi phí thực tế (Theo tháng)' : 'Electricity Consumption / Actual Cost (MTD)'}
+                                    {language === 'vi' ? 'TiÃªu thá»¥ / Chi phÃ­ thá»±c táº¿ (Theo thÃ¡ng)' : 'Electricity Consumption / Actual Cost (MTD)'}
                                 </CardDescription>
                             </div>
                             <div className="flex items-center bg-slate-100/80 p-1 rounded-xl shadow-inner border border-slate-200/50">
@@ -482,7 +480,7 @@ export default function EnergyDashboardPage() {
                                         <div className="w-full lg:w-1/4 flex flex-col gap-4 shrink-0">
                                             <div className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group/card ${isKwh ? 'bg-gradient-to-br from-red-50 to-rose-50/30 border-red-200/60' : 'bg-gradient-to-br from-amber-50 to-orange-50/30 border-amber-200/60'}`}>
                                                 <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-40 group-hover/card:opacity-70 transition-opacity ${isKwh ? 'bg-[#e63121]' : 'bg-amber-400'}`}></div>
-                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 relative z-10">{language === 'vi' ? 'Tổng MTD' : 'TOTAL MTD'} ({isKwh ? 'KWH' : 'VND'})</p>
+                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 relative z-10">{language === 'vi' ? 'Tá»•ng MTD' : 'TOTAL MTD'} ({isKwh ? 'KWH' : 'VND'})</p>
                                                 <p className={`text-4xl lg:text-5xl font-black tracking-tight relative z-10 flex items-baseline gap-1 ${isKwh ? 'text-[#e63121]' : 'text-amber-600'}`}>
                                                     {isKwh ? mtdTotalKwh.toLocaleString('en-US') : mtdTotalVnd.toLocaleString('en-US')}
                                                     <span className="text-lg font-bold text-slate-400 opacity-60 ml-2">{isKwh ? 'kWh' : 'VND'}</span>
@@ -569,10 +567,10 @@ export default function EnergyDashboardPage() {
                     <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-blue-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
                         <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
                             <CardTitle className="text-lg font-bold text-slate-800">
-                                {language === 'vi' ? 'Cơ cấu Giá Điện MTD' : 'Time-of-Use Structure MTD'} {mainChartMode === 'kwh' ? '(kWh)' : '(VND)'}
+                                {language === 'vi' ? 'CÆ¡ cáº¥u GiÃ¡ Äiá»‡n MTD' : 'Time-of-Use Structure MTD'} {mainChartMode === 'kwh' ? '(kWh)' : '(VND)'}
                             </CardTitle>
                             <CardDescription className="font-medium text-xs mt-1">
-                                {language === 'vi' ? 'Tỉ lệ tiêu thụ theo Giờ Cao điểm / Bình thường / Thấp điểm' : 'Consumption share by time slots (Peak/Normal/Off-peak)'}
+                                {language === 'vi' ? 'Tá»‰ lá»‡ tiÃªu thá»¥ theo Giá» Cao Ä‘iá»ƒm / BÃ¬nh thÆ°á»ng / Tháº¥p Ä‘iá»ƒm' : 'Consumption share by time slots (Peak/Normal/Off-peak)'}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="h-[380px] pt-8 relative">
@@ -589,9 +587,9 @@ export default function EnergyDashboardPage() {
                                 }
 
                                 const pieData = [
-                                    { name: isKwh ? (language === 'vi' ? 'Thấp điểm' : 'Off-peak') : (language === 'vi' ? 'Thấp điểm (VND)' : 'Off-peak (VND)'), value: mtdOffpeak, fill: '#10B981', shortName: language === 'vi' ? 'Thấp điểm' : 'Off-peak' },
-                                    { name: isKwh ? (language === 'vi' ? 'Bình thường' : 'Normal') : (language === 'vi' ? 'Bình thường (VND)' : 'Normal (VND)'), value: mtdNormal, fill: '#3B82F6', shortName: language === 'vi' ? 'Bình thường' : 'Normal' },
-                                    { name: isKwh ? (language === 'vi' ? 'Cao điểm' : 'Peak') : (language === 'vi' ? 'Cao điểm (VND)' : 'Peak (VND)'), value: mtdPeak, fill: '#EF4444', shortName: language === 'vi' ? 'Cao điểm' : 'Peak' }
+                                    { name: isKwh ? (language === 'vi' ? 'Tháº¥p Ä‘iá»ƒm' : 'Off-peak') : (language === 'vi' ? 'Tháº¥p Ä‘iá»ƒm (VND)' : 'Off-peak (VND)'), value: mtdOffpeak, fill: '#10B981', shortName: language === 'vi' ? 'Tháº¥p Ä‘iá»ƒm' : 'Off-peak' },
+                                    { name: isKwh ? (language === 'vi' ? 'BÃ¬nh thÆ°á»ng' : 'Normal') : (language === 'vi' ? 'BÃ¬nh thÆ°á»ng (VND)' : 'Normal (VND)'), value: mtdNormal, fill: '#3B82F6', shortName: language === 'vi' ? 'BÃ¬nh thÆ°á»ng' : 'Normal' },
+                                    { name: isKwh ? (language === 'vi' ? 'Cao Ä‘iá»ƒm' : 'Peak') : (language === 'vi' ? 'Cao Ä‘iá»ƒm (VND)' : 'Peak (VND)'), value: mtdPeak, fill: '#EF4444', shortName: language === 'vi' ? 'Cao Ä‘iá»ƒm' : 'Peak' }
                                 ].filter(d => d.value > 0);
 
                                 return (
@@ -673,8 +671,8 @@ export default function EnergyDashboardPage() {
                         return (
                             <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-blue-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
                                 <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
-                                    <CardTitle className="text-lg font-bold text-slate-800">{language === 'vi' ? 'Phân bổ Điện năng Phụ trợ (MTD)' : 'Auxiliary Area Distribution (MTD)'}</CardTitle>
-                                    <CardDescription className="font-medium text-xs mt-1">{language === 'vi' ? 'Dấu chân năng lượng theo từng khu vực phụ trợ' : 'Monthly energy footprint by auxiliary departments'}</CardDescription>
+                                    <CardTitle className="text-lg font-bold text-slate-800">{language === 'vi' ? 'PhÃ¢n bá»• Äiá»‡n nÄƒng Phá»¥ trá»£ (MTD)' : 'Auxiliary Area Distribution (MTD)'}</CardTitle>
+                                    <CardDescription className="font-medium text-xs mt-1">{language === 'vi' ? 'Dáº¥u chÃ¢n nÄƒng lÆ°á»£ng theo tá»«ng khu vá»±c phá»¥ trá»£' : 'Monthly energy footprint by auxiliary departments'}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="h-[380px] p-4">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -698,9 +696,9 @@ export default function EnergyDashboardPage() {
                         <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
                             <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-3">
                                 <div className="w-3.5 h-3.5 rounded-full bg-purple-500 shadow-sm shadow-purple-200"></div>
-                                {language === 'vi' ? 'Hệ Thống Máy Nén Khí' : 'Air Compressors System'}
+                                {language === 'vi' ? 'Há»‡ Thá»‘ng MÃ¡y NÃ©n KhÃ­' : 'Air Compressors System'}
                             </CardTitle>
-                            <CardDescription className="font-medium text-xs mt-1 ml-6">{language === 'vi' ? 'Biến động tiêu thụ điện 3 Cụm MNK (kWh/ngày)' : 'Daily electricity consumption of 3 Compressor clusters (kWh/day)'}</CardDescription>
+                            <CardDescription className="font-medium text-xs mt-1 ml-6">{language === 'vi' ? 'Biáº¿n Ä‘á»™ng tiÃªu thá»¥ Ä‘iá»‡n 3 Cá»¥m MNK (kWh/ngÃ y)' : 'Daily electricity consumption of 3 Compressor clusters (kWh/day)'}</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[400px] pt-8 bg-gradient-to-t from-purple-50/20 to-transparent">
                             {compressorData.length === 0 ? (
@@ -741,13 +739,13 @@ export default function EnergyDashboardPage() {
                         <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
                             <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-3">
                                 <div className="w-3.5 h-3.5 rounded-full bg-slate-600 shadow-sm"></div>
-                                {language === 'vi' ? 'Điện Khu Vực Shelling' : 'Shelling Area Electricity'}
+                                {language === 'vi' ? 'Äiá»‡n Khu Vá»±c Shelling' : 'Shelling Area Electricity'}
                             </CardTitle>
-                            <CardDescription className="font-medium text-xs mt-1 ml-6">{language === 'vi' ? 'Chỉ số tiêu thụ điện hệ thống cắt tách (kWh/ngày)' : 'Daily electricity consumption of shelling system (kWh/day)'}</CardDescription>
+                            <CardDescription className="font-medium text-xs mt-1 ml-6">{language === 'vi' ? 'Chá»‰ sá»‘ tiÃªu thá»¥ Ä‘iá»‡n há»‡ thá»‘ng cáº¯t tÃ¡ch (kWh/ngÃ y)' : 'Daily electricity consumption of shelling system (kWh/day)'}</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[380px] pt-8 bg-gradient-to-t from-slate-50/20 to-transparent">
                             {shellingData.length === 0 ? (
-                                <div className="h-full flex items-center justify-center text-slate-400 font-medium">Chưa có dữ liệu tháng này</div>
+                                <div className="h-full flex items-center justify-center text-slate-400 font-medium">ChÆ°a cÃ³ dá»¯ liá»‡u thÃ¡ng nÃ y</div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={shellingData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
@@ -772,8 +770,8 @@ export default function EnergyDashboardPage() {
                     {/* OTHER ELECTRICITY GRID */}
                     <Card className="col-span-2 shadow-xl shadow-slate-900/5 bg-white/70 backdrop-blur-xl border-slate-200/50 border overflow-hidden">
                         <CardHeader className="bg-white/80 border-b border-slate-200/50 rounded-t-xl px-6 py-5 backdrop-blur-md">
-                            <CardTitle className="text-lg font-bold text-slate-800">{language === 'vi' ? 'Điện Phụ Trợ (Đồng hồ phụ)' : 'Auxiliary Electricity (Sub-meters)'}</CardTitle>
-                            <CardDescription className="text-slate-500 font-medium mt-1">{language === 'vi' ? 'Theo dõi mức tiêu thụ của hệ thống phụ trợ (kWh/ngày)' : 'Detailed monitoring of auxiliary devices/areas (kWh/day)'}</CardDescription>
+                            <CardTitle className="text-lg font-bold text-slate-800">{language === 'vi' ? 'Äiá»‡n Phá»¥ Trá»£ (Äá»“ng há»“ phá»¥)' : 'Auxiliary Electricity (Sub-meters)'}</CardTitle>
+                            <CardDescription className="text-slate-500 font-medium mt-1">{language === 'vi' ? 'Theo dÃµi má»©c tiÃªu thá»¥ cá»§a há»‡ thá»‘ng phá»¥ trá»£ (kWh/ngÃ y)' : 'Detailed monitoring of auxiliary devices/areas (kWh/day)'}</CardDescription>
                         </CardHeader>
                         <CardContent className="pt-6 bg-slate-50/30">
                             {otherElecData.length === 0 ? (
@@ -825,198 +823,7 @@ export default function EnergyDashboardPage() {
             )}
                 </TabsContent>
 
-                {/* ══════════════════════════════════════════════════════════════════
-                    SEU TREND TAB — 4 Significant Energy Uses across months
-                ══════════════════════════════════════════════════════════════════ */}
-                <TabsContent value="seu_trend" className="m-0 mt-0">
-                    {seuLoading ? (
-                        <div className="flex flex-col items-center justify-center h-[400px] gap-4">
-                            <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
-                            <p className="text-muted-foreground font-medium animate-pulse">Đang tổng hợp dữ liệu SEU...</p>
-                        </div>
-                    ) : seuTrend.length === 0 ? (
-                        <div className="flex items-center justify-center h-[300px] text-slate-400 font-medium">Chưa có đủ dữ liệu để hiển thị xu hướng SEU</div>
-                    ) : (
-                        <div className="space-y-4">
 
-                            {/* Header */}
-                            <div className="flex flex-col gap-1">
-                                <h3 className="text-xl font-black text-slate-800">SEU — Sử dụng Năng lượng Đáng kể</h3>
-                                <p className="text-xs text-slate-500">4 nguồn SEU &bull; {seuTrend.length} tháng gần nhất &bull; So sánh theo tháng</p>
-                            </div>
-
-                            {/* Summary KPI cards — latest month vs prev month */}
-                            {(() => {
-                                const last = seuTrend[seuTrend.length - 1]
-                                const prev = seuTrend.length > 1 ? seuTrend[seuTrend.length - 2] : null
-                                const cards = [
-                                    { label: 'Điện Tổng NM', value: last.factoryKwh, prev: prev?.factoryKwh, unit: 'kWh', color: '#e63121', icon: '⚡' },
-                                    { label: 'Điện Máy Nén Khí', value: last.compKwh, prev: prev?.compKwh, unit: 'kWh', color: '#8b5cf6', icon: '🔧' },
-                                    { label: 'Điện Shelling', value: last.shellingKwh, prev: prev?.shellingKwh, unit: 'kWh', color: '#f97316', icon: '🌀' },
-                                    { label: 'Củi Lò Hơi', value: last.woodTons, prev: prev?.woodTons, unit: 'Tấn', color: '#ca8a04', icon: '🪵' },
-                                ]
-                                return (
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                        {cards.map(c => {
-                                            const chg = prev && c.prev > 0 ? ((c.value - c.prev) / c.prev) * 100 : null
-                                            return (
-                                                <div key={c.label} className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-                                                    <div className="absolute top-0 left-0 w-full h-0.5" style={{ backgroundColor: c.color }} />
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{c.icon} {c.label}</span>
-                                                        {chg !== null && (
-                                                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                                                                Math.abs(chg) < 1 ? 'bg-slate-100 text-slate-500'
-                                                                : chg < 0 ? 'bg-emerald-50 text-emerald-700'
-                                                                : 'bg-red-50 text-red-600'
-                                                            }`}>
-                                                                {chg > 0 ? '+' : ''}{chg.toFixed(1)}%
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-2xl font-black tabular-nums" style={{ color: c.color }}>
-                                                        {c.value.toLocaleString('vi-VN')}
-                                                        <span className="text-xs font-normal text-slate-400 ml-1">{c.unit}</span>
-                                                    </div>
-                                                    <p className="text-[10px] text-slate-400 mt-1">{last.label} &bull; trước: {prev ? (c.unit === 'Tấn' ? c.prev?.toLocaleString('vi-VN') : (c.prev as number)?.toLocaleString('vi-VN')) : '—'} {c.unit}</p>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                )
-                            })()}
-
-                            {/* Main SEU Chart — grouped bar + line (wood on right axis) */}
-                            <Card className="shadow-xl shadow-emerald-900/5 bg-white/70 backdrop-blur-xl border-white/60">
-                                <CardHeader className="pb-3 border-b border-slate-100">
-                                    <CardTitle className="text-lg font-bold text-slate-800">Biểu đồ SEU — {seuTrend.length} tháng gần nhất</CardTitle>
-                                    <CardDescription className="text-xs font-medium mt-1">
-                                        Cột: Điện tổng NM / Máy nén khí / Shelling (kWh) &bull; Đường: Củi lò hơi (Tấn)
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="pt-6 h-[420px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart data={seuTrend} margin={{ top: 10, right: 60, left: 10, bottom: 20 }}>
-                                            <defs>
-                                                <linearGradient id="gradFactory" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/>
-                                                    <stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/>
-                                                </linearGradient>
-                                                <linearGradient id="gradComp" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9}/>
-                                                    <stop offset="100%" stopColor="#6d28d9" stopOpacity={0.7}/>
-                                                </linearGradient>
-                                                <linearGradient id="gradShell" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor="#f97316" stopOpacity={0.9}/>
-                                                    <stop offset="100%" stopColor="#ea580c" stopOpacity={0.7}/>
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis
-                                                dataKey="label"
-                                                tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }}
-                                                tickLine={false} axisLine={false} dy={8}
-                                            />
-                                            <YAxis
-                                                yAxisId="kwh"
-                                                tickLine={false} axisLine={false}
-                                                tick={{ fontSize: 10, fill: '#64748b' }}
-                                                tickFormatter={v => v >= 100000 ? `${(v/1000).toFixed(0)}k` : v.toLocaleString('vi-VN')}
-                                                label={{ value: 'kWh', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10, fill: '#94a3b8' } }}
-                                                width={60}
-                                            />
-                                            <YAxis
-                                                yAxisId="wood"
-                                                orientation="right"
-                                                tickLine={false} axisLine={false}
-                                                tick={{ fontSize: 10, fill: '#ca8a04' }}
-                                                tickFormatter={v => `${v.toFixed(0)}T`}
-                                                width={50}
-                                                label={{ value: 'Củi (T)', angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10, fill: '#ca8a04' } }}
-                                            />
-                                            <Tooltip
-                                                content={({ active, payload, label }) => {
-                                                    if (!active || !payload?.length) return null
-                                                    return (
-                                                        <div className="bg-white/95 border border-slate-100 rounded-xl shadow-xl p-3 text-xs min-w-[200px]">
-                                                            <p className="font-black text-slate-700 mb-2 border-b pb-1">📅 {label}</p>
-                                                            {payload.map((p: any, i: number) => (
-                                                                <div key={i} className="flex justify-between gap-4 py-0.5">
-                                                                    <span className="flex items-center gap-1.5 text-slate-600">
-                                                                        <span className="w-2.5 h-2.5 rounded-sm" style={{ background: p.color }} />
-                                                                        {p.name}
-                                                                    </span>
-                                                                    <span className="font-bold text-slate-800 tabular-nums">
-                                                                        {Number(p.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}
-                                                                        <span className="text-slate-400 ml-1">{p.name.includes('Củi') ? 'T' : 'kWh'}</span>
-                                                                    </span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )
-                                                }}
-                                            />
-                                            <Legend
-                                                iconType="circle" iconSize={10}
-                                                wrapperStyle={{ fontSize: 11, fontWeight: 600, paddingTop: 12 }}
-                                            />
-                                            <Bar yAxisId="kwh" dataKey="factoryKwh" name="⚡ Điện Tổng NM" fill="url(#gradFactory)" radius={[4,4,0,0]} maxBarSize={28} />
-                                            <Bar yAxisId="kwh" dataKey="compKwh" name="🔧 Máy Nén Khí" fill="url(#gradComp)" radius={[4,4,0,0]} maxBarSize={28} />
-                                            <Bar yAxisId="kwh" dataKey="shellingKwh" name="🌀 Điện Shelling" fill="url(#gradShell)" radius={[4,4,0,0]} maxBarSize={28} />
-                                            <Line
-                                                yAxisId="wood"
-                                                type="monotone"
-                                                dataKey="woodTons"
-                                                name="🪵 Củi Lò Hơi"
-                                                stroke="#ca8a04"
-                                                strokeWidth={3}
-                                                dot={{ r: 5, fill: '#ca8a04', strokeWidth: 0 }}
-                                                activeDot={{ r: 7, strokeWidth: 0 }}
-                                            />
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
-                                </CardContent>
-                            </Card>
-
-                            {/* Data Table */}
-                            <Card className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-sm">
-                                <CardHeader className="pb-2 border-b border-slate-100">
-                                    <CardTitle className="text-sm font-bold text-slate-600">Bảng tổng hợp SEU theo tháng</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0">
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-xs">
-                                            <thead className="bg-slate-50 border-b border-slate-200">
-                                                <tr>
-                                                    <th className="text-left p-3 font-bold text-slate-600">Tháng</th>
-                                                    <th className="text-right p-3 font-bold" style={{ color: '#e63121' }}>⚡ Điện Tổng (kWh)</th>
-                                                    <th className="text-right p-3 font-bold" style={{ color: '#8b5cf6' }}>🔧 MNK (kWh)</th>
-                                                    <th className="text-right p-3 font-bold" style={{ color: '#f97316' }}>🌀 Shelling (kWh)</th>
-                                                    <th className="text-right p-3 font-bold" style={{ color: '#ca8a04' }}>🪵 Củi (Tấn)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {[...seuTrend].reverse().map((row, i) => {
-                                                    const isLatest = i === 0
-                                                    return (
-                                                        <tr key={row.label} className={`transition-colors ${ isLatest ? 'bg-emerald-50/60 font-bold' : 'hover:bg-slate-50' }`}>
-                                                            <td className="p-3 font-bold text-slate-800">{row.label}{isLatest && <span className="ml-2 text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-black">Hiện tại</span>}</td>
-                                                            <td className="p-3 text-right tabular-nums" style={{ color: '#e63121' }}>{row.factoryKwh > 0 ? row.factoryKwh.toLocaleString('vi-VN') : <span className="text-slate-300">—</span>}</td>
-                                                            <td className="p-3 text-right tabular-nums" style={{ color: '#8b5cf6' }}>{row.compKwh > 0 ? row.compKwh.toLocaleString('vi-VN') : <span className="text-slate-300">—</span>}</td>
-                                                            <td className="p-3 text-right tabular-nums" style={{ color: '#f97316' }}>{row.shellingKwh > 0 ? row.shellingKwh.toLocaleString('vi-VN') : <span className="text-slate-300">—</span>}</td>
-                                                            <td className="p-3 text-right tabular-nums" style={{ color: '#ca8a04' }}>{row.woodTons > 0 ? row.woodTons.toLocaleString('vi-VN') : <span className="text-slate-300">—</span>}</td>
-                                                        </tr>
-                                                    )
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                        </div>
-                    )}
-                </TabsContent>
 
                 <TabsContent value="iso50001" className="m-0 mt-4">
                     <ISO50001Content userRole={userRole} userEmail={userEmail} />
