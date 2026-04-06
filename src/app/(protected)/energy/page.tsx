@@ -498,25 +498,29 @@ export default function EnergyDashboardPage() {
                                             </div>
                                             {/* Breakdown cả 2 cột kWh và VND */}
                                             <div className="rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-md overflow-hidden text-xs shadow-sm ring-1 ring-black/5">
-                                                <div className="grid grid-cols-3 bg-slate-50/80 px-4 py-2 border-b border-slate-100">
+                                                <div className="grid grid-cols-4 bg-slate-50/80 px-3 py-2 border-b border-slate-100">
                                                     <span className="font-bold text-slate-500 text-[10px] uppercase tracking-wider">Giờ</span>
                                                     <span className="font-bold text-slate-500 text-[10px] uppercase tracking-wider text-right">kWh</span>
                                                     <span className="font-bold text-slate-500 text-[10px] uppercase tracking-wider text-right">VND</span>
+                                                    <span className="font-bold text-slate-500 text-[10px] uppercase tracking-wider text-right">%</span>
                                                 </div>
-                                                <div className="grid grid-cols-3 p-3 items-center hover:bg-rose-50/50 transition-colors border-b border-slate-100">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>Peak</span>
+                                                <div className="grid grid-cols-4 px-3 py-2.5 items-center hover:bg-rose-50/50 transition-colors border-b border-slate-100">
+                                                    <span className="font-bold text-slate-700 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>Peak</span>
                                                     <span className="font-mono font-bold text-slate-800 text-right">{mtdPeakKwh.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                                     <span className="font-mono font-bold text-rose-600 text-right">{(mtdPeakVnd/1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M</span>
+                                                    <span className="font-mono font-bold text-rose-500 text-right">{mtdTotalKwh > 0 ? ((mtdPeakKwh / mtdTotalKwh) * 100).toFixed(1) : '0.0'}%</span>
                                                 </div>
-                                                <div className="grid grid-cols-3 p-3 items-center hover:bg-blue-50/50 transition-colors border-b border-slate-100">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>Normal</span>
+                                                <div className="grid grid-cols-4 px-3 py-2.5 items-center hover:bg-blue-50/50 transition-colors border-b border-slate-100">
+                                                    <span className="font-bold text-slate-700 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>Normal</span>
                                                     <span className="font-mono font-bold text-slate-800 text-right">{mtdNormalKwh.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                                     <span className="font-mono font-bold text-blue-600 text-right">{(mtdNormalVnd/1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M</span>
+                                                    <span className="font-mono font-bold text-blue-500 text-right">{mtdTotalKwh > 0 ? ((mtdNormalKwh / mtdTotalKwh) * 100).toFixed(1) : '0.0'}%</span>
                                                 </div>
-                                                <div className="grid grid-cols-3 p-3 items-center hover:bg-emerald-50/50 transition-colors">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>Off-pk</span>
+                                                <div className="grid grid-cols-4 px-3 py-2.5 items-center hover:bg-emerald-50/50 transition-colors">
+                                                    <span className="font-bold text-slate-700 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>Off-pk</span>
                                                     <span className="font-mono font-bold text-slate-800 text-right">{mtdOffpeakKwh.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                                     <span className="font-mono font-bold text-emerald-600 text-right">{(mtdOffpeakVnd/1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M</span>
+                                                    <span className="font-mono font-bold text-emerald-500 text-right">{mtdTotalKwh > 0 ? ((mtdOffpeakKwh / mtdTotalKwh) * 100).toFixed(1) : '0.0'}%</span>
                                                 </div>
                                             </div>
                                         </div>
