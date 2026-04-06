@@ -860,35 +860,13 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                 {/* ── BOTTOM: Compact 5-SEU strip ─────────────────────── */}
                 <div style={{ flexShrink: 0 }}>
                     {/* Section header */}
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center mb-1.5">
                         <div className="flex items-center gap-2">
                             <div style={{ width: 3, height: 14, background: BRAND.red, borderRadius: 2 }} />
                             <span style={{ fontSize: 10, fontWeight: 800, color: BRAND.darkRed, letterSpacing: '0.08em' }}>
                                 {t('kpi_section', lang)}
                             </span>
                         </div>
-                        {/* Overall badge */}
-                        {(() => {
-                            const deltas = ALL_SEU_IDS.map(id => pctChange(calcEnpi(histMap[currKey]?.[id], id), getRef(id))).filter((d): d is number => d != null)
-                            if (!deltas.length) return null
-                            const avgD = deltas.reduce((a, b) => a + b, 0) / deltas.length
-                            const overCount = deltas.filter(d => d > 0).length
-                            const [bg, fg, icon, label] = overCount === 0
-                                ? ['#D1FAE5', '#065F46', '✓', lang === 'vi' ? 'TIẾT KIỆM' : 'SAVING']
-                                : overCount <= 2 && avgD < 5
-                                    ? ['#FEF3C7', '#92400E', '△', lang === 'vi' ? 'CHÚ Ý' : 'AT RISK']
-                                    : ['#FEE2E2', '#991B1B', '✕', lang === 'vi' ? 'VƯỢT MỨC' : 'OVER']
-                            return (
-                                <div className="flex items-center gap-1.5 rounded-full px-2.5 py-0.5"
-                                    style={{ background: bg, border: `1px solid ${fg}30` }}>
-                                    <span style={{ fontSize: 10, color: fg }}>{icon}</span>
-                                    <span style={{ fontSize: 9, fontWeight: 800, color: fg }}>{label}</span>
-                                    <span style={{ fontSize: 10, fontWeight: 900, color: fg }}>
-                                        {avgD > 0 ? '+' : ''}{avgD.toFixed(1)}%
-                                    </span>
-                                </div>
-                            )
-                        })()}
                     </div>
 
                     {/* 5-column SEU grid */}
