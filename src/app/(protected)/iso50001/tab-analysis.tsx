@@ -200,6 +200,18 @@ function BigGroupedChart({
 
     if (nMonths === 0) return <div style={{ height }} />
 
+    // ── helpers ──────────────────────────────────────────────────────
+    // Abbreviate big numbers: 422788 → "423k", 1464 → "1.5k", 0.0034 → "0.0034"
+    const fmtNum = (v: number): string => {
+        const abs = Math.abs(v)
+        if (abs >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M'
+        if (abs >= 10_000)   return Math.round(v / 1_000) + 'k'
+        if (abs >= 1_000)    return (v / 1_000).toFixed(1) + 'k'
+        if (abs >= 10)       return v.toFixed(0)
+        if (abs >= 1)        return v.toFixed(2)
+        return v.toFixed(4)
+    }
+
     const gradIds = series.map(s => `biggrad-${s.color.replace('#', '')}`)
 
     // RCN line: compute min/max across all points for its own scale
@@ -233,7 +245,7 @@ function BigGroupedChart({
                         <line x1={PAD_L} y1={y} x2={TOTAL_W - PAD_R} y2={y}
                             stroke="#E2E8F0" strokeWidth={0.8} />
                         <text x={PAD_L - 3} y={y + 3} fontSize={6.5} fill="#94A3B8"
-                            textAnchor="end">{v.toFixed(3)}</text>
+                            textAnchor="end">{fmtNum(v)}</text>
                     </g>
                 )
             })}
@@ -307,22 +319,30 @@ function BigGroupedChart({
                                         rx={2}
                                         opacity={isHov ? 1 : 0.9}
                                     />
-                                    {/* Value label on current month bars */}
-                                    {isCurrMonth && (
-                                        <text x={barX + barW / 2} y={barY - 4}
-                                            fontSize={6.5} fill={s.color}
-                                            textAnchor="middle" fontWeight="800">
-                                            {pt.enpi.toFixed(3)}
-                                        </text>
-                                    )}
+                                    {/* Value label on current month bars – staggered to avoid overlap */}
+                                    {isCurrMonth && (() => {
+                                        // si=0 EVN: above; si=1 Củi: inside white; si=2 Nước: above
+                                        const isInside = si === 1
+                                        const labelY = isInside
+                                            ? Math.min(barY + 10, PAD_TOP + H - 3)
+                                            : Math.max(barY - 5, PAD_TOP + 8)
+                                        return (
+                                            <text x={barX + barW / 2} y={labelY}
+                                                fontSize={5.5} fill={isInside ? '#ffffffcc' : s.color}
+                                                textAnchor="middle" fontWeight="800"
+                                                style={{ pointerEvents: 'none' }}>
+                                                {fmtNum(pt.enpi)}
+                                            </text>
+                                        )
+                                    })()}
                                     {/* Hover tooltip */}
-                                    {isHov && !isCurrMonth && (
+                                    {isHov && (
                                         <g>
-                                            <rect x={barX + barW / 2 - 24} y={barY - 20} width={48} height={16}
+                                            <rect x={barX + barW / 2 - 28} y={barY - 22} width={56} height={16}
                                                 rx={3} fill="#1E293B" opacity={0.92} />
-                                            <text x={barX + barW / 2} y={barY - 9}
+                                            <text x={barX + barW / 2} y={barY - 11}
                                                 fontSize={6.5} fill="#F8FAFC" textAnchor="middle" fontWeight="600">
-                                                {pt.enpi.toFixed(4)} {s.unit}
+                                                {s.short}: {fmtNum(pt.enpi)} {s.unit}
                                             </text>
                                         </g>
                                     )}
