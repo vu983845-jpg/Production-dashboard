@@ -476,29 +476,47 @@ export default function EnergyDashboardPage() {
 
                                 return (
                                     <div className="flex flex-col lg:flex-row gap-8">
-                                        {/* SUMMARY METRICS (LEFT) */}
-                                        <div className="w-full lg:w-1/4 flex flex-col gap-4 shrink-0">
-                                            <div className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group/card ${isKwh ? 'bg-gradient-to-br from-red-50 to-rose-50/30 border-red-200/60' : 'bg-gradient-to-br from-amber-50 to-orange-50/30 border-amber-200/60'}`}>
-                                                <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-40 group-hover/card:opacity-70 transition-opacity ${isKwh ? 'bg-[#e63121]' : 'bg-amber-400'}`}></div>
-                                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 relative z-10">{language === 'vi' ? 'Tổng MTD' : 'TOTAL MTD'} ({isKwh ? 'KWH' : 'VND'})</p>
-                                                <p className={`text-4xl lg:text-5xl font-black tracking-tight relative z-10 flex items-baseline gap-1 ${isKwh ? 'text-[#e63121]' : 'text-amber-600'}`}>
-                                                    {isKwh ? mtdTotalKwh.toLocaleString('en-US') : mtdTotalVnd.toLocaleString('en-US')}
-                                                    <span className="text-lg font-bold text-slate-400 opacity-60 ml-2">{isKwh ? 'kWh' : 'VND'}</span>
+                                        {/* SUMMARY METRICS (LEFT) - kWh + VND cùng lúc */}
+                                        <div className="w-full lg:w-[300px] flex flex-col gap-3 shrink-0">
+                                            {/* kWh Card */}
+                                            <div className="p-4 rounded-2xl border bg-gradient-to-br from-red-50 to-rose-50/30 border-red-200/60 shadow-sm relative overflow-hidden">
+                                                <div className="absolute -right-6 -top-6 w-16 h-16 rounded-full blur-2xl opacity-40 bg-[#e63121]"></div>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 relative z-10">{language === 'vi' ? 'Tổng MTD (kWh)' : 'TOTAL MTD (kWh)'}</p>
+                                                <p className="text-3xl font-black tracking-tight relative z-10 flex items-baseline gap-1 text-[#e63121]">
+                                                    {mtdTotalKwh.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                                    <span className="text-sm font-bold text-slate-400 opacity-60 ml-1">kWh</span>
                                                 </p>
                                             </div>
-                                            
-                                            <div className="rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-md overflow-hidden text-sm shadow-sm ring-1 ring-black/5 divide-y divide-slate-100">
-                                                <div className="flex justify-between p-4 hover:bg-rose-50/50 transition-colors">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-200"></div>Peak</span>
-                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdPeakKwh.toLocaleString('en-US') : mtdPeakVnd.toLocaleString('en-US')}</span>
+                                            {/* VND Card */}
+                                            <div className="p-4 rounded-2xl border bg-gradient-to-br from-amber-50 to-orange-50/30 border-amber-200/60 shadow-sm relative overflow-hidden">
+                                                <div className="absolute -right-6 -top-6 w-16 h-16 rounded-full blur-2xl opacity-40 bg-amber-400"></div>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 relative z-10">{language === 'vi' ? 'Tổng MTD (VND)' : 'TOTAL MTD (VND)'}</p>
+                                                <p className="text-3xl font-black tracking-tight relative z-10 flex items-baseline gap-1 text-amber-600">
+                                                    {mtdTotalVnd.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                                    <span className="text-sm font-bold text-slate-400 opacity-60 ml-1">VND</span>
+                                                </p>
+                                            </div>
+                                            {/* Breakdown cả 2 cột kWh và VND */}
+                                            <div className="rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-md overflow-hidden text-xs shadow-sm ring-1 ring-black/5">
+                                                <div className="grid grid-cols-3 bg-slate-50/80 px-4 py-2 border-b border-slate-100">
+                                                    <span className="font-bold text-slate-500 text-[10px] uppercase tracking-wider">Giờ</span>
+                                                    <span className="font-bold text-slate-500 text-[10px] uppercase tracking-wider text-right">kWh</span>
+                                                    <span className="font-bold text-slate-500 text-[10px] uppercase tracking-wider text-right">VND</span>
                                                 </div>
-                                                <div className="flex justify-between p-4 hover:bg-blue-50/50 transition-colors">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-200"></div>Normal</span>
-                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdNormalKwh.toLocaleString('en-US') : mtdNormalVnd.toLocaleString('en-US')}</span>
+                                                <div className="grid grid-cols-3 p-3 items-center hover:bg-rose-50/50 transition-colors border-b border-slate-100">
+                                                    <span className="font-bold text-slate-700 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>Peak</span>
+                                                    <span className="font-mono font-bold text-slate-800 text-right">{mtdPeakKwh.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                                    <span className="font-mono font-bold text-rose-600 text-right">{(mtdPeakVnd/1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M</span>
                                                 </div>
-                                                <div className="flex justify-between p-4 hover:bg-emerald-50/50 transition-colors">
-                                                    <span className="font-bold text-slate-700 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></div>Off-peak</span>
-                                                    <span className="font-mono font-bold text-slate-800">{isKwh ? mtdOffpeakKwh.toLocaleString('en-US') : mtdOffpeakVnd.toLocaleString('en-US')}</span>
+                                                <div className="grid grid-cols-3 p-3 items-center hover:bg-blue-50/50 transition-colors border-b border-slate-100">
+                                                    <span className="font-bold text-slate-700 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>Normal</span>
+                                                    <span className="font-mono font-bold text-slate-800 text-right">{mtdNormalKwh.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                                    <span className="font-mono font-bold text-blue-600 text-right">{(mtdNormalVnd/1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M</span>
+                                                </div>
+                                                <div className="grid grid-cols-3 p-3 items-center hover:bg-emerald-50/50 transition-colors">
+                                                    <span className="font-bold text-slate-700 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>Off-pk</span>
+                                                    <span className="font-mono font-bold text-slate-800 text-right">{mtdOffpeakKwh.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                                    <span className="font-mono font-bold text-emerald-600 text-right">{(mtdOffpeakVnd/1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -563,61 +581,63 @@ export default function EnergyDashboardPage() {
                         </CardContent>
                     </Card>
 
-                    {/* MTD PIE CHART */}
-                    <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-blue-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
-                        <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
-                            <CardTitle className="text-lg font-bold text-slate-800">
-                                {language === 'vi' ? 'Cơ cấu Giá Điện MTD' : 'Time-of-Use Structure MTD'} {mainChartMode === 'kwh' ? '(kWh)' : '(VND)'}
-                            </CardTitle>
-                            <CardDescription className="font-medium text-xs mt-1">
-                                {language === 'vi' ? 'Tỉ lệ tiêu thụ theo Giờ Cao điểm / Bình thường / Thấp điểm' : 'Consumption share by time slots (Peak/Normal/Off-peak)'}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-[380px] pt-8 relative">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-50/30 to-transparent pointer-events-none"></div>
-                            {(() => {
-                                const isKwh = mainChartMode === 'kwh';
-                                const mtdPeak = energyData.reduce((acc, curr) => acc + (isKwh ? (curr.stacked_peak || 0) : (curr.cost_peak || 0)), 0);
-                                const mtdNormal = energyData.reduce((acc, curr) => acc + (isKwh ? (curr.stacked_normal || 0) : (curr.cost_normal || 0)), 0);
-                                const mtdOffpeak = energyData.reduce((acc, curr) => acc + (isKwh ? (curr.stacked_offpeak || 0) : (curr.cost_offpeak || 0)), 0);
-                                const total = mtdPeak + mtdNormal + mtdOffpeak;
-                                
-                                if (energyData.length === 0 || total === 0) {
-                                    return <div className="h-full flex items-center justify-center text-slate-400 font-medium">No peak-hour allocation data for this month</div>;
-                                }
+                    {/* MTD PIE CHARTS - kWh (trái) và VND (phải), luôn hiển thị cả 2 */}
+                    {(() => {
+                        const kwhPeakMtd = energyData.reduce((acc, curr) => acc + (curr.stacked_peak || 0), 0);
+                        const kwhNormalMtd = energyData.reduce((acc, curr) => acc + (curr.stacked_normal || 0), 0);
+                        const kwhOffpeakMtd = energyData.reduce((acc, curr) => acc + (curr.stacked_offpeak || 0), 0);
+                        const vndPeakMtd = energyData.reduce((acc, curr) => acc + (curr.cost_peak || 0), 0);
+                        const vndNormalMtd = energyData.reduce((acc, curr) => acc + (curr.cost_normal || 0), 0);
+                        const vndOffpeakMtd = energyData.reduce((acc, curr) => acc + (curr.cost_offpeak || 0), 0);
+                        const kwhTotal = kwhPeakMtd + kwhNormalMtd + kwhOffpeakMtd;
+                        const vndTotal = vndPeakMtd + vndNormalMtd + vndOffpeakMtd;
+                        const kwhPieData = [
+                            { name: language === 'vi' ? 'Thấp điểm' : 'Off-peak', value: kwhOffpeakMtd, fill: '#10B981' },
+                            { name: language === 'vi' ? 'Bình thường' : 'Normal',  value: kwhNormalMtd, fill: '#3B82F6' },
+                            { name: language === 'vi' ? 'Cao điểm' : 'Peak',       value: kwhPeakMtd, fill: '#EF4444' },
+                        ].filter(d => d.value > 0);
+                        const vndPieData = [
+                            { name: language === 'vi' ? 'Thấp điểm' : 'Off-peak', value: vndOffpeakMtd, fill: '#10B981' },
+                            { name: language === 'vi' ? 'Bình thường' : 'Normal',  value: vndNormalMtd, fill: '#3B82F6' },
+                            { name: language === 'vi' ? 'Cao điểm' : 'Peak',       value: vndPeakMtd, fill: '#EF4444' },
+                        ].filter(d => d.value > 0);
 
-                                const pieData = [
-                                    { name: isKwh ? (language === 'vi' ? 'Thấp điểm' : 'Off-peak') : (language === 'vi' ? 'Thấp điểm (VND)' : 'Off-peak (VND)'), value: mtdOffpeak, fill: '#10B981', shortName: language === 'vi' ? 'Thấp điểm' : 'Off-peak' },
-                                    { name: isKwh ? (language === 'vi' ? 'Bình thường' : 'Normal') : (language === 'vi' ? 'Bình thường (VND)' : 'Normal (VND)'), value: mtdNormal, fill: '#3B82F6', shortName: language === 'vi' ? 'Bình thường' : 'Normal' },
-                                    { name: isKwh ? (language === 'vi' ? 'Cao điểm' : 'Peak') : (language === 'vi' ? 'Cao điểm (VND)' : 'Peak (VND)'), value: mtdPeak, fill: '#EF4444', shortName: language === 'vi' ? 'Cao điểm' : 'Peak' }
-                                ].filter(d => d.value > 0);
+                        const MiniPie = ({ data, total }: { data: typeof kwhPieData; total: number }) => (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={data} cx="50%" cy="50%" innerRadius={65} outerRadius={110} paddingAngle={4} dataKey="value" stroke="none"
+                                        label={({ payload, percent }) => `${payload.name} (${((percent || 0) * 100).toFixed(1)}%)`}
+                                        labelLine={{ stroke: '#94A3B8', strokeWidth: 1.5 }}>
+                                        {data.map((entry, i) => <Cell key={i} fill={entry.fill} className="hover:opacity-80 transition-opacity" />)}
+                                    </Pie>
+                                    <Tooltip content={<CustomTooltip />} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        );
 
-                                return (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={pieData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={80}
-                                                outerRadius={130}
-                                                paddingAngle={4}
-                                                dataKey="value"
-                                                stroke="none"
-                                                label={({ payload, percent }) => `${payload.shortName} (${((percent || 0) * 100).toFixed(1)}%)`}
-                                                labelLine={{ stroke: '#94A3B8', strokeWidth: 1.5 }}
-                                            >
-                                                {pieData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-80 transition-opacity" />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip content={<CustomTooltip />} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                );
-                            })()}
-                        </CardContent>
-                    </Card>
+                        return (<>
+                            <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-blue-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
+                                <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
+                                    <CardTitle className="text-lg font-bold text-slate-800">{language === 'vi' ? 'Cơ cấu tiêu thụ MTD (kWh)' : 'MTD Consumption Structure (kWh)'}</CardTitle>
+                                    <CardDescription className="font-medium text-xs mt-1">{language === 'vi' ? 'Tỉ trọng kWh theo khung giờ' : 'kWh share by time-of-use slot'}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="h-[340px] pt-6 relative">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-50/30 to-transparent pointer-events-none"></div>
+                                    {kwhTotal === 0 ? <div className="h-full flex items-center justify-center text-slate-400 font-medium">No data</div> : <MiniPie data={kwhPieData} total={kwhTotal} />}
+                                </CardContent>
+                            </Card>
+                            <Card className="col-span-2 lg:col-span-1 shadow-lg shadow-amber-900/5 bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-xl transition-shadow duration-300">
+                                <CardHeader className="bg-white/40 border-b border-slate-200/50 rounded-t-xl px-6 py-5">
+                                    <CardTitle className="text-lg font-bold text-slate-800">{language === 'vi' ? 'Cơ cấu Chi phí MTD (VND)' : 'MTD Cost Structure (VND)'}</CardTitle>
+                                    <CardDescription className="font-medium text-xs mt-1">{language === 'vi' ? 'Tỉ trọng tiền điện theo khung giờ' : 'Cost share by time-of-use slot'}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="h-[340px] pt-6 relative">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-50/30 to-transparent pointer-events-none"></div>
+                                    {vndTotal === 0 ? <div className="h-full flex items-center justify-center text-slate-400 font-medium">No data</div> : <MiniPie data={vndPieData} total={vndTotal} />}
+                                </CardContent>
+                            </Card>
+                        </>);
+                    })()}
 
                     {/* DEPARTMENT BREAKDOWN STACKED BAR */}
                     {(() => {
