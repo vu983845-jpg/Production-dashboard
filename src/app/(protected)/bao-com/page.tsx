@@ -2382,15 +2382,23 @@ export default function BaoCom() {
                                                                                                 }
                                                                                                 if (!rec) continue  // No record to update, skip
                                                                                                 const diff = newVal - orig
-                                                                                                const newOfficial = Math.max(0, (rec.official_present ?? 0) + diff)
+                                                                                                // Apply diff to official first; if official goes negative, carry remainder into seasonal
+                                                                                                const oldOfficial = rec.official_present ?? 0
+                                                                                                const oldSeasonal = rec.seasonal_present ?? 0
+                                                                                                let newOfficial = oldOfficial + diff
+                                                                                                let newSeasonal = oldSeasonal
+                                                                                                if (newOfficial < 0) {
+                                                                                                    newSeasonal = Math.max(0, oldSeasonal + newOfficial)
+                                                                                                    newOfficial = 0
+                                                                                                }
                                                                                                 const res = await fetch('/api/meal-headcount', {
                                                                                                     method: 'PATCH',
                                                                                                     headers: { 'Content-Type': 'application/json' },
-                                                                                                    body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: rec.ot_count ?? 0 })
+                                                                                                    body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: rec.vegetarian ?? 0, ot_count: rec.ot_count ?? 0 })
                                                                                                 })
                                                                                                 if (res.ok) {
                                                                                                     savedCount++
-                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec!.id ? { ...r, official_present: newOfficial } : r) : prev)
+                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec!.id ? { ...r, official_present: newOfficial, seasonal_present: newSeasonal } : r) : prev)
                                                                                                 } else {
                                                                                                     const j = await res.json()
                                                                                                     alert('Lỗi lưu: ' + (j.error || res.statusText))
@@ -2490,13 +2498,15 @@ export default function BaoCom() {
                                                                                                 if (rowIds.length === 0) continue
                                                                                                 const rec = (statsData ?? []).find(r => r.id === rowIds[0])
                                                                                                 if (!rec) continue
+                                                                                                // newVal is ot_count + ot_vegetarian (combined display); compute actual ot_count to store
+                                                                                                const newOtCount = Math.max(0, newVal - (rec.ot_vegetarian ?? 0))
                                                                                                 const res = await fetch('/api/meal-headcount', {
                                                                                                     method: 'PATCH',
                                                                                                     headers: { 'Content-Type': 'application/json' },
-                                                                                                    body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newVal })
+                                                                                                    body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newOtCount })
                                                                                                 })
                                                                                                 if (res.ok) {
-                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newVal } : r) : prev)
+                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newOtCount } : r) : prev)
                                                                                                 } else {
                                                                                                     const j = await res.json()
                                                                                                     alert('Lỗi lưu OT: ' + (j.error || res.statusText))
@@ -2556,7 +2566,7 @@ export default function BaoCom() {
                                                                     )
                                                                 })}
                                                                 <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100 text-xs">
-                                                                    {deptOTTotal}
+                                                                    {deptOTTotal > 0 ? deptOTTotal : '—'}
                                                                 </td>
                                                             </tr>
                                                         )
