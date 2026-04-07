@@ -1004,7 +1004,7 @@ export default function BaoCom() {
         BORMA:      ['Borma S1','Borma thời vụ S1','Borma S2','Borma thời vụ S2','Borma S3','Borma thời vụ S3'],
         PEEL:       ['Peeling S1','Peeling thời vụ S1','Peeling S2','Peeling thời vụ S2','Peeling S3','Peeling thời vụ S3'],
         CS:         ['Machine Grading - shift 1','Machine Grading  - thời vụ 1','Machine Grading  - shift 2','Machine Grading  thời vụ - shift 2','Machine Grading  - shift 3','Machine Grading  thời vụ- shift 3'],
-        HPEEL:      ['Manual Grading -Shift 1 (Ms Huệ)','Manual Grading Thời vụ -Shift 1 (Ms Huệ)','Manual Grading -Shift 2 (Ms Huệ)','Manual Grading Thời vụ -Shift 2 (Ms Huệ)','Manual Grading -Shift 3 (Ms Huệ)','Manual Grading Thời vụ -Shift 3 (Ms Huệ)','Manual peeling S1 - Liên','Manual peeling S1 thời vụ - Liên','Manual peeling S1 - Dung','Manual peeling S1 thời vụ - Dung','Manual peeling S2 - Liên','Manual peeling S2 thời vụ - Liên','Manual peeling S2 - Dung','Manual peeling S2 thời vụ - Dung','Manual peeling S3 - Liên','Manual peeling S3 thời vụ - Liên','Manual peeling S3 - Dung','Manual peeling S3 thời vụ - Dung'],
+        HPEEL:      ['Manual Grading -Shift 1 (Ms Huệ)','Manual Grading Thời vụ -Shift 1 (Ms Huệ)','Manual Grading -Shift 2 (Ms Huệ)','Manual Grading Thời vụ -Shift 2 (Ms Huệ)','Manual Grading -Shift 3 (Ms Huệ)','Manual Grading Thời vụ -Shift 3 (Ms Huệ)','Manual peeling S1 - Liên','Manual peeling S1 thời vụ - Liên','Manual peeling S1 - Dung','Manual peeling S1 thời vụ - Dung','Manual peeling S2 - Liên','Manual peeling S2 thời vụ - Liên','Manual peeling S2 - Dung','Manual peeling S2 thời vụ - Dung','Manual peeling S3 - Liên','Manual peeling S3 thời vụ - Liên','Manual peeling S3 - Dung','Manual peeling S3 thời vụ - Dung','Hand Peeling OT'],
         PACK:       ['Packing S1','Packing thời vụ S1','Packing S2','Packing thời vụ S2','Packing S3'],
         BOILER:     ['Boiler worker S1','Boiler worker S2','Boiler worker S3'],
         MAINT_HCA:  ['Maintenance S1','Maintenance S2','Maintenance S3'],
@@ -1061,8 +1061,13 @@ export default function BaoCom() {
             const isKnownSection = knownSections.some(s => s.toLowerCase() === sectionName.toLowerCase())
             if (!isKnownSection && deptCode) {
                 if (deptCode === 'HPEEL') {
-                    // For HPEEL: normalize to canonical section name based on supervisor clues
-                    sectionName = normalizeHpeelSectionName(sectionName, shift)
+                    if (shift === 'OT') {
+                        // OT row for HPEEL — use canonical 'Hand Peeling OT' name
+                        sectionName = 'Hand Peeling OT'
+                    } else {
+                        // For HPEEL: normalize to canonical section name based on supervisor clues
+                        sectionName = normalizeHpeelSectionName(sectionName, shift)
+                    }
                 } else {
                     const displayName = DEPT_DISPLAY[deptCode] ?? sectionName
                     if (shift === 'OT') {
@@ -1181,8 +1186,8 @@ export default function BaoCom() {
             }
         })
         // Footer rows
-        const totalRow = ['Total', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0) + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)),
-            deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0) + (dg.shifts.find(sh=>sh.shift==='OT') ? [...dg.shifts.find(sh=>sh.shift==='OT')!.days.values()].reduce((a,b)=>a+b,0) : 0), 0)]
+        const totalRow = ['Total', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift !== 'OT').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0) + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)),
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift !== 'OT').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0) + (dg.shifts.find(sh=>sh.shift==='OT') ? [...dg.shifts.find(sh=>sh.shift==='OT')!.days.values()].reduce((a,b)=>a+b,0) : 0), 0)]
         const ca1Row = ['Ca 1:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '1').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
             deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '1').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
         const ca2Row = ['Ca 2:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '2').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
@@ -2267,9 +2272,11 @@ export default function BaoCom() {
                         if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">Không có dữ liệu trong tháng này</div>
                         const { days, deptGroups } = buildMonthlyPivot(statsData)
                         // Total per day (all sections including OT)
+                        // Note: filter sr.shift !== 'OT' to avoid double-counting HPEEL OT
+                        // which exists in both sectionRows ('Hand Peeling OT') AND dg.shifts (OT ShiftEntry)
                         const dayTotals = days.map(d =>
                             deptGroups.reduce((s, dg) =>
-                                s + dg.sectionRows.reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0)
+                                s + dg.sectionRows.filter(sr => sr.shift !== 'OT').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0)
                                   + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)
                         )
                         const grandTotal = dayTotals.reduce((a, b) => a + b, 0)
@@ -2312,7 +2319,8 @@ export default function BaoCom() {
                                             {deptGroups.map(dept => {
                                                 const deptOT = dept.shifts.find(sh => sh.shift === 'OT')
                                                 const deptOTTotal = deptOT ? [...deptOT.days.values()].reduce((a,b)=>a+b,0) : 0
-                                                const deptTotal = dept.sectionRows.reduce((s, sr) => s + [...sr.days.values()].reduce((a,b)=>a+b,0), 0) + (deptOTTotal ?? 0)
+                                                // filter shift !== 'OT' to avoid double-counting with deptOTTotal (from shiftMap)
+                                const deptTotal = dept.sectionRows.filter(sr => sr.shift !== 'OT').reduce((s, sr) => s + [...sr.days.values()].reduce((a,b)=>a+b,0), 0) + (deptOTTotal ?? 0)
                                                 return (
                                                 <Fragment key={dept.code || dept.deptKey}>
                                                     {/* Dept group header row */}
