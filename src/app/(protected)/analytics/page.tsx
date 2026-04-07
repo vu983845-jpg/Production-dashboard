@@ -368,7 +368,8 @@ export default function AnalyticsPage() {
         const daysInMonth = getDaysInMonth(now)
         const daysElapsed = Math.max(1, today)
         const actual = currentMonthDaily.reduce((s, r) => s + Number(r.actual_ton || 0), 0)
-        const plan = currentMonthDaily.reduce((s, r) => s + Number(r.plan_ton || 0), 0) / daysElapsed * daysInMonth
+        // plan_ton is fetched for ALL days in the month, so the sum is already the monthly total
+        const plan = currentMonthDaily.reduce((s, r) => s + Number(r.plan_ton || 0), 0)
         const projectedEndOfMonth = actual / daysElapsed * daysInMonth
         const gap = projectedEndOfMonth - plan
         return {
