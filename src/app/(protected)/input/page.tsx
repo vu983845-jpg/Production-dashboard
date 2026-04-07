@@ -1503,384 +1503,384 @@ export default function InputPage() {
                                 </TabsList>
 
                                 <TabsContent value="actual" className="space-y-4">
-                                    <div className="rounded-xl border bg-card text-card-foreground shadow">
-                                        <div className="p-6">
-                                            <Form {...formActual}>
-                                                <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-2xl">
-                                                    <div className="rounded-md border overflow-hidden">
-                                                        <Table>
-                                                            <TableHeader className="bg-muted/50">
-                                                                <TableRow>
-                                                                    <TableHead className="w-1/2">Chỉ tiêu</TableHead>
-                                                                    <TableHead className="w-1/2"><span>Giá trị nhập</span><span className="ml-2 text-[10px] font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{format(date, "dd/MM/yyyy")}</span></TableHead>
-                                                                </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                {departments.find(d => d.id === selectedDept)?.code === 'SHELL' ? (
-                                                                    <>
-                                                                        <TableRow>
-                                                                            <TableCell colSpan={2} className="p-0 pb-0">
-                                                                                <div className="bg-slate-50/60 border-b px-4 pt-3 pb-2 flex gap-4 overflow-x-auto">
-                                                                                    <p className="text-xs font-semibold text-slate-700 whitespace-nowrap self-center mr-2">👤 Tổ trưởng:</p>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (
-                                                                                        <div key={shift} className="flex flex-col items-start min-w-[120px]">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <select
-                                                                                                value={shiftLeaders[shift]}
-                                                                                                onChange={e => setShiftLeaders(prev => ({ ...prev, [shift]: e.target.value }))}
-                                                                                                className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white focus:outline-none focus:border-primary"
-                                                                                            >
-                                                                                                <option value="">-- Trống --</option>
-                                                                                                {SHIFT_LEADERS.map(l => <option key={l} value={l}>{l}</option>)}
-                                                                                            </select>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                                <div className="bg-blue-50/60 border-b px-4 pt-3 pb-1">
-                                                                                    <p className="text-xs font-semibold text-blue-700 mb-2">📊 Sản lượng theo từng Line (Tấn)</p>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
-                                                                                        <div key={shift} className="mb-3">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => {
-                                                                                                    const lColors: Record<string, string> = { A: 'border-blue-400', B: 'border-green-400', C: 'border-amber-400', D1: 'border-red-400', D2: 'border-purple-400' }
-                                                                                                    return (
-                                                                                                        <div key={`${line}-${shift}`} className="flex flex-col items-center flex-1">
-                                                                                                            <label className={`text-[10px] font-bold mb-1 ${lColors[line].replace('border-','text-')}`}>{line}</label>
-                                                                                                            <input
-                                                                                                                type="number" step="0.001" min="0"
-                                                                                                                className={`w-full text-right p-1 rounded border-2 ${lColors[line]} bg-white text-sm focus:outline-none`}
-                                                                                                                value={shellingLineData[line]?.[shift]?.actual_ton || ''}
-                                                                                                                onChange={e => {
-                                                                                                                    const val = Number(e.target.value) || 0
-                                                                                                                    setShellingLineData(prev => {
-                                                                                                                        const currentMp = prev[line]?.[shift]?.manpower || 0;
-                                                                                                                        // Auto-fill manpower with fixed default when line starts running and manpower not yet set
-                                                                                                                        const newMp = (val > 0 && currentMp === 0) ? SHELLING_LINE_MANPOWER[line] : currentMp;
-                                                                                                                        const next = { ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], actual_ton: val, manpower: newMp } } }
-                                                                                                                        let total = 0
-                                                                                                                        SHELLING_LINES.forEach(l => {
-                                                                                                                            (['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).forEach(s => total += (next[l]?.[s]?.actual_ton || 0))
-                                                                                                                        })
-                                                                                                                        formActual.setValue('actual_ton', total)
-                                                                                                                        return next
-                                                                                                                    })
-                                                                                                                }}
-                                                                                                            />
-                                                                                                        </div>
-                                                                                                    )
-                                                                                                })}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                    <p className="text-[10px] font-semibold text-blue-800 text-right">
-                                                                                        Tổng 3 ca: <span className="text-base font-black">{SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l]?.['Ca 1']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 2']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 3']?.actual_ton || 0), 0).toFixed(3)}</span> T
-                                                                                    </p>
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell colSpan={2} className="p-0">
-                                                                                <div className="bg-purple-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-purple-700 mb-2">🏷️ Kích cỡ (Size)</p>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
-                                                                                        <div key={shift} className="mb-3">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => (
-                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
-                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
-                                                                                                        <select
-                                                                                                            className="w-full text-center p-1 rounded border-2 border-purple-200 bg-white text-sm focus:outline-none focus:border-purple-500"
-                                                                                                            value={shellingLineData[line]?.[shift]?.size || ''}
-                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], size: e.target.value } } }))}
-                                                                                                        >
-                                                                                                            <option value="">--</option>
-                                                                                                            {['A+', 'A1', 'A2', 'B', 'B1', 'B2', 'C', 'C1', 'C2', 'D1', 'D2', 'E'].map(s => <option key={s} value={s}>{s}</option>)}
-                                                                                                        </select>
-                                                                                                    </div>
-                                                                                                ))}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell colSpan={2} className="p-0">
-                                                                                <div className="bg-green-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-green-700 mb-2">⏱ Thời gian chạy máy (Giờ)</p>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
-                                                                                        <div key={shift} className="mb-3">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => {
-                                                                                                    const aTon = shellingLineData[line]?.[shift]?.actual_ton || 0;
-                                                                                                    const dMin = shellingLineData[line]?.[shift]?.downtime_min || 0;
-                                                                                                    const mp = shellingLineData[line]?.[shift]?.manpower || 0;
-                                                                                                    const runHrs = (aTon > 0) ? Math.max(0, 7 - dMin / 60) : 0;
-                                                                                                    return (
-                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
-                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
-                                                                                                        <input
-                                                                                                            type="number" step="0.1" min="0" max="24" readOnly
-                                                                                                            className="w-full text-right p-1 rounded border-2 border-green-300 bg-green-50 text-sm focus:outline-none text-green-800 font-semibold cursor-not-allowed"
-                                                                                                            value={runHrs > 0 ? runHrs.toFixed(1) : ''}
-                                                                                                            title="Tự động tính = 7 giờ - Dừng máy"
-                                                                                                        />
-                                                                                                    </div>
-                                                                                                )})}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell colSpan={2} className="p-0">
-                                                                                <div className="bg-red-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">⏸ Thời gian dừng máy - Downtime (Phút)</p>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
-                                                                                        <div key={shift} className="mb-3">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => (
-                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
-                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
-                                                                                                        <input
-                                                                                                            type="number" step="1" min="0" readOnly
-                                                                                                            className="w-full text-right p-1 rounded border-2 border-red-200 bg-red-50 text-sm focus:outline-none text-red-700 font-semibold cursor-not-allowed"
-                                                                                                            value={shellingLineData[line]?.[shift]?.downtime_min || ''}
-                                                                                                            title="Dữ liệu tự động đồng bộ từ Hệ thống Cảnh báo Sự cố"
-                                                                                                        />
-                                                                                                    </div>
-                                                                                                ))}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell colSpan={2} className="p-0">
-                                                                                <div className="bg-amber-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <div className="flex items-center gap-2 mb-2">
-                                                                                        <p className="text-xs font-semibold text-amber-700">🧑‍🤝‍🧑 Nhân sự tham gia (Người)</p>
-                                                                                        <span className="text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full font-medium">Định mức: A/B/C/D1=2, D2=3</span>
-                                                                                    </div>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
-                                                                                        <div key={shift} className="mb-3">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => {
-                                                                                                    const currentMp = shellingLineData[line]?.[shift]?.manpower || 0;
-                                                                                                    const defaultMp = SHELLING_LINE_MANPOWER[line];
-                                                                                                    const isRunning = (shellingLineData[line]?.[shift]?.actual_ton || 0) > 0;
-                                                                                                    const isOverridden = isRunning && currentMp !== defaultMp && currentMp !== 0;
-                                                                                                    return (
-                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
-                                                                                                        <label className="text-[10px] font-bold mb-0.5 text-gray-500">
-                                                                                                            {line}
-                                                                                                            <span className="text-[9px] text-amber-500 ml-0.5">({defaultMp})</span>
-                                                                                                        </label>
-                                                                                                        <input
-                                                                                                            type="number" step="1" min="0"
-                                                                                                            className={`w-full text-right p-1 rounded border-2 text-sm focus:outline-none ${isOverridden ? 'border-orange-400 bg-orange-50 text-orange-800 font-semibold' : 'border-amber-200 bg-white'}`}
-                                                                                                            value={currentMp || ''}
-                                                                                                            title={isRunning ? `Định mức cố định: ${defaultMp} người` : 'Nhập volume trước để tự điền'}
-                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], manpower: Number(e.target.value) || 0 } } }))}
-                                                                                                        />
-                                                                                                    </div>
-                                                                                                    );
-                                                                                                })}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell colSpan={2} className="p-0">
-                                                                                <div className="bg-red-50/40 border-b px-4 pt-2 pb-3">
-                                                                                    <p className="text-xs font-semibold text-red-700 mb-2">💔 Tỷ lệ Bể (% Broken)</p>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (
-                                                                                        <div key={shift} className="mb-3">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => (
-                                                                                                    <div key={`${line}-${shift}`} className="flex flex-col items-center">
-                                                                                                        <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
-                                                                                                        <input
-                                                                                                            type="number" step="0.1" min="0" max="100"
-                                                                                                            className="w-full text-right p-1 rounded border-2 border-red-200 bg-white text-sm focus:outline-none focus:border-red-500"
-                                                                                                            value={shellingLineData[line]?.[shift]?.broken_pct || ''}
-                                                                                                            onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], broken_pct: Number(e.target.value) || 0 } } }))}
-                                                                                                        />
-                                                                                                    </div>
-                                                                                                ))}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
-
-                                                                        {/* OEE Row */}
-                                                                        <TableRow>
-                                                                            <TableCell colSpan={2} className="p-0">
-                                                                                <div className="bg-indigo-50/60 border-b px-4 pt-2 pb-3">
-                                                                                    <div className="flex items-center gap-2 mb-2">
-                                                                                        <p className="text-xs font-semibold text-indigo-700">📈 OEE (Hiệu suất Tổng thể)</p>
-                                                                                        <span className="text-[10px] text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded-full">Avail × Perf × Quality</span>
-                                                                                    </div>
-                                                                                    {/* OEE Explanation Card */}
-                                                                                    <div className="mb-3 rounded-lg border border-indigo-200 bg-white/70 p-2.5 text-[10px] text-slate-600 space-y-1.5">
-                                                                                        <p className="font-bold text-indigo-800 text-[11px]">📖 OEE là gì?</p>
-                                                                                        <p>OEE (<b>Overall Equipment Effectiveness</b>) đo lường hiệu quả tổng thể của thiết bị qua 3 thành phần:</p>
-                                                                                        <div className="grid grid-cols-1 gap-1 mt-1">
-                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-blue-600 shrink-0">Tính sẵn sàng (A):</span><span>Run Hours / 8h kế hoạch. Ca nào có line khác chạy mà line này tắt → A giảm.</span></div>
-                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-emerald-600 shrink-0">Hiệu suất (P):</span><span>Sản lượng thực / (Run Hours × Tốc độ thiết kế). P thấp = chạy chậm hơn lý thuyết.</span></div>
-                                                                                            <div className="flex gap-1.5 items-start"><span className="font-bold text-rose-600 shrink-0">Chất lượng (Q):</span><span>1 − % Bể. Q thấp = nhiều hạt vỡ.</span></div>
-                                                                                        </div>
-                                                                                        <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-indigo-100">
-                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span> ≥75% Tốt</span>
-                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> 55–74% Cần cải thiện</span>
-                                                                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> &lt;55% Kém</span>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (
-                                                                                        <div key={shift} className="mb-3">
-                                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
-                                                                                            <div className="grid grid-cols-5 gap-2">
-                                                                                                {SHELLING_LINES.map(line => {
-                                                                                                    const oeeData = calcOEE(line, shift)
-                                                                                                    const oeeVal = oeeData?.hasData ? oeeData.oee : null
-                                                                                                    const oeeColor = oeeVal === null ? 'border-gray-200 bg-gray-50 text-gray-300'
-                                                                                                        : oeeVal >= 0.75 ? 'border-green-400 bg-green-50 text-green-800'
-                                                                                                        : oeeVal >= 0.55 ? 'border-yellow-400 bg-yellow-50 text-yellow-800'
-                                                                                                        : 'border-red-400 bg-red-50 text-red-800'
-                                                                                                    const tooltip = oeeData?.hasData
-                                                                                                        ? `Avail: ${(oeeData.avail * 100).toFixed(1)}% | Perf: ${(oeeData.perf * 100).toFixed(1)}% | Quality: ${(oeeData.qual * 100).toFixed(1)}%`
-                                                                                                        : 'Chưa có dữ liệu'
-                                                                                                    return (
-                                                                                                        <div key={`${line}-${shift}`} className="flex flex-col items-center">
-                                                                                                            <label className="text-[10px] font-bold mb-1 text-indigo-500">{line}</label>
-                                                                                                            <div
-                                                                                                                title={tooltip}
-                                                                                                                className={`w-full text-right p-1 rounded border-2 text-sm font-bold ${oeeColor}`}
-                                                                                                            >
-                                                                                                                {oeeVal !== null ? `${(oeeVal * 100).toFixed(1)}%` : '—'}
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    )
-                                                                                                })}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
-
-                                                                        <TableRow className="bg-blue-50">
-                                                                            <TableCell className="font-semibold text-blue-800">Tổng sản lượng Shelling (Tấn)</TableCell>
-                                                                            <TableCell className="p-2 align-middle">
-                                                                                <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
-                                                                                    <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 focus-visible:ring-1 shadow-none font-bold text-blue-900" /></FormControl></FormItem>
-                                                                                )} />
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                    </>
-                                                                ) : departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' ? (
-                                                                    <>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium align-middle text-blue-700">Pass 1 — Tổng 3 ca (Tấn)</TableCell>
-                                                                            <TableCell className="p-2 align-middle">
-                                                                                <FormField control={formActual.control} name="pass1_ton" render={({ field }) => (
-                                                                                    <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 shadow-none font-bold text-blue-900 cursor-not-allowed" /></FormControl></FormItem>
-                                                                                )} />
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow>
-                                                                            <TableCell className="font-medium align-middle text-green-700">Pass 2 — Tổng 3 ca (Tấn)</TableCell>
-                                                                            <TableCell className="p-2 align-middle">
-                                                                                <FormField control={formActual.control} name="pass2_ton" render={({ field }) => (
-                                                                                    <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-green-50 border-0 ring-offset-0 shadow-none font-bold text-green-900 cursor-not-allowed" /></FormControl></FormItem>
-                                                                                )} />
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                        <TableRow className="bg-blue-50">
-                                                                            <TableCell className="font-semibold text-blue-800">Tổng sản lượng (Tấn)</TableCell>
-                                                                            <TableCell className="p-2 align-middle">
-                                                                                <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
-                                                                                    <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 shadow-none font-bold text-blue-900 cursor-not-allowed" /></FormControl></FormItem>
-                                                                                )} />
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                    </>
-                                                                ) : (
-                                                                    <TableRow>
-                                                                        <TableCell className="font-medium align-middle">Sản lượng thực tế (Tấn)</TableCell>
-                                                                        <TableCell className="p-2 align-middle">
-                                                                            <FormField control={formActual.control} name="actual_ton" render={({ field }) => (
-                                                                                <FormItem><FormControl><Input type="number" step="0.001" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
-                                                                            )} />
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                )}
-                                                                {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (
-                                                                    <TableRow>
-                                                                        <TableCell className="font-medium text-blue-600 align-middle">Sản lượng ISP (Tấn)</TableCell>
-                                                                        <TableCell className="p-2 align-middle">
-                                                                            <FormField control={formActual.control} name="isp_ton" render={({ field }) => (
-                                                                                <FormItem><FormControl><Input type="number" step="0.001" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
-                                                                            )} />
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                )}
-                                                                {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
-                                                                    <TableRow>
-                                                                        <TableCell className="font-medium align-middle">Số Container thực tế</TableCell>
-                                                                        <TableCell className="p-2 align-middle">
-                                                                            <FormField control={formActual.control} name="actual_container" render={({ field }) => (
-                                                                                <FormItem><FormControl><Input type="number" step="0.01" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
-                                                                            )} />
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                )}
-                                                                {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (
-                                                                    <TableRow>
-                                                                        <TableCell className="font-medium text-amber-600 align-middle">Chỉ số điện Shelling (kWh)</TableCell>
-                                                                        <TableCell className="p-2 align-middle">
-                                                                            <FormField control={formActual.control} name="electricity_meter_reading" render={({ field }) => (
-                                                                                <FormItem><FormControl><Input type="number" step="1" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
-                                                                            )} />
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                )}
-                                                                <TableRow>
-                                                                    <TableCell className="font-medium align-middle border-b-0">Ghi chú (Tùy chọn)</TableCell>
-                                                                    <TableCell className="p-2 align-middle border-b-0">
-                                                                        <FormField control={formActual.control} name="note" render={({ field }) => (
-                                                                            <FormItem><FormControl><Input {...field} placeholder="Vd: Ca sáng nghỉ 30p..." className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>
-                                                                        )} />
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            </TableBody>
-                                                        </Table>
-                                                    </div>
-
-                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t pt-4 gap-4">
-                                                        <p className="text-sm font-medium text-amber-700 bg-amber-50 px-3 py-2 rounded-md border border-amber-200 flex-1">
-                                                            ⚠️ <span className="font-bold">Lưu ý:</span> Bạn nhớ bấm nút <strong>Lưu Actual</strong> sau khi nhập xong nhé!
-                                                        </p>
-                                                        <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
-                                                            <Save className="mr-2 h-4 w-4" />
-                                                            {isSaving ? "Đang lưu..." : "Lưu Actual"}
-                                                        </Button>
-                                                    </div>
-                                                </form>
-                                            </Form>
-                                        </div>
+                                    <div className={`rounded-xl border bg-card text-card-foreground shadow${departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' ? ' hidden' : ''}`}>    
+                                          <div className="p-6">    
+                                              <Form {...formActual}>    
+                                                  <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-2xl">    
+                                                      <div className="rounded-md border overflow-hidden">    
+                                                          <Table>    
+                                                              <TableHeader className="bg-muted/50">    
+                                                                  <TableRow>    
+                                                                      <TableHead className="w-1/2">Chỉ tiêu</TableHead>    
+                                                                      <TableHead className="w-1/2"><span>Giá trị nhập</span><span className="ml-2 text-[10px] font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{format(date, "dd/MM/yyyy")}</span></TableHead>    
+                                                                  </TableRow>    
+                                                              </TableHeader>    
+                                                              <TableBody>    
+                                                                  {departments.find(d => d.id === selectedDept)?.code === 'SHELL' ? (    
+                                                                      <>    
+                                                                          <TableRow>    
+                                                                              <TableCell colSpan={2} className="p-0 pb-0">    
+                                                                                  <div className="bg-slate-50/60 border-b px-4 pt-3 pb-2 flex gap-4 overflow-x-auto">    
+                                                                                      <p className="text-xs font-semibold text-slate-700 whitespace-nowrap self-center mr-2">👤 Tổ trưởng:</p>    
+                                                                                      {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (    
+                                                                                          <div key={shift} className="flex flex-col items-start min-w-[120px]">    
+                                                                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>    
+                                                                                              <select    
+                                                                                                  value={shiftLeaders[shift]}    
+                                                                                                  onChange={e => setShiftLeaders(prev => ({ ...prev, [shift]: e.target.value }))}    
+                                                                                                  className="w-full text-xs p-1.5 rounded border border-slate-300 bg-white focus:outline-none focus:border-primary"    
+                                                                                              >    
+                                                                                                  <option value="">-- Trống --</option>    
+                                                                                                  {SHIFT_LEADERS.map(l => <option key={l} value={l}>{l}</option>)}    
+                                                                                              </select>    
+                                                                                          </div>    
+                                                                                      ))}    
+                                                                                  </div>    
+                                                                                  <div className="bg-blue-50/60 border-b px-4 pt-3 pb-1">    
+                                                                                      <p className="text-xs font-semibold text-blue-700 mb-2">📊 Sản lượng theo từng Line (Tấn)</p>    
+                                                                                      {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (    
+                                                                                          <div key={shift} className="mb-3">    
+                                                                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>    
+                                                                                              <div className="grid grid-cols-5 gap-2">    
+                                                                                                  {SHELLING_LINES.map(line => {    
+                                                                                                      const lColors: Record<string, string> = { A: 'border-blue-400', B: 'border-green-400', C: 'border-amber-400', D1: 'border-red-400', D2: 'border-purple-400' }    
+                                                                                                      return (    
+                                                                                                          <div key={`${line}-${shift}`} className="flex flex-col items-center flex-1">    
+                                                                                                              <label className={`text-[10px] font-bold mb-1 ${lColors[line].replace('border-','text-')}`}>{line}</label>    
+                                                                                                              <input    
+                                                                                                                  type="number" step="0.001" min="0"    
+                                                                                                                  className={`w-full text-right p-1 rounded border-2 ${lColors[line]} bg-white text-sm focus:outline-none`}    
+                                                                                                                  value={shellingLineData[line]?.[shift]?.actual_ton || ''}    
+                                                                                                                  onChange={e => {    
+                                                                                                                      const val = Number(e.target.value) || 0    
+                                                                                                                      setShellingLineData(prev => {    
+                                                                                                                          const currentMp = prev[line]?.[shift]?.manpower || 0;    
+                                                                                                                          // Auto-fill manpower with fixed default when line starts running and manpower not yet set    
+                                                                                                                          const newMp = (val > 0 && currentMp === 0) ? SHELLING_LINE_MANPOWER[line] : currentMp;    
+                                                                                                                          const next = { ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], actual_ton: val, manpower: newMp } } }    
+                                                                                                                          let total = 0    
+                                                                                                                          SHELLING_LINES.forEach(l => {    
+                                                                                                                              (['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).forEach(s => total += (next[l]?.[s]?.actual_ton || 0))    
+                                                                                                                          })    
+                                                                                                                          formActual.setValue('actual_ton', total)    
+                                                                                                                          return next    
+                                                                                                                      })    
+                                                                                                                  }}    
+                                                                                                              />    
+                                                                                                          </div>    
+                                                                                                      )    
+                                                                                                  })}    
+                                                                                              </div>    
+                                                                                          </div>    
+                                                                                      ))}    
+                                                                                      <p className="text-[10px] font-semibold text-blue-800 text-right">    
+                                                                                          Tổng 3 ca: <span className="text-base font-black">{SHELLING_LINES.reduce((s, l) => s + (shellingLineData[l]?.['Ca 1']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 2']?.actual_ton || 0) + (shellingLineData[l]?.['Ca 3']?.actual_ton || 0), 0).toFixed(3)}</span> T    
+                                                                                      </p>    
+                                                                                  </div>    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                          <TableRow>    
+                                                                              <TableCell colSpan={2} className="p-0">    
+                                                                                  <div className="bg-purple-50/40 border-b px-4 pt-2 pb-3">    
+                                                                                      <p className="text-xs font-semibold text-purple-700 mb-2">🏷️ Kích cỡ (Size)</p>    
+                                                                                      {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (    
+                                                                                          <div key={shift} className="mb-3">    
+                                                                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>    
+                                                                                              <div className="grid grid-cols-5 gap-2">    
+                                                                                                  {SHELLING_LINES.map(line => (    
+                                                                                                      <div key={`${line}-${shift}`} className="flex flex-col items-center">    
+                                                                                                          <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>    
+                                                                                                          <select    
+                                                                                                              className="w-full text-center p-1 rounded border-2 border-purple-200 bg-white text-sm focus:outline-none focus:border-purple-500"    
+                                                                                                              value={shellingLineData[line]?.[shift]?.size || ''}    
+                                                                                                              onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], size: e.target.value } } }))}    
+                                                                                                          >    
+                                                                                                              <option value="">--</option>    
+                                                                                                              {['A+', 'A1', 'A2', 'B', 'B1', 'B2', 'C', 'C1', 'C2', 'D1', 'D2', 'E'].map(s => <option key={s} value={s}>{s}</option>)}    
+                                                                                                          </select>    
+                                                                                                      </div>    
+                                                                                                  ))}    
+                                                                                              </div>    
+                                                                                          </div>    
+                                                                                      ))}    
+                                                                                  </div>    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                          <TableRow>    
+                                                                              <TableCell colSpan={2} className="p-0">    
+                                                                                  <div className="bg-green-50/40 border-b px-4 pt-2 pb-3">    
+                                                                                      <p className="text-xs font-semibold text-green-700 mb-2">⏱ Thời gian chạy máy (Giờ)</p>    
+                                                                                      {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (    
+                                                                                          <div key={shift} className="mb-3">    
+                                                                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>    
+                                                                                              <div className="grid grid-cols-5 gap-2">    
+                                                                                                  {SHELLING_LINES.map(line => {    
+                                                                                                      const aTon = shellingLineData[line]?.[shift]?.actual_ton || 0;    
+                                                                                                      const dMin = shellingLineData[line]?.[shift]?.downtime_min || 0;    
+                                                                                                      const mp = shellingLineData[line]?.[shift]?.manpower || 0;    
+                                                                                                      const runHrs = (aTon > 0) ? Math.max(0, 7 - dMin / 60) : 0;    
+                                                                                                      return (    
+                                                                                                      <div key={`${line}-${shift}`} className="flex flex-col items-center">    
+                                                                                                          <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>    
+                                                                                                          <input    
+                                                                                                              type="number" step="0.1" min="0" max="24" readOnly    
+                                                                                                              className="w-full text-right p-1 rounded border-2 border-green-300 bg-green-50 text-sm focus:outline-none text-green-800 font-semibold cursor-not-allowed"    
+                                                                                                              value={runHrs > 0 ? runHrs.toFixed(1) : ''}    
+                                                                                                              title="Tự động tính = 7 giờ - Dừng máy"    
+                                                                                                          />    
+                                                                                                      </div>    
+                                                                                                  )})}    
+                                                                                              </div>    
+                                                                                          </div>    
+                                                                                      ))}    
+                                                                                  </div>    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                          <TableRow>    
+                                                                              <TableCell colSpan={2} className="p-0">    
+                                                                                  <div className="bg-red-50/40 border-b px-4 pt-2 pb-3">    
+                                                                                      <p className="text-xs font-semibold text-red-700 mb-2">⏸ Thời gian dừng máy - Downtime (Phút)</p>    
+                                                                                      {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (    
+                                                                                          <div key={shift} className="mb-3">    
+                                                                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>    
+                                                                                              <div className="grid grid-cols-5 gap-2">    
+                                                                                                  {SHELLING_LINES.map(line => (    
+                                                                                                      <div key={`${line}-${shift}`} className="flex flex-col items-center">    
+                                                                                                          <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>    
+                                                                                                          <input    
+                                                                                                              type="number" step="1" min="0" readOnly    
+                                                                                                              className="w-full text-right p-1 rounded border-2 border-red-200 bg-red-50 text-sm focus:outline-none text-red-700 font-semibold cursor-not-allowed"    
+                                                                                                              value={shellingLineData[line]?.[shift]?.downtime_min || ''}    
+                                                                                                              title="Dữ liệu tự động đồng bộ từ Hệ thống Cảnh báo Sự cố"    
+                                                                                                          />    
+                                                                                                      </div>    
+                                                                                                  ))}    
+                                                                                              </div>    
+                                                                                          </div>    
+                                                                                      ))}    
+                                                                                  </div>    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                          <TableRow>    
+                                                                              <TableCell colSpan={2} className="p-0">    
+                                                                                  <div className="bg-amber-50/40 border-b px-4 pt-2 pb-3">    
+                                                                                      <div className="flex items-center gap-2 mb-2">    
+                                                                                          <p className="text-xs font-semibold text-amber-700">🧑‍🤝‍🧑 Nhân sự tham gia (Người)</p>    
+                                                                                          <span className="text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full font-medium">Định mức: A/B/C/D1=2, D2=3</span>    
+                                                                                      </div>    
+                                                                                      {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (    
+                                                                                          <div key={shift} className="mb-3">    
+                                                                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>    
+                                                                                              <div className="grid grid-cols-5 gap-2">    
+                                                                                                  {SHELLING_LINES.map(line => {    
+                                                                                                      const currentMp = shellingLineData[line]?.[shift]?.manpower || 0;    
+                                                                                                      const defaultMp = SHELLING_LINE_MANPOWER[line];    
+                                                                                                      const isRunning = (shellingLineData[line]?.[shift]?.actual_ton || 0) > 0;    
+                                                                                                      const isOverridden = isRunning && currentMp !== defaultMp && currentMp !== 0;    
+                                                                                                      return (    
+                                                                                                      <div key={`${line}-${shift}`} className="flex flex-col items-center">    
+                                                                                                          <label className="text-[10px] font-bold mb-0.5 text-gray-500">    
+                                                                                                              {line}    
+                                                                                                              <span className="text-[9px] text-amber-500 ml-0.5">({defaultMp})</span>    
+                                                                                                          </label>    
+                                                                                                          <input    
+                                                                                                              type="number" step="1" min="0"    
+                                                                                                              className={`w-full text-right p-1 rounded border-2 text-sm focus:outline-none ${isOverridden ? 'border-orange-400 bg-orange-50 text-orange-800 font-semibold' : 'border-amber-200 bg-white'}`}    
+                                                                                                              value={currentMp || ''}    
+                                                                                                              title={isRunning ? `Định mức cố định: ${defaultMp} người` : 'Nhập volume trước để tự điền'}    
+                                                                                                              onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], manpower: Number(e.target.value) || 0 } } }))}    
+                                                                                                          />    
+                                                                                                      </div>    
+                                                                                                      );    
+                                                                                                  })}    
+                                                                                              </div>    
+                                                                                          </div>    
+                                                                                      ))}    
+                                                                                  </div>    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                          <TableRow>    
+                                                                              <TableCell colSpan={2} className="p-0">    
+                                                                                  <div className="bg-red-50/40 border-b px-4 pt-2 pb-3">    
+                                                                                      <p className="text-xs font-semibold text-red-700 mb-2">💔 Tỷ lệ Bể (% Broken)</p>    
+                                                                                      {(['Ca 1', 'Ca 2', 'Ca 3'] as ('Ca 1' | 'Ca 2' | 'Ca 3')[]).map(shift => (    
+                                                                                          <div key={shift} className="mb-3">    
+                                                                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>    
+                                                                                              <div className="grid grid-cols-5 gap-2">    
+                                                                                                  {SHELLING_LINES.map(line => (    
+                                                                                                      <div key={`${line}-${shift}`} className="flex flex-col items-center">    
+                                                                                                          <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>    
+                                                                                                          <input    
+                                                                                                              type="number" step="0.1" min="0" max="100"    
+                                                                                                              className="w-full text-right p-1 rounded border-2 border-red-200 bg-white text-sm focus:outline-none focus:border-red-500"    
+                                                                                                              value={shellingLineData[line]?.[shift]?.broken_pct || ''}    
+                                                                                                              onChange={e => setShellingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], broken_pct: Number(e.target.value) || 0 } } }))}    
+                                                                                                          />    
+                                                                                                      </div>    
+                                                                                                  ))}    
+                                                                                              </div>    
+                                                                                          </div>    
+                                                                                      ))}    
+                                                                                  </div>    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+      
+                                                                          {/* OEE Row */}    
+                                                                          <TableRow>    
+                                                                              <TableCell colSpan={2} className="p-0">    
+                                                                                  <div className="bg-indigo-50/60 border-b px-4 pt-2 pb-3">    
+                                                                                      <div className="flex items-center gap-2 mb-2">    
+                                                                                          <p className="text-xs font-semibold text-indigo-700">📈 OEE (Hiệu suất Tổng thể)</p>    
+                                                                                          <span className="text-[10px] text-indigo-500 bg-indigo-100 px-1.5 py-0.5 rounded-full">Avail × Perf × Quality</span>    
+                                                                                      </div>    
+                                                                                      {/* OEE Explanation Card */}    
+                                                                                      <div className="mb-3 rounded-lg border border-indigo-200 bg-white/70 p-2.5 text-[10px] text-slate-600 space-y-1.5">    
+                                                                                          <p className="font-bold text-indigo-800 text-[11px]">📖 OEE là gì?</p>    
+                                                                                          <p>OEE (<b>Overall Equipment Effectiveness</b>) đo lường hiệu quả tổng thể của thiết bị qua 3 thành phần:</p>    
+                                                                                          <div className="grid grid-cols-1 gap-1 mt-1">    
+                                                                                              <div className="flex gap-1.5 items-start"><span className="font-bold text-blue-600 shrink-0">Tính sẵn sàng (A):</span><span>Run Hours / 8h kế hoạch. Ca nào có line khác chạy mà line này tắt → A giảm.</span></div>    
+                                                                                              <div className="flex gap-1.5 items-start"><span className="font-bold text-emerald-600 shrink-0">Hiệu suất (P):</span><span>Sản lượng thực / (Run Hours × Tốc độ thiết kế). P thấp = chạy chậm hơn lý thuyết.</span></div>    
+                                                                                              <div className="flex gap-1.5 items-start"><span className="font-bold text-rose-600 shrink-0">Chất lượng (Q):</span><span>1 − % Bể. Q thấp = nhiều hạt vỡ.</span></div>    
+                                                                                          </div>    
+                                                                                          <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-indigo-100">    
+                                                                                              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span> ≥75% Tốt</span>    
+                                                                                              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> 55–74% Cần cải thiện</span>    
+                                                                                              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> &lt;55% Kém</span>    
+                                                                                          </div>    
+                                                                                      </div>    
+                                                                                      {(['Ca 1', 'Ca 2', 'Ca 3'] as ShellShift[]).map(shift => (    
+                                                                                          <div key={shift} className="mb-3">    
+                                                                                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>    
+                                                                                              <div className="grid grid-cols-5 gap-2">    
+                                                                                                  {SHELLING_LINES.map(line => {    
+                                                                                                      const oeeData = calcOEE(line, shift)    
+                                                                                                      const oeeVal = oeeData?.hasData ? oeeData.oee : null    
+                                                                                                      const oeeColor = oeeVal === null ? 'border-gray-200 bg-gray-50 text-gray-300'    
+                                                                                                          : oeeVal >= 0.75 ? 'border-green-400 bg-green-50 text-green-800'    
+                                                                                                          : oeeVal >= 0.55 ? 'border-yellow-400 bg-yellow-50 text-yellow-800'    
+                                                                                                          : 'border-red-400 bg-red-50 text-red-800'    
+                                                                                                      const tooltip = oeeData?.hasData    
+                                                                                                          ? `Avail: ${(oeeData.avail * 100).toFixed(1)}% | Perf: ${(oeeData.perf * 100).toFixed(1)}% | Quality: ${(oeeData.qual * 100).toFixed(1)}%`    
+                                                                                                          : 'Chưa có dữ liệu'    
+                                                                                                      return (    
+                                                                                                          <div key={`${line}-${shift}`} className="flex flex-col items-center">    
+                                                                                                              <label className="text-[10px] font-bold mb-1 text-indigo-500">{line}</label>    
+                                                                                                              <div    
+                                                                                                                  title={tooltip}    
+                                                                                                                  className={`w-full text-right p-1 rounded border-2 text-sm font-bold ${oeeColor}`}    
+                                                                                                              >    
+                                                                                                                  {oeeVal !== null ? `${(oeeVal * 100).toFixed(1)}%` : '—'}    
+                                                                                                              </div>    
+                                                                                                          </div>    
+                                                                                                      )    
+                                                                                                  })}    
+                                                                                              </div>    
+                                                                                          </div>    
+                                                                                      ))}    
+                                                                                  </div>    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+      
+                                                                          <TableRow className="bg-blue-50">    
+                                                                              <TableCell className="font-semibold text-blue-800">Tổng sản lượng Shelling (Tấn)</TableCell>    
+                                                                              <TableCell className="p-2 align-middle">    
+                                                                                  <FormField control={formActual.control} name="actual_ton" render={({ field }) => (    
+                                                                                      <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 focus-visible:ring-1 shadow-none font-bold text-blue-900" /></FormControl></FormItem>    
+                                                                                  )} />    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                      </>    
+                                                                  ) : departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' ? (    
+                                                                      <>    
+                                                                          <TableRow>    
+                                                                              <TableCell className="font-medium align-middle text-blue-700">Pass 1 — Tổng 3 ca (Tấn)</TableCell>    
+                                                                              <TableCell className="p-2 align-middle">    
+                                                                                  <FormField control={formActual.control} name="pass1_ton" render={({ field }) => (    
+                                                                                      <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 shadow-none font-bold text-blue-900 cursor-not-allowed" /></FormControl></FormItem>    
+                                                                                  )} />    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                          <TableRow>    
+                                                                              <TableCell className="font-medium align-middle text-green-700">Pass 2 — Tổng 3 ca (Tấn)</TableCell>    
+                                                                              <TableCell className="p-2 align-middle">    
+                                                                                  <FormField control={formActual.control} name="pass2_ton" render={({ field }) => (    
+                                                                                      <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-green-50 border-0 ring-offset-0 shadow-none font-bold text-green-900 cursor-not-allowed" /></FormControl></FormItem>    
+                                                                                  )} />    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                          <TableRow className="bg-blue-50">    
+                                                                              <TableCell className="font-semibold text-blue-800">Tổng sản lượng (Tấn)</TableCell>    
+                                                                              <TableCell className="p-2 align-middle">    
+                                                                                  <FormField control={formActual.control} name="actual_ton" render={({ field }) => (    
+                                                                                      <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 shadow-none font-bold text-blue-900 cursor-not-allowed" /></FormControl></FormItem>    
+                                                                                  )} />    
+                                                                              </TableCell>    
+                                                                          </TableRow>    
+                                                                      </>    
+                                                                  ) : (    
+                                                                      <TableRow>    
+                                                                          <TableCell className="font-medium align-middle">Sản lượng thực tế (Tấn)</TableCell>    
+                                                                          <TableCell className="p-2 align-middle">    
+                                                                              <FormField control={formActual.control} name="actual_ton" render={({ field }) => (    
+                                                                                  <FormItem><FormControl><Input type="number" step="0.001" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>    
+                                                                              )} />    
+                                                                          </TableCell>    
+                                                                      </TableRow>    
+                                                                  )}    
+                                                                  {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (    
+                                                                      <TableRow>    
+                                                                          <TableCell className="font-medium text-blue-600 align-middle">Sản lượng ISP (Tấn)</TableCell>    
+                                                                          <TableCell className="p-2 align-middle">    
+                                                                              <FormField control={formActual.control} name="isp_ton" render={({ field }) => (    
+                                                                                  <FormItem><FormControl><Input type="number" step="0.001" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>    
+                                                                              )} />    
+                                                                          </TableCell>    
+                                                                      </TableRow>    
+                                                                  )}    
+                                                                  {departments.find(d => d.id === selectedDept)?.code === "PACK" && (    
+                                                                      <TableRow>    
+                                                                          <TableCell className="font-medium align-middle">Số Container thực tế</TableCell>    
+                                                                          <TableCell className="p-2 align-middle">    
+                                                                              <FormField control={formActual.control} name="actual_container" render={({ field }) => (    
+                                                                                  <FormItem><FormControl><Input type="number" step="0.01" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>    
+                                                                              )} />    
+                                                                          </TableCell>    
+                                                                      </TableRow>    
+                                                                  )}    
+                                                                  {departments.find(d => d.id === selectedDept)?.code === "SHELL" && (    
+                                                                      <TableRow>    
+                                                                          <TableCell className="font-medium text-amber-600 align-middle">Chỉ số điện Shelling (kWh)</TableCell>    
+                                                                          <TableCell className="p-2 align-middle">    
+                                                                              <FormField control={formActual.control} name="electricity_meter_reading" render={({ field }) => (    
+                                                                                  <FormItem><FormControl><Input type="number" step="1" {...field} className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>    
+                                                                              )} />    
+                                                                          </TableCell>    
+                                                                      </TableRow>    
+                                                                  )}    
+                                                                  <TableRow>    
+                                                                      <TableCell className="font-medium align-middle border-b-0">Ghi chú (Tùy chọn)</TableCell>    
+                                                                      <TableCell className="p-2 align-middle border-b-0">    
+                                                                          <FormField control={formActual.control} name="note" render={({ field }) => (    
+                                                                              <FormItem><FormControl><Input {...field} placeholder="Vd: Ca sáng nghỉ 30p..." className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none" /></FormControl></FormItem>    
+                                                                          )} />    
+                                                                      </TableCell>    
+                                                                  </TableRow>    
+                                                              </TableBody>    
+                                                          </Table>    
+                                                      </div>    
+      
+                                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t pt-4 gap-4">    
+                                                          <p className="text-sm font-medium text-amber-700 bg-amber-50 px-3 py-2 rounded-md border border-amber-200 flex-1">    
+                                                              ⚠️ <span className="font-bold">Lưu ý:</span> Bạn nhớ bấm nút <strong>Lưu Actual</strong> sau khi nhập xong nhé!    
+                                                          </p>    
+                                                          <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">    
+                                                              <Save className="mr-2 h-4 w-4" />    
+                                                              {isSaving ? "Đang lưu..." : "Lưu Actual"}    
+                                                          </Button>    
+                                                      </div>    
+                                                  </form>    
+                                              </Form>    
+                                          </div>
                                     </div>
 
                                     {/* ── Peeling 3-shift breakdown card ── */}
