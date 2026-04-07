@@ -286,6 +286,19 @@ export default function InputPage() {
         'Ca 3': ''
     })
 
+    // Peeling MC 3-shift tracking
+    type PeelShift = 'Ca 1' | 'Ca 2' | 'Ca 3'
+    type PeelShiftEntry = { pass1_ton: number; pass2_ton: number; broken_pct: number; unpeel_pct: number; note: string }
+    const PEEL_SHIFT_LEADERS = ['Mr. Châu', 'Ms. Ngân', 'Mr. Toàn']
+    const initPeelShift = (): PeelShiftEntry => ({ pass1_ton: 0, pass2_ton: 0, broken_pct: 0, unpeel_pct: 0, note: '' })
+    const [peelingShiftData, setPeelingShiftData] = useState<Record<PeelShift, PeelShiftEntry>>({
+        'Ca 1': initPeelShift(), 'Ca 2': initPeelShift(), 'Ca 3': initPeelShift(),
+    })
+    const [peelingShiftLeaders, setPeelingShiftLeaders] = useState<Record<PeelShift, string>>({
+        'Ca 1': '', 'Ca 2': '', 'Ca 3': ''
+    })
+    const peelingFetchRef = useRef<string>("")
+
 
     // Forms
     const formActual = useForm<z.infer<typeof actualSchema>>({
@@ -468,6 +481,13 @@ export default function InputPage() {
             if (shellingFetchRef.current !== cacheKey) {
                 shellingFetchRef.current = cacheKey;
                 fetchShellingLineData();
+            }
+        }
+        if (deptCodeLine === 'PEEL_MC') {
+            const cacheKey = `${selectedDept}-${format(date, "yyyy-MM-dd")}`;
+            if (peelingFetchRef.current !== cacheKey) {
+                peelingFetchRef.current = cacheKey;
+                fetchPeelingShiftData();
             }
         }
     }, [selectedDept, date, formActual, formKpi, departments])
@@ -1062,6 +1082,94 @@ export default function InputPage() {
             const newState = { A: initShiftObj(), B: initShiftObj(), C: initShiftObj(), D1: initShiftObj(), D2: initShiftObj() } as Record<ShellLine, Record<ShellShift, ShellLineEntry>>
             setShellingLineData(newState)
         }
+    }
+
+    async function fetchPeelingShiftData() {
+        if (!selectedDept) return;
+        const formattedDate = format(date, "yyyy-MM-dd")
+        const currentRef = peelingFetchRef.current;
+        const { data } = await supabase
+            .from('peeling_shift_daily')
+            .select('*')
+            .eq('department_id', selectedDept)
+            .eq('work_date', formattedDate)
+        if (peelingFetchRef.current !== currentRef) return;
+        const newData: Record<PeelShift, PeelShiftEntry> = {
+            'Ca 1': initPeelShift(), 'Ca 2': initPeelShift(), 'Ca 3': initPeelShift(),
+        }
+        const newLeaders: Record<PeelShift, string> = { 'Ca 1': '', 'Ca 2': '', 'Ca 3': '' }
+        if (data && data.length > 0) {
+            data.forEach((r: any) => {
+                const shift = (r.shift_name || 'Ca 1') as PeelShift;
+                if (r.shift_leader) newLeaders[shift] = r.shift_leader;
+                newData[shift] = {
+                    pass1_ton: Number(r.pass1_ton || 0),
+                    pass2_ton: Number(r.pass2_ton || 0),
+                    broken_pct: Number(r.broken_pct || 0),
+                    unpeel_pct: Number(r.unpeel_pct || 0),
+                    note: r.note || '',
+                }
+            })
+        }
+        setPeelingShiftData(newData)
+        setPeelingShiftLeaders(newLeaders)
+        // Sync totals to Actual form
+        const p1 = (['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).reduce((s, sh) => s + newData[sh].pass1_ton, 0)
+        const p2 = (['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).reduce((s, sh) => s + newData[sh].pass2_ton, 0)
+        if (p1 + p2 > 0) {
+            formActual.setValue('pass1_ton', p1)
+            formActual.setValue('pass2_ton', p2)
+            formActual.setValue('actual_ton', p1 + p2)
+        }
+    }
+
+    async function savePeelingShifts() {
+        if (!selectedDept) return;
+        setIsSaving(true)
+        const formattedDate = format(date, "yyyy-MM-dd")
+        const shifts: PeelShift[] = ['Ca 1', 'Ca 2', 'Ca 3']
+        const payload = shifts.map(shift => {
+            const d = peelingShiftData[shift]
+            return {
+                department_id: selectedDept,
+                work_date: formattedDate,
+                shift_name: shift,
+                shift_leader: peelingShiftLeaders[shift] || null,
+                pass1_ton: d.pass1_ton,
+                pass2_ton: d.pass2_ton,
+                actual_ton: d.pass1_ton + d.pass2_ton,
+                broken_pct: d.broken_pct,
+                unpeel_pct: d.unpeel_pct,
+                note: d.note || null,
+                updated_by: userId,
+                updated_at: new Date().toISOString()
+            }
+        })
+        const { error } = await supabase
+            .from('peeling_shift_daily')
+            .upsert(payload, { onConflict: 'department_id,work_date,shift_name' })
+        if (error) {
+            toast.error('Lỗi khi lưu ca Peeling: ' + error.message)
+            setIsSaving(false)
+            return
+        }
+        // Auto-update daily_actual with shift totals
+        const totalP1 = shifts.reduce((s, sh) => s + (peelingShiftData[sh].pass1_ton || 0), 0)
+        const totalP2 = shifts.reduce((s, sh) => s + (peelingShiftData[sh].pass2_ton || 0), 0)
+        await supabase.from('daily_actual').upsert({
+            department_id: selectedDept,
+            work_date: formattedDate,
+            pass1_ton: totalP1,
+            pass2_ton: totalP2,
+            actual_ton: totalP1 + totalP2,
+            updated_by: userId,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'department_id,work_date' })
+        formActual.setValue('pass1_ton', totalP1)
+        formActual.setValue('pass2_ton', totalP2)
+        formActual.setValue('actual_ton', totalP1 + totalP2)
+        toast.success('Đã lưu dữ liệu 3 ca Peeling thành công!')
+        setIsSaving(false)
     }
 
     async function saveShellingLines() {
@@ -1685,36 +1793,18 @@ export default function InputPage() {
                                                                 ) : departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' ? (
                                                                     <>
                                                                         <TableRow>
-                                                                            <TableCell className="font-medium align-middle text-blue-700">Pass 1 (Tấn)</TableCell>
+                                                                            <TableCell className="font-medium align-middle text-blue-700">Pass 1 — Tổng 3 ca (Tấn)</TableCell>
                                                                             <TableCell className="p-2 align-middle">
                                                                                 <FormField control={formActual.control} name="pass1_ton" render={({ field }) => (
-                                                                                    <FormItem><FormControl><Input type="number" step="0.001"
-                                                                                        {...field}
-                                                                                        className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none"
-                                                                                        onChange={e => {
-                                                                                            field.onChange(e)
-                                                                                            const p1 = Number(e.target.value) || 0
-                                                                                            const p2 = Number(formActual.getValues('pass2_ton')) || 0
-                                                                                            formActual.setValue('actual_ton', p1 + p2)
-                                                                                        }}
-                                                                                    /></FormControl></FormItem>
+                                                                                    <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-blue-50 border-0 ring-offset-0 shadow-none font-bold text-blue-900 cursor-not-allowed" /></FormControl></FormItem>
                                                                                 )} />
                                                                             </TableCell>
                                                                         </TableRow>
                                                                         <TableRow>
-                                                                            <TableCell className="font-medium align-middle text-green-700">Pass 2 (Tấn)</TableCell>
+                                                                            <TableCell className="font-medium align-middle text-green-700">Pass 2 — Tổng 3 ca (Tấn)</TableCell>
                                                                             <TableCell className="p-2 align-middle">
                                                                                 <FormField control={formActual.control} name="pass2_ton" render={({ field }) => (
-                                                                                    <FormItem><FormControl><Input type="number" step="0.001"
-                                                                                        {...field}
-                                                                                        className="bg-transparent border-0 ring-offset-0 focus-visible:ring-1 shadow-none"
-                                                                                        onChange={e => {
-                                                                                            field.onChange(e)
-                                                                                            const p2 = Number(e.target.value) || 0
-                                                                                            const p1 = Number(formActual.getValues('pass1_ton')) || 0
-                                                                                            formActual.setValue('actual_ton', p1 + p2)
-                                                                                        }}
-                                                                                    /></FormControl></FormItem>
+                                                                                    <FormItem><FormControl><Input type="number" step="0.001" {...field} readOnly className="bg-green-50 border-0 ring-offset-0 shadow-none font-bold text-green-900 cursor-not-allowed" /></FormControl></FormItem>
                                                                                 )} />
                                                                             </TableCell>
                                                                         </TableRow>
@@ -1792,6 +1882,84 @@ export default function InputPage() {
                                             </Form>
                                         </div>
                                     </div>
+
+                                    {/* ── Peeling 3-shift breakdown card ── */}
+                                    {departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' && (
+                                        <div className="rounded-xl border bg-card text-card-foreground shadow">
+                                            <div className="p-6 space-y-4">
+                                                <div className="flex justify-between items-center">
+                                                    <div>
+                                                        <h3 className="font-semibold text-lg text-emerald-800">📊 Chi tiết sản lượng 3 ca — Peeling</h3>
+                                                        <p className="text-sm text-muted-foreground">Nhập sản lượng &amp; chất lượng từng ca, sau đó bấm <strong>Lưu 3 Ca</strong></p>
+                                                    </div>
+                                                    <Button onClick={savePeelingShifts} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                                        <Save className="mr-2 h-4 w-4" />
+                                                        {isSaving ? 'Đang lưu...' : 'Lưu 3 Ca'}
+                                                    </Button>
+                                                </div>
+
+                                                {/* Tổ trưởng */}
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    {(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).map(shift => (
+                                                        <div key={shift} className="space-y-1">
+                                                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tổ trưởng {shift}</Label>
+                                                            <Select value={peelingShiftLeaders[shift]} onValueChange={v => setPeelingShiftLeaders(prev => ({ ...prev, [shift]: v }))}>
+                                                                <SelectTrigger className="bg-white"><SelectValue placeholder="Chọn tổ trưởng..." /></SelectTrigger>
+                                                                <SelectContent>{PEEL_SHIFT_LEADERS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Bảng dữ liệu 3 ca */}
+                                                <div className="rounded-md border overflow-hidden">
+                                                    <Table>
+                                                        <TableHeader className="bg-emerald-50">
+                                                            <TableRow>
+                                                                <TableHead className="w-44">Chỉ tiêu</TableHead>
+                                                                <TableHead className="text-center text-emerald-700">Ca 1</TableHead>
+                                                                <TableHead className="text-center text-blue-700">Ca 2</TableHead>
+                                                                <TableHead className="text-center text-indigo-700">Ca 3</TableHead>
+                                                                <TableHead className="text-center font-bold bg-gray-50">Tổng / Avg</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            <TableRow>
+                                                                <TableCell className="font-medium text-blue-700 text-sm">Pass 1 (Tấn)</TableCell>
+                                                                {(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).map(shift => (
+                                                                    <TableCell key={shift} className="p-1"><input type="number" step="0.001" min="0" value={peelingShiftData[shift].pass1_ton || ''} onChange={e => setPeelingShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], pass1_ton: Number(e.target.value) || 0 } }))} className="w-full text-right p-1.5 rounded border border-gray-200 outline-none focus:ring-1 focus:ring-emerald-400 bg-transparent text-sm font-semibold" /></TableCell>
+                                                                ))}<TableCell className="text-right font-bold text-blue-700 bg-blue-50 text-sm">{(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).reduce((s, sh) => s + (peelingShiftData[sh].pass1_ton || 0), 0).toFixed(3)}</TableCell>
+                                                            </TableRow>
+                                                            <TableRow>
+                                                                <TableCell className="font-medium text-green-700 text-sm">Pass 2 (Tấn)</TableCell>
+                                                                {(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).map(shift => (
+                                                                    <TableCell key={shift} className="p-1"><input type="number" step="0.001" min="0" value={peelingShiftData[shift].pass2_ton || ''} onChange={e => setPeelingShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], pass2_ton: Number(e.target.value) || 0 } }))} className="w-full text-right p-1.5 rounded border border-gray-200 outline-none focus:ring-1 focus:ring-emerald-400 bg-transparent text-sm font-semibold" /></TableCell>
+                                                                ))}<TableCell className="text-right font-bold text-green-700 bg-green-50 text-sm">{(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).reduce((s, sh) => s + (peelingShiftData[sh].pass2_ton || 0), 0).toFixed(3)}</TableCell>
+                                                            </TableRow>
+                                                            <TableRow className="bg-red-50/40">
+                                                                <TableCell className="font-medium text-red-700 text-sm">% Bể (Broken)</TableCell>
+                                                                {(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).map(shift => (
+                                                                    <TableCell key={shift} className="p-1"><input type="number" step="0.1" min="0" max="100" value={peelingShiftData[shift].broken_pct || ''} onChange={e => setPeelingShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], broken_pct: Number(e.target.value) || 0 } }))} className="w-full text-right p-1.5 rounded border border-gray-200 outline-none focus:ring-1 focus:ring-red-400 bg-transparent text-sm" /></TableCell>
+                                                                ))}<TableCell className="text-right text-red-700 bg-red-50 text-sm font-semibold">{((['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).reduce((s, sh) => s + (peelingShiftData[sh].broken_pct || 0), 0) / 3).toFixed(1)}%</TableCell>
+                                                            </TableRow>
+                                                            <TableRow className="bg-orange-50/40">
+                                                                <TableCell className="font-medium text-orange-700 text-sm">% Unpeel (Sót lụa)</TableCell>
+                                                                {(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).map(shift => (
+                                                                    <TableCell key={shift} className="p-1"><input type="number" step="0.1" min="0" max="100" value={peelingShiftData[shift].unpeel_pct || ''} onChange={e => setPeelingShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], unpeel_pct: Number(e.target.value) || 0 } }))} className="w-full text-right p-1.5 rounded border border-gray-200 outline-none focus:ring-1 focus:ring-orange-400 bg-transparent text-sm" /></TableCell>
+                                                                ))}<TableCell className="text-right text-orange-700 bg-orange-50 text-sm font-semibold">{((['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).reduce((s, sh) => s + (peelingShiftData[sh].unpeel_pct || 0), 0) / 3).toFixed(1)}%</TableCell>
+                                                            </TableRow>
+                                                            <TableRow className="bg-emerald-50">
+                                                                <TableCell className="font-semibold text-emerald-800 text-sm">Tổng SL/ca (Tấn)</TableCell>
+                                                                {(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).map(shift => (
+                                                                    <TableCell key={shift} className="text-center font-bold text-emerald-700 text-sm">{((peelingShiftData[shift].pass1_ton || 0) + (peelingShiftData[shift].pass2_ton || 0)).toFixed(3)}</TableCell>
+                                                                ))}<TableCell className="text-right font-black text-emerald-800 bg-emerald-100 text-sm">{(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).reduce((s, sh) => s + (peelingShiftData[sh].pass1_ton || 0) + (peelingShiftData[sh].pass2_ton || 0), 0).toFixed(3)}</TableCell>
+                                                            </TableRow>
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </TabsContent>
 
                                 <TabsContent value="kpi" className="space-y-4">
