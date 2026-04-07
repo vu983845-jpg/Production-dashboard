@@ -1445,6 +1445,14 @@ export default function BaoCom() {
     const [expandedSource, setExpandedSource] = useState<Set<number>>(new Set())
     const [confirmingRow, setConfirmingRow] = useState<number | null>(null)
     const [confirmMsg, setConfirmMsg] = useState<Record<number, { type: 'ok'|'err'; text: string }>>({})
+    // ── Overwrite confirmation modal ──
+    // Used by both single-row confirm and bulk save
+    const [overwriteModal, setOverwriteModal] = useState<{
+        title: string
+        lines: string[]
+        onConfirm: () => void
+        onCancel: () => void
+    } | null>(null)
     // Inline editing state
     const [editingCell, setEditingCell] = useState<{ row: number; field: string } | null>(null)
     const [editDraft, setEditDraft] = useState('')
@@ -1484,17 +1492,26 @@ export default function BaoCom() {
 
             if (existing) {
                 const existSummary = `CT: ${existing.official_present ?? 0}, TV: ${existing.seasonal_present ?? 0}, Chay: ${existing.vegetarian ?? 0}, OT: ${existing.ot_count ?? 0}`
-                const ok = window.confirm(
-                    `⚠️ Đã có dữ liệu cho:\n` +
-                    `📅 ${workDate}  |  Bộ phận: ${canonicalName}  |  Ca ${shift}\n` +
-                    `Dữ liệu cũ: ${existSummary}\n\n` +
-                    `Bạn có muốn ghi đè lại không?`
-                )
-                if (!ok) {
-                    setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '⏭ Bỏ qua (đã có data)' } }))
-                    setConfirmingRow(null)
-                    return
-                }
+                // Hiện modal xác nhận thay vì window.confirm
+                await new Promise<void>((resolve, reject) => {
+                    setOverwriteModal({
+                        title: '⚠️ Dữ liệu đã tồn tại',
+                        lines: [
+                            `📅 Ngày: ${workDate}`,
+                            `🏭 Bộ phận: ${canonicalName}  |  Ca ${shift}`,
+                            `📊 Dữ liệu hiện tại: ${existSummary}`,
+                            '',
+                            'Bạn có muốn ghi đè dữ liệu cũ không?',
+                        ],
+                        onConfirm: () => { setOverwriteModal(null); resolve() },
+                        onCancel: () => {
+                            setOverwriteModal(null)
+                            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '⏭ Bỏ qua (đã có data)' } }))
+                            setConfirmingRow(null)
+                            reject(new Error('cancelled'))
+                        },
+                    })
+                })  // Nếu reject('cancelled'), catch bên ngoài sẽ bắt và return — không lưu
             }
 
             const { otCount, otVegetarian } = parseOTString(r.ot)
@@ -1520,6 +1537,11 @@ export default function BaoCom() {
             setConfirmedRows(prev => new Set([...prev, i]))
             setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: existing ? '✓ Đã ghi đè' : '✓ Đã lưu' } }))
         } catch (e) {
+            // 'cancelled' = user bấm Hủy ở modal — không hiện lỗi (confirmMsg đã được set trong onCancel)
+            if (e instanceof Error && e.message === 'cancelled') {
+                setConfirmingRow(null)
+                return
+            }
             setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '❌ ' + (e instanceof Error ? e.message : String(e)) } }))
         } finally {
             setConfirmingRow(null)
@@ -1654,8 +1676,6 @@ export default function BaoCom() {
             const { data: { user } } = await supabase.auth.getUser()
             const payload = records.map((r, i) => {
                 const deptId = getEffectiveDeptId(r, i)
-                // Use canonical name_en if dept resolved; otherwise keep raw area string
-                const _area = getEffectiveArea(r, i)
                 const canonicalName = getCanonicalDeptName(r, i, deptId)
                 const { otCount, otVegetarian } = parseOTString(r.ot)
                 return {
@@ -1676,6 +1696,57 @@ export default function BaoCom() {
                 }
             })
 
+            // ── Kiểm tra ngày đã có data chưa trước khi lưu ──
+            const uniqueDatesInPayload = [...new Set(payload.map(p => p.work_date))]
+            const { data: existingCheck } = await supabase
+                .from('meal_headcount')
+                .select('work_date, department_name, shift')
+                .in('work_date', uniqueDatesInPayload)
+
+            if (existingCheck && existingCheck.length > 0) {
+                // Tìm các bản ghi mới trùng với bản ghi cũ
+                const overlapping = payload.filter(p =>
+                    existingCheck.some(e =>
+                        e.work_date === p.work_date &&
+                        e.department_name === p.department_name &&
+                        e.shift === p.shift
+                    )
+                )
+                if (overlapping.length > 0) {
+                    setSaving(false)
+                    // Nhóm theo ngày để hiển thị rõ ràng
+                    const byDate = overlapping.reduce<Record<string, string[]>>((acc, p) => {
+                        if (!acc[p.work_date]) acc[p.work_date] = []
+                        acc[p.work_date].push(`${p.department_name} Ca ${p.shift}`)
+                        return acc
+                    }, {})
+                    const lines = [
+                        `⚠️ Có ${overlapping.length} bản ghi sẽ bị ghi đè:`,
+                        '',
+                        ...Object.entries(byDate).flatMap(([date, items]) => [
+                            `📅 ${date}:`,
+                            ...items.slice(0, 5).map(s => `   • ${s}`),
+                            ...(items.length > 5 ? [`   ... và ${items.length - 5} bản ghi khác`] : []),
+                        ]),
+                        '',
+                        'Bạn có chắc muốn ghi đè tất cả không?',
+                    ]
+                    await new Promise<void>((resolve, reject) => {
+                        setOverwriteModal({
+                            title: '🔒 Xác nhận ghi đè dữ liệu',
+                            lines,
+                            onConfirm: () => { setOverwriteModal(null); resolve() },
+                            onCancel: () => {
+                                setOverwriteModal(null)
+                                setSaveMsg({ type: 'err', text: '⏭ Đã hủy — không ghi đè dữ liệu cũ.' })
+                                reject(new Error('cancelled'))
+                            },
+                        })
+                    })
+                    setSaving(true)  // tiếp tục lưu sau khi user xác nhận
+                }
+            }
+
             const { error } = await supabase.from("meal_headcount").upsert(payload, {
                 onConflict: "work_date,department_name,shift",
             })
@@ -1683,6 +1754,7 @@ export default function BaoCom() {
             if (error) throw error
             setSaveMsg({ type: "ok", text: `✅ Đã lưu ${payload.length} bản ghi thành công!` })
         } catch (err: unknown) {
+            if (err instanceof Error && err.message === 'cancelled') return
             const message = err instanceof Error ? err.message : "Lỗi không xác định"
             setSaveMsg({ type: "err", text: `❌ Lỗi: ${message}` })
         } finally {
@@ -1738,6 +1810,59 @@ export default function BaoCom() {
 
     return (
         <>
+        {/* ── Overwrite Confirmation Modal ── */}
+        {overwriteModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+                {/* Backdrop */}
+                <div
+                    className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                    onClick={overwriteModal.onCancel}
+                />
+                {/* Dialog */}
+                <div className="relative z-10 bg-white rounded-2xl shadow-2xl border-2 border-orange-200 w-full max-w-md mx-4 overflow-hidden">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4">
+                        <h2 className="text-white font-bold text-lg">{overwriteModal.title}</h2>
+                    </div>
+                    {/* Body */}
+                    <div className="px-5 py-4 space-y-1">
+                        {overwriteModal.lines.map((line, idx) =>
+                            line === '' ? <div key={idx} className="h-2" /> : (
+                                <p
+                                    key={idx}
+                                    className={
+                                        line.startsWith('📅') ? 'text-sm font-semibold text-gray-800' :
+                                        line.startsWith('🏭') || line.startsWith('📊') ? 'text-sm text-gray-700' :
+                                        line.startsWith('⚠️') || line.startsWith('🔒') ? 'text-sm font-bold text-orange-700' :
+                                        line.startsWith('   •') ? 'text-xs text-gray-600 pl-2' :
+                                        line.startsWith('   ...') ? 'text-xs text-gray-400 pl-2 italic' :
+                                        line.includes('chắc') || line.includes('muốn') ? 'text-sm font-semibold text-red-600 mt-1' :
+                                        'text-sm text-gray-700'
+                                    }
+                                >
+                                    {line}
+                                </p>
+                            )
+                        )}
+                    </div>
+                    {/* Footer */}
+                    <div className="px-5 py-3 bg-gray-50 border-t flex justify-end gap-3">
+                        <button
+                            onClick={overwriteModal.onCancel}
+                            className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-100 transition-colors"
+                        >
+                            ❌ Hủy bỏ
+                        </button>
+                        <button
+                            onClick={overwriteModal.onConfirm}
+                            className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition-colors shadow-sm"
+                        >
+                            ✅ Xác nhận ghi đè
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
         <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
