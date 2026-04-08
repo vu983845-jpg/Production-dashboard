@@ -42,16 +42,19 @@ export async function PATCH(req: NextRequest) {
         if (!id) {
             return NextResponse.json({ error: 'Missing id' }, { status: 400 })
         }
-        
+
+        // 3b. Clamp numeric fields to >= 0
+        const clamp0 = (v: number | undefined | null) => Math.max(0, v ?? 0)
+
         // 4. Do the update with service role (bypasses RLS)
         const { data, error: updateError } = await adminClient
             .from('meal_headcount')
             .update({
-                official_present: official_present ?? 0,
-                seasonal_present: seasonal_present ?? 0,
-                vegetarian: vegetarian ?? 0,
-                ot_count: ot_count ?? 0,
-                ot_vegetarian: ot_vegetarian ?? 0,
+                official_present: clamp0(official_present),
+                seasonal_present: clamp0(seasonal_present),
+                vegetarian: clamp0(vegetarian),
+                ot_count: clamp0(ot_count),
+                ot_vegetarian: clamp0(ot_vegetarian),
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)

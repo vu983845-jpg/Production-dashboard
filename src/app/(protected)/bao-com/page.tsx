@@ -889,10 +889,10 @@ export default function BaoCom() {
         const lines: string[] = []
         groups.forEach((recs, key) => {
             const [date, shift] = key.split("|||")
-            const totalPresent = recs.reduce((s, r) => s + (r.officialPresent ?? 0) + (r.seasonalPresent ?? 0), 0)
+            const totalPresent = recs.reduce((s, r) => s + Math.max((r.officialPresent ?? 0) + (r.seasonalPresent ?? 0), r.vegetarian ?? 0), 0)
             const totalVeg = recs.reduce((s, r) => s + (r.vegetarian ?? 0), 0)
             const totalOT = recs.reduce((s, r) => s + (parseInt(r.ot) || 0), 0)
-            const man = totalPresent - totalVeg
+            const man = Math.max(0, totalPresent - totalVeg)
             const otHour = OT_HOUR[shift] ?? ""
             let block = `Ngày ${date}\nCa ${shift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
             if (totalOT > 0) block += `\n${totalOT} OT (ăn lúc ${otHour})`
@@ -1077,9 +1077,14 @@ export default function BaoCom() {
                     }
                 }
             }
+            let official = r.official_present ?? 0
+            let seasonal = r.seasonal_present ?? 0
+            const veg = r.vegetarian ?? 0
+            if (official + seasonal < veg) {
+                official += veg - (official + seasonal)
+            }
             // Total = official + seasonal (vegetarian is a SUBSET of official/seasonal, NOT additive)
-            const total = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
-            // Always track dayRowIds (even for zero-count rows) so we can update them
+            const total = official + seasonal
             const key = `${sectionName}|${shift}`
             if (!sectionMap.has(key)) sectionMap.set(key, {
                 sectionName, deptCode, shift,
@@ -1110,11 +1115,16 @@ export default function BaoCom() {
             // Track row IDs for direct save
             if (!entry.dayRowIds.has(r.work_date)) entry.dayRowIds.set(r.work_date, [])
             entry.dayRowIds.get(r.work_date)!.push(r.id)
+            let off = r.official_present ?? 0
+            let sea = r.seasonal_present ?? 0
+            const v = r.vegetarian ?? 0
+            if (off + sea < v) off += v - (off + sea)
+            
             // Total = official + seasonal (vegetarian is subset, NOT additive)
-            const count = (r.official_present ?? 0) + (r.seasonal_present ?? 0)
+            const count = off + sea
             if (count > 0) entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + count)
-            if ((r.official_present ?? 0) > 0) entry.officialDays.set(r.work_date, (entry.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
-            if ((r.seasonal_present ?? 0) > 0) entry.seasonalDays.set(r.work_date, (entry.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
+            if (off > 0) entry.officialDays.set(r.work_date, (entry.officialDays.get(r.work_date) ?? 0) + off)
+            if (sea > 0) entry.seasonalDays.set(r.work_date, (entry.seasonalDays.get(r.work_date) ?? 0) + sea)
             // Route ot_count to a synthetic OT shift entry for this dept
             // (kitchen tab records store OT workers in ot_count alongside regular shifts)
             const otTotal = (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)
@@ -1244,12 +1254,12 @@ export default function BaoCom() {
             if (error) throw error
             const rows = (data ?? []) as { shift: string; official_present: number; seasonal_present: number; ot_count: number; vegetarian: number; ot_vegetarian: number }[]
             // Tổng theo từng ca
-            const ca1 = rows.filter(r => r.shift === '1').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
-            const ca2 = rows.filter(r => r.shift === '2').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
-            const ca3 = rows.filter(r => r.shift === '3').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
+            const ca1 = rows.filter(r => r.shift === '1').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
+            const ca2 = rows.filter(r => r.shift === '2').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
+            const ca3 = rows.filter(r => r.shift === '3').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
             // OT: tổng ot_count từ tất cả ca + shift='OT' riêng
             const totalOTMan = rows.filter(r => r.shift !== 'OT').reduce((s, r) => s + (r.ot_count ?? 0), 0)
-                             + rows.filter(r => r.shift === 'OT').reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0) + (r.ot_count ?? 0), 0)
+                             + rows.filter(r => r.shift === 'OT').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0) + (r.ot_count ?? 0), 0)
             const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
             const totalOT = totalOTMan + totalOTVeg
             const grand = ca1 + ca2 + ca3 + totalOT
@@ -1400,13 +1410,13 @@ export default function BaoCom() {
     }
 
     const buildDBSummaryText = (rows: SavedRecord[]): string => {
-        const totalPresent = rows.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
+        const totalPresent = rows.reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
         const totalVeg = rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)
         // ot_count = số phần MẶN OT, ot_vegetarian = số phần CHAY OT
         const totalOTMan = rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)
         const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
         const totalOT = totalOTMan + totalOTVeg
-        const man = totalPresent - totalVeg
+        const man = Math.max(0, totalPresent - totalVeg)
         const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
         const otHour = OT_HOUR[summaryShift] ?? ""
         let msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}`
@@ -2134,7 +2144,7 @@ export default function BaoCom() {
                                                             </>) : (<>
                                                                 <td className="px-3 py-2 text-right font-semibold text-green-700">{r.official_present ?? 0}</td>
                                                                 <td className="px-3 py-2 text-right">{r.seasonal_present ?? 0}</td>
-                                                                <td className="px-3 py-2 text-right font-bold">{(r.official_present ?? 0) + (r.seasonal_present ?? 0)}</td>
+                                                                <td className="px-3 py-2 text-right font-bold">{Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0)}</td>
                                                                 <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
                                                                 <td className="px-3 py-2 text-right font-semibold">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) > 0 ? (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) : 0}</td>
                                                                 <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{(r.ot_vegetarian ?? 0) > 0 ? r.ot_vegetarian : <span className="text-gray-300">—</span>}</td>
@@ -2181,7 +2191,7 @@ export default function BaoCom() {
                                                     <td className="px-3 py-2">TỔNG</td>
                                                     <td className="px-3 py-2 text-right text-green-700">{summaryData.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
-                                                    <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}</td>
+                                                    <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right font-bold">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0), 0)}</td>
                                                     <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) > 0 ? summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) : <span className="text-gray-300">—</span>}</td>
@@ -2391,14 +2401,17 @@ export default function BaoCom() {
                                                                                                     newSeasonal = Math.max(0, oldSeasonal + newOfficial)
                                                                                                     newOfficial = 0
                                                                                                 }
+                                                                                                // Cap vegetarian to not exceed new total (official + seasonal)
+                                                                                                const newTotal = newOfficial + newSeasonal
+                                                                                                const newVegetarian = Math.min(rec.vegetarian ?? 0, newTotal)
                                                                                                 const res = await fetch('/api/meal-headcount', {
                                                                                                     method: 'PATCH',
                                                                                                     headers: { 'Content-Type': 'application/json' },
-                                                                                                    body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: rec.vegetarian ?? 0, ot_count: rec.ot_count ?? 0 })
+                                                                                                    body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian, ot_count: rec.ot_count ?? 0, ot_vegetarian: rec.ot_vegetarian ?? 0 })
                                                                                                 })
                                                                                                 if (res.ok) {
                                                                                                     savedCount++
-                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec!.id ? { ...r, official_present: newOfficial, seasonal_present: newSeasonal } : r) : prev)
+                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec!.id ? { ...r, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian } : r) : prev)
                                                                                                 } else {
                                                                                                     const j = await res.json()
                                                                                                     alert('Lỗi lưu: ' + (j.error || res.statusText))
@@ -2503,7 +2516,7 @@ export default function BaoCom() {
                                                                                                 const res = await fetch('/api/meal-headcount', {
                                                                                                     method: 'PATCH',
                                                                                                     headers: { 'Content-Type': 'application/json' },
-                                                                                                    body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newOtCount })
+                                                                                                    body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newOtCount, ot_vegetarian: rec.ot_vegetarian ?? 0 })
                                                                                                 })
                                                                                                 if (res.ok) {
                                                                                                     setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newOtCount } : r) : prev)
@@ -3175,7 +3188,7 @@ export default function BaoCom() {
                     const key: PivotKey = `${r.department_id ?? r.department_name}|${r.shift}`
                     if (!pivotMap.has(key)) pivotMap.set(key, { deptCode, deptName, shift: r.shift, days: new Map() })
                     pivotMap.get(key)!.days.set(r.work_date, {
-                        present: (r.official_present ?? 0) + (r.seasonal_present ?? 0),
+                        present: Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0),
                         ot: r.ot_count ?? 0,
                         veg: r.vegetarian ?? 0,
                     })
