@@ -1558,7 +1558,7 @@ export default function InputPage() {
                                 </TabsList>
 
                                 <TabsContent value="actual" className="space-y-4">
-                                    <div className={`rounded-xl border bg-card text-card-foreground shadow${departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' ? ' hidden' : ''}`}>    
+                                    <div className={`rounded-xl border bg-card text-card-foreground shadow${['PEEL_MC', 'CS'].includes(departments.find(d => d.id === selectedDept)?.code || '') ? ' hidden' : ''}`}>    
                                           <div className="p-6">    
                                               <Form {...formActual}>    
                                                   <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-2xl">    
