@@ -1109,8 +1109,9 @@ export default function BaoCom() {
             const deptKey  = (DEPT_CODE_ALIAS[deptList.find(d => d.id === r.department_id)?.code ?? ''] ? deptList.find(d => d.code === deptCode)?.id : r.department_id) ?? r.department_id ?? r.department_name
             const deptName = DEPT_DISPLAY[deptCode] ?? r.department_name
             const shift = r.shift ?? '1'
-            const mapKey = `${deptKey}|${shift}`
-            if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey, deptName, deptCode, shift, days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map(), dayRowIds: new Map() })
+            const groupKey = deptCode || deptKey
+            const mapKey = `${groupKey}|${shift}`
+            if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey: groupKey, deptName, deptCode, shift, days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map(), dayRowIds: new Map() })
             const entry = shiftMap.get(mapKey)!
             // Track row IDs for direct save
             if (!entry.dayRowIds.has(r.work_date)) entry.dayRowIds.set(r.work_date, [])
@@ -1129,8 +1130,9 @@ export default function BaoCom() {
             // (kitchen tab records store OT workers in ot_count alongside regular shifts)
             const otTotal = (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)
             if (otTotal > 0 && shift !== 'OT') {
-                const otMapKey = `${deptKey}|OT`
-                if (!shiftMap.has(otMapKey)) shiftMap.set(otMapKey, { deptKey, deptName, deptCode, shift: 'OT', days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map(), dayRowIds: new Map() })
+                const groupKey = deptCode || deptKey
+                const otMapKey = `${groupKey}|OT`
+                if (!shiftMap.has(otMapKey)) shiftMap.set(otMapKey, { deptKey: groupKey, deptName, deptCode, shift: 'OT', days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map(), dayRowIds: new Map() })
                 const otEntry = shiftMap.get(otMapKey)!
                 otEntry.days.set(r.work_date, (otEntry.days.get(r.work_date) ?? 0) + otTotal)
                 // Track which row has OT for this date
