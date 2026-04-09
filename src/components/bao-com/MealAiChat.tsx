@@ -11,13 +11,13 @@ interface MealRow {
     dept_lookup?: string   // For HPEEL sub-codes: the real dept code to look up
     dept_display: string
     shift: string
-    official_present: number
-    seasonal_present: number
-    official_absent: number
-    seasonal_absent: number
-    ot_count: number
-    vegetarian: number
-    ot_vegetarian: number
+    official_present: number | null
+    seasonal_present: number | null
+    official_absent: number | null
+    seasonal_absent: number | null
+    ot_count: number | null
+    vegetarian: number | null
+    ot_vegetarian: number | null
     ot_only?: boolean      // True when message only reports OT headcount
 }
 
@@ -180,7 +180,18 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                 .maybeSingle()
 
             if (!existing) {
-                toInsert.push({ row, deptId })
+                // For new insert, any null becomes 0
+                const insertRow = {
+                    ...row,
+                    official_present: row.official_present ?? 0,
+                    seasonal_present: row.seasonal_present ?? 0,
+                    official_absent: row.official_absent ?? 0,
+                    seasonal_absent: row.seasonal_absent ?? 0,
+                    ot_count: row.ot_count ?? 0,
+                    vegetarian: row.vegetarian ?? 0,
+                    ot_vegetarian: row.ot_vegetarian ?? 0,
+                }
+                toInsert.push({ row: insertRow, deptId })
             } else if (row.ot_only) {
                 // OT-only update: keep all non-OT fields from existing, ACCUMULATE OT fields
                 const existingOtCount = (existing as Record<string, number>).ot_count ?? 0
@@ -201,10 +212,24 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                 } else {
                     toUpdate.push({ row: merged, existing: existing as Record<string, number>, deptId })
                 }
-            } else if (isSameData(row, existing as Record<string, number>)) {
-                alreadySame.push(`${row.dept_display} Ca${row.shift}`)
             } else {
-                toUpdate.push({ row, existing: existing as Record<string, number>, deptId })
+                // Smart merge: if row field is null, KEEP existing field value
+                const merged: MealRow = {
+                    ...row,
+                    official_present: row.official_present ?? (existing as Record<string, number>).official_present ?? 0,
+                    seasonal_present: row.seasonal_present ?? (existing as Record<string, number>).seasonal_present ?? 0,
+                    official_absent: row.official_absent ?? (existing as Record<string, number>).official_absent ?? 0,
+                    seasonal_absent: row.seasonal_absent ?? (existing as Record<string, number>).seasonal_absent ?? 0,
+                    ot_count: row.ot_count ?? (existing as Record<string, number>).ot_count ?? 0,
+                    vegetarian: row.vegetarian ?? (existing as Record<string, number>).vegetarian ?? 0,
+                    ot_vegetarian: row.ot_vegetarian ?? (existing as Record<string, number>).ot_vegetarian ?? 0,
+                }
+
+                if (isSameData(merged, existing as Record<string, number>)) {
+                    alreadySame.push(`${row.dept_display} Ca${row.shift}`)
+                } else {
+                    toUpdate.push({ row: merged, existing: existing as Record<string, number>, deptId })
+                }
             }
         }
 
@@ -401,12 +426,14 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                             </span>
                                                             {shiftWarn && <div className="text-[10px] text-amber-600 mt-0.5">{shiftWarn}</div>}
                                                         </td>
-                                                        <td className="px-4 py-3 text-center font-bold text-slate-800 text-base">{r.official_present ?? 0}</td>
-                                                        <td className="px-4 py-3 text-center text-slate-600">{r.seasonal_present ?? 0}</td>
-                                                        <td className="px-4 py-3 text-center text-slate-600">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)}</td>
-                                                        <td className="px-4 py-3 text-center text-green-600 font-medium">{r.vegetarian ?? 0}</td>
+                                                        <td className="px-4 py-3 text-center font-bold text-slate-800 text-base">{r.official_present ?? <span className="text-slate-300">-</span>}</td>
+                                                        <td className="px-4 py-3 text-center text-slate-600">{r.seasonal_present ?? <span className="text-slate-300">-</span>}</td>
+                                                        <td className="px-4 py-3 text-center text-slate-600">
+                                                            {r.ot_count == null && r.ot_vegetarian == null ? <span className="text-slate-300">-</span> : (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center text-green-600 font-medium">{r.vegetarian ?? <span className="text-slate-300">-</span>}</td>
                                                         <td className="px-4 py-3 text-center text-emerald-700 font-medium">
-                                                             {r.ot_vegetarian ?? 0}
+                                                             {r.ot_vegetarian ?? <span className="text-slate-300">-</span>}
                                                              {r.ot_only && <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold align-middle">OT only</span>}
                                                          </td>
                                                     </tr>

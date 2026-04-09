@@ -114,6 +114,10 @@ Ví dụ: "OT: 11+8chay" → ot_count=11, ot_vegetarian=8
 QUAN TRỌNG - "ĂN Xh":
 "ăn 14h", "ăn 11h30"... là giờ ăn — KHÔNG phải headcount, bỏ qua hoàn toàn.
 
+QUAN TRỌNG - GIÁ TRỊ THIẾU CẦN ĐỂ NULL:
+- NẾU DỮ LIỆU CHƯA ĐƯỢC NHẮC ĐẾN HOẶC BỊ TRỐNG (ví dụ user không nhắc gì tới OT, thời vụ, chay), thì bắt buộc trả về \`null\` cho trường đó, KHÔNG trả về \`0\`.
+- CHỈ trả về \`0\` nếu user ghi rõ là \`0\` (ví dụ "OT 0", "thời vụ 0", "không OT").
+
 OUTPUT FORMAT khi có data:
 Trả lời text ngắn + JSON block:
 
@@ -125,12 +129,12 @@ Trả lời text ngắn + JSON block:
       "dept_code": "SHELL",
       "shift": "1",
       "official_present": 45,
-      "seasonal_present": 0,
-      "official_absent": 0,
-      "seasonal_absent": 0,
-      "ot_count": 0,
-      "vegetarian": 0,
-      "ot_vegetarian": 0
+      "seasonal_present": null,
+      "official_absent": null,
+      "seasonal_absent": null,
+      "ot_count": null,
+      "vegetarian": null,
+      "ot_vegetarian": null
     }
   ]
 }
@@ -194,7 +198,7 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
             try {
                 const parsed = JSON.parse(rawJsonStr)
                 if (parsed.rows && Array.isArray(parsed.rows)) {
-                    parsedRows = parsed.rows.map((r: { dept_code: string; official_present?: number; seasonal_present?: number; ot_count?: number; [key: string]: unknown }) => {
+                    parsedRows = parsed.rows.map((r: { dept_code: string; official_present?: number | null; seasonal_present?: number | null; ot_count?: number | null; [key: string]: unknown }) => {
                         // Auto-detect OT-only: no regular headcount but has OT
                         const isOtOnly = (r.official_present ?? 0) === 0
                             && (r.seasonal_present ?? 0) === 0

@@ -210,6 +210,7 @@ export default function DashboardPage() {
     // Shelling line view
     const SHELLING_LINES_DASH = ['A', 'B', 'C', 'D1', 'D2'] as const
     const [shellingLineMonthData, setShellingLineMonthData] = useState<Record<string, { actual_ton: number; run_hours: number }>>({})
+    const [peelingLineMonthData, setPeelingLineMonthData] = useState<Record<string, { actual_ton: number }>>({})
     const [deptViewModes, setDeptViewModes] = useState<Record<string, 'chart' | 'details' | 'lines' | 'isp'>>({})
     const [shellingSubView, setShellingSubView] = useState<'production' | 'capacity'>('production')
     const [showCo2Intensity, setShowCo2Intensity] = useState(false);
@@ -284,6 +285,7 @@ export default function DashboardPage() {
                 { data: deptRows },
                 { data: shellKpiRaw },
                 { data: othersRaw },
+                { data: peelLineData },
             ] = await Promise.all([
                 supabase
                     .from('downtime_events')
@@ -342,6 +344,11 @@ export default function DashboardPage() {
                     .gte('work_date', prevMonthDateStr)
                     .lte('work_date', nextDayStr)
                     .order('work_date'),
+                supabase
+                    .from('peeling_line_daily')
+                    .select('line_code, actual_ton, broken_pct, unpeel_pct')
+                    .gte('work_date', startFilter)
+                    .lte('work_date', endFilter),
             ]);
 
 
@@ -385,10 +392,10 @@ export default function DashboardPage() {
                     woodActual += wood;
                     woodTarget += Number(r.wood_target_kg || 0);
 
-                    // Scope 1: Wood (tons -> * 43.893270) + Wastewater (Water * 0.6 -> * 0.201)
-                    const scope1 = (wood * 43.893270) + (water * 0.6 * 0.201);
-                    // Scope 2: Electricity (kWh -> * 0.845)
-                    const scope2 = elec * 0.845;
+                    // Scope 1: Wood (tons -> * 0.028) + Wastewater (Water * 0.6 -> * 0.201)
+                    const scope1 = (wood * 0.028) + (water * 0.6 * 0.201);
+                    // Scope 2: Electricity (kWh -> * 0.6592)
+                    const scope2 = elec * 0.6592;
                     const dailyEmission = (scope1 + scope2) / 1000; // Convert to Tons CO₂e
                     
                     dailyEmissionsByDate[r.work_date] = dailyEmission;
@@ -798,6 +805,48 @@ export default function DashboardPage() {
                     });
                 }
             }
+            if (peelLineData) {
+                let totalBrokenWeight = 0, totalBrokenTon = 0;
+                let totalUnpeelWeight = 0, totalUnpeelTon = 0;
+                peelLineData.forEach((r: any) => {
+                    const ton = Number(r.actual_ton || 0);
+                    const brk = Number(r.broken_pct || 0);
+                    const unp = Number(r.unpeel_pct || 0);
+                    if (ton > 0 && brk > 0) { totalBrokenWeight += brk * ton; totalBrokenTon += ton; }
+                    if (ton > 0 && unp > 0) { totalUnpeelWeight += unp * ton; totalUnpeelTon += ton; }
+                });
+                const avgBrokenPct = totalBrokenTon > 0 ? totalBrokenWeight / totalBrokenTon : 0;
+                const avgUnpeelPct = totalUnpeelTon > 0 ? totalUnpeelWeight / totalUnpeelTon : 0;
+                const peelMonthData: Record<string, { actual_ton: number }> = {};
+                peelLineData.forEach((r: any) => {
+                    const lc = r.line_code;
+                    const ton = Number(r.actual_ton || 0);
+                    if (!peelMonthData[lc]) peelMonthData[lc] = { actual_ton: 0 };
+                    peelMonthData[lc].actual_ton += ton;
+                });
+                setPeelingLineMonthData(peelMonthData);
+
+                if (avgBrokenPct > 0 || avgUnpeelPct > 0) {
+                    setDashboardsData(prev => {
+                        const peelKey = Object.keys(prev).find(k => {
+                            const recs = (dData || []).filter((r: any) => r.department_id === k);
+                            return recs.length > 0 && recs[0].dept_code === 'PEEL_MC';
+                        });
+                        if (!peelKey) return prev;
+                        return {
+                            ...prev,
+                            [peelKey]: {
+                                ...prev[peelKey],
+                                summary: {
+                                    ...prev[peelKey].summary,
+                                    brokenPct: avgBrokenPct > 0 ? avgBrokenPct : prev[peelKey].summary.brokenPct,
+                                    unpeelPct: avgUnpeelPct > 0 ? avgUnpeelPct : prev[peelKey].summary.unpeelPct
+                                }
+                            }
+                        };
+                    });
+                }
+            }
             setPageLoading(false);
         }
         fetchDashboard()
@@ -828,6 +877,7 @@ export default function DashboardPage() {
                 });
             }
         }
+
 
         const csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1071,7 +1121,17 @@ export default function DashboardPage() {
                             {isTotal && <FileSymlink className="h-4 w-4 text-primary" />}
                             {deptCode === 'SHELL' && summary.brokenPct > 0 && (
                                 <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-normal normal-case border ${summary.brokenPct <= 6 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                                    💔 {summary.brokenPct.toFixed(1)}% <span className="font-normal opacity-70">broken</span>
+                                    💔 {summary.brokenPct.toFixed(1)}% <span className="font-normal opacity-70">{language === 'vi' ? 'bể' : 'broken'}</span>
+                                </span>
+                            )}
+                            {deptCode === 'PEEL_MC' && summary.brokenPct > 0 && (
+                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-normal normal-case border ${summary.brokenPct <= 20 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                                    💔 {summary.brokenPct.toFixed(1)}% <span className="font-normal opacity-70">{language === 'vi' ? 'bể' : 'broken'}</span>
+                                </span>
+                            )}
+                            {deptCode === 'PEEL_MC' && summary.unpeelPct > 0 && (
+                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-normal normal-case border bg-amber-50 text-amber-700 border-amber-200`}>
+                                    🍂 {summary.unpeelPct.toFixed(1)}% <span className="font-normal opacity-70">{language === 'vi' ? 'sót lụa' : 'unpeel'}</span>
                                 </span>
                             )}
                         </span>
@@ -1205,6 +1265,7 @@ export default function DashboardPage() {
                         </div>
                     ) : deptCode === "SHELL" && deptViewModes[id] === 'lines' ? (
                         <div className="w-full mt-auto border-t pt-2 space-y-1.5 flex-1 flex flex-col justify-center">
+                            {deptCode === 'SHELL' && (
                             <div className="flex items-center gap-1 mb-1">
                                 <button onClick={() => setShellingSubView('production')}
                                     className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'production' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
@@ -1215,6 +1276,7 @@ export default function DashboardPage() {
                                     {language === 'vi' ? '⚡ Công suất' : '⚡ Capacity'}
                                 </button>
                             </div>
+                        )}
 
                             {shellingSubView === 'production' ? (
                                 SHELLING_LINES_DASH.map(line => {
