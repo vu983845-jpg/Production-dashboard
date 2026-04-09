@@ -409,7 +409,8 @@ export default function DashboardPage() {
                     WaterActual: Number(r.water_m3 || 0),
                     WaterTarget: Number(r.water_target_m3 || 0),
                     WoodActual: Number(r.wood_kg || 0),
-                    WoodTarget: Number(r.wood_target_kg || 0)
+                    WoodTarget: Number(r.wood_target_kg || 0),
+                    Emission: Number((dailyEmissionsByDate[r.work_date] || 0).toFixed(2))
                 })));
             }
 
@@ -1850,6 +1851,8 @@ export default function DashboardPage() {
                                         <Line yAxisId="right" type="monotone" dataKey="WaterTarget" name="Target Nước" stroke="#2563eb" strokeDasharray="5 5" dot={false} strokeWidth={2} />
                                         <Bar yAxisId="right2" dataKey="WoodActual" name="Củi (Tấn)" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
                                         <Line yAxisId="right2" type="monotone" dataKey="WoodTarget" name="Target Củi" stroke="#c2410c" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                        <YAxis yAxisId="emission" orientation="right" tick={{ fontSize: 12 }} stroke="#10b981" width={60} />
+                                        <Line yAxisId="emission" type="monotone" dataKey="Emission" name="Phát thải (TCO₂e)" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 5 }} />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </div>
@@ -1909,6 +1912,20 @@ export default function DashboardPage() {
                                             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
                                             <Bar dataKey="WoodActual" name={t('legend.actual')} fill="#f97316" radius={[2, 2, 0, 0]} barSize={12} />
                                             <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={2} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                {/* Emission Chart */}
+                                <div className="h-48 w-full">
+                                    <p className="text-xs font-bold text-emerald-600 mb-2 uppercase tracking-tight">Cacbon (TCO₂e)</p>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                            <YAxis tick={{ fontSize: 9 }} stroke="#10b981" />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
+                                            <Line type="monotone" dataKey="Emission" name="Phát thải" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 5 }} />
                                         </ComposedChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -2064,52 +2081,6 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* ── Auxiliary Electricity Mini-Cards (per sub-meter MTD) ── */}
-            {selectedDept === 'all' && Object.keys(otherElecMtd).some(k => (otherElecMtd[k] || 0) > 0) && (
-                <div className="mt-3 md:mt-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-                    <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500" />
-                        <span className="text-xs font-bold text-slate-700 uppercase tracking-widest">Điện Phụ Trợ — Đồng hồ phụ (MTD)</span>
-                        <span className="ml-auto text-[10px] text-slate-400 font-medium">
-                            Tổng: <span className="font-black text-slate-700">{Math.round(Object.values(otherElecMtd).reduce((s, v) => s + v, 0)).toLocaleString('vi-VN')} kWh</span>
-                        </span>
-                    </div>
-                    <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {[
-                            { key: 'cooling_fan',  name: 'Cooling Fan', color: '#f97316', icon: '🌀' },
-                            { key: 'boiler',       name: 'Boiler',      color: '#eab308', icon: '🔥' },
-                            { key: 'db_ac_hca',   name: 'AC / DB HCA', color: '#3b82f6', icon: '❄️' },
-                            { key: 'eco2',        name: 'ECO2',        color: '#10b981', icon: '🌿' },
-                            { key: 'canteen',     name: 'Canteen',     color: '#f43f5e', icon: '🍽️' },
-                            { key: 'office',      name: 'Office',      color: '#64748b', icon: '🏢' },
-                            { key: 'transformer', name: 'Transformer', color: '#8b5cf6', icon: '⚡' },
-                            { key: 'maintenance', name: 'Maintenance', color: '#06b6d4', icon: '🔧' },
-                        ].map(meter => {
-                            const val = Math.round(otherElecMtd[meter.key] || 0)
-                            const totalOther = Object.values(otherElecMtd).reduce((s, v) => s + v, 0)
-                            const pct = totalOther > 0 ? Math.round((val / totalOther) * 100) : 0
-                            return (
-                                <div key={meter.key} className="relative p-3 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-full h-0.5" style={{ backgroundColor: meter.color }} />
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1">
-                                            <span>{meter.icon}</span> {meter.name}
-                                        </span>
-                                        <span className="text-[10px] font-black" style={{ color: meter.color }}>{pct}%</span>
-                                    </div>
-                                    <div className="text-base font-black text-slate-800 tabular-nums leading-tight">
-                                        {val > 0 ? val.toLocaleString('vi-VN') : <span className="text-slate-300 text-sm font-medium">Chưa có</span>}
-                                        {val > 0 && <span className="text-[10px] font-normal text-slate-400 ml-1">kWh</span>}
-                                    </div>
-                                    <div className="mt-1.5 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: meter.color }} />
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
 
             {/* ⚡ Daily Electricity Intensity vs Shell+Peel Output — moved below energy card */}
             {dailyElecVsProd.length > 0 && (
