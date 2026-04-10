@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export const dynamic = 'force-dynamic'
 
 // API Key bảo mật — đặt trong Vercel env var: POWERBI_API_KEY
-const POWERBI_API_KEY = process.env.POWERBI_API_KEY || 'PPE_PowerBI_2026'
+const POWERBI_API_KEY = process.env.POWERBI_API_KEY || 'Steaming2026'
 
 /**
  * GET /api/powerbi/hap-daily
