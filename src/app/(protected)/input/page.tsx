@@ -290,12 +290,12 @@ export default function InputPage() {
     type PeelShift = 'Ca 1' | 'Ca 2' | 'Ca 3'
     const PEELING_LINES = ['A', 'B', 'C', 'D1', 'D2'] as const
     type PeelLine = typeof PEELING_LINES[number]
-    type PeelLineEntry = { actual_ton: number; broken_pct: number; unpeel_pct: number; note: string }
+    type PeelLineEntry = { actual_ton: number; pass2_ton: number; broken_pct: number; unpeel_pct: number; note: string }
     const PEEL_SHIFT_LEADERS = ['Mr. Châu', 'Ms. Ngân', 'Mr. Toàn']
     const initPeelLineObj = (): Record<PeelShift, PeelLineEntry> => ({
-        'Ca 1': { actual_ton: 0, broken_pct: 0, unpeel_pct: 0, note: '' },
-        'Ca 2': { actual_ton: 0, broken_pct: 0, unpeel_pct: 0, note: '' },
-        'Ca 3': { actual_ton: 0, broken_pct: 0, unpeel_pct: 0, note: '' },
+        'Ca 1': { actual_ton: 0, pass2_ton: 0, broken_pct: 0, unpeel_pct: 0, note: '' },
+        'Ca 2': { actual_ton: 0, pass2_ton: 0, broken_pct: 0, unpeel_pct: 0, note: '' },
+        'Ca 3': { actual_ton: 0, pass2_ton: 0, broken_pct: 0, unpeel_pct: 0, note: '' },
     })
     const [peelingLineData, setPeelingLineData] = useState<Record<PeelLine, Record<PeelShift, PeelLineEntry>>>({
         A: initPeelLineObj(), B: initPeelLineObj(), C: initPeelLineObj(), D1: initPeelLineObj(), D2: initPeelLineObj()
@@ -1122,7 +1122,7 @@ export default function InputPage() {
                 if (PEELING_LINES.includes(r.line_code)) {
                     newState[r.line_code as PeelLine][shift] = {
                         actual_ton: Number(r.actual_ton || 0),
-
+                        pass2_ton: Number(r.pass2_ton || 0),
                         broken_pct: Number(r.broken_pct || 0),
                         unpeel_pct: Number(r.unpeel_pct || 0),
                         note: r.note || '',
@@ -1161,8 +1161,7 @@ export default function InputPage() {
                 shift_name: shift,
                 shift_leader: peelingShiftLeaders[shift] || null,
                 actual_ton: d.actual_ton,
-
-
+                pass2_ton: d.pass2_ton,
                 broken_pct: d.broken_pct,
                 unpeel_pct: d.unpeel_pct,
                 note: d.note || null,
@@ -1994,6 +1993,32 @@ export default function InputPage() {
                                                                 </TableCell>
                                                             </TableRow>
                                                             
+                                                            <TableRow>
+                                                                <TableCell colSpan={2} className="p-0">
+                                                                    <div className="bg-purple-50/40 border-b px-4 pt-2 pb-3">
+                                                                        <p className="text-xs font-semibold text-purple-700 mb-2">♻️ Sản lượng Hàng 2 Pass (Tấn)</p>
+                                                                        {(['Ca 1', 'Ca 2', 'Ca 3'] as PeelShift[]).map(shift => (
+                                                                            <div key={shift} className="mb-3">
+                                                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{shift}</span>
+                                                                                <div className="grid grid-cols-5 gap-2">
+                                                                                    {PEELING_LINES.map(line => (
+                                                                                        <div key={`p2-${line}-${shift}`} className="flex flex-col items-center">
+                                                                                            <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
+                                                                                            <input
+                                                                                                type="number" step="0.001" min="0"
+                                                                                                className="w-full text-right p-1 rounded border-2 border-purple-200 bg-white text-sm focus:outline-none focus:border-purple-500"
+                                                                                                value={peelingLineData[line]?.[shift]?.pass2_ton || ''}
+                                                                                                onChange={e => setPeelingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], pass2_ton: Number(e.target.value) || 0 } } }))}
+                                                                                            />
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+
                                                             <TableRow>
                                                                 <TableCell colSpan={2} className="p-0">
                                                                     {/* Bể */}
