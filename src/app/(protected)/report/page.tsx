@@ -94,6 +94,7 @@ export default function ReportPage() {
     const [selectedDeepDiveLeader, setSelectedDeepDiveLeader] = useState("")
     const [hasData, setHasData] = useState(false)
     const [showShiftDetails, setShowShiftDetails] = useState(false)
+    const [showOEEHelp, setShowOEEHelp] = useState(false)
     const [compressorMonthly, setCompressorMonthly] = useState<{work_date: string; total_kwh: number}[]>([])
     const [shellingEnergyMonthly, setShellingEnergyMonthly] = useState<{work_date: string; kwh: number}[]>([])
     // Headcount từ báo cơm: { work_date → { official, seasonal } }
@@ -1619,7 +1620,14 @@ export default function ReportPage() {
                             <Card>
                                 <CardHeader className="pb-2 flex flex-row items-center justify-between border-b bg-indigo-50/30">
                                     <CardTitle className="text-sm font-bold text-indigo-800">📈 OEE — Hiệu suất Tổng thể từng Line (Tháng)</CardTitle>
-                                    <span className="text-[10px] text-indigo-500 bg-indigo-100 px-2 py-0.5 rounded-full">Avail × Perf × Quality | Lý thuyết 8h/ca</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] text-indigo-500 bg-indigo-100 px-2 py-0.5 rounded-full">Avail × Perf × Quality | Lý thuyết 8h/ca</span>
+                                        <button
+                                            onClick={() => setShowOEEHelp(true)}
+                                            className="w-5 h-5 rounded-full bg-indigo-200 hover:bg-indigo-300 text-indigo-700 text-[11px] font-black flex items-center justify-center transition-colors"
+                                            title="Hướng dẫn cách tính OEE"
+                                        >?</button>
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="pt-4">
                                     <div className="grid grid-cols-5 gap-3">
@@ -1642,6 +1650,78 @@ export default function ReportPage() {
                                     <p className="text-[10px] text-slate-400 mt-3 text-center">🟢 ≥75% tốt · 🟡 55–74% cần cải thiện · 🔴 &lt;55% kém</p>
                                 </CardContent>
                             </Card>
+                        )}
+
+                        {/* OEE Help Modal */}
+                        {showOEEHelp && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowOEEHelp(false)}>
+                                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6 relative" onClick={e => e.stopPropagation()}>
+                                    <button
+                                        onClick={() => setShowOEEHelp(false)}
+                                        className="absolute top-3 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold"
+                                    >✕</button>
+                                    <h2 className="text-base font-black text-indigo-800 mb-1">📈 Cách tính OEE — Shelling</h2>
+                                    <p className="text-[11px] text-slate-500 mb-4">OEE (Overall Equipment Effectiveness) = Tính sẵn sàng × Hiệu suất × Chất lượng</p>
+
+                                    <div className="space-y-4 text-[12px]">
+                                        {/* Formula box */}
+                                        <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-center">
+                                            <span className="font-black text-indigo-700 text-sm">OEE = Avail × Perf × Quality</span>
+                                        </div>
+
+                                        {/* Availability */}
+                                        <div className="border rounded-xl p-3 space-y-1">
+                                            <div className="font-bold text-blue-700">🕐 Tính sẵn sàng (Availability)</div>
+                                            <div className="bg-slate-50 rounded-lg px-3 py-1.5 font-mono text-[11px] text-slate-700">
+                                                Avail = Giờ chạy thực tế ÷ Giờ kế hoạch
+                                            </div>
+                                            <ul className="text-slate-600 space-y-0.5 pl-2 list-disc list-inside">
+                                                <li><b>Giờ chạy thực tế</b>: cột <code className="bg-slate-100 px-1 rounded">run_hours</code> nhập từ màn hình Input mỗi ca</li>
+                                                <li><b>Giờ kế hoạch</b>: số ca hoạt động trong ngày × 8h/ca</li>
+                                                <li>Ca hoạt động = ca có bất kỳ line nào có <code className="bg-slate-100 px-1 rounded">run_hours &gt; 0</code> hoặc <code className="bg-slate-100 px-1 rounded">actual_ton &gt; 0</code></li>
+                                            </ul>
+                                        </div>
+
+                                        {/* Performance */}
+                                        <div className="border rounded-xl p-3 space-y-1">
+                                            <div className="font-bold text-emerald-700">⚡ Hiệu suất (Performance)</div>
+                                            <div className="bg-slate-50 rounded-lg px-3 py-1.5 font-mono text-[11px] text-slate-700">
+                                                Perf = Sản lượng thực ÷ (Giờ chạy × Công suất lý thuyết)
+                                            </div>
+                                            <ul className="text-slate-600 space-y-0.5 pl-2 list-disc list-inside">
+                                                <li><b>Sản lượng thực</b>: cột <code className="bg-slate-100 px-1 rounded">actual_ton</code></li>
+                                                <li><b>Công suất lý thuyết</b>: A=1.4 T/h · B=1.8 T/h · C=1.5 T/h · D1=1.2 T/h · D2=1.2 T/h</li>
+                                                <li>Tối đa 100% (nếu vượt lý thuyết vẫn tính bằng 100%)</li>
+                                            </ul>
+                                        </div>
+
+                                        {/* Quality */}
+                                        <div className="border rounded-xl p-3 space-y-1">
+                                            <div className="font-bold text-rose-700">🎯 Chất lượng (Quality)</div>
+                                            <div className="bg-slate-50 rounded-lg px-3 py-1.5 font-mono text-[11px] text-slate-700">
+                                                Quality = 1 − (Tổng tấn vỡ ÷ Tổng sản lượng)
+                                            </div>
+                                            <ul className="text-slate-600 space-y-0.5 pl-2 list-disc list-inside">
+                                                <li><b>Tỷ lệ vỡ</b>: cột <code className="bg-slate-100 px-1 rounded">broken_pct</code> (%) nhập từ Input</li>
+                                                <li>Tấn vỡ = <code className="bg-slate-100 px-1 rounded">broken_pct/100 × actual_ton</code></li>
+                                                <li>Tính weighted average theo sản lượng khi tổng hợp nhiều ca</li>
+                                            </ul>
+                                        </div>
+
+                                        {/* Data source */}
+                                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800">
+                                            <b>📋 Dữ liệu lấy từ:</b> bảng <code className="bg-amber-100 px-1 rounded">shelling_line_daily</code> — nhập tại màn hình <b>Input → Shelling</b> mỗi ca (run_hours, actual_ton, broken_pct)
+                                        </div>
+
+                                        {/* Thresholds */}
+                                        <div className="flex gap-2 text-[11px]">
+                                            <span className="flex-1 text-center bg-green-50 border border-green-200 rounded-lg py-1.5 font-bold text-green-700">🟢 ≥ 75%<br/><span className="font-normal">Tốt</span></span>
+                                            <span className="flex-1 text-center bg-yellow-50 border border-yellow-200 rounded-lg py-1.5 font-bold text-yellow-700">🟡 55–74%<br/><span className="font-normal">Cần cải thiện</span></span>
+                                            <span className="flex-1 text-center bg-red-50 border border-red-200 rounded-lg py-1.5 font-bold text-red-700">🔴 &lt; 55%<br/><span className="font-normal">Kém</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
                         {/* Shelling Analytics Overview */}

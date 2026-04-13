@@ -241,6 +241,11 @@ export default function InputPage() {
     note: string; }
     
     // Fixed default staffing (nhân sự cố định) per line when running
+    // No-material downtime suggestion modal (Shelling)
+    const [showNoMaterialModal, setShowNoMaterialModal] = useState(false)
+    const [noMaterialSuggestions, setNoMaterialSuggestions] = useState<{line: ShellLine, shift: ShellShift}[]>([])
+    const [noMaterialSelected, setNoMaterialSelected] = useState<Set<string>>(new Set())
+
     const SHELLING_LINE_MANPOWER: Record<ShellLine, number> = { A: 2, B: 2, C: 2, D1: 2, D2: 3 }
     // Ideal (theoretical) capacity per hour per line in tons/hour
     const SHELLING_IDEAL_RATE: Record<ShellLine, number> = { A: 1.4, B: 1.8, C: 1.5, D1: 1.2, D2: 1.2 }
@@ -1275,8 +1280,73 @@ export default function InputPage() {
             toast.error('Lỗi khi lưu Shelling Lines: ' + error.message)
         } else {
             toast.success('Đã lưu dữ liệu Shelling Lines thành công')
+            detectNoMaterialShifts()
         }
         setIsSaving(false)
+    }
+
+    function detectNoMaterialShifts() {
+        const SHIFTS: ShellShift[] = ['Ca 1', 'Ca 2', 'Ca 3']
+        const SHIFT_START_HOUR: Record<ShellShift, number> = { 'Ca 1': 6, 'Ca 2': 14, 'Ca 3': 22 }
+        const suggestions: { line: ShellLine; shift: ShellShift }[] = []
+
+        SHIFTS.forEach(shift => {
+            const shiftIsActive = SHELLING_LINES.some(l => {
+                const d = shellingLineData[l]?.[shift]
+                return (d?.actual_ton || 0) > 0 || (d?.run_hours || 0) > 0
+            })
+            if (!shiftIsActive) return
+
+            SHELLING_LINES.forEach(line => {
+                const d = shellingLineData[line]?.[shift]
+                const isEmpty = (!d?.actual_ton || d.actual_ton === 0) && (!d?.run_hours || d.run_hours === 0)
+                if (!isEmpty) return
+
+                const shiftHour = SHIFT_START_HOUR[shift]
+                const alreadyHasDowntime = downtimes.some(dt => {
+                    if (dt.exclude_downtime) return false
+                    const dtLine = String(dt.machine_area || '').replace('Line ', '')
+                    if (dtLine !== line) return false
+                    if (!dt.start_time) return false
+                    const h = parseInt(dt.start_time.split(':')[0], 10)
+                    const dtShiftH = (h >= 6 && h < 14) ? 6 : (h >= 14 && h < 22) ? 14 : 22
+                    return dtShiftH === shiftHour
+                })
+
+                if (!alreadyHasDowntime) suggestions.push({ line, shift })
+            })
+        })
+
+        if (suggestions.length > 0) {
+            setNoMaterialSuggestions(suggestions)
+            setNoMaterialSelected(new Set(suggestions.map(s => s.line + '|' + s.shift)))
+            setShowNoMaterialModal(true)
+        }
+    }
+
+    async function handleConfirmNoMaterialDowntime() {
+        const selected = noMaterialSuggestions.filter(s => noMaterialSelected.has(s.line + '|' + s.shift))
+        if (selected.length === 0) { setShowNoMaterialModal(false); return }
+        const SHIFT_START_TIME: Record<ShellShift, string> = { 'Ca 1': '06:00:00', 'Ca 2': '14:00:00', 'Ca 3': '22:00:00' }
+        const formattedDate = format(date, 'yyyy-MM-dd')
+        const toInsert = selected.map(s => ({
+            department_id: selectedDept,
+            work_date: formattedDate,
+            duration_mins: 480,
+            root_cause: 'LU',
+            note: 'Không có nguyên liệu',
+            machine_area: 'Line ' + s.line,
+            start_time: SHIFT_START_TIME[s.shift],
+            created_by: userId
+        }))
+        const { data, error } = await supabase.from('downtime_events').insert(toInsert).select()
+        if (error) {
+            toast.error('Lỗi khi thêm downtime: ' + error.message)
+        } else {
+            toast.success(`Đã thêm ${toInsert.length} phiếu downtime "Không có nguyên liệu"`)
+            setDowntimes(prev => [...prev, ...(data || [])])
+            setShowNoMaterialModal(false)
+        }
     }
 
     async function saveShellingEnergy() {
@@ -1437,8 +1507,53 @@ export default function InputPage() {
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog>
-
+            </AlertDialog>
+
+            {/* No-material downtime suggestion modal */}
+            {showNoMaterialModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowNoMaterialModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6 relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowNoMaterialModal(false)} className="absolute top-3 right-4 text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
+                        <h2 className="text-base font-black text-amber-700 mb-1">⚠️ Phát hiện Line/Ca không có sản lượng</h2>
+                        <p className="text-[12px] text-slate-500 mb-4">Hệ thống tự động tạo phiếu downtime <b>LU — Không có nguyên liệu</b> (480 phút) cho các Line/Ca dưới đây. Bỏ chọn nếu không muốn thêm.</p>
+                        <div className="space-y-2 mb-5 max-h-64 overflow-y-auto">
+                            {noMaterialSuggestions.map(s => {
+                                const key = s.line + '|' + s.shift
+                                const checked = noMaterialSelected.has(key)
+                                return (
+                                    <label key={key} className="flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer hover:bg-slate-50">
+                                        <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={() => setNoMaterialSelected(prev => {
+                                                const next = new Set(prev)
+                                                checked ? next.delete(key) : next.add(key)
+                                                return next
+                                            })}
+                                            className="w-4 h-4 accent-amber-500"
+                                        />
+                                        <span className="text-sm font-semibold text-slate-700">Line {s.line}</span>
+                                        <span className="text-sm text-slate-500">{s.shift}</span>
+                                        <span className="ml-auto text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">LU · 480 phút</span>
+                                    </label>
+                                )
+                            })}
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowNoMaterialModal(false)}
+                                className="flex-1 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
+                            >Bỏ qua</button>
+                            <button
+                                onClick={handleConfirmNoMaterialDowntime}
+                                disabled={noMaterialSelected.size === 0}
+                                className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-sm font-bold"
+                            >Xác nhận thêm ({noMaterialSelected.size})</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center justify-between space-y-2 border-b pb-4 mb-4">
                 <h2 className="text-3xl font-bold tracking-tight">Nhập Liệu Báo Cáo</h2>
             </div>
