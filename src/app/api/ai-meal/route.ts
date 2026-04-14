@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { format } from "date-fns"
 
-const GEMINI_MODEL = "gemma-4-26b-a4b-it"
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+const GEMINI_MODELS = ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash-lite", "gemini-2.5-flash"]
+const getApiUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 // Dept map - codes must match departments.code in DB
 // HPEEL sub-groups use HPEEL dept_id but different department_name
@@ -155,50 +155,56 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
         const geminiKey = process.env.GEMINI_API_KEY
         if (!geminiKey) return NextResponse.json({ message: "❌ Thiếu GEMINI_API_KEY" }, { status: 200 })
 
-        const fetchOptions = {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-goog-api-key": geminiKey,
-            },
-            body: JSON.stringify({
-                system_instruction: { parts: [{ text: systemPrompt }] },
-                contents,
-                generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
-            }),
-        }
-
-        let geminiRes;
-        let attempt = 0;
-        const maxRetries = 3;
+        let geminiRes: Response | null = null;
+        let usedModel = '';
         
-        while (attempt <= maxRetries) {
-            geminiRes = await fetch(GEMINI_API_URL, fetchOptions)
+        for (const model of GEMINI_MODELS) {
+            const url = getApiUrl(model)
+            let attempt = 0;
+            const maxRetries = 2;
             
-            if (geminiRes.ok) {
-                break;
-            }
-            
-            if (geminiRes.status === 429 || geminiRes.status >= 500) {
-                attempt++;
-                if (attempt <= maxRetries) {
-                    const waitTime = Math.pow(2, attempt) * 1000 + Math.random() * 500;
-                    console.warn(`[ai-meal] Gemini overloaded (${geminiRes.status}). Retrying attempt ${attempt}/${maxRetries} after ${Math.round(waitTime)}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                    continue;
+            while (attempt <= maxRetries) {
+                geminiRes = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": geminiKey,
+                    },
+                    body: JSON.stringify({
+                        system_instruction: { parts: [{ text: systemPrompt }] },
+                        contents,
+                        generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
+                    }),
+                })
+                
+                if (geminiRes.ok) {
+                    usedModel = model;
+                    break;
                 }
+                
+                if (geminiRes.status === 429 || geminiRes.status >= 500) {
+                    attempt++;
+                    if (attempt <= maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 500));
+                        continue;
+                    }
+                    console.warn(`[ai-meal] ${model} failed (${geminiRes.status}) after ${attempt} retries, trying next model...`);
+                    break; // try next model
+                }
+                
+                break; // non-retryable error
             }
             
-            break;
+            if (geminiRes?.ok) break;
         }
 
         if (!geminiRes || !geminiRes.ok) {
             const errText = geminiRes ? await geminiRes.text() : 'Unknown network failure'
             const status = geminiRes ? geminiRes.status : 'Network'
-            console.error(`[ai-meal] Gemini error after ${attempt} attempts:`, errText)
+            console.error(`[ai-meal] All models failed:`, errText)
             
             if (status === 503 || status === 429) {
-                return NextResponse.json({ message: `❌ Hệ thống AI từ Google đang quá tải (Lỗi ${status}). Đã tự động thử ${attempt} lần không thành công, vui lòng chờ 1 lát rồi thử lại.` }, { status: 200 })
+                return NextResponse.json({ message: `❌ Tất cả AI model đang quá tải (Lỗi ${status}). Vui lòng chờ 1 lát rồi thử lại.` }, { status: 200 })
             }
             
             return NextResponse.json({ message: `❌ Gemini lỗi ${status}: ${errText.slice(0, 200)}` }, { status: 200 })

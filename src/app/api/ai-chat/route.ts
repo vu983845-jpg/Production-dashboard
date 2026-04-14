@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { format, startOfMonth, endOfMonth, getDaysInMonth, addDays } from "date-fns"
 
-const GEMINI_MODEL = "gemma-4-26b-a4b-it"
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+const GEMINI_MODELS = ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash-lite", "gemini-2.5-flash"]
+const getApiUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 // ── Dept greeting & feature map ────────────────────────────────────────────
 const DEPT_CONTEXT: Record<string, { greeting: string; features: string[] }> = {
@@ -556,14 +556,32 @@ export async function POST(req: Request) {
         generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
     }
 
-    const geminiRes = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(geminiBody),
-    })
+    let geminiRes: Response | null = null;
+    for (const model of GEMINI_MODELS) {
+        let attempt = 0;
+        while (attempt <= 2) {
+            geminiRes = await fetch(`${getApiUrl(model)}?key=${apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(geminiBody),
+            })
+            if (geminiRes.ok) break;
+            if (geminiRes.status === 429 || geminiRes.status >= 500) {
+                attempt++;
+                if (attempt <= 2) {
+                    await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 500));
+                    continue;
+                }
+                console.warn(`[ai-chat] ${model} failed (${geminiRes.status}), trying next...`);
+                break;
+            }
+            break;
+        }
+        if (geminiRes?.ok) break;
+    }
 
-    if (!geminiRes.ok) {
-        const errText = await geminiRes.text()
+    if (!geminiRes || !geminiRes.ok) {
+        const errText = geminiRes ? await geminiRes.text() : 'All models failed'
         return NextResponse.json({ error: `Gemini error: ${errText}` }, { status: 500 })
     }
 
