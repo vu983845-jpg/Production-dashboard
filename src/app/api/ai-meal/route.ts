@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { format } from "date-fns"
 
-const GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
+const GEMINI_MODEL = "gemma-4-26b"
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 // Dept map - codes must match departments.code in DB
