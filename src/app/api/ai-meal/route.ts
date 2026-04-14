@@ -124,6 +124,10 @@ Khi sau số hiện diện có block dạng:
 Ví dụ: "Chính thức hiện diện: 19\nTrong đó:\n- Mặn: 9p\n- Chay: 10p\n- OT: 0"
 → official_present=19, vegetarian=10, ot_count=0, ot_vegetarian=null
 
+QUAN TRỌNG - OT KHÔNG CÓ SỐ:
+"OT:" / "OT: " / "OT:(chay)" / "OT: (chay)" / "OT." → KHÔNG có số cụ thể → ot_count=null, ot_vegetarian=null.
+TUYỆT ĐỐI không lấy số từ block "Trong đó" để điền vào OT.
+
 QUAN TRỌNG - "ĂN Xh":
 "ăn 14h", "ăn 11h30"... là giờ ăn — KHÔNG phải headcount, bỏ qua hoàn toàn.
 
