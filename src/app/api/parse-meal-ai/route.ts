@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // AI cascade: Gemini 2.5 Flash (smart) → Gemini 3.1 Flash Lite (high quota) → Groq (fallback)
 const GEMINI_MODEL_SMART = 'gemini-2.5-flash'              // Tier 1: thông minh hơn, 20 RPD
-const GEMINI_MODEL_QUOTA = 'gemini-3-flash'                 // fallback khi 2.5 hết quota (250K TPM, 20 RPD)
+const GEMINI_MODEL_QUOTA = 'gemma-4-26b-a4b-it'             // fallback khi 2.5 hết quota (unlimited TPM, 1500 RPD)
 const GROQ_MODEL         = 'llama-3.3-70b-versatile'       // Tier 3: Groq, last resort
 
 
