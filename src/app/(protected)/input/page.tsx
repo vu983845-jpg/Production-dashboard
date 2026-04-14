@@ -1290,10 +1290,10 @@ export default function InputPage() {
 
     function detectNoMaterialShifts() {
         const SHIFTS: ShellShift[] = ['Ca 1', 'Ca 2', 'Ca 3']
-        const SHIFT_START_HOUR: Record<ShellShift, number> = { 'Ca 1': 6, 'Ca 2': 14, 'Ca 3': 22 }
         const suggestions: { line: ShellLine; shift: ShellShift }[] = []
 
         SHIFTS.forEach(shift => {
+            // Ca active = ca có ít nhất 1 line có sản lượng hoặc giờ chạy
             const shiftIsActive = SHELLING_LINES.some(l => {
                 const d = shellingLineData[l]?.[shift]
                 return (d?.actual_ton || 0) > 0 || (d?.run_hours || 0) > 0
@@ -1303,36 +1303,38 @@ export default function InputPage() {
             SHELLING_LINES.forEach(line => {
                 const d = shellingLineData[line]?.[shift]
                 const isEmpty = (!d?.actual_ton || d.actual_ton === 0) && (!d?.run_hours || d.run_hours === 0)
-                if (!isEmpty) return
-
-                const alreadyHasDowntime = downtimes.some(dt => {
-                    if (dt.exclude_downtime) return false
-                    const dtLine = String(dt.machine_area || '').replace('Line ', '')
-                    if (dtLine !== line) return false
-                    // Match same shift by checking start_time (handles both HH:mm:ss and ISO formats)
-                    const SHIFT_START_HOUR: Record<ShellShift, number> = { 'Ca 1': 6, 'Ca 2': 14, 'Ca 3': 22 }
-                    const expectedHour = SHIFT_START_HOUR[shift]
-                    if (dt.start_time) {
-                        const ts = String(dt.start_time)
-                        const h = ts.includes('T')
-                            ? new Date(ts).getHours()
-                            : parseInt(ts.split(':')[0], 10)
-                        const dtShiftH = (h >= 6 && h < 14) ? 6 : (h >= 14 && h < 22) ? 14 : 22
-                        return dtShiftH === expectedHour
-                    }
-                    // No start_time — match by note as fallback
-                    return String(dt.note || '').includes('Không có nguyên liệu')
-                })
-
-                if (!alreadyHasDowntime) suggestions.push({ line, shift })
+                if (isEmpty) suggestions.push({ line, shift })
             })
         })
 
-        if (suggestions.length > 0) {
-            setNoMaterialSuggestions(suggestions)
-            setNoMaterialSelected(new Set(suggestions.map(s => s.line + '|' + s.shift)))
-            setShowNoMaterialModal(true)
-        }
+        if (suggestions.length === 0) return
+
+        // Pre-uncheck lines that already have a no-material downtime today for that shift
+        const SHIFT_HOUR: Record<ShellShift, number> = { 'Ca 1': 6, 'Ca 2': 14, 'Ca 3': 22 }
+        const alreadyDoneKeys = new Set<string>()
+        downtimes.forEach(dt => {
+            if (dt.exclude_downtime) return
+            const dtLine = String(dt.machine_area || '').replace('Line ', '')
+            if (!['A','B','C','D1','D2'].includes(dtLine)) return
+            if (!String(dt.note || '').includes('Không có nguyên liệu')) return
+            // Determine shift from start_time
+            let dtShift: ShellShift = 'Ca 1'
+            if (dt.start_time) {
+                const ts = String(dt.start_time)
+                const h = ts.includes('T') ? new Date(ts).getHours() : parseInt(ts.split(':')[0], 10)
+                dtShift = (h >= 6 && h < 14) ? 'Ca 1' : (h >= 14 && h < 22) ? 'Ca 2' : 'Ca 3'
+            }
+            alreadyDoneKeys.add(dtLine + '|' + dtShift)
+        })
+
+        setNoMaterialSuggestions(suggestions)
+        // Pre-select all — but uncheck ones already done today
+        setNoMaterialSelected(new Set(
+            suggestions
+                .filter(s => !alreadyDoneKeys.has(s.line + '|' + s.shift))
+                .map(s => s.line + '|' + s.shift)
+        ))
+        setShowNoMaterialModal(true)
     }
 
     async function handleConfirmNoMaterialDowntime() {
