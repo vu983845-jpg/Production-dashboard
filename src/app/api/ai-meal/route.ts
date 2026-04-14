@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { format } from "date-fns"
 
-const GEMINI_MODELS = ["gemini-3.1-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-2.5-flash-lite"]
-const getApiUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-const GROQ_MODEL = "llama-3.3-70b-versatile"
+// Groq models theo thứ tự ưu tiên (TPD limit cao → thấp)
+// llama-3.1-8b-instant: 500K TPD | gemma2-9b-it: 500K TPD | llama-3.3-70b: 100K TPD
+const GROQ_MODELS = ["llama-3.1-8b-instant", "gemma2-9b-it", "llama-3.3-70b-versatile"]
 
 
 // Dept map - codes must match departments.code in DB
@@ -165,7 +165,7 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
         const groqKey = process.env.GROQ_API_KEY
         if (!groqKey) return NextResponse.json({ message: "❌ Thiếu GROQ_API_KEY" }, { status: 200 })
 
-        // ── Groq (primary) ────────────────────────────────────────────────────
+        // ── Groq cascade ─────────────────────────────────────────────────────
         let rawText = ''
         const groqMessages = [
             { role: 'system', content: systemPrompt },
@@ -175,18 +175,23 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
             })),
             { role: 'user', content: message },
         ]
-        {
+        let lastGroqError = ''
+        for (const model of GROQ_MODELS) {
             const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: GROQ_MODEL, messages: groqMessages, temperature: 0.1, max_tokens: 2048 }),
+                body: JSON.stringify({ model, messages: groqMessages, temperature: 0.1, max_tokens: 2048 }),
             })
-            if (!groqRes.ok) {
-                const errText = await groqRes.text()
-                return NextResponse.json({ message: `❌ Groq lỗi ${groqRes.status}: ${errText.slice(0, 200)}` }, { status: 200 })
+            if (groqRes.ok) {
+                const groqData = await groqRes.json()
+                rawText = groqData.choices?.[0]?.message?.content ?? ''
+                break
             }
-            const groqData = await groqRes.json()
-            rawText = groqData.choices?.[0]?.message?.content ?? ''
+            lastGroqError = `Groq ${model} lỗi ${groqRes.status}`
+            console.warn(`[ai-meal] ${lastGroqError}, trying next model...`)
+        }
+        if (!rawText) {
+            return NextResponse.json({ message: `❌ Tất cả Groq model đều lỗi. ${lastGroqError}` }, { status: 200 })
         }
 
         const text = rawText
