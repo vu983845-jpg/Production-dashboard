@@ -4,6 +4,7 @@ import { format } from "date-fns"
 
 const GEMINI_MODELS = ["gemini-3.1-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-2.5-flash-lite"]
 const getApiUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+const GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 // Dept map - codes must match departments.code in DB
@@ -154,65 +155,78 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
         ]
 
         const geminiKey = process.env.GEMINI_API_KEY
-        if (!geminiKey) return NextResponse.json({ message: "❌ Thiếu GEMINI_API_KEY" }, { status: 200 })
+        const groqKey   = process.env.GROQ_API_KEY
 
-        let geminiRes: Response | null = null;
-        let usedModel = '';
-        
-        for (const model of GEMINI_MODELS) {
-            const url = getApiUrl(model)
-            let attempt = 0;
-            const maxRetries = 2;
-            
-            while (attempt <= maxRetries) {
-                geminiRes = await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "x-goog-api-key": geminiKey,
-                    },
-                    body: JSON.stringify({
-                        system_instruction: { parts: [{ text: systemPrompt }] },
-                        contents,
-                        generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
-                    }),
-                })
-                
-                if (geminiRes.ok) {
-                    usedModel = model;
-                    break;
-                }
-                
-                if (geminiRes.status === 429 || geminiRes.status >= 500) {
-                    attempt++;
-                    if (attempt <= maxRetries) {
-                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 500));
-                        continue;
+        if (!geminiKey && !groqKey) return NextResponse.json({ message: "❌ Thiếu GEMINI_API_KEY và GROQ_API_KEY" }, { status: 200 })
+
+        let rawText = ''
+        let allQuota = false
+
+        // ── Tier 1-3: Gemini cascade ─────────────────────────────────────────
+        if (geminiKey) {
+            let geminiRes: Response | null = null
+            for (const model of GEMINI_MODELS) {
+                const url = getApiUrl(model)
+                let attempt = 0
+                while (attempt <= 2) {
+                    geminiRes = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+                        body: JSON.stringify({
+                            system_instruction: { parts: [{ text: systemPrompt }] },
+                            contents,
+                            generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
+                        }),
+                    })
+                    if (geminiRes.ok) break
+                    if (geminiRes.status === 429 || geminiRes.status >= 500) {
+                        attempt++
+                        if (attempt <= 2) {
+                            await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 500))
+                            continue
+                        }
+                        console.warn(`[ai-meal] ${model} quota/error, trying next...`)
+                        break
                     }
-                    console.warn(`[ai-meal] ${model} failed (${geminiRes.status}) after ${attempt} retries, trying next model...`);
-                    break; // try next model
+                    break
                 }
-                
-                break; // non-retryable error
+                if (geminiRes?.ok) {
+                    const data = await geminiRes.json()
+                    rawText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+                    break
+                }
             }
-            
-            if (geminiRes?.ok) break;
+            if (!rawText) allQuota = true
         }
 
-        if (!geminiRes || !geminiRes.ok) {
-            const errText = geminiRes ? await geminiRes.text() : 'Unknown network failure'
-            const status = geminiRes ? geminiRes.status : 'Network'
-            console.error(`[ai-meal] All models failed:`, errText)
-            
-            if (status === 503 || status === 429) {
-                return NextResponse.json({ message: `❌ Tất cả AI model đang quá tải (Lỗi ${status}). Vui lòng chờ 1 lát rồi thử lại.` }, { status: 200 })
+        // ── Tier 4: Groq fallback ─────────────────────────────────────────────
+        if (allQuota || !geminiKey) {
+            if (!groqKey) {
+                return NextResponse.json({ message: "❌ Tất cả Gemini model đang quá tải và không có GROQ_API_KEY để fallback." }, { status: 200 })
             }
-            
-            return NextResponse.json({ message: `❌ Gemini lỗi ${status}: ${errText.slice(0, 200)}` }, { status: 200 })
+            console.warn('[ai-meal] All Gemini quota exhausted — falling back to Groq')
+            // Convert Gemini contents format → OpenAI messages format
+            const groqMessages = [
+                { role: 'system', content: systemPrompt },
+                ...contents.map((c: { role: string; parts: { text: string }[] }) => ({
+                    role: c.role === 'model' ? 'assistant' : 'user',
+                    content: c.parts.map((p: { text: string }) => p.text).join(''),
+                })),
+            ]
+            const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: GROQ_MODEL, messages: groqMessages, temperature: 0.1, max_tokens: 2048 }),
+            })
+            if (!groqRes.ok) {
+                const errText = await groqRes.text()
+                return NextResponse.json({ message: `❌ Groq lỗi ${groqRes.status}: ${errText.slice(0, 200)}` }, { status: 200 })
+            }
+            const groqData = await groqRes.json()
+            rawText = groqData.choices?.[0]?.message?.content ?? ''
         }
 
-        const geminiData = await geminiRes.json()
-        const text: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ""
+        const text = rawText
 
         // Extract JSON rows — handle both ```json blocks and raw JSON
         let parsedRows = null
