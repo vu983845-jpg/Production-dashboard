@@ -948,6 +948,12 @@ export default function BaoCom() {
     const [rowEditDrafts, setRowEditDrafts] = useState<Record<string, string>>({})
     const [rowSaving, setRowSaving] = useState(false)
 
+    useEffect(() => {
+        if (activeTab === "monthly") {
+            fetchMonthStats()
+        }
+    }, [activeTab, statsMonth]) // eslint-disable-line react-hooks/exhaustive-deps
+
     const fetchMonthStats = async () => {
         setStatsLoading(true)
         setStatsError(null)
@@ -1017,7 +1023,7 @@ export default function BaoCom() {
     type DeptGroup  = { deptKey: string; name: string; code: string; shifts: ShiftEntry[]; sectionRows: SectionRow[] }
     // SectionRow: 1 row per department_name (the Excel "Section" name)
     // dayRowIds: date → list of statsData row IDs (used for direct save without UUID re-lookup)
-    type SectionRow = { sectionName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; dayRowIds: Map<string, string[]>; departmentIds: Set<string> }
+    type SectionRow = { sectionName: string; deptCode: string; deptKey: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; dayRowIds: Map<string, string[]>; departmentIds: Set<string> }
 
     // Build pivot: group by department_name ("Section" in Excel)
     const buildMonthlyPivot = (rows: MealStatRow[]) => {
@@ -1086,8 +1092,9 @@ export default function BaoCom() {
             // Total = official + seasonal (vegetarian is a SUBSET of official/seasonal, NOT additive)
             const total = official + seasonal
             const key = `${sectionName}|${shift}`
+            const deptKey = (DEPT_CODE_ALIAS[deptCode] ? deptList.find(d => d.code === deptCode)?.id : r.department_id) ?? r.department_id ?? r.department_name
             if (!sectionMap.has(key)) sectionMap.set(key, {
-                sectionName, deptCode, shift,
+                sectionName, deptCode, deptKey, shift,
                 days: new Map(), officialDays: new Map(), seasonalDays: new Map(), dayRowIds: new Map(), departmentIds: new Set()
             })
             const e = sectionMap.get(key)!
@@ -1150,7 +1157,9 @@ export default function BaoCom() {
         })
         // Attach section rows to dept groups
         sectionMap.forEach(sr => {
-            const dg = deptGroupMap.get(sr.deptCode) ?? [...deptGroupMap.values()].find(g => g.code === sr.deptCode)
+            const keyToFind = sr.deptCode || sr.sectionName
+            // Try to find the group by code first, then by matching the name
+            const dg = deptGroupMap.get(keyToFind) ?? [...deptGroupMap.values()].find(g => (g.code && g.code === sr.deptCode) || (!g.code && g.name === sr.sectionName))
             if (dg && !dg.sectionRows.find(s => s.sectionName === sr.sectionName && s.shift === sr.shift)) {
                 dg.sectionRows.push(sr)
             }
@@ -1222,7 +1231,7 @@ export default function BaoCom() {
 
     // ─── DB-based summary state (Chi tiết từng ca) ───
     const [summaryDate, setSummaryDate] = useState<string>(new Date().toISOString().slice(0, 10))  // default: hôm nay
-    const [summaryShift, setSummaryShift] = useState<string>("2")
+    const [summaryShift, setSummaryShift] = useState<string>("1")
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryData, setSummaryData] = useState<SavedRecord[] | null>(null)
     const [summaryError, setSummaryError] = useState<string | null>(null)
@@ -1233,10 +1242,9 @@ export default function BaoCom() {
     const [addRow, setAddRow] = useState<{ deptId: string; officialPresent: number; seasonalPresent: number; vegetarian: number; otCount: number } | null>(null)
 
     // ─── Daily summary state (Chốt số gửi nhà ăn) ───
-    // Có thể chọn ngày, default hôm qua
+    // Có thể chọn ngày, default hôm nay
     const [dailyDate, setDailyDate] = useState<string>(() => {
         const d = new Date()
-        d.setDate(d.getDate() - 1)
         return d.toISOString().slice(0, 10)
     })
     const [dailyLoading, setDailyLoading] = useState(false)

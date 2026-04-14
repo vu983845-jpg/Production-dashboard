@@ -27,6 +27,7 @@ import { FadeIn, FadeInStagger } from "@/components/magicui/fade-in"
 import { AnimatedNumber } from "@/components/magicui/animated-number"
 import { BadgePulse } from "@/components/magicui/badge-pulse"
 import { OverviewTab } from "@/components/dashboard/OverviewTab"
+import { OpexReportTab } from "@/components/dashboard/opex-report-tab"
 
 const CustomTooltip = memo(({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -1506,6 +1507,7 @@ export default function DashboardPage() {
                             <TabsTrigger value="stations">{t('tab_stations')}</TabsTrigger>
                             <TabsTrigger value="regions">{t('tab_regions')}</TabsTrigger>
                             <TabsTrigger value="overview">⚡ Overview</TabsTrigger>
+                            <TabsTrigger value="opex_report">📈 Opex Report</TabsTrigger>
                         </TabsList>
                         <div className="flex space-x-2">
                             {/* Month selector */}
@@ -1801,6 +1803,9 @@ export default function DashboardPage() {
                             woodTarget: 0.08,       // kg wood / kg RCN
                         }}
                     />
+                </TabsContent>
+                <TabsContent value="opex_report" className="mt-0 pt-0">
+                    <OpexReportTab />
                 </TabsContent>
             </Tabs>
 
