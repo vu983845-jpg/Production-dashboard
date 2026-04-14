@@ -1074,6 +1074,9 @@ export default function BaoCom() {
                         // For HPEEL: normalize to canonical section name based on supervisor clues
                         sectionName = normalizeHpeelSectionName(sectionName, shift)
                     }
+                } else if (deptCode === 'CS') {
+                    // CS uses "Machine Grading - shift N" format (not "Machine Grading SN")
+                    sectionName = shift === 'OT' ? 'Machine Grading OT' : `Machine Grading - shift ${shift}`
                 } else {
                     const displayName = DEPT_DISPLAY[deptCode] ?? sectionName
                     if (shift === 'OT') {
