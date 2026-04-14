@@ -113,6 +113,14 @@ Ví dụ: "@Tổ Liên (ca 2) OT 25 p(14 chay)" → shift="2", ot_count=11, ot_v
 Ví dụ: "OT: 13 mặn (2 chay)" → ot_count=13, ot_vegetarian=2 (có "mặn" → X đã là mặn)
 Ví dụ: "OT: 11+8chay" → ot_count=11, ot_vegetarian=8
 
+QUAN TRỌNG - BLOCK "TRONG ĐÓ: MẶN / CHAY" (KHÔNG PHẢI OT):
+Khi sau số hiện diện có block dạng:
+  "Trong đó:\n- Mặn: Xp\n- Chay: Yp"
+→ Đây là breakdown của official_present, KHÔNG phải OT.
+→ vegetarian = Y (số chay), ot_count/ot_vegetarian = null (trừ khi có dòng OT riêng).
+Ví dụ: "Chính thức hiện diện: 19\nTrong đó:\n- Mặn: 9p\n- Chay: 10p\n- OT: 0"
+→ official_present=19, vegetarian=10, ot_count=0, ot_vegetarian=null
+
 QUAN TRỌNG - "ĂN Xh":
 "ăn 14h", "ăn 11h30"... là giờ ăn — KHÔNG phải headcount, bỏ qua hoàn toàn.
 
