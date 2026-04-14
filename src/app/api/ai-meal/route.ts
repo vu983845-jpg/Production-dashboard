@@ -162,65 +162,20 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
             { role: "user", parts: [{ text: message }] },
         ]
 
-        const geminiKey = process.env.GEMINI_API_KEY
-        const groqKey   = process.env.GROQ_API_KEY
+        const groqKey = process.env.GROQ_API_KEY
+        if (!groqKey) return NextResponse.json({ message: "❌ Thiếu GROQ_API_KEY" }, { status: 200 })
 
-        if (!geminiKey && !groqKey) return NextResponse.json({ message: "❌ Thiếu GEMINI_API_KEY và GROQ_API_KEY" }, { status: 200 })
-
+        // ── Groq (primary) ────────────────────────────────────────────────────
         let rawText = ''
-        let allQuota = false
-
-        // ── Tier 1-3: Gemini cascade ─────────────────────────────────────────
-        if (geminiKey) {
-            let geminiRes: Response | null = null
-            for (const model of GEMINI_MODELS) {
-                const url = getApiUrl(model)
-                let attempt = 0
-                while (attempt <= 2) {
-                    geminiRes = await fetch(url, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
-                        body: JSON.stringify({
-                            system_instruction: { parts: [{ text: systemPrompt }] },
-                            contents,
-                            generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
-                        }),
-                    })
-                    if (geminiRes.ok) break
-                    if (geminiRes.status === 429 || geminiRes.status >= 500) {
-                        attempt++
-                        if (attempt <= 2) {
-                            await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 500))
-                            continue
-                        }
-                        console.warn(`[ai-meal] ${model} quota/error, trying next...`)
-                        break
-                    }
-                    break
-                }
-                if (geminiRes?.ok) {
-                    const data = await geminiRes.json()
-                    rawText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-                    break
-                }
-            }
-            if (!rawText) allQuota = true
-        }
-
-        // ── Tier 4: Groq fallback ─────────────────────────────────────────────
-        if (allQuota || !geminiKey) {
-            if (!groqKey) {
-                return NextResponse.json({ message: "❌ Tất cả Gemini model đang quá tải và không có GROQ_API_KEY để fallback." }, { status: 200 })
-            }
-            console.warn('[ai-meal] All Gemini quota exhausted — falling back to Groq')
-            // Convert Gemini contents format → OpenAI messages format
-            const groqMessages = [
-                { role: 'system', content: systemPrompt },
-                ...contents.map((c: { role: string; parts: { text: string }[] }) => ({
-                    role: c.role === 'model' ? 'assistant' : 'user',
-                    content: c.parts.map((p: { text: string }) => p.text).join(''),
-                })),
-            ]
+        const groqMessages = [
+            { role: 'system', content: systemPrompt },
+            ...(history || []).map((m: { role: string; content: string }) => ({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content,
+            })),
+            { role: 'user', content: message },
+        ]
+        {
             const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },

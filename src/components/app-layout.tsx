@@ -280,16 +280,8 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                 </div>
             </footer>
         </div>
-        {/* AI Chat Widget — visible to all logged-in users */}
-        <AIChatWidget
-            userContext={{
-                deptId: departmentId,
-                deptCode: deptCode || role,
-                deptName: deptName || "Toàn nhà máy",
-                role,
-                fullName,
-            }}
-        />
+        {/* AI Chat Widget — disabled */}
+        {/* <AIChatWidget userContext={{ deptId: departmentId, deptCode: deptCode || role, deptName: deptName || "Toàn nhà máy", role, fullName }} /> */}
         </>
     )
 }
