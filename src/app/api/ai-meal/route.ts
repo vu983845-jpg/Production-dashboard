@@ -5,6 +5,9 @@ import { format } from "date-fns"
 // Groq models theo thứ tự ưu tiên (TPD limit cao → thấp)
 // llama-3.1-8b-instant: 500K TPD | gemma2-9b-it: 500K TPD | llama-3.3-70b: 100K TPD
 const GROQ_MODELS = ["llama-3.1-8b-instant", "gemma2-9b-it", "llama-3.3-70b-versatile"]
+// Gemini fallback sau khi tất cả Groq hết quota
+const GEMINI_FALLBACK = "gemini-3.1-flash-lite"
+const getGeminiUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 
 // Dept map - codes must match departments.code in DB
@@ -162,10 +165,12 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
             { role: "user", parts: [{ text: message }] },
         ]
 
-        const groqKey = process.env.GROQ_API_KEY
-        if (!groqKey) return NextResponse.json({ message: "❌ Thiếu GROQ_API_KEY" }, { status: 200 })
+        const groqKey   = process.env.GROQ_API_KEY
+        const geminiKey = process.env.GEMINI_API_KEY
 
-        // ── Groq cascade ─────────────────────────────────────────────────────
+        if (!groqKey && !geminiKey) return NextResponse.json({ message: "❌ Thiếu GROQ_API_KEY và GEMINI_API_KEY" }, { status: 200 })
+
+        // ── Tier 1-3: Groq cascade ────────────────────────────────────────────
         let rawText = ''
         const groqMessages = [
             { role: 'system', content: systemPrompt },
@@ -175,23 +180,51 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
             })),
             { role: 'user', content: message },
         ]
-        let lastGroqError = ''
-        for (const model of GROQ_MODELS) {
-            const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model, messages: groqMessages, temperature: 0.1, max_tokens: 2048 }),
-            })
-            if (groqRes.ok) {
-                const groqData = await groqRes.json()
-                rawText = groqData.choices?.[0]?.message?.content ?? ''
-                break
+        if (groqKey) {
+            for (const model of GROQ_MODELS) {
+                const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model, messages: groqMessages, temperature: 0.1, max_tokens: 2048 }),
+                })
+                if (groqRes.ok) {
+                    const groqData = await groqRes.json()
+                    rawText = groqData.choices?.[0]?.message?.content ?? ''
+                    break
+                }
+                console.warn(`[ai-meal] Groq ${model} lỗi ${groqRes.status}, trying next...`)
             }
-            lastGroqError = `Groq ${model} lỗi ${groqRes.status}`
-            console.warn(`[ai-meal] ${lastGroqError}, trying next model...`)
         }
+
+        // ── Tier 4: Gemini 3.1 Flash Lite fallback ───────────────────────────
+        if (!rawText && geminiKey) {
+            console.warn('[ai-meal] All Groq quota exhausted — falling back to Gemini 3.1 Flash Lite')
+            const geminiContents = [
+                ...(history || []).map((m: { role: string; content: string }) => ({
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: m.content }],
+                })),
+                { role: 'user', parts: [{ text: message }] },
+            ]
+            const geminiRes = await fetch(getGeminiUrl(GEMINI_FALLBACK), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
+                body: JSON.stringify({
+                    system_instruction: { parts: [{ text: systemPrompt }] },
+                    contents: geminiContents,
+                    generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
+                }),
+            })
+            if (geminiRes.ok) {
+                const geminiData = await geminiRes.json()
+                rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+            } else {
+                console.warn(`[ai-meal] Gemini fallback lỗi ${geminiRes.status}`)
+            }
+        }
+
         if (!rawText) {
-            return NextResponse.json({ message: `❌ Tất cả Groq model đều lỗi. ${lastGroqError}` }, { status: 200 })
+            return NextResponse.json({ message: '❌ Tất cả AI model đang quá tải. Vui lòng thử lại sau.' }, { status: 200 })
         }
 
         const text = rawText
