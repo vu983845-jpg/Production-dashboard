@@ -535,7 +535,10 @@ export default function InputPage() {
                 // Determine shift from start_time (format usually HH:mm:ss)
                 let shift: ShellShift = 'Ca 1'; // Default
                 if (dt.start_time) {
-                    const h = parseInt(dt.start_time.split(':')[0], 10);
+                    const ts = String(dt.start_time)
+                    const h = ts.includes('T')
+                        ? new Date(ts).getHours()
+                        : parseInt(ts.split(':')[0], 10)
                     if (h >= 6 && h < 14) shift = 'Ca 1';
                     else if (h >= 14 && h < 22) shift = 'Ca 2';
                     else shift = 'Ca 3';
@@ -1302,15 +1305,23 @@ export default function InputPage() {
                 const isEmpty = (!d?.actual_ton || d.actual_ton === 0) && (!d?.run_hours || d.run_hours === 0)
                 if (!isEmpty) return
 
-                const shiftHour = SHIFT_START_HOUR[shift]
                 const alreadyHasDowntime = downtimes.some(dt => {
                     if (dt.exclude_downtime) return false
                     const dtLine = String(dt.machine_area || '').replace('Line ', '')
                     if (dtLine !== line) return false
-                    if (!dt.start_time) return false
-                    const h = parseInt(dt.start_time.split(':')[0], 10)
-                    const dtShiftH = (h >= 6 && h < 14) ? 6 : (h >= 14 && h < 22) ? 14 : 22
-                    return dtShiftH === shiftHour
+                    // Match same shift by checking start_time (handles both HH:mm:ss and ISO formats)
+                    const SHIFT_START_HOUR: Record<ShellShift, number> = { 'Ca 1': 6, 'Ca 2': 14, 'Ca 3': 22 }
+                    const expectedHour = SHIFT_START_HOUR[shift]
+                    if (dt.start_time) {
+                        const ts = String(dt.start_time)
+                        const h = ts.includes('T')
+                            ? new Date(ts).getHours()
+                            : parseInt(ts.split(':')[0], 10)
+                        const dtShiftH = (h >= 6 && h < 14) ? 6 : (h >= 14 && h < 22) ? 14 : 22
+                        return dtShiftH === expectedHour
+                    }
+                    // No start_time — match by note as fallback
+                    return String(dt.note || '').includes('Không có nguyên liệu')
                 })
 
                 if (!alreadyHasDowntime) suggestions.push({ line, shift })
@@ -1327,7 +1338,7 @@ export default function InputPage() {
     async function handleConfirmNoMaterialDowntime() {
         const selected = noMaterialSuggestions.filter(s => noMaterialSelected.has(s.line + '|' + s.shift))
         if (selected.length === 0) { setShowNoMaterialModal(false); return }
-        const SHIFT_START_TIME: Record<ShellShift, string> = { 'Ca 1': '06:00:00', 'Ca 2': '14:00:00', 'Ca 3': '22:00:00' }
+        const SHIFT_START_TIME: Record<ShellShift, string> = { 'Ca 1': 'T06:00:00', 'Ca 2': 'T14:00:00', 'Ca 3': 'T22:00:00' }
         const formattedDate = format(date, 'yyyy-MM-dd')
         const toInsert = selected.map(s => ({
             department_id: selectedDept,
@@ -1336,7 +1347,7 @@ export default function InputPage() {
             root_cause: 'LU',
             note: 'Không có nguyên liệu',
             machine_area: 'Line ' + s.line,
-            start_time: SHIFT_START_TIME[s.shift],
+            start_time: formattedDate + SHIFT_START_TIME[s.shift],
             created_by: userId
         }))
         const { data, error } = await supabase.from('downtime_events').insert(toInsert).select()
