@@ -152,7 +152,7 @@ async function callGemini(filtered: string, apiKey: string, model: string): Prom
             generationConfig: { temperature: 0.1, maxOutputTokens: 3000, responseMimeType: 'application/json' },
         }),
     })
-    if (res.status === 429) return { status429: true }
+    if (res.status === 429 || res.status >= 500) return { status429: true }
     if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`)
     const data = await res.json()
     return { raw: data.candidates?.[0]?.content?.parts?.[0]?.text ?? '' }

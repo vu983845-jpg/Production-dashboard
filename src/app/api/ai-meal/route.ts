@@ -155,7 +155,7 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
         const geminiKey = process.env.GEMINI_API_KEY
         if (!geminiKey) return NextResponse.json({ message: "❌ Thiếu GEMINI_API_KEY" }, { status: 200 })
 
-        const geminiRes = await fetch(GEMINI_API_URL, {
+        const fetchOptions = {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -166,12 +166,42 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
                 contents,
                 generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
             }),
-        })
+        }
 
-        if (!geminiRes.ok) {
-            const errText = await geminiRes.text()
-            console.error("[ai-meal] Gemini error:", errText)
-            return NextResponse.json({ message: `❌ Gemini lỗi ${geminiRes.status}: ${errText.slice(0, 200)}` }, { status: 200 })
+        let geminiRes;
+        let attempt = 0;
+        const maxRetries = 3;
+        
+        while (attempt <= maxRetries) {
+            geminiRes = await fetch(GEMINI_API_URL, fetchOptions)
+            
+            if (geminiRes.ok) {
+                break;
+            }
+            
+            if (geminiRes.status === 429 || geminiRes.status >= 500) {
+                attempt++;
+                if (attempt <= maxRetries) {
+                    const waitTime = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+                    console.warn(`[ai-meal] Gemini overloaded (${geminiRes.status}). Retrying attempt ${attempt}/${maxRetries} after ${Math.round(waitTime)}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    continue;
+                }
+            }
+            
+            break;
+        }
+
+        if (!geminiRes || !geminiRes.ok) {
+            const errText = geminiRes ? await geminiRes.text() : 'Unknown network failure'
+            const status = geminiRes ? geminiRes.status : 'Network'
+            console.error(`[ai-meal] Gemini error after ${attempt} attempts:`, errText)
+            
+            if (status === 503 || status === 429) {
+                return NextResponse.json({ message: `❌ Hệ thống AI từ Google đang quá tải (Lỗi ${status}). Đã tự động thử ${attempt} lần không thành công, vui lòng chờ 1 lát rồi thử lại.` }, { status: 200 })
+            }
+            
+            return NextResponse.json({ message: `❌ Gemini lỗi ${status}: ${errText.slice(0, 200)}` }, { status: 200 })
         }
 
         const geminiData = await geminiRes.json()
