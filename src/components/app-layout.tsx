@@ -1,6 +1,6 @@
 "use client"
 
-import { ReactNode, useEffect } from "react"
+import { ReactNode, useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -60,6 +60,32 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
     }, [deptCode, fullName])
 
     const { t } = useLanguage()
+
+    // ── Open downtime warning ──────────────────────────────────────────────
+    const [openDowntimes, setOpenDowntimes] = useState<any[]>([])
+    const [dtBannerDismissed, setDtBannerDismissed] = useState(false)
+
+    useEffect(() => {
+        if (!departmentId) return
+        const sessionKey = `dt_banner_dismissed_${departmentId}`
+        if (sessionStorage.getItem(sessionKey)) { setDtBannerDismissed(true); return }
+
+        supabase
+            .from('downtime_events')
+            .select('id, root_cause, note, machine_area, work_date')
+            .eq('department_id', departmentId)
+            .eq('is_ongoing', true)
+            .eq('exclude_downtime', false)
+            .then(({ data }) => {
+                if (data && data.length > 0) setOpenDowntimes(data)
+            })
+    }, [departmentId])
+
+    const dismissDtBanner = () => {
+        setDtBannerDismissed(true)
+        sessionStorage.setItem(`dt_banner_dismissed_${departmentId}`, '1')
+    }
+    // ──────────────────────────────────────────────────────────────────────
 
     const navItems = [
         {
@@ -215,6 +241,32 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                 </div>
             </header>
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+                {/* Open downtime warning banner */}
+                {!dtBannerDismissed && openDowntimes.length > 0 && (
+                    <div className="rounded-xl border-2 border-orange-300 bg-orange-50 px-4 py-3 flex items-start gap-3 shadow-sm">
+                        <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                            <p className="font-bold text-orange-800 text-sm">
+                                ⚠️ Bạn đang có {openDowntimes.length} sự cố downtime chưa đóng!
+                            </p>
+                            <div className="mt-1 flex flex-wrap gap-2">
+                                {openDowntimes.map(dt => (
+                                    <span key={dt.id} className="text-[11px] bg-orange-100 border border-orange-200 text-orange-700 px-2 py-0.5 rounded-full">
+                                        {dt.root_cause}{dt.machine_area ? ` · ${dt.machine_area}` : ''}{dt.note ? ` — ${dt.note}` : ''}
+                                    </span>
+                                ))}
+                            </div>
+                            <Link href="/downtime" className="text-[11px] text-orange-600 underline underline-offset-2 mt-1 inline-block hover:text-orange-800">
+                                → Vào trang Downtime để đóng sự cố
+                            </Link>
+                        </div>
+                        <button
+                            onClick={dismissDtBanner}
+                            className="shrink-0 text-orange-400 hover:text-orange-700 text-base font-bold leading-none"
+                            title="Đóng cảnh báo"
+                        >✕</button>
+                    </div>
+                )}
                 {children}
             </main>
             <footer className="mt-auto border-t bg-background px-4 py-3 sm:px-6">
