@@ -430,8 +430,8 @@ export default function PublicMealPage() {
                                     <tr>
                                         <th>Bộ phận</th>
                                         <th>Ca</th>
-                                        <th>CT</th>
-                                        <th>TV</th>
+                                        <th>Chính thức</th>
+                                        <th>Thời vụ</th>
                                         <th>🍖</th>
                                         <th>🥬</th>
                                         <th>OT🍖</th>
