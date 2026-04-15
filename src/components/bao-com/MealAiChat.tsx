@@ -62,11 +62,10 @@ function isSameData(row: MealRow, existing: Record<string, number>) {
 
 // Validation helpers
 function isFutureDate(dateStr: string): boolean {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const d = new Date(dateStr)
-    d.setHours(0, 0, 0, 0)
-    return d > today
+    const vnDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+    const vnNow = new Date(vnDateString)
+    const todayStr = `${vnNow.getFullYear()}-${String(vnNow.getMonth() + 1).padStart(2, "0")}-${String(vnNow.getDate()).padStart(2, "0")}`
+    return dateStr > todayStr
 }
 
 function getShiftWarning(row: MealRow): string | null {
@@ -359,11 +358,10 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
 
                         <div className={`max-w-[90%] space-y-2 ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col`}>
                             {/* Bubble */}
-                            <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                                msg.role === "user"
+                            <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${msg.role === "user"
                                     ? "bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-tr-sm shadow-md shadow-orange-200"
                                     : "bg-white border border-slate-200/80 text-slate-800 rounded-tl-sm shadow-sm"
-                            }`}>
+                                }`}>
                                 {msg.content.split(/(\*[^*]+\*)/g).map((part, i) =>
                                     part.startsWith("*") && part.endsWith("*")
                                         ? <strong key={i} className="font-semibold">{part.slice(1, -1)}</strong>
@@ -408,35 +406,35 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
                                                     const rowBg = futureDate
                                                         ? 'bg-red-50 border-l-4 border-red-400'
                                                         : shiftWarn
-                                                        ? 'bg-amber-50 border-l-4 border-amber-400'
-                                                        : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                                                            ? 'bg-amber-50 border-l-4 border-amber-400'
+                                                            : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
                                                     return (
-                                                    <tr key={ri} className={`border-t border-slate-100 ${rowBg} hover:opacity-90`}>
-                                                        <td className={`px-4 py-3 font-mono font-medium ${futureDate ? 'text-red-600 font-bold' : 'text-slate-600'}`}>
-                                                            {format(new Date(r.date), "dd/MM/yyyy")}
-                                                            {futureDate && <span className="ml-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">TƯƠNG LAI ⚠️</span>}
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <span className="font-semibold text-slate-800">{r.dept_display}</span>
-                                                            <span className="ml-2 text-xs text-slate-400 font-mono">({r.dept_code})</span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            <span className={`rounded-lg px-2.5 py-1 font-bold text-xs ${shiftWarn ? 'bg-amber-100 text-amber-700' : 'bg-orange-100 text-orange-700'}`}>
-                                                                Ca {r.shift}
-                                                            </span>
-                                                            {shiftWarn && <div className="text-[10px] text-amber-600 mt-0.5">{shiftWarn}</div>}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center font-bold text-slate-800 text-base">{r.official_present ?? <span className="text-slate-300">-</span>}</td>
-                                                        <td className="px-4 py-3 text-center text-slate-600">{r.seasonal_present ?? <span className="text-slate-300">-</span>}</td>
-                                                        <td className="px-4 py-3 text-center text-slate-600">
-                                                            {r.ot_count == null && r.ot_vegetarian == null ? <span className="text-slate-300">-</span> : (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center text-green-600 font-medium">{r.vegetarian ?? <span className="text-slate-300">-</span>}</td>
-                                                        <td className="px-4 py-3 text-center text-emerald-700 font-medium">
-                                                             {r.ot_vegetarian ?? <span className="text-slate-300">-</span>}
-                                                             {r.ot_only && <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold align-middle">OT only</span>}
-                                                         </td>
-                                                    </tr>
+                                                        <tr key={ri} className={`border-t border-slate-100 ${rowBg} hover:opacity-90`}>
+                                                            <td className={`px-4 py-3 font-mono font-medium ${futureDate ? 'text-red-600 font-bold' : 'text-slate-600'}`}>
+                                                                {format(new Date(r.date), "dd/MM/yyyy")}
+                                                                {futureDate && <span className="ml-1 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">TƯƠNG LAI ⚠️</span>}
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                <span className="font-semibold text-slate-800">{r.dept_display}</span>
+                                                                <span className="ml-2 text-xs text-slate-400 font-mono">({r.dept_code})</span>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <span className={`rounded-lg px-2.5 py-1 font-bold text-xs ${shiftWarn ? 'bg-amber-100 text-amber-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                                    Ca {r.shift}
+                                                                </span>
+                                                                {shiftWarn && <div className="text-[10px] text-amber-600 mt-0.5">{shiftWarn}</div>}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center font-bold text-slate-800 text-base">{r.official_present ?? <span className="text-slate-300">-</span>}</td>
+                                                            <td className="px-4 py-3 text-center text-slate-600">{r.seasonal_present ?? <span className="text-slate-300">-</span>}</td>
+                                                            <td className="px-4 py-3 text-center text-slate-600">
+                                                                {r.ot_count == null && r.ot_vegetarian == null ? <span className="text-slate-300">-</span> : (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center text-green-600 font-medium">{r.vegetarian ?? <span className="text-slate-300">-</span>}</td>
+                                                            <td className="px-4 py-3 text-center text-emerald-700 font-medium">
+                                                                {r.ot_vegetarian ?? <span className="text-slate-300">-</span>}
+                                                                {r.ot_only && <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold align-middle">OT only</span>}
+                                                            </td>
+                                                        </tr>
                                                     )
                                                 })}
                                             </tbody>
@@ -542,11 +540,10 @@ export function MealAiChat({ deptList, onSaveSuccess }: Props) {
 
                             {/* Confirmed badge */}
                             {msg.rows && msg.confirmed && (
-                                <div className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full ${
-                                    saveResults[`msg-${idx}`] === "ok"
+                                <div className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full ${saveResults[`msg-${idx}`] === "ok"
                                         ? "bg-green-50 text-green-600 border border-green-200"
                                         : "bg-slate-100 text-slate-500"
-                                }`}>
+                                    }`}>
                                     {saveResults[`msg-${idx}`] === "ok"
                                         ? <><Check className="h-3 w-3" /> Đã xử lý</>
                                         : <><AlertCircle className="h-3 w-3" /> Đã xử lý</>

@@ -40,8 +40,10 @@ export async function POST(req: NextRequest) {
         }
 
         const { message, history } = await req.json()
-        const today = format(new Date(), "yyyy-MM-dd")
-        const todayDisplay = format(new Date(), "dd/MM/yyyy")
+        const vnDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+        const vnDateObj = new Date(vnDateString)
+        const today = format(vnDateObj, "yyyy-MM-dd")
+        const todayDisplay = format(vnDateObj, "dd/MM/yyyy")
 
         const systemPrompt = `Bạn là trợ lý nhập liệu báo cơm nhà máy VICC LA.
 Hôm nay là ${todayDisplay} (${today}).
@@ -169,7 +171,7 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
             { role: "user", parts: [{ text: message }] },
         ]
 
-        const groqKey   = process.env.GROQ_API_KEY
+        const groqKey = process.env.GROQ_API_KEY
         const geminiKey = process.env.GEMINI_API_KEY
 
         if (!groqKey && !geminiKey) return NextResponse.json({ message: "❌ Thiếu GROQ_API_KEY và GEMINI_API_KEY" }, { status: 200 })
@@ -236,7 +238,7 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
         // Extract JSON rows — handle both ```json blocks and raw JSON
         let parsedRows = null
         const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) ||
-                          text.match(/```\s*([\s\S]*?)```/)
+            text.match(/```\s*([\s\S]*?)```/)
         let rawJsonStr: string | null = null
 
         if (jsonMatch) {
@@ -254,7 +256,7 @@ Nếu không có data → chỉ trả lời text, KHÔNG có JSON block.`
             try {
                 const parsed = JSON.parse(rawJsonStr)
                 if (parsed.rows && Array.isArray(parsed.rows)) {
-                    parsedRows = parsed.rows.map((r: { dept_code: string; official_present?: number | null; seasonal_present?: number | null; ot_count?: number | null; [key: string]: unknown }) => {
+                    parsedRows = parsed.rows.map((r: { dept_code: string; official_present?: number | null; seasonal_present?: number | null; ot_count?: number | null;[key: string]: unknown }) => {
                         // Auto-detect OT-only: no regular headcount but has OT
                         const isOtOnly = (r.official_present ?? 0) === 0
                             && (r.seasonal_present ?? 0) === 0
