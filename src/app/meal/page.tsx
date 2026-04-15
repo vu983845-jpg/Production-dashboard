@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
+import { IntersnackLogo } from "@/components/intersnack-logo"
 
 interface Dept { id: string; code: string; name_en: string }
 
@@ -29,6 +30,7 @@ interface ShiftData {
     otTotal: string       // tổng OT (mặn + chay)
     otVeg: string         // OT chay
     otTime: string        // giờ ăn OT
+    showOT: boolean
 }
 const blank = (shiftVal = ""): ShiftData => ({
     officialPresent: "", seasonalPresent: "",
@@ -36,6 +38,7 @@ const blank = (shiftVal = ""): ShiftData => ({
     vegCount: "",
     otTotal: "", otVeg: "",
     otTime: OT_DEFAULT_TIME[shiftVal] ?? "",
+    showOT: false,
 })
 
 interface ConfirmRow {
@@ -114,17 +117,17 @@ export default function PublicMealPage() {
 
     const selectedDept   = depts.find(d => d.id === deptId)
     const isMultiShift   = !!(selectedDept && MULTI_SHIFT_CODES.has(selectedDept.code))
-    const isHpeel        = selectedDept?.code === "HPEEL"
+    const isHpeel        = selectedDept?.code === "HPEEL" || selectedDept?.code === "HAND"
     const isOffice       = selectedDept?.code === "OFFICE"
     const shifts         = isOffice ? SHIFTS_WITH_HC : SHIFTS_NORMAL
     const otSelectedDept = depts.find(d => d.id === otDeptId)
-    const isOtHpeel      = otSelectedDept?.code === "HPEEL"
+    const isOtHpeel      = otSelectedDept?.code === "HPEEL" || otSelectedDept?.code === "HAND"
     const isOtOffice     = otSelectedDept?.code === "OFFICE"
     const otShifts       = isOtOffice ? SHIFTS_WITH_HC : SHIFTS_NORMAL
 
     const getEffectiveDeptName = (id = deptId, sub = hpeelSub) => {
         const dept = depts.find(d => d.id === id)
-        if (dept?.code === "HPEEL" && sub) return HPEEL_SUBGROUPS.find(s => s.key === sub)?.dept_name ?? dept.name_en
+        if ((dept?.code === "HPEEL" || dept?.code === "HAND") && sub) return HPEEL_SUBGROUPS.find(s => s.key === sub)?.dept_name ?? dept.name_en
         return dept?.name_en ?? ""
     }
 
@@ -211,9 +214,9 @@ export default function PublicMealPage() {
 
     const resetOt = () => { setOtStep("select"); setOtDeptId(""); setOtHpeelSub(""); setOtShift(""); setOtRecord(null); setOtNewTotal(""); setOtNewVeg(""); setOtNotFound(false); setOtError("") }
 
-    const updateMulti = (shiftKey: string, field: keyof ShiftData, val: string) =>
+    const updateMulti = (shiftKey: string, field: keyof ShiftData, val: any) =>
         setMultiData(prev => ({ ...prev, [shiftKey]: { ...prev[shiftKey], [field]: val } }))
-    const updateSingle = (field: keyof ShiftData, val: string) =>
+    const updateSingle = (field: keyof ShiftData, val: any) =>
         setSingleData(prev => ({ ...prev, [field]: val }))
 
     // ── Sub-components ──
@@ -240,7 +243,7 @@ export default function PublicMealPage() {
 
     // Main meal fields component
     const ShiftFields = ({ data, update, shiftLabel, shiftVal }: {
-        data: ShiftData; update: (f: keyof ShiftData, v: string) => void
+        data: ShiftData; update: (f: keyof ShiftData, v: any) => void
         shiftLabel?: string; shiftVal?: string
     }) => {
         const total     = totalPresent(data)
@@ -308,32 +311,43 @@ export default function PublicMealPage() {
                 </div>
 
                 {/* OT */}
-                <div className="subsection-label" style={{ marginTop: 12 }}>⏰ Tăng ca (OT) <span className="opt-tag">nếu có</span></div>
-                <div className="row2">
-                    <div className="field-sm">
-                        <label>Tổng phần OT</label>
-                        <input type="number" min="0" max="999" placeholder="0" value={data.otTotal} onChange={e => update("otTotal", e.target.value)} />
-                    </div>
-                    <div className="field-sm">
-                        <label>Trong đó chay</label>
-                        <input type="number" min="0" max={otTotalN || 999} placeholder="0" value={data.otVeg} onChange={e => update("otVeg", e.target.value)} />
-                    </div>
-                </div>
+                {!data.showOT ? (
+                    <button type="button" className="ghost-btn" style={{ marginTop: 12, padding: "10px", width: "100%", border: "1.5px dashed #f97316", background: "#fff7ed", color: "#c2410c" }} onClick={() => update("showOT", true)}>
+                        + Thêm báo cơm Tăng ca (OT)
+                    </button>
+                ) : (
+                    <>
+                        <div className="subsection-label" style={{ marginTop: 12 }}>⏰ Tăng ca (OT) <span className="opt-tag">nếu có</span></div>
+                        <div className="row2">
+                            <div className="field-sm">
+                                <label>Tổng phần OT</label>
+                                <input type="number" min="0" max="999" placeholder="0" value={data.otTotal} onChange={e => update("otTotal", e.target.value)} />
+                            </div>
+                            <div className="field-sm">
+                                <label>Trong đó chay</label>
+                                <input type="number" min="0" max={otTotalN || 999} placeholder="0" value={data.otVeg} onChange={e => update("otVeg", e.target.value)} />
+                            </div>
+                        </div>
                 {hasOT && (
                     <div className="ot-breakdown">
                         <span>Mặn OT: <strong>{otMalanN}</strong></span>
                         <span className="dot">·</span>
                         <span>Chay OT: <strong>{otChayN}</strong></span>
-                        <div className="ot-time-row">
-                            <span>🕐 Giờ ăn OT:</span>
-                            <input
-                                type="time"
-                                value={data.otTime || (OT_DEFAULT_TIME[shiftVal ?? shift] ?? "")}
-                                onChange={e => update("otTime", e.target.value)}
-                                className="time-input"
-                            />
+                            <div className="ot-time-row">
+                                <span>🕐 Giờ ăn OT:</span>
+                                <input
+                                    type="time"
+                                    value={data.otTime || (OT_DEFAULT_TIME[shiftVal ?? shift] ?? "")}
+                                    onChange={e => update("otTime", e.target.value)}
+                                    className="time-input"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
+                    <button type="button" className="ghost-btn" style={{ marginTop: 6, padding: "8px", fontSize: 13, color: "#ef4444", border: "1px solid #fee2e2", background: "#fef2f2" }} onClick={() => { update("showOT", false); update("otTotal", ""); update("otVeg", ""); }}>
+                        ❌ Hủy phần OT ca này
+                    </button>
+                </>
                 )}
             </div>
         )
@@ -455,7 +469,9 @@ export default function PublicMealPage() {
         if (otStep === "done") return (
             <PageShell>
                 <div className="success-page">
-                    <img src="/assets/intersnack-icon.png" alt="logo" className="page-logo" />
+                    <div className="bg-white rounded-xl shadow-sm w-16 h-16 overflow-hidden flex items-center justify-center border border-slate-100 mb-4">
+                        <IntersnackLogo className="w-12 h-12" />
+                    </div>
                     <div className="success-icon">✅</div>
                     <div className="success-title">OT đã được cập nhật!</div>
                     <p className="success-sub">Sai sót liên hệ <strong>Ms Chi</strong> nhé!</p>
@@ -557,7 +573,7 @@ export default function PublicMealPage() {
                 )}
                 <div className="field-sm"><label>Ca <span className="req">*</span></label><ShiftPills value={otShift} onChange={s => { setOtShift(s) }} arr={otShifts} /></div>
                 <div className="field-sm"><label>Ngày <span className="req">*</span></label>
-                    <input type="date" value={otDate} onChange={e => setOtDate(e.target.value)} max={format(new Date(), "yyyy-MM-dd")} />
+                    <input type="date" value={otDate} onChange={e => setOtDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} />
                 </div>
                 {otNotFound && <div className="err-box">⚠️ Không tìm thấy bản ghi. Kiểm tra lại bộ phận / ca / ngày.</div>}
                 {otError && <div className="err-box">⚠️ {otError}</div>}
@@ -604,7 +620,9 @@ export default function PublicMealPage() {
     if (success) return (
         <PageShell>
             <div className="success-page">
-                <img src="/assets/intersnack-icon.png" alt="logo" className="page-logo" />
+                <div className="bg-white rounded-xl shadow-sm w-16 h-16 overflow-hidden flex items-center justify-center border border-slate-100 mb-4">
+                    <IntersnackLogo className="w-12 h-12" />
+                </div>
                 <div className="success-icon">✅</div>
                 <div className="success-title">Đã báo cơm thành công!</div>
                 <p className="success-sub">Cảm ơn bạn đã báo cơm! 🙏<br /><small>Sai sót liên hệ <strong>Ms Chi</strong> nhé!</small></p>
@@ -624,7 +642,9 @@ export default function PublicMealPage() {
         <PageShell>
             {/* Header with logo */}
             <div className="app-header">
-                <img src="/assets/intersnack-icon.png" alt="Intersnack" className="header-logo-img" />
+                <div className="bg-white rounded-lg shadow-sm w-[44px] h-[44px] overflow-hidden flex items-center justify-center shrink-0 border border-slate-100">
+                    <IntersnackLogo className="w-9 h-9" />
+                </div>
                 <div>
                     <div className="app-title">Báo Cơm Nhà Máy</div>
                     <div className="app-sub">VICC Long An · Intersnack Cashew Vietnam</div>
