@@ -6,7 +6,7 @@ import { format } from "date-fns"
 // llama-3.1-8b-instant: 500K TPD | gemma2-9b-it: 500K TPD | llama-3.3-70b: 100K TPD
 const GROQ_MODELS = ["llama-3.1-8b-instant"]
 // Gemini fallback sau khi tất cả Groq hết quota
-const GEMINI_FALLBACK = "gemini-3.1-flash-lite"
+const GEMINI_FALLBACK = "gemini-2.0-flash-lite"
 const getGeminiUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 
