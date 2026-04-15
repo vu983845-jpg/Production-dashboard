@@ -180,7 +180,15 @@ export default function PublicMealPage() {
         const url = `/api/public-meal?dept_id=${otDeptId}&work_date=${otDate}&shift=${otShift}&dept_name=${encodeURIComponent(deptName)}`
         const res  = await fetch(url); const data = await res.json()
         setOtLooking(false)
-        if (!data.record) { setOtNotFound(true); return }
+        if (!data.record) {
+            // create default 0 record if not found
+            setOtRecord({ ot_count: 0, ot_vegetarian: 0, official_present: 0, seasonal_present: 0, vegetarian: 0 })
+            setOtNewTotal("0")
+            setOtNewVeg("0")
+            setOtNewTime(OT_DEFAULT_TIME[otShift] ?? "")
+            setOtStep("edit")
+            return
+        }
         const rec = data.record as OTRecord
         setOtRecord(rec)
         const oldTotal = (rec.ot_count ?? 0) + (rec.ot_vegetarian ?? 0)
