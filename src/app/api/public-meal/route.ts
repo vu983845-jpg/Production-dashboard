@@ -67,13 +67,15 @@ async function sendTeamsNotification(rows: {
     }
 
     try {
-        await fetch(webhookUrl, {
+        const res = await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         })
-    } catch {
-        // Không block response nếu Teams lỗi
+        const text = await res.text()
+        console.log("[Teams] status:", res.status, "body:", text)
+    } catch (err) {
+        console.error("[Teams] fetch error:", err)
     }
 }
 
@@ -83,6 +85,30 @@ export async function GET(req: NextRequest) {
     const workDate = searchParams.get("work_date")
     const shift    = searchParams.get("shift")
     const deptName = searchParams.get("dept_name")
+
+    // Debug Teams webhook
+    const debugTeams = searchParams.get("debug_teams")
+    if (debugTeams === "1") {
+        const webhookUrl = process.env.TEAMS_WEBHOOK_URL
+        if (!webhookUrl) return NextResponse.json({ error: "TEAMS_WEBHOOK_URL not set" })
+        try {
+            const res = await fetch(webhookUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    "@type": "MessageCard",
+                    "@context": "http://schema.org/extensions",
+                    themeColor: "FF0000",
+                    summary: "Debug",
+                    sections: [{ activityTitle: "DEBUG TEST", activitySubtitle: new Date().toISOString() }],
+                }),
+            })
+            const text = await res.text()
+            return NextResponse.json({ teamsStatus: res.status, teamsBody: text, urlPrefix: webhookUrl.slice(0, 50) })
+        } catch (err) {
+            return NextResponse.json({ error: String(err) })
+        }
+    }
 
     // Fetch daily summary
     const summaryDate = searchParams.get("summary_date")
@@ -162,8 +188,8 @@ export async function POST(req: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-        // Gửi thông báo Teams (không block response)
-        sendTeamsNotification(payloads).catch(() => {})
+        // Gửi thông báo Teams (await để đảm bảo gửi xong trước khi function tắt)
+        await sendTeamsNotification(payloads)
 
         return NextResponse.json({ success: true, count: payloads.length })
     } catch (err) {
