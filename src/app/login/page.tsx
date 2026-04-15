@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,8 @@ import { toast } from "sonner";
 import { IntersnackLogo } from "@/components/intersnack-logo";
 import { ArrowLeft, Leaf, Rocket, Users, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
 
-const HCAPTCHA_SITE_KEY = "9830204c-9c10-41fc-98fc-ba4a9aa2e2c8";
+
 
 const CORE_VALUES = [
     { img: "/cv-thinking.svg", bg: "#6B8C2A", title: "Thinking Responsibly",     desc: "Đặt trách nhiệm lên hàng đầu trong mọi quyết định" },
@@ -45,9 +44,7 @@ export default function LoginPage() {
     const [email, setEmail]           = useState("");
     const [password, setPassword]     = useState("");
     const [loading, setLoading]       = useState(false);
-    const [captchaToken, setCaptchaToken] = useState("");
     const [mounted, setMounted]       = useState(false);
-    const captchaRef = useRef<HCaptcha>(null);
     const router  = useRouter();
     const supabase = createClient();
 
@@ -66,13 +63,11 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
         const { data, error } = await supabase.auth.signInWithPassword({
-            email, password, options: { captchaToken },
+            email, password,
         });
         if (error) {
             toast.error(getAuthErrorMessage(error.message), { duration: 5000, style: { whiteSpace: "pre-line" } });
             setLoading(false);
-            captchaRef.current?.resetCaptcha();
-            setCaptchaToken("");
             return;
         }
         if (data.user) {
@@ -281,7 +276,7 @@ export default function LoginPage() {
                 .field input::placeholder { color: #a09d9c; }
                 .field input:focus { border-bottom-color: #E30613; border-width: 2px; }
 
-                .captcha-wrap { display:flex; justify-content:center; margin-top: 10px; }
+
 
                 .btn-login {
                     width:100%; padding:18px;
@@ -433,25 +428,12 @@ export default function LoginPage() {
                                 />
                             </div>
 
-                            <div className="captcha-wrap">
-                                <HCaptcha
-                                    ref={captchaRef}
-                                    sitekey={HCAPTCHA_SITE_KEY}
-                                    onVerify={(token) => setCaptchaToken(token)}
-                                    onExpire={() => setCaptchaToken("")}
-                                />
-                            </div>
-
                             <button
                                 type="submit"
-                                disabled={loading || !captchaToken}
-                                className={`btn-login ${captchaToken ? "active" : "inactive"}`}
+                                disabled={loading}
+                                className={`btn-login ${!loading ? "active" : "inactive"}`}
                             >
-                                {loading
-                                    ? "Đang xử lý..."
-                                    : !captchaToken
-                                    ? "Vui lòng xác minh captcha"
-                                    : "Vào trang quản trị"}
+                                {loading ? "Đang xử lý..." : "Vào trang quản trị"}
                             </button>
                         </form>
 
