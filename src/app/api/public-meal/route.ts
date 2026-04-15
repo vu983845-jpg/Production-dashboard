@@ -6,6 +6,88 @@ const supabaseAdmin = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+const SHIFT_LABEL: Record<string, string> = { "1": "Ca 1", "2": "Ca 2", "3": "Ca 3", "HC": "HC" }
+
+async function sendTeamsNotification(rows: {
+    department_name: string
+    work_date: string
+    shift: string
+    official_present: number
+    seasonal_present: number
+    ot_count: number
+    vegetarian: number
+    ot_vegetarian: number
+    note: string
+}[]) {
+    const webhookUrl = process.env.TEAMS_WEBHOOK_URL
+    if (!webhookUrl) return
+
+    const now = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
+
+    const tableRows = rows.map(r => {
+        const total = r.official_present + r.seasonal_present
+        return [
+            `**${r.department_name}**`,
+            SHIFT_LABEL[r.shift] ?? r.shift,
+            r.work_date,
+            `${total} (BCT: ${r.official_present}, TV: ${r.seasonal_present})`,
+            r.vegetarian > 0 ? `${r.vegetarian} chay` : "—",
+            r.ot_count > 0 ? `${r.ot_count}${r.ot_vegetarian > 0 ? ` (${r.ot_vegetarian} chay)` : ""}` : "—",
+            r.note || "—",
+        ]
+    })
+
+    const bodyLines = tableRows.map(cols =>
+        `- **${cols[0]}** | ${cols[1]} | ${cols[2]} | Tổng: ${cols[3]} | Chay: ${cols[4]} | OT: ${cols[5]} | ${cols[6]}`
+    ).join("\n\n")
+
+    const reporter = rows[0]?.note?.replace("Báo bởi: ", "") ?? "Link công khai"
+
+    const body = {
+        type: "message",
+        attachments: [{
+            contentType: "application/vnd.microsoft.card.adaptive",
+            content: {
+                $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+                type: "AdaptiveCard",
+                version: "1.4",
+                body: [
+                    {
+                        type: "TextBlock",
+                        text: "🍱 Báo Cơm Mới",
+                        weight: "Bolder",
+                        size: "Large",
+                        color: "Accent",
+                    },
+                    {
+                        type: "TextBlock",
+                        text: `Người báo: **${reporter}** — ${now}`,
+                        wrap: true,
+                        spacing: "Small",
+                        isSubtle: true,
+                    },
+                    {
+                        type: "TextBlock",
+                        text: bodyLines,
+                        wrap: true,
+                        spacing: "Medium",
+                    },
+                ],
+            },
+        }],
+    }
+
+    try {
+        await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        })
+    } catch {
+        // Không block response nếu Teams lỗi
+    }
+}
+
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const deptId   = searchParams.get("dept_id")
@@ -90,6 +172,10 @@ export async function POST(req: NextRequest) {
             })
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+        // Gửi thông báo Teams (không block response)
+        sendTeamsNotification(payloads).catch(() => {})
+
         return NextResponse.json({ success: true, count: payloads.length })
     } catch (err) {
         return NextResponse.json({ error: String(err) }, { status: 500 })
