@@ -43,37 +43,26 @@ async function sendTeamsNotification(rows: {
 
     const reporter = rows[0]?.note?.replace("Báo bởi: ", "") ?? "Link công khai"
 
+    const facts = rows.map(r => {
+        const total = r.official_present + r.seasonal_present
+        const parts = [
+            `${SHIFT_LABEL[r.shift] ?? r.shift} ngay ${r.work_date}`,
+            `Tong so suat: ${total} (Bien che: ${r.official_present}, Thoi vu: ${r.seasonal_present})`,
+            r.vegetarian > 0 ? `An chay: ${r.vegetarian} suat` : null,
+            r.ot_count > 0 ? `Tang ca: ${r.ot_count} suat${r.ot_vegetarian > 0 ? ` (chay: ${r.ot_vegetarian})` : ""}` : null,
+        ].filter(Boolean).join(" | ")
+        return { name: r.department_name, value: parts }
+    })
+
     const body = {
-        type: "message",
-        attachments: [{
-            contentType: "application/vnd.microsoft.card.adaptive",
-            content: {
-                $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
-                type: "AdaptiveCard",
-                version: "1.4",
-                body: [
-                    {
-                        type: "TextBlock",
-                        text: "🍱 Báo Cơm Mới",
-                        weight: "Bolder",
-                        size: "Large",
-                        color: "Accent",
-                    },
-                    {
-                        type: "TextBlock",
-                        text: `Người báo: **${reporter}** — ${now}`,
-                        wrap: true,
-                        spacing: "Small",
-                        isSubtle: true,
-                    },
-                    {
-                        type: "TextBlock",
-                        text: bodyLines,
-                        wrap: true,
-                        spacing: "Medium",
-                    },
-                ],
-            },
+        "@type": "MessageCard",
+        "@context": "http://schema.org/extensions",
+        themeColor: "0076D7",
+        summary: "Bao Com Moi",
+        sections: [{
+            activityTitle: "BAO COM MOI",
+            activitySubtitle: `Nguoi bao: ${reporter} - ${now}`,
+            facts,
         }],
     }
 
