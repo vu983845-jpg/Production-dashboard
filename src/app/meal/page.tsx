@@ -45,7 +45,8 @@ interface ConfirmRow {
 }
 
 interface OTRecord { ot_count: number; ot_vegetarian: number; official_present: number; seasonal_present: number; vegetarian: number }
-type PageMode = "report" | "edit-ot"
+interface SummaryRow { department_name: string; shift: string; official_present: number; seasonal_present: number; official_absent: number; seasonal_absent: number; ot_count: number; vegetarian: number; ot_vegetarian: number; note?: string }
+type PageMode = "report" | "edit-ot" | "summary"
 type OTStep  = "select" | "edit" | "confirm" | "done"
 
 // ── helpers ──
@@ -86,6 +87,23 @@ export default function PublicMealPage() {
     const [otLooking, setOtLooking]     = useState(false)
     const [otSubmitting, setOtSubmitting] = useState(false)
     const [otError, setOtError]         = useState("")
+
+    // Summary state
+    const [sumDate, setSumDate]       = useState(format(new Date(), "yyyy-MM-dd"))
+    const [sumRows, setSumRows]       = useState<SummaryRow[]>([])
+    const [sumLoading, setSumLoading] = useState(false)
+    const [sumError, setSumError]     = useState("")
+    const [sumLoaded, setSumLoaded]   = useState(false)
+
+    const loadSummary = async (date: string) => {
+        setSumLoading(true); setSumError(""); setSumLoaded(false)
+        const res  = await fetch(`/api/public-meal?summary_date=${date}`)
+        const data = await res.json()
+        setSumLoading(false)
+        if (data.error) { setSumError(data.error); return }
+        setSumRows(data.summary ?? [])
+        setSumLoaded(true)
+    }
 
     useEffect(() => {
         fetch("/api/public-meal")
@@ -328,8 +346,112 @@ export default function PublicMealPage() {
         </div>
     )
 
+    // ─────── SUMMARY MODE ───────
+    if ((pageMode as string) === "summary") {
+        const totalRow = sumRows.reduce((acc, r) => ({
+            present:  acc.present  + r.official_present + r.seasonal_present,
+            absent:   acc.absent   + r.official_absent  + r.seasonal_absent,
+            malan:    acc.malan    + (r.official_present + r.seasonal_present - r.vegetarian),
+            chay:     acc.chay     + r.vegetarian,
+            otMalan:  acc.otMalan  + r.ot_count,
+            otChay:   acc.otChay   + r.ot_vegetarian,
+        }), { present: 0, absent: 0, malan: 0, chay: 0, otMalan: 0, otChay: 0 })
+
+        return (
+            <PageShell header={{ icon: "📊", title: "Tổng hợp báo cơm", sub: sumLoaded ? format(new Date(sumDate + "T00:00:00"), "dd/MM/yyyy") : "Chọn ngày để xem" }}>
+                <div className="mode-tabs">
+                    <button className="mode-tab" onClick={() => setPageMode("report")}>🍽️ Báo cơm</button>
+                    <button className="mode-tab" onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
+                    <button className="mode-tab active">📊 Tổng hợp</button>
+                </div>
+
+                <div className="sum-date-row">
+                    <div className="field-sm" style={{ flex: 1 }}>
+                        <label>Chọn ngày xem</label>
+                        <input type="date" value={sumDate} onChange={e => setSumDate(e.target.value)} max={format(new Date(), "yyyy-MM-dd")} />
+                    </div>
+                    <button className="load-btn" onClick={() => loadSummary(sumDate)} disabled={sumLoading}>
+                        {sumLoading ? "⏳" : "🔍 Xem"}
+                    </button>
+                </div>
+
+                {sumError && <div className="err-box">⚠️ {sumError}</div>}
+
+                {sumLoaded && sumRows.length === 0 && (
+                    <div className="sum-empty">📭 Chưa có dữ liệu báo cơm cho ngày này.</div>
+                )}
+
+                {sumLoaded && sumRows.length > 0 && (
+                    <>
+                        {/* KPI cards */}
+                        <div className="kpi-row">
+                            <div className="kpi-card orange">
+                                <div className="kpi-val">{totalRow.present}</div>
+                                <div className="kpi-label">👥 Tổng HD</div>
+                            </div>
+                            <div className="kpi-card blue">
+                                <div className="kpi-val">{totalRow.malan + totalRow.chay}</div>
+                                <div className="kpi-label">🍽️ Mặn+Chay</div>
+                            </div>
+                            <div className="kpi-card green">
+                                <div className="kpi-val">{totalRow.otMalan + totalRow.otChay}</div>
+                                <div className="kpi-label">⏰ Tổng OT</div>
+                            </div>
+                        </div>
+
+                        {/* Table */}
+                        <div className="sum-table-wrap">
+                            <table className="sum-table">
+                                <thead>
+                                    <tr>
+                                        <th>Bộ phận</th>
+                                        <th>Ca</th>
+                                        <th>CT</th>
+                                        <th>TV</th>
+                                        <th>🍖</th>
+                                        <th>🥬</th>
+                                        <th>OT🍖</th>
+                                        <th>OT🥬</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sumRows.map((r, i) => {
+                                        const malan = Math.max(0, r.official_present + r.seasonal_present - r.vegetarian)
+                                        return (
+                                            <tr key={i}>
+                                                <td className="td-dept">{r.department_name}</td>
+                                                <td className="td-ca">{r.shift === "HC" ? "HC" : `Ca ${r.shift}`}</td>
+                                                <td>{r.official_present}</td>
+                                                <td>{r.seasonal_present}</td>
+                                                <td className="td-malan">{malan}</td>
+                                                <td className="td-chay">{r.vegetarian}</td>
+                                                <td className="td-ot">{r.ot_count}</td>
+                                                <td className="td-ot">{r.ot_vegetarian}</td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                                <tfoot>
+                                    <tr className="sum-total-row">
+                                        <td colSpan={2}>Tổng</td>
+                                        <td colSpan={2}>{totalRow.present}</td>
+                                        <td className="td-malan">{totalRow.malan}</td>
+                                        <td className="td-chay">{totalRow.chay}</td>
+                                        <td className="td-ot">{totalRow.otMalan}</td>
+                                        <td className="td-ot">{totalRow.otChay}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div className="sum-note">📞 Dữ liệu do các bộ phận tự báo. Sai sót liên hệ <strong>Ms Chi</strong>.</div>
+                    </>
+                )}
+            </PageShell>
+        )
+    }
+
     // ─────── OT EDIT MODE ───────
-    if (pageMode === "edit-ot") {
+    if ((pageMode as string) === "edit-ot") {
         if (otStep === "done") return (
             <PageShell>
                 <div className="success-page">
@@ -509,10 +631,10 @@ export default function PublicMealPage() {
                 </div>
             </div>
 
-            {/* Mode tabs */}
             <div className="mode-tabs">
                 <button className={`mode-tab ${pageMode === "report" ? "active" : ""}`} onClick={() => setPageMode("report")}>🍽️ Báo cơm</button>
                 <button className={`mode-tab ${ (pageMode as string) === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
+                <button className={`mode-tab ${ (pageMode as string) === "summary" ? "active" : ""}`} onClick={() => { setPageMode("summary" as PageMode); if (!sumLoaded) loadSummary(sumDate) }}>📊 Tổng hợp</button>
             </div>
             <div className="zalo-banner">💬 Mọi người nhớ báo <strong>dự trù cơm</strong> trên nhóm <strong>Zalo</strong> giúp em nha!</div>
 
@@ -780,6 +902,38 @@ function Style() {
             .logo-spin { width: 56px; height: 56px; object-fit: contain; animation: spin 1.2s linear infinite; }
             @keyframes spin { to { transform: rotate(360deg); } }
             .loading-text { font-size: 15px; font-weight: 600; color: #64748b; }
+
+            /* Summary */
+            .sum-date-row { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; }
+            .load-btn { padding: 12px 18px; background: linear-gradient(135deg, #c2410c, #f97316); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+            .load-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+            .sum-empty { text-align: center; padding: 32px 16px; color: #94a3b8; font-size: 15px; background: white; border-radius: 12px; border: 1.5px dashed #e2e8f0; }
+            .kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+            .kpi-card { background: white; border-radius: 12px; padding: 14px 10px; text-align: center; border: 1.5px solid #e2e8f0; }
+            .kpi-card.orange { border-color: #fed7aa; background: #fff7ed; }
+            .kpi-card.blue   { border-color: #bfdbfe; background: #eff6ff; }
+            .kpi-card.green  { border-color: #bbf7d0; background: #f0fdf4; }
+            .kpi-val { font-size: 30px; font-weight: 800; color: #1e293b; line-height: 1.1; }
+            .kpi-card.orange .kpi-val { color: #c2410c; }
+            .kpi-card.blue   .kpi-val { color: #1d4ed8; }
+            .kpi-card.green  .kpi-val { color: #15803d; }
+            .kpi-label { font-size: 12px; font-weight: 600; color: #64748b; margin-top: 4px; }
+            .sum-table-wrap { overflow-x: auto; border-radius: 12px; border: 1.5px solid #e2e8f0; margin-bottom: 14px; }
+            .sum-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            .sum-table thead tr { background: #f1f5f9; }
+            .sum-table th { padding: 10px 8px; font-weight: 700; color: #475569; text-align: center; border-bottom: 1.5px solid #e2e8f0; white-space: nowrap; }
+            .sum-table th:first-child { text-align: left; padding-left: 12px; }
+            .sum-table td { padding: 9px 8px; text-align: center; border-bottom: 1px solid #f1f5f9; color: #374151; }
+            .sum-table tbody tr:last-child td { border-bottom: none; }
+            .sum-table tbody tr:hover { background: #f8fafc; }
+            .td-dept { text-align: left !important; padding-left: 12px !important; font-weight: 600; color: #1e293b !important; font-size: 12px; max-width: 100px; }
+            .td-ca { font-weight: 700; color: #ea580c !important; }
+            .td-malan { color: #dc2626 !important; font-weight: 700; }
+            .td-chay  { color: #16a34a !important; font-weight: 700; }
+            .td-ot { color: #7c3aed !important; font-weight: 700; }
+            .sum-total-row td { background: #f1f5f9; font-weight: 800; font-size: 13px; padding: 10px 8px; color: #1e293b; }
+            .sum-total-row td:first-child { padding-left: 12px; }
+            .sum-note { font-size: 13px; color: #64748b; text-align: center; margin-top: 8px; }
         `}</style>
     )
 }

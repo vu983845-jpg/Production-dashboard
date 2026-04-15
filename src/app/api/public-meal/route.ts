@@ -13,6 +13,19 @@ export async function GET(req: NextRequest) {
     const shift    = searchParams.get("shift")
     const deptName = searchParams.get("dept_name")
 
+    // Fetch daily summary
+    const summaryDate = searchParams.get("summary_date")
+    if (summaryDate) {
+        const { data, error } = await supabaseAdmin
+            .from("meal_headcount")
+            .select("department_name, shift, official_present, seasonal_present, official_absent, seasonal_absent, ot_count, vegetarian, ot_vegetarian, note")
+            .eq("work_date", summaryDate)
+            .order("department_name")
+            .order("shift")
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ summary: data ?? [] })
+    }
+
     // Fetch existing record for OT-edit mode
     if (deptId && workDate && shift && deptName) {
         const { data, error } = await supabaseAdmin
