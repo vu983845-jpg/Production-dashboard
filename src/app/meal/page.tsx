@@ -310,7 +310,7 @@ export default function PublicMealPage() {
                             <span>🕐 Giờ ăn OT:</span>
                             <input
                                 type="time"
-                                value={data.otTime || OT_DEFAULT_TIME[shiftVal ?? shift] ?? ""}
+                                value={data.otTime || (OT_DEFAULT_TIME[shiftVal ?? shift] ?? "")}
                                 onChange={e => update("otTime", e.target.value)}
                                 className="time-input"
                             />
@@ -512,7 +512,7 @@ export default function PublicMealPage() {
             {/* Mode tabs */}
             <div className="mode-tabs">
                 <button className={`mode-tab ${pageMode === "report" ? "active" : ""}`} onClick={() => setPageMode("report")}>🍽️ Báo cơm</button>
-                <button className={`mode-tab ${pageMode === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
+                <button className={`mode-tab ${ (pageMode as string) === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
             </div>
             <div className="zalo-banner">💬 Mọi người nhớ báo <strong>dự trù cơm</strong> trên nhóm <strong>Zalo</strong> giúp em nha!</div>
 
