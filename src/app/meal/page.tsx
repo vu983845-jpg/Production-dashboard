@@ -363,7 +363,9 @@ export default function PublicMealPage() {
 
     if (loading) return (
         <div className="loading-screen">
-            <img src="/assets/intersnack-icon.png" alt="logo" className="logo-spin" />
+            <div className="bg-white rounded-2xl shadow-md w-16 h-16 overflow-hidden flex items-center justify-center border border-slate-100 logo-spin mb-4">
+                <IntersnackLogo className="w-12 h-12" />
+            </div>
             <div className="loading-text">Đang tải...</div>
         </div>
     )
