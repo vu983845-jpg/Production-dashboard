@@ -1027,8 +1027,16 @@ export default function BaoCom() {
 
     // Build pivot: group by department_name ("Section" in Excel)
     const buildMonthlyPivot = (rows: MealStatRow[]) => {
-        // 1. All unique days sorted
-        const days = [...new Set(rows.map(r => r.work_date))].sort()
+        // 1. All days in billing cycle (including Sundays with no data)
+        const { from, to } = getBillingCycle(statsMonth)
+        const allDays: string[] = []
+        const cur = new Date(from + "T00:00:00")
+        const end = new Date(to + "T00:00:00")
+        while (cur <= end) {
+            allDays.push(cur.toISOString().slice(0, 10))
+            cur.setDate(cur.getDate() + 1)
+        }
+        const days = allDays
 
         // Helper: normalize HPEEL non-canonical section names → canonical SECTION_ORDER name
         const normalizeHpeelSectionName = (name: string, shift: string): string => {
@@ -2330,11 +2338,15 @@ export default function BaoCom() {
                                                 <th className="px-2 py-2 font-bold text-center sticky left-[160px] bg-slate-100 z-10 w-10 border-r border-slate-300">
                                                     Ca
                                                 </th>
-                                                {days.map(d => (
-                                                    <th key={d} className="px-1.5 py-2 font-bold text-center w-8">
-                                                        {parseInt(d.slice(8), 10)}
-                                                    </th>
-                                                ))}
+                                                {days.map(d => {
+                                                    const isSunday = new Date(d + "T00:00:00").getDay() === 0
+                                                    return (
+                                                        <th key={d} className={`px-1.5 py-2 font-bold text-center w-8 ${isSunday ? "bg-orange-100 text-orange-600" : ""}`}>
+                                                            {parseInt(d.slice(8), 10)}
+                                                            {isSunday && <div className="text-[9px] font-normal leading-none">CN</div>}
+                                                        </th>
+                                                    )
+                                                })}
                                                 <th className="px-2 py-2 font-bold text-center bg-slate-200 border-l border-slate-300">Total</th>
                                             </tr>
                                         </thead>
@@ -2462,6 +2474,7 @@ export default function BaoCom() {
                                                                     <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${shiftColor}`}>{shiftLabel}</span>
                                                                 </td>
                                                                 {days.map(d => {
+                                                                    const isSunday = new Date(d + "T00:00:00").getDay() === 0
                                                                     const v = isRowEditing ? (parseInt(rowEditDrafts[d]) || 0) : (sr.days.get(d) ?? 0)
                                                                     const origV = sr.days.get(d) ?? 0
                                                                     const changed = isRowEditing && parseInt(rowEditDrafts[d] ?? '') !== origV
@@ -2469,6 +2482,7 @@ export default function BaoCom() {
                                                                         <td key={d}
                                                                             className={`px-0 py-0 text-center text-xs ${
                                                                                 isRowEditing ? (changed ? 'bg-yellow-100' : 'bg-yellow-50') :
+                                                                                isSunday ? 'bg-orange-50 text-orange-400' :
                                                                                 origV > 0 ? (isTV ? 'text-blue-600 font-semibold' : 'font-semibold text-slate-800') : 'text-slate-200'
                                                                             }`}
                                                                         >
@@ -2606,43 +2620,43 @@ export default function BaoCom() {
                                             <tr className="bg-slate-700 text-white font-bold border-t-2 border-slate-500">
                                                 <td className="px-3 py-2 sticky left-0 bg-slate-700 z-10 border-r border-slate-500">TỔNG</td>
                                                 <td className="px-2 py-2 sticky left-[160px] bg-slate-700 z-10 border-r border-slate-500"></td>
-                                                {dayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-2 text-center">{v > 0 ? v : ''}</td>)}
+                                                {dayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-2 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                 <td className="px-2 py-2 text-center border-l border-slate-500">{grandTotal}</td>
                                             </tr>
                                             <tr className="bg-blue-600 text-white text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-blue-600 z-10 font-semibold border-r border-blue-400">Ca 1:</td>
                                                 <td className="px-2 py-1.5 sticky left-[160px] bg-blue-600 z-10 border-r border-blue-400"></td>
-                                                {ca1Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                {ca1Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-blue-400">{ca1Totals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-blue-500 text-white text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-blue-500 z-10 font-semibold border-r border-blue-300">Ca 2:</td>
                                                 <td className="px-2 py-1.5 sticky left-[160px] bg-blue-500 z-10 border-r border-blue-300"></td>
-                                                {ca2Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                {ca2Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-blue-300">{ca2Totals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-blue-400 text-white text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-blue-400 z-10 font-semibold border-r border-blue-200">Ca 3:</td>
                                                 <td className="px-2 py-1.5 sticky left-[160px] bg-blue-400 z-10 border-r border-blue-200"></td>
-                                                {ca3Totals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                {ca3Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-blue-200">{ca3Totals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-orange-500 text-white text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">OT</td>
                                                 <td className="px-2 py-1.5 sticky left-[160px] bg-orange-500 z-10 border-r border-orange-300"></td>
-                                                {otDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                {otDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-orange-300">{otDayTotals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-purple-100 text-purple-800 text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-purple-100 z-10 font-semibold border-r border-purple-200">Thời vụ</td>
                                                 <td className="px-2 py-1.5 sticky left-[160px] bg-purple-100 z-10 border-r border-purple-200"></td>
-                                                {tvDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                {tvDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-purple-800/30" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-purple-200">{tvDayTotals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                             <tr className="bg-green-100 text-green-800 text-[11px]">
                                                 <td className="px-3 py-1.5 sticky left-0 bg-green-100 z-10 font-semibold border-r border-green-200">Chính thức</td>
                                                 <td className="px-2 py-1.5 sticky left-[160px] bg-green-100 z-10 border-r border-green-200"></td>
-                                                {ctDayTotals.map((v, i) => <td key={days[i]} className="px-1.5 py-1.5 text-center">{v > 0 ? v : ''}</td>)}
+                                                {ctDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-green-800/30" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                 <td className="px-2 py-1.5 text-center font-bold border-l border-green-200">{ctDayTotals.reduce((a,b)=>a+b,0)}</td>
                                             </tr>
                                         </tfoot>
