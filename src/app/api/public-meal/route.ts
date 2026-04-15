@@ -6,7 +6,28 @@ const supabaseAdmin = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const { searchParams } = new URL(req.url)
+    const deptId   = searchParams.get("dept_id")
+    const workDate = searchParams.get("work_date")
+    const shift    = searchParams.get("shift")
+    const deptName = searchParams.get("dept_name")
+
+    // Fetch existing record for OT-edit mode
+    if (deptId && workDate && shift && deptName) {
+        const { data, error } = await supabaseAdmin
+            .from("meal_headcount")
+            .select("ot_count, ot_vegetarian, official_present, seasonal_present, vegetarian")
+            .eq("department_id", deptId)
+            .eq("work_date", workDate)
+            .eq("shift", shift)
+            .eq("department_name", deptName)
+            .maybeSingle()
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json({ record: data })
+    }
+
+    // Default: return dept list
     const { data: depts, error } = await supabaseAdmin
         .from("departments")
         .select("id, code, name_en")
