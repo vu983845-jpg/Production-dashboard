@@ -6,7 +6,7 @@ import { IntersnackLogo } from "@/components/intersnack-logo"
 
 interface Dept { id: string; code: string; name_en: string }
 
-const MULTI_SHIFT_CODES = new Set(["QC", "BOILER"])
+const MULTI_SHIFT_CODES = new Set(["QC", "BOILER", "CLEAN"])
 
 const HPEEL_SUBGROUPS = [
     { key: "HPEEL_LIEN", label: "Tổ Liên", dept_name: "Manual Peeling (Liên)" },
@@ -132,6 +132,7 @@ export default function PublicMealPage() {
     const isOtHpeel = otSelectedDept?.code === "HPEEL" || otSelectedDept?.code === "HAND"
     const isOtOffice = otSelectedDept?.code === "OFFICE"
     const otShifts = (isOtOffice || isOtHpeel) ? SHIFTS_WITH_HC : SHIFTS_NORMAL
+    const activeMultiShifts = selectedDept?.code === "CLEAN" ? ["1", "2"] : MULTI_SHIFTS
 
     const getEffectiveDeptName = (id = deptId, sub = hpeelSub) => {
         const dept = depts.find(d => d.id === id)
@@ -159,7 +160,7 @@ export default function PublicMealPage() {
         if (!deptId) { setError("Vui lòng chọn bộ phận"); return }
         if (isHpeel && !hpeelSub) { setError("Vui lòng chọn tổ trưởng"); return }
         if (!isMultiShift && !shift) { setError("Vui lòng chọn ca làm việc"); return }
-        const rows = isMultiShift ? MULTI_SHIFTS.map(s => buildRow(multiData[s], s)) : [buildRow(singleData, shift)]
+        const rows = isMultiShift ? activeMultiShifts.map(s => buildRow(multiData[s], s)) : [buildRow(singleData, shift)]
         setConfirmRows(rows); setShowConfirm(true)
     }
 
@@ -726,8 +727,8 @@ export default function PublicMealPage() {
                             <label>Ngày <span className="req">*</span></label>
                             <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} max={format(new Date(), "yyyy-MM-dd")} required />
                         </div>
-                        <div className="info-banner">📌 Điền thông tin cho cả 3 ca bên dưới</div>
-                        {MULTI_SHIFTS.map(s => (
+                        <div className="info-banner">📌 Điền thông tin cho cả {activeMultiShifts.length} ca bên dưới</div>
+                        {activeMultiShifts.map(s => (
                             <ShiftFields key={s} shiftLabel={`Ca ${s}`} shiftVal={s} data={multiData[s]} update={(f, v) => updateMulti(s, f, v)} />
                         ))}
                     </>
