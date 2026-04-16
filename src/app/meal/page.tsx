@@ -73,6 +73,223 @@ const getLockStatus = (shiftVal: string | undefined, workDateStr: string) => {
     return false;
 }
 
+    // ── Sub-components ──
+    const HpeelPicker = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+        <div className="radio-group">
+            {HPEEL_SUBGROUPS.map(sg => (
+                <label key={sg.key} className={`radio-btn ${value === sg.key ? "active" : ""}`}>
+                    <input type="radio" name="hpeel_sub" value={sg.key} checked={value === sg.key} onChange={() => onChange(sg.key)} />
+                    {sg.label}
+                </label>
+            ))}
+        </div>
+    )
+
+    const ShiftPills = ({ value, onChange, arr }: { value: string; onChange: (v: string) => void; arr: typeof SHIFTS_NORMAL }) => (
+        <div className="shift-pills">
+            {arr.map(s => (
+                <button key={s.value} type="button" className={`shift-pill ${value === s.value ? "active" : ""}`} onClick={() => onChange(s.value)}>
+                    {s.label}
+                </button>
+            ))}
+        </div>
+    )
+
+    // Main meal fields component
+    const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr, hideSeasonal, hideAbsent }: {
+        data: ShiftData; update: (f: keyof ShiftData, v: any) => void
+        shiftLabel?: string; shiftVal?: string; workDateStr: string
+        hideSeasonal?: boolean; hideAbsent?: boolean
+    }) => {
+        const isLocked = getLockStatus(shiftVal, workDateStr)
+
+        const total = totalPresent(data)
+        const chay = n(data.vegCount)
+        const malan = Math.max(0, total - chay)
+        const hasTotal = total > 0
+        const otTotalN = n(data.otTotal)
+        const otChayN = n(data.otVeg)
+        const otMalanN = calcMalan(data.otTotal, data.otVeg)
+        const hasOT = otTotalN > 0
+
+        return (
+            <div className={`shift-block ${isLocked ? "locked" : ""}`}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    {shiftLabel && <div className="shift-block-label">📅 {shiftLabel}</div>}
+                    {isLocked && <div className="locked-badge">🔒 Đã khóa (chỉ được báo OT)</div>}
+                </div>
+
+                {/* Present */}
+                <div className="subsection-label">👥 Hiện diện {isLocked && <span className="opt-tag">Bị khóa</span>}</div>
+                <div className="row2">
+                    <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
+                        <label>Chính thức</label>
+                        <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.officialPresent} onChange={e => update("officialPresent", e.target.value)} />
+                    </div>
+                    {!hideSeasonal && (
+                        <div className="field-sm">
+                            <label>Thời vụ</label>
+                            <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.seasonalPresent} onChange={e => update("seasonalPresent", e.target.value)} />
+                        </div>
+                    )}
+                </div>
+
+                {/* Vegetarian breakdown — shows after entering total */}
+                {hasTotal && (
+
+                    <div className="breakdown-box">
+                        <div className="breakdown-total">Tổng: <strong>{total} phần</strong></div>
+                        <div className="breakdown-row">
+                            <div className="breakdown-item man">
+                                <span>🍖 Mặn</span>
+                                <strong>{malan}</strong>
+                            </div>
+                            <div className="breakdown-sep">+</div>
+                            <div className="breakdown-item chay">
+                                <span>🥬 Chay {isLocked && "🔒"}</span>
+                                <input
+                                    type="number" min="0" max={total} placeholder="0"
+                                    disabled={isLocked}
+                                    value={data.vegCount}
+                                    onChange={e => update("vegCount", e.target.value)}
+                                    className="chay-input"
+                                />
+                            </div>
+                            <div className="breakdown-sep">= {total}</div>
+                        </div>
+                        {chay > total && <div className="breakdown-warn">⚠️ Số chay không thể lớn hơn tổng!</div>}
+                    </div>
+                )}
+
+                {/* Absent */}
+                {!hideAbsent && (
+                    <>
+                        <div className="subsection-label" style={{ marginTop: 8 }}>❌ Vắng mặt {isLocked ? <span className="opt-tag">Bị khóa</span> : <span className="opt-tag">nếu có</span>}</div>
+                        <div className="row2">
+                            <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
+                                <label>Chính thức</label>
+                                <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.officialAbsent} onChange={e => update("officialAbsent", e.target.value)} />
+                            </div>
+                            {!hideSeasonal && (
+                                <div className="field-sm">
+                                    <label>Thời vụ</label>
+                                    <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.seasonalAbsent} onChange={e => update("seasonalAbsent", e.target.value)} />
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                {/* OT */}
+                {!data.showOT ? (
+                    <button type="button" className="ghost-btn" style={{ marginTop: 8, padding: "8px", width: "100%", border: "1.5px dashed #f97316", background: "#fff7ed", color: "#c2410c" }} onClick={() => update("showOT", true)}>
+                        + Thêm báo cơm Tăng ca (OT)
+                    </button>
+                ) : (
+                    <>
+                        <div className="subsection-label" style={{ marginTop: 8 }}>⏰ Tăng ca (OT) <span className="opt-tag">nếu có</span></div>
+                        <div className="row2">
+                            <div className="field-sm">
+                                <label>Tổng phần OT</label>
+                                <input type="number" min="0" max="999" placeholder="0" value={data.otTotal} onChange={e => update("otTotal", e.target.value)} />
+                            </div>
+                            <div className="field-sm">
+                                <label>Trong đó chay</label>
+                                <input type="number" min="0" max={otTotalN || 999} placeholder="0" value={data.otVeg} onChange={e => update("otVeg", e.target.value)} />
+                            </div>
+                        </div>
+                        {hasOT && (
+                            <div className="ot-breakdown">
+                                <span>Mặn OT: <strong>{otMalanN}</strong></span>
+                                <span className="dot">·</span>
+                                <span>Chay OT: <strong>{otChayN}</strong></span>
+                                <div className="ot-time-row">
+                                    <span>🕐 Giờ ăn OT:</span>
+                                    <input
+                                        type="time"
+                                        value={data.otTime || (OT_DEFAULT_TIME[shiftVal ?? ""] ?? "")}
+                                        onChange={e => update("otTime", e.target.value)}
+                                        className="time-input"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        <button type="button" className="ghost-btn" style={{ marginTop: 6, padding: "8px", fontSize: 13, color: "#ef4444", border: "1px solid #fee2e2", background: "#fef2f2" }} onClick={() => { update("showOT", false); update("otTotal", ""); update("otVeg", ""); }}>
+                            ❌ Hủy phần OT ca này
+                        </button>
+                    </>
+                )}
+            </div>
+        )
+    }
+
+    const FullScreenLoader = ({ text }: { text: string }) => (
+        <div className="full-screen-loader">
+            <div className="loader-card">
+                <div className="loader-logo-spin">
+                    <IntersnackLogo className="w-12 h-12" />
+                </div>
+                <div className="loader-text">{text}</div>
+                <div className="loader-dots">
+                    <div className="ldot" />
+                    <div className="ldot" style={{ animationDelay: '0.2s' }} />
+                    <div className="ldot" style={{ animationDelay: '0.4s' }} />
+                </div>
+            </div>
+        </div>
+    )
+
+
+    const CountdownWidget = ({ now }: { now: Date | null }) => {
+        if (!now) return null;
+
+        const vnDateString = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+        const vnNow = new Date(vnDateString)
+        const currentMins = vnNow.getHours() * 60 + vnNow.getMinutes();
+
+        let targetMins = 0;
+        let targetLabel = "";
+
+        if (currentMins < 10 * 60) {
+            targetMins = 10 * 60;
+            targetLabel = "Ca 1";
+        } else if (currentMins < 15 * 60 + 30) {
+            targetMins = 15 * 60 + 30;
+            targetLabel = "Ca 2";
+        } else {
+            return (
+                <div className="countdown-widget done">
+                    <div className="cw-icon">✅</div>
+                    <div>
+                        <div className="cw-title">Đã qua giờ khóa Ca 1 & Ca 2</div>
+                        <div className="cw-sub">Ca 3 và OT vẫn cập nhật bình thường.</div>
+                    </div>
+                </div>
+            )
+        }
+
+        const diffMinsTotal = targetMins - currentMins - 1;
+        const diffSecs = 59 - vnNow.getSeconds();
+        const h = Math.floor(diffMinsTotal / 60);
+        const m = diffMinsTotal % 60;
+        const s = diffSecs;
+
+        const isUrgent = diffMinsTotal < 30;
+
+        return (
+            <div className={`countdown-widget ${isUrgent ? "urgent" : "active"}`}>
+                <div className="cw-icon">{isUrgent ? "⏳" : "⏱️"}</div>
+                <div className="cw-content">
+                    <div className="cw-title">Sắp khóa báo cơm <strong>{targetLabel}</strong></div>
+                    <div className="cw-timer">
+                        Còn <span>{String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}</span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+
 export default function PublicMealPage() {
     const [depts, setDepts] = useState<Dept[]>([])
     const [loading, setLoading] = useState(true)
@@ -341,171 +558,6 @@ export default function PublicMealPage() {
         setMultiData(prev => ({ ...prev, [shiftKey]: { ...prev[shiftKey], [field]: val } }))
     const updateSingle = (field: keyof ShiftData, val: any) =>
         setSingleData(prev => ({ ...prev, [field]: val }))
-
-    // ── Sub-components ──
-    const HpeelPicker = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-        <div className="radio-group">
-            {HPEEL_SUBGROUPS.map(sg => (
-                <label key={sg.key} className={`radio-btn ${value === sg.key ? "active" : ""}`}>
-                    <input type="radio" name="hpeel_sub" value={sg.key} checked={value === sg.key} onChange={() => onChange(sg.key)} />
-                    {sg.label}
-                </label>
-            ))}
-        </div>
-    )
-
-    const ShiftPills = ({ value, onChange, arr }: { value: string; onChange: (v: string) => void; arr: typeof SHIFTS_NORMAL }) => (
-        <div className="shift-pills">
-            {arr.map(s => (
-                <button key={s.value} type="button" className={`shift-pill ${value === s.value ? "active" : ""}`} onClick={() => onChange(s.value)}>
-                    {s.label}
-                </button>
-            ))}
-        </div>
-    )
-
-    // Main meal fields component
-    const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr }: {
-        data: ShiftData; update: (f: keyof ShiftData, v: any) => void
-        shiftLabel?: string; shiftVal?: string; workDateStr: string
-    }) => {
-        const isLocked = getLockStatus(shiftVal, workDateStr)
-
-        const total = totalPresent(data)
-        const chay = n(data.vegCount)
-        const malan = Math.max(0, total - chay)
-        const hasTotal = total > 0
-        const otTotalN = n(data.otTotal)
-        const otChayN = n(data.otVeg)
-        const otMalanN = calcMalan(data.otTotal, data.otVeg)
-        const hasOT = otTotalN > 0
-
-        return (
-            <div className={`shift-block ${isLocked ? "locked" : ""}`}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    {shiftLabel && <div className="shift-block-label">📅 {shiftLabel}</div>}
-                    {isLocked && <div className="locked-badge">🔒 Đã khóa (chỉ được báo OT)</div>}
-                </div>
-
-                {/* Present */}
-                <div className="subsection-label">👥 Hiện diện {isLocked && <span className="opt-tag">Bị khóa</span>}</div>
-                <div className="row2">
-                    <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
-                        <label>Chính thức</label>
-                        <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.officialPresent} onChange={e => update("officialPresent", e.target.value)} />
-                    </div>
-                    {!hideSeasonal && (
-                        <div className="field-sm">
-                            <label>Thời vụ</label>
-                            <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.seasonalPresent} onChange={e => update("seasonalPresent", e.target.value)} />
-                        </div>
-                    )}
-                </div>
-
-                {/* Vegetarian breakdown — shows after entering total */}
-                {hasTotal && (
-
-                    <div className="breakdown-box">
-                        <div className="breakdown-total">Tổng: <strong>{total} phần</strong></div>
-                        <div className="breakdown-row">
-                            <div className="breakdown-item man">
-                                <span>🍖 Mặn</span>
-                                <strong>{malan}</strong>
-                            </div>
-                            <div className="breakdown-sep">+</div>
-                            <div className="breakdown-item chay">
-                                <span>🥬 Chay {isLocked && "🔒"}</span>
-                                <input
-                                    type="number" min="0" max={total} placeholder="0"
-                                    disabled={isLocked}
-                                    value={data.vegCount}
-                                    onChange={e => update("vegCount", e.target.value)}
-                                    className="chay-input"
-                                />
-                            </div>
-                            <div className="breakdown-sep">= {total}</div>
-                        </div>
-                        {chay > total && <div className="breakdown-warn">⚠️ Số chay không thể lớn hơn tổng!</div>}
-                    </div>
-                )}
-
-                {/* Absent */}
-                {!hideAbsent && (
-                    <>
-                        <div className="subsection-label" style={{ marginTop: 8 }}>❌ Vắng mặt {isLocked ? <span className="opt-tag">Bị khóa</span> : <span className="opt-tag">nếu có</span>}</div>
-                        <div className="row2">
-                            <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
-                                <label>Chính thức</label>
-                                <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.officialAbsent} onChange={e => update("officialAbsent", e.target.value)} />
-                            </div>
-                            {!hideSeasonal && (
-                                <div className="field-sm">
-                                    <label>Thời vụ</label>
-                                    <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.seasonalAbsent} onChange={e => update("seasonalAbsent", e.target.value)} />
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
-
-                {/* OT */}
-                {!data.showOT ? (
-                    <button type="button" className="ghost-btn" style={{ marginTop: 8, padding: "8px", width: "100%", border: "1.5px dashed #f97316", background: "#fff7ed", color: "#c2410c" }} onClick={() => update("showOT", true)}>
-                        + Thêm báo cơm Tăng ca (OT)
-                    </button>
-                ) : (
-                    <>
-                        <div className="subsection-label" style={{ marginTop: 8 }}>⏰ Tăng ca (OT) <span className="opt-tag">nếu có</span></div>
-                        <div className="row2">
-                            <div className="field-sm">
-                                <label>Tổng phần OT</label>
-                                <input type="number" min="0" max="999" placeholder="0" value={data.otTotal} onChange={e => update("otTotal", e.target.value)} />
-                            </div>
-                            <div className="field-sm">
-                                <label>Trong đó chay</label>
-                                <input type="number" min="0" max={otTotalN || 999} placeholder="0" value={data.otVeg} onChange={e => update("otVeg", e.target.value)} />
-                            </div>
-                        </div>
-                        {hasOT && (
-                            <div className="ot-breakdown">
-                                <span>Mặn OT: <strong>{otMalanN}</strong></span>
-                                <span className="dot">·</span>
-                                <span>Chay OT: <strong>{otChayN}</strong></span>
-                                <div className="ot-time-row">
-                                    <span>🕐 Giờ ăn OT:</span>
-                                    <input
-                                        type="time"
-                                        value={data.otTime || (OT_DEFAULT_TIME[shiftVal ?? shift] ?? "")}
-                                        onChange={e => update("otTime", e.target.value)}
-                                        className="time-input"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                        <button type="button" className="ghost-btn" style={{ marginTop: 6, padding: "8px", fontSize: 13, color: "#ef4444", border: "1px solid #fee2e2", background: "#fef2f2" }} onClick={() => { update("showOT", false); update("otTotal", ""); update("otVeg", ""); }}>
-                            ❌ Hủy phần OT ca này
-                        </button>
-                    </>
-                )}
-            </div>
-        )
-    }
-
-    const FullScreenLoader = ({ text }: { text: string }) => (
-        <div className="full-screen-loader">
-            <div className="loader-card">
-                <div className="loader-logo-spin">
-                    <IntersnackLogo className="w-12 h-12" />
-                </div>
-                <div className="loader-text">{text}</div>
-                <div className="loader-dots">
-                    <div className="ldot" />
-                    <div className="ldot" style={{ animationDelay: '0.2s' }} />
-                    <div className="ldot" style={{ animationDelay: '0.4s' }} />
-                </div>
-            </div>
-        </div>
-    )
 
     if (loading) return <FullScreenLoader text="Đang tải dữ liệu..." />
 
@@ -822,55 +874,6 @@ export default function PublicMealPage() {
         </PageShell>
     )
 
-    const CountdownWidget = () => {
-        if (!now) return null;
-
-        const vnDateString = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
-        const vnNow = new Date(vnDateString)
-        const currentMins = vnNow.getHours() * 60 + vnNow.getMinutes();
-
-        let targetMins = 0;
-        let targetLabel = "";
-
-        if (currentMins < 10 * 60) {
-            targetMins = 10 * 60;
-            targetLabel = "Ca 1";
-        } else if (currentMins < 15 * 60 + 30) {
-            targetMins = 15 * 60 + 30;
-            targetLabel = "Ca 2";
-        } else {
-            return (
-                <div className="countdown-widget done">
-                    <div className="cw-icon">✅</div>
-                    <div>
-                        <div className="cw-title">Đã qua giờ khóa Ca 1 & Ca 2</div>
-                        <div className="cw-sub">Ca 3 và OT vẫn cập nhật bình thường.</div>
-                    </div>
-                </div>
-            )
-        }
-
-        const diffMinsTotal = targetMins - currentMins - 1;
-        const diffSecs = 59 - vnNow.getSeconds();
-        const h = Math.floor(diffMinsTotal / 60);
-        const m = diffMinsTotal % 60;
-        const s = diffSecs;
-
-        const isUrgent = diffMinsTotal < 30;
-
-        return (
-            <div className={`countdown-widget ${isUrgent ? "urgent" : "active"}`}>
-                <div className="cw-icon">{isUrgent ? "⏳" : "⏱️"}</div>
-                <div className="cw-content">
-                    <div className="cw-title">Sắp khóa báo cơm <strong>{targetLabel}</strong></div>
-                    <div className="cw-timer">
-                        Còn <span>{String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}</span>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
     return (
         <PageShell>
             {(submitting || sumLoading || existingLoading || otLooking || otSubmitting) && (
@@ -901,7 +904,7 @@ export default function PublicMealPage() {
 
             {pageMode === "report" && (
                 <>
-                    <CountdownWidget />
+                    <CountdownWidget now={now} />
                     <div className="info-banner" style={{ marginTop: 8, background: "#f0fdfa", color: "#0f766e", border: "1px solid #ccfbf1", borderRadius: 8, padding: 12 }}>
                         <strong>📌 Quy định báo cơm:</strong>
                         <ul style={{ marginLeft: 20, marginTop: 4, listStyleType: "disc", lineHeight: "1.5" }}>
@@ -1008,11 +1011,11 @@ export default function PublicMealPage() {
                             <>
                                 <div className="info-banner" style={{ marginBottom: 16 }}>📌 Điền thông tin cho cả {activeMultiShifts.length} ca bên dưới</div>
                                 {activeMultiShifts.map(s => (
-                                    <ShiftFields key={s} shiftLabel={`Ca ${s}`} shiftVal={s} data={multiData[s]} update={(f, v) => updateMulti(s, f, v)} workDateStr={workDate} />
+                                    <ShiftFields key={s} shiftLabel={`Ca ${s}`} shiftVal={s} data={multiData[s]} update={(f, v) => updateMulti(s, f, v)} workDateStr={workDate} hideSeasonal={hideSeasonal} hideAbsent={hideAbsent} />
                                 ))}
                             </>
                         ) : (
-                            <ShiftFields data={singleData} update={updateSingle} shiftVal={shift} workDateStr={workDate} />
+                            <ShiftFields data={singleData} update={updateSingle} shiftVal={shift} workDateStr={workDate} hideSeasonal={hideSeasonal} hideAbsent={hideAbsent} />
                         )}
 
                         <hr className="divider" />
