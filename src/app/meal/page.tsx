@@ -310,11 +310,11 @@ export default function PublicMealPage() {
                 <div className="subsection-label" style={{ marginTop: 12 }}>❌ Vắng mặt <span className="opt-tag">nếu có</span></div>
                 <div className="row2">
                     <div className="field-sm">
-                        <label>CT vắng</label>
+                        <label>Chính thức</label>
                         <input type="number" min="0" max="999" placeholder="0" value={data.officialAbsent} onChange={e => update("officialAbsent", e.target.value)} />
                     </div>
                     <div className="field-sm">
-                        <label>TV vắng</label>
+                        <label>Thời vụ</label>
                         <input type="number" min="0" max="999" placeholder="0" value={data.seasonalAbsent} onChange={e => update("seasonalAbsent", e.target.value)} />
                     </div>
                 </div>
@@ -611,10 +611,10 @@ export default function PublicMealPage() {
                 <div key={i} className="confirm-shift-card">
                     <div className="confirm-shift-title">Ca {r.shift}</div>
                     <div className="confirm-grid">
-                        <div className="cg-item"><span>CT Hiện diện</span><b>{r.official_present}</b></div>
-                        <div className="cg-item"><span>TV Hiện diện</span><b>{r.seasonal_present}</b></div>
-                        <div className="cg-item"><span>CT Vắng</span><b>{r.official_absent}</b></div>
-                        <div className="cg-item"><span>TV Vắng</span><b>{r.seasonal_absent}</b></div>
+                        <div className="cg-item"><span>Chính thức hiện diện</span><b>{r.official_present}</b></div>
+                        <div className="cg-item"><span>Thời vụ hiện diện</span><b>{r.seasonal_present}</b></div>
+                        <div className="cg-item"><span>Chính thức vắng</span><b>{r.official_absent}</b></div>
+                        <div className="cg-item"><span>Thời vụ vắng</span><b>{r.seasonal_absent}</b></div>
                         <div className="cg-item"><span>🍖 Mặn ca</span><b>{r.official_present + r.seasonal_present - r.vegetarian}</b></div>
                         <div className="cg-item"><span>🥬 Chay ca</span><b>{r.vegetarian}</b></div>
                         <div className="cg-item"><span>⏰ OT mặn</span><b>{r.ot_count}</b></div>
