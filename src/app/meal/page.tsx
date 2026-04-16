@@ -77,6 +77,11 @@ export default function PublicMealPage() {
     const [error, setError] = useState("")
     const [submitting, setSubmitting] = useState(false)
 
+    // Existing record state for pre-fill / update detection
+    const [existingRecord, setExistingRecord] = useState<Record<string, any> | null>(null)
+    const [existingLoading, setExistingLoading] = useState(false)
+    const [isUpdate, setIsUpdate] = useState(false)
+
     // OT edit state
     const [otStep, setOtStep] = useState<OTStep>("select")
     const [otDeptId, setOtDeptId] = useState("")
@@ -182,6 +187,39 @@ export default function PublicMealPage() {
         }
     }
 
+    // Auto-fetch existing record when dept + shift + date are selected
+    const fetchExistingRecord = async (depId: string, sh: string, dt: string, sub: string) => {
+        if (!depId || !sh || !dt) return
+        setExistingLoading(true)
+        try {
+            const dName = getEffectiveDeptName(depId, sub)
+            const url = `/api/public-meal?dept_id=${depId}&work_date=${dt}&shift=${sh}&dept_name=${encodeURIComponent(dName)}`
+            const res = await fetch(url)
+            const data = await res.json()
+            if (data.record) {
+                setExistingRecord(data.record)
+                setIsUpdate(true)
+                // Pre-fill form with existing data
+                const rec = data.record
+                setSingleData({
+                    officialPresent: String(rec.official_present ?? 0),
+                    seasonalPresent: String(rec.seasonal_present ?? 0),
+                    officialAbsent: String(rec.official_absent ?? 0),
+                    seasonalAbsent: String(rec.seasonal_absent ?? 0),
+                    vegCount: String(rec.vegetarian ?? 0),
+                    otTotal: String((rec.ot_count ?? 0) + (rec.ot_vegetarian ?? 0)),
+                    otVeg: String(rec.ot_vegetarian ?? 0),
+                    otTime: OT_DEFAULT_TIME[sh] ?? "",
+                    showOT: ((rec.ot_count ?? 0) + (rec.ot_vegetarian ?? 0)) > 0,
+                })
+            } else {
+                setExistingRecord(null)
+                setIsUpdate(false)
+            }
+        } catch { /* ignore */ }
+        setExistingLoading(false)
+    }
+
     const handlePreview = (e: React.FormEvent) => {
         e.preventDefault(); setError("")
         if (!deptId) { setError("Vui lòng chọn bộ phận"); return }
@@ -193,7 +231,18 @@ export default function PublicMealPage() {
 
     const handleSubmit = async () => {
         setSubmitting(true); setError("")
-        const res = await fetch("/api/public-meal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(confirmRows) })
+        // Attach old_data to each row if updating
+        const payload = confirmRows.map(r => ({
+            ...r,
+            old_data: isUpdate && existingRecord ? {
+                official_present: existingRecord.official_present ?? 0,
+                seasonal_present: existingRecord.seasonal_present ?? 0,
+                vegetarian: existingRecord.vegetarian ?? 0,
+                ot_count: existingRecord.ot_count ?? 0,
+                ot_vegetarian: existingRecord.ot_vegetarian ?? 0,
+            } : null,
+        }))
+        const res = await fetch("/api/public-meal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         const data = await res.json()
         setSubmitting(false)
         if (data.success) { setSuccess(true); setShowConfirm(false) }
@@ -204,7 +253,7 @@ export default function PublicMealPage() {
         setSuccess(false); setShowConfirm(false); setError("")
         setDeptId(""); setHpeelSub(""); setShift("")
         setSingleData(blank()); setMultiData({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
-        setConfirmRows([])
+        setConfirmRows([]); setExistingRecord(null); setIsUpdate(false)
     }
 
     // OT edit
@@ -645,7 +694,28 @@ export default function PublicMealPage() {
 
     // ─────── REPORT MODE ───────
     if (showConfirm) return (
-        <PageShell header={{ icon: "🔍", title: "Xác nhận báo cơm", sub: "Kiểm tra trước khi gửi" }}>
+        <PageShell header={{ icon: "🔍", title: isUpdate ? "⚠️ Xác nhận THAY ĐỔI báo cơm" : "Xác nhận báo cơm", sub: "Kiểm tra trước khi gửi" }}>
+            {isUpdate && existingRecord && (
+                <div className="update-warning-box">
+                    <div className="update-warning-title">⚠️ BẠN ĐANG THAY ĐỔI DỮ LIỆU ĐÃ BÁO!</div>
+                    <div className="update-warning-sub">Dữ liệu cũ sẽ bị ghi đè. Vui lòng kiểm tra kỹ.</div>
+                    <div className="compare-card" style={{ marginTop: 10 }}>
+                        <div className="compare-col old">
+                            <div className="compare-label">📋 Cũ</div>
+                            <div className="compare-sub">BCT: {existingRecord.official_present ?? 0} · TV: {existingRecord.seasonal_present ?? 0}</div>
+                            <div className="compare-sub">Chay: {existingRecord.vegetarian ?? 0}</div>
+                            <div className="compare-sub">OT: {(existingRecord.ot_count ?? 0) + (existingRecord.ot_vegetarian ?? 0)}</div>
+                        </div>
+                        <div className="compare-arrow">→</div>
+                        <div className="compare-col new">
+                            <div className="compare-label">✏️ Mới</div>
+                            <div className="compare-sub">BCT: {confirmRows[0]?.official_present ?? 0} · TV: {confirmRows[0]?.seasonal_present ?? 0}</div>
+                            <div className="compare-sub">Chay: {confirmRows[0]?.vegetarian ?? 0}</div>
+                            <div className="compare-sub">OT: {(confirmRows[0]?.ot_count ?? 0) + (confirmRows[0]?.ot_vegetarian ?? 0)}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="confirm-meta-card">
                 <div><span>Bộ phận</span><strong>{getEffectiveDeptName()}</strong></div>
                 <div><span>Ngày</span><strong>{format(new Date(workDate + "T00:00:00"), "dd/MM/yyyy")}</strong></div>
@@ -668,8 +738,8 @@ export default function PublicMealPage() {
             ))}
             {error && <div className="err-box">⚠️ {error}</div>}
             <div className="contact-note">📞 Sai sót liên hệ <strong>Ms Chi</strong> để điều chỉnh nhé!</div>
-            <button className="primary-btn" onClick={handleSubmit} disabled={submitting}>
-                {submitting ? "⏳ Đang gửi..." : "✅ Xác nhận & Gửi báo cơm"}
+            <button className="primary-btn" onClick={handleSubmit} disabled={submitting} style={isUpdate ? { background: "#dc2626" } : {}}>
+                {submitting ? "⏳ Đang gửi..." : isUpdate ? "⚠️ Xác nhận THAY ĐỔI" : "✅ Xác nhận & Gửi báo cơm"}
             </button>
             <button className="ghost-btn" onClick={() => setShowConfirm(false)} disabled={submitting}>✏️ Sửa lại</button>
         </PageShell>
@@ -765,13 +835,37 @@ export default function PublicMealPage() {
                         <div className="row2" style={{ marginBottom: 14 }}>
                             <div className="field-sm">
                                 <label>Ca làm <span className="req">*</span></label>
-                                <ShiftPills value={shift} onChange={v => { setShift(v); updateSingle("otTime", OT_DEFAULT_TIME[v] ?? "") }} arr={shifts} />
+                                <ShiftPills value={shift} onChange={v => {
+                                    setShift(v); updateSingle("otTime", OT_DEFAULT_TIME[v] ?? "")
+                                    // Auto-fetch existing record
+                                    if (deptId && v && workDate) {
+                                        setExistingRecord(null); setIsUpdate(false)
+                                        fetchExistingRecord(deptId, v, workDate, hpeelSub)
+                                    }
+                                }} arr={shifts} />
                             </div>
                             <div className="field-sm">
                                 <label>Ngày <span className="req">*</span></label>
-                                <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} max={format(new Date(), "yyyy-MM-dd")} required />
+                                <input type="date" value={workDate} onChange={e => {
+                                    setWorkDate(e.target.value)
+                                    // Auto-fetch existing record
+                                    if (deptId && shift && e.target.value) {
+                                        setExistingRecord(null); setIsUpdate(false)
+                                        fetchExistingRecord(deptId, shift, e.target.value, hpeelSub)
+                                    }
+                                }} max={format(new Date(), "yyyy-MM-dd")} required />
                             </div>
                         </div>
+                        {existingLoading && <div className="info-banner">⏳ Đang kiểm tra dữ liệu đã báo...</div>}
+                        {isUpdate && existingRecord && (
+                            <div className="update-warning-box">
+                                <div className="update-warning-title">⚠️ Ca này đã được báo cơm rồi!</div>
+                                <div className="update-warning-sub">Dữ liệu cũ đã được điền sẵn bên dưới. Bạn có thể chỉnh sửa rồi gửi lại để cập nhật.</div>
+                                <div style={{ fontSize: 12, marginTop: 6, color: "#92400e" }}>
+                                    BCT: {existingRecord.official_present ?? 0} · TV: {existingRecord.seasonal_present ?? 0} · Chay: {existingRecord.vegetarian ?? 0} · OT: {(existingRecord.ot_count ?? 0) + (existingRecord.ot_vegetarian ?? 0)}
+                                </div>
+                            </div>
+                        )}
                         <ShiftFields data={singleData} update={updateSingle} shiftVal={shift} />
                     </>
                 )}
@@ -978,6 +1072,21 @@ function Style() {
             .compare-sub { font-size: 13px; color: #475569; margin-top: 4px; }
             .compare-col { display: flex; flex-direction: column; align-items: center; }
             .compare-card { display: flex; align-items: center; justify-content: space-around; }
+
+            /* Update warning */
+            .update-warning-box {
+                background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px;
+                padding: 14px 16px; margin-bottom: 14px;
+                animation: shake 0.4s ease;
+            }
+            @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+            .update-warning-title {
+                font-size: 14px; font-weight: 800; color: #92400e;
+                margin-bottom: 4px;
+            }
+            .update-warning-sub {
+                font-size: 13px; color: #a16207; line-height: 1.5;
+            }
 
             /* Success */
             .success-page { display: flex; flex-direction: column; align-items: center; padding: 32px 16px 48px; text-align: center; }

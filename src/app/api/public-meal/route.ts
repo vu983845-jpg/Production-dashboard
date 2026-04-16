@@ -199,6 +199,10 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Extract old_data before building payloads
+        const oldDataMap = new Map<number, any>()
+        rows.forEach((row, i) => { if (row.old_data) oldDataMap.set(i, row.old_data) })
+
         const payloads = rows.map(row => ({
             department_id: row.department_id,
             department_name: row.department_name ?? "",
@@ -223,11 +227,81 @@ export async function POST(req: NextRequest) {
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-        // Gửi thông báo Teams (await để đảm bảo gửi xong trước khi function tắt)
-        await sendTeamsNotification(payloads)
+        // Gửi thông báo Teams
+        const isChange = oldDataMap.size > 0
+        if (isChange) {
+            await sendTeamsChangeNotification(payloads, oldDataMap)
+        } else {
+            await sendTeamsNotification(payloads)
+        }
 
         return NextResponse.json({ success: true, count: payloads.length })
     } catch (err) {
         return NextResponse.json({ error: String(err) }, { status: 500 })
+    }
+}
+
+async function sendTeamsChangeNotification(
+    newRows: {
+        department_name: string; work_date: string; shift: string
+        official_present: number; seasonal_present: number
+        ot_count: number; vegetarian: number; ot_vegetarian: number; note: string
+    }[],
+    oldDataMap: Map<number, any>
+) {
+    const webhookUrl = process.env.TEAMS_WEBHOOK_URL
+    if (!webhookUrl) return
+
+    const now = new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })
+    const reporter = newRows[0]?.note?.replace("Báo bởi: ", "") ?? "Link công khai"
+
+    const facts = newRows.map((r, i) => {
+        const old = oldDataMap.get(i)
+        const newTotal = r.official_present + r.seasonal_present
+        const newOT = r.ot_count + r.ot_vegetarian
+
+        if (old) {
+            const oldTotal = (old.official_present ?? 0) + (old.seasonal_present ?? 0)
+            const oldOT = (old.ot_count ?? 0) + (old.ot_vegetarian ?? 0)
+            const oldVeg = old.vegetarian ?? 0
+            const changes: string[] = []
+            if (oldTotal !== newTotal) changes.push(`Tong suat: ${oldTotal} → ${newTotal}`)
+            if (old.official_present !== r.official_present) changes.push(`BCT: ${old.official_present} → ${r.official_present}`)
+            if (old.seasonal_present !== r.seasonal_present) changes.push(`TV: ${old.seasonal_present} → ${r.seasonal_present}`)
+            if (oldVeg !== r.vegetarian) changes.push(`Chay: ${oldVeg} → ${r.vegetarian}`)
+            if (oldOT !== newOT) changes.push(`OT: ${oldOT} → ${newOT}`)
+            return {
+                name: `⚠️ ${r.department_name} (${SHIFT_LABEL[r.shift] ?? r.shift})`,
+                value: changes.length > 0 ? changes.join(" | ") : "Khong thay doi",
+            }
+        }
+        return {
+            name: r.department_name,
+            value: `${SHIFT_LABEL[r.shift] ?? r.shift} | Tong: ${newTotal} | Chay: ${r.vegetarian} | OT: ${newOT}`,
+        }
+    })
+
+    const body = {
+        "@type": "MessageCard",
+        "@context": "http://schema.org/extensions",
+        themeColor: "FF8C00",
+        summary: "THAY DOI BAO COM",
+        sections: [{
+            activityTitle: "⚠️ THAY DOI BAO COM",
+            activitySubtitle: `Nguoi thay doi: ${reporter} - ${now}`,
+            facts,
+        }],
+    }
+
+    try {
+        const res = await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        })
+        const text = await res.text()
+        console.log("[Teams Change] status:", res.status, "body:", text)
+    } catch (err) {
+        console.error("[Teams Change] fetch error:", err)
     }
 }
