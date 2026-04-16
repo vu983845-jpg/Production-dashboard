@@ -1133,7 +1133,8 @@ export default function BaoCom() {
             deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC → PEEL
             const deptKey = (DEPT_CODE_ALIAS[deptList.find(d => d.id === r.department_id)?.code ?? ''] ? deptList.find(d => d.code === deptCode)?.id : r.department_id) ?? r.department_id ?? r.department_name
             const deptName = DEPT_DISPLAY[deptCode] ?? r.department_name
-            const shift = r.shift ?? '1'
+            let shift = r.shift ?? '1'
+            if (shift === 'HC') shift = '1' // Force HC to merge into Shift 1
             const groupKey = deptCode || deptKey
             const mapKey = `${groupKey}|${shift}`
             if (!shiftMap.has(mapKey)) shiftMap.set(mapKey, { deptKey: groupKey, deptName, deptCode, shift, days: new Map(), officialDays: new Map(), seasonalDays: new Map(), otDays: new Map(), dayRowIds: new Map() })
