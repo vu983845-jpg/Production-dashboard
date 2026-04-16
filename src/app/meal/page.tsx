@@ -191,6 +191,10 @@ export default function PublicMealPage() {
     const otShifts = (isOtOffice || isOtHpeel) ? SHIFTS_WITH_HC : SHIFTS_NORMAL
     const activeMultiShifts = selectedDept?.code === "CLEAN" ? ["1", "2"] : MULTI_SHIFTS
 
+    const isStep1Complete = !!deptId && (!isHpeel || !!hpeelSub);
+    const isStep2Complete = isStep1Complete && (isMultiShift ? !!workDate : (!!shift && !!workDate));
+    const isOtStep1Complete = !!otDeptId && (!isOtHpeel || !!otHpeelSub);
+
     const getEffectiveDeptName = (id = deptId, sub = hpeelSub) => {
         const dept = depts.find(d => d.id === id)
         if ((dept?.code === "HPEEL" || dept?.code === "HAND") && sub) return HPEEL_SUBGROUPS.find(s => s.key === sub)?.dept_name ?? dept.name_en
@@ -866,10 +870,6 @@ export default function PublicMealPage() {
             </div>
         )
     }
-
-    const isStep1Complete = !!deptId && (!isHpeel || !!hpeelSub);
-    const isStep2Complete = isStep1Complete && (isMultiShift ? !!workDate : (!!shift && !!workDate));
-    const isOtStep1Complete = !!otDeptId && (!isOtHpeel || !!otHpeelSub);
 
     return (
         <PageShell>
