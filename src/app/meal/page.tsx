@@ -839,8 +839,8 @@ export default function PublicMealPage() {
                 <div className="countdown-widget done">
                     <div className="cw-icon">✅</div>
                     <div>
-                        <div className="cw-title">Đã qua giờ khóa báo cơm hôm nay</div>
-                        <div className="cw-sub">OT vẫn có thể cập nhật bình thường.</div>
+                        <div className="cw-title">Đã qua giờ khóa Ca 1 & Ca 2</div>
+                        <div className="cw-sub">Ca 3 và OT vẫn cập nhật bình thường.</div>
                     </div>
                 </div>
             )
