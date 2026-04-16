@@ -706,29 +706,41 @@ export default function PublicMealPage() {
                     <button className="mode-tab" onClick={() => { setPageMode("report"); resetOt() }}>🍽️ Báo cơm</button>
                     <button className="mode-tab active">⏰ Sửa OT</button>
                 </div>
-                <div className="field-sm" style={{ marginTop: 16 }}>
-                    <label>Bộ phận <span className="req">*</span></label>
-                    <select value={otDeptId} onChange={e => { setOtDeptId(e.target.value); setOtHpeelSub(""); setOtShift("") }}>
-                        <option value="">— Chọn bộ phận —</option>
-                        {depts.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
-                    </select>
+                <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", marginTop: "16px" }}>
+                    <div className="section-label">1️⃣ Chọn bộ phận</div>
+                    <div className="field-sm">
+                        <label>Bộ phận <span className="req">*</span></label>
+                        <select value={otDeptId} onChange={e => { setOtDeptId(e.target.value); setOtHpeelSub(""); setOtShift("") }}>
+                            <option value="">— Chọn bộ phận —</option>
+                            {depts.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+                        </select>
+                    </div>
+                    {isOtHpeel && (
+                        <div className="field-sm" style={{ marginTop: 12 }}>
+                            <label>Tổ trưởng <span className="req">*</span></label>
+                            <HpeelPicker value={otHpeelSub} onChange={v => {
+                                setOtHpeelSub(v);
+                                if (v === "HPEEL_LOAN") setOtShift("HC");
+                            }} />
+                        </div>
+                    )}
                 </div>
-                {isOtHpeel && (
-                    <div className="field-sm"><label>Tổ trưởng <span className="req">*</span></label><HpeelPicker value={otHpeelSub} onChange={v => {
-                        setOtHpeelSub(v);
-                        if (v === "HPEEL_LOAN") setOtShift("HC");
-                    }} /></div>
+
+                {isOtStep1Complete && (
+                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", marginTop: "16px", animation: "fadeIn 0.3s ease-in-out" }}>
+                        <div className="section-label">2️⃣ Chọn ca & ngày</div>
+                        <div className="field-sm"><label>Ca <span className="req">*</span></label><ShiftPills value={otShift} onChange={s => { setOtShift(s) }} arr={otShifts} /></div>
+                        <div className="field-sm"><label>Ngày <span className="req">*</span></label>
+                            <input type="date" value={otDate} onChange={e => setOtDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} />
+                        </div>
+                        {otNotFound && <div className="err-box">⚠️ Không tìm thấy bản ghi. Kiểm tra lại bộ phận / ca / ngày.</div>}
+                        {otError && <div className="err-box">⚠️ {otError}</div>}
+                        <button className="primary-btn" onClick={handleOtLookup} disabled={otLooking || !otDeptId || !otShift}>
+                            {otLooking ? "⏳ Đang tìm..." : "🔍 Xem OT đã báo"}
+                        </button>
+                    </div>
                 )}
-                <div className="field-sm"><label>Ca <span className="req">*</span></label><ShiftPills value={otShift} onChange={s => { setOtShift(s) }} arr={otShifts} /></div>
-                <div className="field-sm"><label>Ngày <span className="req">*</span></label>
-                    <input type="date" value={otDate} onChange={e => setOtDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} />
-                </div>
-                {otNotFound && <div className="err-box">⚠️ Không tìm thấy bản ghi. Kiểm tra lại bộ phận / ca / ngày.</div>}
-                {otError && <div className="err-box">⚠️ {otError}</div>}
-                <button className="primary-btn" onClick={handleOtLookup} disabled={otLooking || !otDeptId || !otShift}>
-                    {otLooking ? "⏳ Đang tìm..." : "🔍 Xem OT đã báo"}
-                </button>
-                <button className="ghost-btn" onClick={() => { setPageMode("report"); resetOt() }}>← Về báo cơm</button>
+                <button className="ghost-btn" style={{ marginTop: 16 }} onClick={() => { setPageMode("report"); resetOt() }}>← Về báo cơm</button>
             </PageShell>
         )
     }
@@ -855,6 +867,10 @@ export default function PublicMealPage() {
         )
     }
 
+    const isStep1Complete = !!deptId && (!isHpeel || !!hpeelSub);
+    const isStep2Complete = isStep1Complete && (isMultiShift ? !!workDate : (!!shift && !!workDate));
+    const isOtStep1Complete = !!otDeptId && (!isOtHpeel || !!otHpeelSub);
+
     return (
         <PageShell>
             {(submitting || sumLoading || existingLoading || otLooking || otSubmitting) && (
@@ -903,80 +919,78 @@ export default function PublicMealPage() {
             )}
 
             <form onSubmit={handlePreview}>
-                <div className="section-label">📋 Thông tin ca làm việc</div>
-                <div className="field-sm">
-                    <label>Bộ phận <span className="req">*</span></label>
-                    <select value={deptId} onChange={e => {
-                        const newId = e.target.value
-                        const newDept = depts.find(d => d.id === newId)
-                        setDeptId(newId); setHpeelSub(""); setShift("")
-                        if (newDept?.code === "BOILER") {
-                            setMultiData({
-                                "1": { ...blank("1"), officialPresent: "1" },
-                                "2": { ...blank("2"), officialPresent: "1" },
-                                "3": { ...blank("3"), officialPresent: "1" }
-                            })
-                        } else {
-                            setMultiData({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
-                            setSingleData(blank())
-                        }
-                    }} required>
-                        <option value="">— Chọn bộ phận —</option>
-                        {depts.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
-                    </select>
-                </div>
-                {isHpeel && (
+                <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+                    <div className="section-label">1️⃣ Chọn bộ phận</div>
                     <div className="field-sm">
-                        <label>Tổ trưởng <span className="req">*</span></label>
-                        <HpeelPicker value={hpeelSub} onChange={v => {
-                            setHpeelSub(v);
-                            if (v === "HPEEL_LOAN") {
-                                setShift("HC");
-                                updateSingle("otTime", OT_DEFAULT_TIME["HC"] ?? "");
+                        <label>Bộ phận <span className="req">*</span></label>
+                        <select value={deptId} onChange={e => {
+                            const newId = e.target.value
+                            const newDept = depts.find(d => d.id === newId)
+                            setDeptId(newId); setHpeelSub(""); setShift("")
+                            if (newDept?.code === "BOILER") {
+                                setMultiData({
+                                    "1": { ...blank("1"), officialPresent: "1" },
+                                    "2": { ...blank("2"), officialPresent: "1" },
+                                    "3": { ...blank("3"), officialPresent: "1" }
+                                })
+                            } else {
+                                setMultiData({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
+                                setSingleData(blank())
                             }
-                        }} />
+                        }} required>
+                            <option value="">— Chọn bộ phận —</option>
+                            {depts.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+                        </select>
                     </div>
-                )}
-                {isMultiShift ? (
-                    <>
-                        <div className="field-sm">
-                            <label>Ngày <span className="req">*</span></label>
-                            <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} required />
+                    {isHpeel && (
+                        <div className="field-sm" style={{ marginTop: 12 }}>
+                            <label>Tổ trưởng <span className="req">*</span></label>
+                            <HpeelPicker value={hpeelSub} onChange={v => {
+                                setHpeelSub(v);
+                                if (v === "HPEEL_LOAN") {
+                                    setShift("HC");
+                                    updateSingle("otTime", OT_DEFAULT_TIME["HC"] ?? "");
+                                }
+                            }} />
                         </div>
-                        <div className="info-banner">📌 Điền thông tin cho cả {activeMultiShifts.length} ca bên dưới</div>
-                        {activeMultiShifts.map(s => (
-                            <ShiftFields key={s} shiftLabel={`Ca ${s}`} shiftVal={s} data={multiData[s]} update={(f, v) => updateMulti(s, f, v)} workDateStr={workDate} />
-                        ))}
-                    </>
-                ) : (
-                    <>
-                        <div className="row2" style={{ marginBottom: 14 }}>
-                            <div className="field-sm">
-                                <label>Ca làm <span className="req">*</span></label>
-                                <ShiftPills value={shift} onChange={v => {
-                                    setShift(v); updateSingle("otTime", OT_DEFAULT_TIME[v] ?? "")
-                                    // Auto-fetch existing record
-                                    if (deptId && v && workDate) {
-                                        setExistingRecord(null); setIsUpdate(false)
-                                        fetchExistingRecord(deptId, v, workDate, hpeelSub)
-                                    }
-                                }} arr={shifts} />
-                            </div>
+                    )}
+                </div>
+
+                {isStep1Complete && (
+                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", marginTop: "16px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)", animation: "fadeIn 0.3s ease-in-out" }}>
+                        <div className="section-label">2️⃣ Chọn ca & ngày</div>
+                        {isMultiShift ? (
                             <div className="field-sm">
                                 <label>Ngày <span className="req">*</span></label>
-                                <input type="date" value={workDate} onChange={e => {
-                                    setWorkDate(e.target.value)
-                                    // Auto-fetch existing record
-                                    if (deptId && shift && e.target.value) {
-                                        setExistingRecord(null); setIsUpdate(false)
-                                        fetchExistingRecord(deptId, shift, e.target.value, hpeelSub)
-                                    }
-                                }} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} required />
+                                <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} required />
                             </div>
-                        </div>
-                        {existingLoading && <div className="info-banner">⏳ Đang kiểm tra dữ liệu đã báo...</div>}
+                        ) : (
+                            <div className="row2" style={{ marginBottom: 14 }}>
+                                <div className="field-sm">
+                                    <label>Ca làm <span className="req">*</span></label>
+                                    <ShiftPills value={shift} onChange={v => {
+                                        setShift(v); updateSingle("otTime", OT_DEFAULT_TIME[v] ?? "")
+                                        if (deptId && v && workDate) {
+                                            setExistingRecord(null); setIsUpdate(false)
+                                            fetchExistingRecord(deptId, v, workDate, hpeelSub)
+                                        }
+                                    }} arr={shifts} />
+                                </div>
+                                <div className="field-sm">
+                                    <label>Ngày <span className="req">*</span></label>
+                                    <input type="date" value={workDate} onChange={e => {
+                                        setWorkDate(e.target.value)
+                                        if (deptId && shift && e.target.value) {
+                                            setExistingRecord(null); setIsUpdate(false)
+                                            fetchExistingRecord(deptId, shift, e.target.value, hpeelSub)
+                                        }
+                                    }} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} required />
+                                </div>
+                            </div>
+                        )}
+                        {existingLoading && <div className="info-banner" style={{ marginTop: 8 }}>⏳ Đang kiểm tra dữ liệu đã báo...</div>}
                         {isUpdate && existingRecord && (
-                            <div className="update-warning-box">
+                            <div className="update-warning-box" style={{ marginTop: 8 }}>
                                 <div className="update-warning-title">⚠️ Ca này đã được báo cơm rồi!</div>
                                 <div className="update-warning-sub">Dữ liệu cũ đã được điền sẵn bên dưới. Bạn có thể chỉnh sửa rồi gửi lại để cập nhật.</div>
                                 <div style={{ fontSize: 12, marginTop: 6, color: "#92400e" }}>
@@ -984,20 +998,35 @@ export default function PublicMealPage() {
                                 </div>
                             </div>
                         )}
-                        <ShiftFields data={singleData} update={updateSingle} shiftVal={shift} workDateStr={workDate} />
-                    </>
+                    </div>
                 )}
 
-                <hr className="divider" />
-                <div className="field-sm">
-                    <label style={{ color: "#6b7280", fontSize: 13 }}>👤 Người báo <span className="opt-tag">tuỳ chọn</span></label>
-                    <input type="text" placeholder="VD: Mai, Hùng, Tổ trưởng SHELL..." value={reporterName} onChange={e => setReporterName(e.target.value)} maxLength={60} />
-                </div>
+                {isStep2Complete && (
+                    <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", marginTop: "16px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)", animation: "fadeIn 0.3s ease-in-out" }}>
+                        <div className="section-label">3️⃣ Khai báo số lượng</div>
+                        {isMultiShift ? (
+                            <>
+                                <div className="info-banner" style={{ marginBottom: 16 }}>📌 Điền thông tin cho cả {activeMultiShifts.length} ca bên dưới</div>
+                                {activeMultiShifts.map(s => (
+                                    <ShiftFields key={s} shiftLabel={`Ca ${s}`} shiftVal={s} data={multiData[s]} update={(f, v) => updateMulti(s, f, v)} workDateStr={workDate} />
+                                ))}
+                            </>
+                        ) : (
+                            <ShiftFields data={singleData} update={updateSingle} shiftVal={shift} workDateStr={workDate} />
+                        )}
 
-                {error && <div className="err-box">⚠️ {error}</div>}
-                <button type="submit" className="primary-btn" disabled={!deptId || (!isMultiShift && !shift)}>
-                    🔍 Xem lại & Xác nhận
-                </button>
+                        <hr className="divider" />
+                        <div className="field-sm">
+                            <label style={{ color: "#6b7280", fontSize: 13 }}>👤 Người báo <span className="opt-tag">tuỳ chọn</span></label>
+                            <input type="text" placeholder="VD: Mai, Hùng, Tổ trưởng SHELL..." value={reporterName} onChange={e => setReporterName(e.target.value)} maxLength={60} />
+                        </div>
+
+                        {error && <div className="err-box">⚠️ {error}</div>}
+                        <button type="submit" className="primary-btn" disabled={!deptId || (!isMultiShift && !shift)}>
+                            🔍 Xem lại & Xác nhận
+                        </button>
+                    </div>
+                )}
             </form>
         </PageShell >
     )
