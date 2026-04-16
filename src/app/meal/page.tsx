@@ -12,6 +12,7 @@ const HPEEL_SUBGROUPS = [
     { key: "HPEEL_LIEN", label: "Tổ Liên", dept_name: "Manual Peeling (Liên)" },
     { key: "HPEEL_DUNG", label: "Tổ Dung", dept_name: "Manual Peeling (Dung)" },
     { key: "HPEEL_GRADING", label: "Ms Huệ (Grading)", dept_name: "Manual Grading (Ms Huệ)" },
+    { key: "HPEEL_LOAN", label: "Ms Loan", dept_name: "Manual Peeling (Loan)" },
 ]
 
 const SHIFTS_NORMAL = [{ value: "1", label: "Ca 1" }, { value: "2", label: "Ca 2" }, { value: "3", label: "Ca 3" }]
@@ -579,7 +580,10 @@ export default function PublicMealPage() {
                     </select>
                 </div>
                 {isOtHpeel && (
-                    <div className="field-sm"><label>Tổ trưởng <span className="req">*</span></label><HpeelPicker value={otHpeelSub} onChange={setOtHpeelSub} /></div>
+                    <div className="field-sm"><label>Tổ trưởng <span className="req">*</span></label><HpeelPicker value={otHpeelSub} onChange={v => {
+                        setOtHpeelSub(v);
+                        if (v === "HPEEL_LOAN") setOtShift("HC");
+                    }} /></div>
                 )}
                 <div className="field-sm"><label>Ca <span className="req">*</span></label><ShiftPills value={otShift} onChange={s => { setOtShift(s) }} arr={otShifts} /></div>
                 <div className="field-sm"><label>Ngày <span className="req">*</span></label>
@@ -680,7 +684,13 @@ export default function PublicMealPage() {
                 {isHpeel && (
                     <div className="field-sm">
                         <label>Tổ trưởng <span className="req">*</span></label>
-                        <HpeelPicker value={hpeelSub} onChange={setHpeelSub} />
+                        <HpeelPicker value={hpeelSub} onChange={v => {
+                            setHpeelSub(v);
+                            if (v === "HPEEL_LOAN") {
+                                setShift("HC");
+                                updateSingle("otTime", OT_DEFAULT_TIME["HC"] ?? "");
+                            }
+                        }} />
                     </div>
                 )}
                 {isMultiShift ? (

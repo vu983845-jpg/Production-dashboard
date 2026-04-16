@@ -21,11 +21,12 @@ const DEPT_DISPLAY: Record<string, string> = {
     HPEEL: "Hand Peeling",              // Real dept: Hand Peeling
     HPEEL_GRADING: "Manual Grading (Ms Hu\u1ec7)",
     HPEEL_DUNG: "Manual Peeling (Dung)",
+    HPEEL_LOAN: "Manual Peeling (Loan)",
     RCN: "RCN", MAINT_SHELL: "Maint Shelling",
     MAINT_HCA: "Maintenance HCA", OFFICE: "Office", CLEAN: "Cleaning",
 }
-// Only HPEEL_GRADING and HPEEL_DUNG are virtual sub-codes → map to HPEEL dept_id
-const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_DUNG"])
+// Only HPEEL_GRADING, HPEEL_DUNG and HPEEL_LOAN are virtual sub-codes → map to HPEEL dept_id
+const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_DUNG", "HPEEL_LOAN"])
 
 export async function POST(req: NextRequest) {
     try {
@@ -68,8 +69,10 @@ MAPPING TÊN TIẾNG VIỆT → CODE:
 - "loading", "warehouse", "kho", "fgwh" → FGWH
 - "hand peeling", "hpeel", "bóc tay" → HPEEL
 - "manual peeling liên", "liên", "handpeeling liên" → HAND  (real dept, không phải sub-code)
-- "manual grading", "grading", "ms huệ", "huệ" → HPEEL_GRADING
-- "manual peeling dung", "dung" → HPEEL_DUNG
+- "manual grading", "phân loại tay", "ms huệ", "huệ" → HPEEL_GRADING
+- "cắt tách tay", "cắt tay", "hand peeling", "manual peeling" → HPEEL
+- "manual peeling dung", "dung", "cô dung", "chị dung" → HPEEL_DUNG
+- "manual peeling loan", "loan", "ms loan", "chị loan", "cô loan" → HPEEL_LOAN
 - "rcn" → RCN
 - "bảo trì shelling", "maint shelling" → MAINT_SHELL
 - "bảo trì highcare", "maint HCA" → MAINT_HCA

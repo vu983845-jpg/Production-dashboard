@@ -1010,7 +1010,7 @@ export default function BaoCom() {
         BORMA: ['Borma S1', 'Borma thời vụ S1', 'Borma S2', 'Borma thời vụ S2', 'Borma S3', 'Borma thời vụ S3'],
         PEEL: ['Peeling S1', 'Peeling thời vụ S1', 'Peeling S2', 'Peeling thời vụ S2', 'Peeling S3', 'Peeling thời vụ S3'],
         CS: ['Machine Grading - shift 1', 'Machine Grading  - thời vụ 1', 'Machine Grading  - shift 2', 'Machine Grading  thời vụ - shift 2', 'Machine Grading  - shift 3', 'Machine Grading  thời vụ- shift 3'],
-        HPEEL: ['Manual Grading -Shift 1 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 1 (Ms Huệ)', 'Manual Grading -Shift 2 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 2 (Ms Huệ)', 'Manual Grading -Shift 3 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 3 (Ms Huệ)', 'Manual Grading -Shift HC (Ms Huệ)', 'Manual peeling S1 - Liên', 'Manual peeling S1 thời vụ - Liên', 'Manual peeling S1 - Dung', 'Manual peeling S1 thời vụ - Dung', 'Manual peeling S2 - Liên', 'Manual peeling S2 thời vụ - Liên', 'Manual peeling S2 - Dung', 'Manual peeling S2 thời vụ - Dung', 'Manual peeling S3 - Liên', 'Manual peeling S3 thời vụ - Liên', 'Manual peeling S3 - Dung', 'Manual peeling S3 thời vụ - Dung', 'Manual peeling HC - Liên', 'Manual peeling HC - Dung', 'Hand Peeling OT'],
+        HPEEL: ['Manual Grading -Shift 1 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 1 (Ms Huệ)', 'Manual Grading -Shift 2 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 2 (Ms Huệ)', 'Manual Grading -Shift 3 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 3 (Ms Huệ)', 'Manual Grading -Shift HC (Ms Huệ)', 'Manual peeling S1 - Liên', 'Manual peeling S1 thời vụ - Liên', 'Manual peeling S1 - Dung', 'Manual peeling S1 thời vụ - Dung', 'Manual peeling S1 - Loan', 'Manual peeling S1 thời vụ - Loan', 'Manual peeling S2 - Liên', 'Manual peeling S2 thời vụ - Liên', 'Manual peeling S2 - Dung', 'Manual peeling S2 thời vụ - Dung', 'Manual peeling S2 - Loan', 'Manual peeling S2 thời vụ - Loan', 'Manual peeling S3 - Liên', 'Manual peeling S3 thời vụ - Liên', 'Manual peeling S3 - Dung', 'Manual peeling S3 thời vụ - Dung', 'Manual peeling S3 - Loan', 'Manual peeling S3 thời vụ - Loan', 'Manual peeling HC - Liên', 'Manual peeling HC - Dung', 'Manual peeling HC - Loan', 'Hand Peeling OT'],
         PACK: ['Packing S1', 'Packing thời vụ S1', 'Packing S2', 'Packing thời vụ S2', 'Packing S3'],
         BOILER: ['Boiler worker S1', 'Boiler worker S2', 'Boiler worker S3'],
         MAINT_HCA: ['Maintenance S1', 'Maintenance S2', 'Maintenance S3'],
@@ -1054,6 +1054,10 @@ export default function BaoCom() {
             // Dung → Manual peeling SN - Dung
             if (/dung/i.test(n)) {
                 return `Manual peeling ${sPrefix} - Dung`
+            }
+            // Loan → Manual peeling SN - Loan
+            if (/loan/i.test(n)) {
+                return `Manual peeling ${sPrefix} - Loan`
             }
             // Generic hand peeling / manual peeling without supervisor → map to Liên (ca1 default)
             if (/hand.?peel|manual.?peel/i.test(n)) {
