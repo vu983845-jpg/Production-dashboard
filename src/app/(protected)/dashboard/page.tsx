@@ -27,7 +27,6 @@ import { FadeIn, FadeInStagger } from "@/components/magicui/fade-in"
 import { AnimatedNumber } from "@/components/magicui/animated-number"
 import { BadgePulse } from "@/components/magicui/badge-pulse"
 import { OverviewTab } from "@/components/dashboard/OverviewTab"
-import { OpexReportTab } from "@/components/dashboard/opex-report-tab"
 
 const CustomTooltip = memo(({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -46,7 +45,7 @@ const CustomTooltip = memo(({ active, payload, label }: any) => {
                                     <div className="w-3 h-3 rounded-full shadow-md flex-shrink-0" style={{ backgroundColor: color }}></div>
                                     {entry.name}
                                 </span>
-                                <span className="font-black text-slate-900 text-sm tabular-nums">{Number(entry.value).toLocaleString('vi-VN', {maximumFractionDigits: 1})}</span>
+                                <span className="font-black text-slate-900 text-sm tabular-nums">{Number(entry.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</span>
                             </div>
                         )
                     })}
@@ -385,7 +384,7 @@ export default function DashboardPage() {
                     const elec = Number(r.electricity_kwh || 0);
                     const water = Number(r.water_m3 || 0);
                     const wood = Number(r.wood_kg || 0);
-                    
+
                     elecActual += elec;
                     elecTarget += Number(r.electricity_target_kwh || 0);
                     waterActual += water;
@@ -398,7 +397,7 @@ export default function DashboardPage() {
                     // Scope 2: Electricity (kWh -> * 0.6592)
                     const scope2 = elec * 0.6592;
                     const dailyEmission = (scope1 + scope2) / 1000; // Convert to Tons CO₂e
-                    
+
                     dailyEmissionsByDate[r.work_date] = dailyEmission;
                     totalEmissionTons += dailyEmission;
                 });
@@ -593,11 +592,11 @@ export default function DashboardPage() {
                 let totalCompressorKwhMtd = 0;
                 let dailyCompressorKwhMap: Record<string, number> = {};
                 const compChartPoints: any[] = [];
-                
+
                 if (compData && compData.length > 0) {
                     const mapByDate = Object.fromEntries(compData.map((c: any) => [c.work_date, c]));
                     const daysInSelectedMonth = compData.filter((c: any) => c.work_date >= startFilter);
-                    
+
                     daysInSelectedMonth.forEach((curr: any) => {
                         // Find previous available reading (handles gaps in data)
                         const prevDateStr = format(subDays(new Date(curr.work_date), 1), "yyyy-MM-dd");
@@ -605,9 +604,9 @@ export default function DashboardPage() {
                         if (prev && prev.meter1 != null && prev.meter2 != null && prev.meter3 != null) {
                             const diffDays = 1; // prev is always 1 day before (guaranteed by prevDateStr lookup)
                             // meter unit = MWh → multiply by 1000 to get kWh (same as energy page computeDeltas multiplier=1000)
-                            const m1 = Math.max(0, ((curr.meter1||0) - prev.meter1) / diffDays) * 1000;
-                            const m2 = Math.max(0, ((curr.meter2||0) - prev.meter2) / diffDays) * 1000;
-                            const m3 = Math.max(0, ((curr.meter3||0) - prev.meter3) / diffDays) * 1000;
+                            const m1 = Math.max(0, ((curr.meter1 || 0) - prev.meter1) / diffDays) * 1000;
+                            const m2 = Math.max(0, ((curr.meter2 || 0) - prev.meter2) / diffDays) * 1000;
+                            const m3 = Math.max(0, ((curr.meter3 || 0) - prev.meter3) / diffDays) * 1000;
                             // Total = tổng 3 cụm MNK (#1 + #2,4 + #3,5,6)
                             const dailyTotal = m1 + m2 + m3;
                             const normalizedDate = format(new Date(curr.work_date), 'yyyy-MM-dd');
@@ -671,7 +670,7 @@ export default function DashboardPage() {
 
                 // ── Compute per-key MTD sums for auxiliary electricity mini-cards ──
                 if (othersRaw && othersRaw.length > 1) {
-                    const KEYS = ['cooling_fan','boiler','office','db_ac_hca','eco2','canteen','transformer','maintenance'];
+                    const KEYS = ['cooling_fan', 'boiler', 'office', 'db_ac_hca', 'eco2', 'canteen', 'transformer', 'maintenance'];
                     const sums: Record<string, number> = {};
                     KEYS.forEach(k => sums[k] = 0);
                     for (let i = 1; i < othersRaw.length; i++) {
@@ -692,7 +691,7 @@ export default function DashboardPage() {
 
                     if (dCode === 'PEEL_MC') {
                         dashboards[key].summary.totalCompressorKwhMtd = totalCompressorKwhMtd;
-                        
+
                         // Inject into history for the line chart
                         dashboards[key].history = dashboards[key].history.map((h: any) => {
                             const normalizedHDate = format(new Date(h.workDate), 'yyyy-MM-dd');
@@ -899,7 +898,7 @@ export default function DashboardPage() {
         const { summary, history } = data;
 
         const isFgwh = id === 'fgwh';
-        
+
         // Use the dynamically computed remaining planned days to respect "cutoff" limits
         const remainingDays = id === 'virtual-container' ? summary.remainingContWorkingDays : summary.remainingWorkingDays;
 
@@ -939,7 +938,7 @@ export default function DashboardPage() {
                 <Card key={id} className="bg-white/80 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-xl transition-all duration-300 relative overflow-hidden flex flex-col h-full border-l-[4px] border-l-primary">
                     {/* Glossy highlight effect on top edge */}
                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent z-10"></div>
-                    
+
                     <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-gradient-to-b from-white/60 to-transparent border-b border-white/40 flex-shrink-0">
                         <CardTitle className="text-lg font-bold flex flex-row flex-wrap justify-between items-start md:items-center gap-2 md:gap-4 text-slate-800">
                             <span className="flex items-center gap-2 whitespace-nowrap">
@@ -963,12 +962,12 @@ export default function DashboardPage() {
                             <ResponsiveContainer width="100%" height={220}>
                                 <ComposedChart data={displayHistory} margin={{ top: 8, right: 8, left: 0, bottom: 20 }}>
                                     <defs>
-<linearGradient id="fgwhGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.75}/></linearGradient>
-<linearGradient id="fgwhRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.75}/></linearGradient>
-</defs>
+                                        <linearGradient id="fgwhGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95} /><stop offset="100%" stopColor="#059669" stopOpacity={0.75} /></linearGradient>
+                                        <linearGradient id="fgwhRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95} /><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.75} /></linearGradient>
+                                    </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-<XAxis dataKey="name" tick={{ fontSize: 11, dy: 4, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} height={28} minTickGap={12} tickMargin={5} />
-                                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)} width={40} />
+                                    <XAxis dataKey="name" tick={{ fontSize: 11, dy: 4, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} height={28} minTickGap={12} tickMargin={5} />
+                                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toFixed(0)} width={40} />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
                                     <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px', paddingTop: '6px', fontWeight: 500 }} />
                                     <Bar dataKey="Actual" name={t('legend.actual')} radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out">
@@ -1001,7 +1000,7 @@ export default function DashboardPage() {
                                 </div>
                                 CONTAINER
                             </span>
-                            
+
                             <div className="flex items-center drop-shadow-sm">
                                 <span className={`font-black flex items-baseline gap-1 ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-rose-600'} text-2xl md:text-3xl`}>
                                     {summary.achivementPct.toFixed(0)}% <span className="font-bold uppercase text-slate-500 opacity-80 text-xs md:text-sm">MTD</span>
@@ -1026,30 +1025,30 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     </CardHeader>
-                    
+
                     <CardContent className="flex-1 flex flex-col justify-start p-2 pt-3 md:p-4 md:pt-4 relative z-10">
                         <div className="w-full bg-white/70 rounded-2xl flex-1 min-h-[220px] p-2 border border-red-50 shadow-inner">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="contActualGradient" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/>
-    <stop offset="100%" stopColor="#059669" stopOpacity={0.6}/>
-</linearGradient>
+                                            <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
+                                            <stop offset="100%" stopColor="#059669" stopOpacity={0.6} />
+                                        </linearGradient>
                                         <linearGradient id="contActualMissGradient" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/>
-    <stop offset="100%" stopColor="#b91c1c" stopOpacity={0.6}/>
-</linearGradient>
+                                            <stop offset="0%" stopColor="#e63121" stopOpacity={0.9} />
+                                            <stop offset="100%" stopColor="#b91c1c" stopOpacity={0.6} />
+                                        </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                     <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
-</defs>
-<XAxis 
-                                        dataKey="name" 
-                                        tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} 
-                                        tickLine={false} 
+                                        <linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9} /><stop offset="100%" stopColor="#059669" stopOpacity={0.7} /></linearGradient>
+                                        <linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9} /><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7} /></linearGradient>
+                                    </defs>
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }}
+                                        tickLine={false}
                                         axisLine={false}
                                         dy={10}
                                         tickFormatter={(val) => {
@@ -1059,8 +1058,8 @@ export default function DashboardPage() {
                                         minTickGap={0}
                                     />
                                     <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} dx={-10} />
-                                    
-                                    <Tooltip 
+
+                                    <Tooltip
                                         trigger="hover"
                                         cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }}
                                         content={({ active, payload, label }: any) => {
@@ -1086,18 +1085,18 @@ export default function DashboardPage() {
                                         }}
                                     />
                                     <Legend wrapperStyle={{ paddingTop: '15px', fontSize: '12px', fontWeight: 600, color: '#334155' }} iconType="circle" />
-                                    
+
                                     {!isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="4 4" dot={false} strokeWidth={2.5} name="Target / Day" connectNulls={false} />
                                     )}
-                                    
+
                                     <Bar dataKey="Actual" name={language === 'vi' ? "Thực tế (Cont)" : "Actual (Cont)"} radius={[6, 6, 0, 0]} maxBarSize={45} fill="#10b981" legendType="circle">
                                         {displayHistory.map((entry: any, index: number) => {
                                             const isMiss = entry.Plan > 0 && entry.Actual < entry.Plan;
                                             return <Cell key={`cell-${index}`} fill={isMiss ? "url(#contActualMissGradient)" : "url(#contActualGradient)"} />;
                                         })}
                                     </Bar>
-                                    
+
                                     <Line type="step" dataKey="Plan" stroke="#6366f1" strokeDasharray="3 3" dot={false} strokeWidth={2} name={language === 'vi' ? "Kế hoạch (Cont)" : "Plan (Cont)"} />
                                 </ComposedChart>
                             </ResponsiveContainer>
@@ -1192,22 +1191,22 @@ export default function DashboardPage() {
                         <div className="h-7 flex items-center">
                             {(["PEEL_MC", "SHELL", "HAND", "BORMA", "CS"].includes(deptCode)) && (
                                 <div className="flex items-center gap-1 w-full justify-center bg-slate-100/50 rounded-md p-0.5">
-                                    <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'chart'}))}
+                                    <button onClick={() => setDeptViewModes(p => ({ ...p, [id]: 'chart' }))}
                                         className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${(!deptViewModes[id] || deptViewModes[id] === 'chart') ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
                                         Chart
                                     </button>
-                                    <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'details'}))}
+                                    <button onClick={() => setDeptViewModes(p => ({ ...p, [id]: 'details' }))}
                                         className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'details' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
                                         Details
                                     </button>
                                     {deptCode === 'SHELL' && (
-                                        <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'lines'}))}
+                                        <button onClick={() => setDeptViewModes(p => ({ ...p, [id]: 'lines' }))}
                                             className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'lines' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
                                             By Line
                                         </button>
                                     )}
                                     {['CS', 'HAND'].includes(deptCode) && (
-                                        <button onClick={() => setDeptViewModes(p => ({...p, [id]: 'isp'}))}
+                                        <button onClick={() => setDeptViewModes(p => ({ ...p, [id]: 'isp' }))}
                                             className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'isp' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
                                             ISP
                                         </button>
@@ -1218,7 +1217,7 @@ export default function DashboardPage() {
                     )}
 
                     {/* CO2e/T info line for STEAM card - hidden */}
-                    
+
                     {/* View Switching Logic */}
                     {!(isTotal || isFgwh) && deptViewModes[id] === 'details' ? (
                         <div className="flex-1 w-full mt-auto bg-slate-50/80 rounded-md border border-slate-100 p-2 grid grid-cols-2 gap-2 content-center items-center">
@@ -1268,17 +1267,17 @@ export default function DashboardPage() {
                     ) : deptCode === "SHELL" && deptViewModes[id] === 'lines' ? (
                         <div className="w-full mt-auto border-t pt-2 space-y-1.5 flex-1 flex flex-col justify-center">
                             {deptCode === 'SHELL' && (
-                            <div className="flex items-center gap-1 mb-1">
-                                <button onClick={() => setShellingSubView('production')}
-                                    className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'production' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
-                                    {language === 'vi' ? '📊 Sản lượng MTD' : '📊 Production MTD'}
-                                </button>
-                                <button onClick={() => setShellingSubView('capacity')}
-                                    className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'capacity' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
-                                    {language === 'vi' ? '⚡ Công suất' : '⚡ Capacity'}
-                                </button>
-                            </div>
-                        )}
+                                <div className="flex items-center gap-1 mb-1">
+                                    <button onClick={() => setShellingSubView('production')}
+                                        className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'production' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
+                                        {language === 'vi' ? '📊 Sản lượng MTD' : '📊 Production MTD'}
+                                    </button>
+                                    <button onClick={() => setShellingSubView('capacity')}
+                                        className={`text-[9px] px-2 py-0.5 rounded border transition-all ${shellingSubView === 'capacity' ? 'bg-slate-700 text-white border-slate-700' : 'border-gray-300 text-muted-foreground'}`}>
+                                        {language === 'vi' ? '⚡ Công suất' : '⚡ Capacity'}
+                                    </button>
+                                </div>
+                            )}
 
                             {shellingSubView === 'production' ? (
                                 SHELLING_LINES_DASH.map(line => {
@@ -1340,10 +1339,10 @@ export default function DashboardPage() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 8, right: 6, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                                    <XAxis 
-                                        dataKey="name" 
-                                        tick={{ fontSize: 10, dy: 4, fill: '#94a3b8', fontWeight: 500 }} 
-                                        tickLine={false} 
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fontSize: 10, dy: 4, fill: '#94a3b8', fontWeight: 500 }}
+                                        tickLine={false}
                                         axisLine={false}
                                         height={22}
                                         tickFormatter={(val) => {
@@ -1354,7 +1353,7 @@ export default function DashboardPage() {
                                             return '';
                                         }}
                                         interval={0}
-                                        tickMargin={4} 
+                                        tickMargin={4}
                                     />
                                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(0)} width={28} />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139, 92, 246, 0.08)' }} />
@@ -1386,8 +1385,8 @@ export default function DashboardPage() {
                                     ) : (
                                         <>
                                             <defs>
-                                                <linearGradient id="ispGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-                                                <linearGradient id="ispRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
+                                                <linearGradient id="ispGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95} /><stop offset="100%" stopColor="#059669" stopOpacity={0.7} /></linearGradient>
+                                                <linearGradient id="ispRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95} /><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7} /></linearGradient>
                                             </defs>
                                             <Bar dataKey="IspActual" name="ISP Thực tế (T)" radius={[3, 3, 0, 0]} animationDuration={900} animationEasing="ease-out" legendType="none">
                                                 {displayHistory.map((entry: any, index: number) => {
@@ -1403,32 +1402,32 @@ export default function DashboardPage() {
                             </ResponsiveContainer>
                         </ChartWrapper>
                     ) : (
-                    <ChartWrapper className={`w-full rounded-xl border-t ${deptCode === 'STEAM' ? 'flex-1 min-h-[220px]' : 'h-[140px] md:h-[160px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: 0, bottom: 5 }}>
-                                <defs>
-<linearGradient id="mainGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95}/><stop offset="100%" stopColor="#059669" stopOpacity={0.75}/></linearGradient>
-<linearGradient id="mainRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.75}/></linearGradient>
-</defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                                <XAxis 
-                                    dataKey="name" 
-                                    tick={{ fontSize: 11, dy: 4, fill: '#94a3b8', fontWeight: 500 }} 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                    height={24}
-                                    tickFormatter={(val) => {
-                                        const day = parseInt(val, 10);
-                                        if (!isNaN(day) && (day === 1 || day === 8 || day === 15 || day === 22 || day === 29)) {
-                                            return val;
-                                        }
-                                        return '';
-                                    }}
-                                    interval={0}
-                                    tickMargin={5} 
-                                />
-                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)} width={40} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
+                        <ChartWrapper className={`w-full rounded-xl border-t ${deptCode === 'STEAM' ? 'flex-1 min-h-[220px]' : 'h-[140px] md:h-[160px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: 0, bottom: 5 }}>
+                                    <defs>
+                                        <linearGradient id="mainGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.95} /><stop offset="100%" stopColor="#059669" stopOpacity={0.75} /></linearGradient>
+                                        <linearGradient id="mainRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.95} /><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.75} /></linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fontSize: 11, dy: 4, fill: '#94a3b8', fontWeight: 500 }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        height={24}
+                                        tickFormatter={(val) => {
+                                            const day = parseInt(val, 10);
+                                            if (!isNaN(day) && (day === 1 || day === 8 || day === 15 || day === 22 || day === 29)) {
+                                                return val;
+                                            }
+                                            return '';
+                                        }}
+                                        interval={0}
+                                        tickMargin={5}
+                                    />
+                                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toFixed(0)} width={40} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.06)', radius: 4 }} />
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name={t('legend.daily_needed')} connectNulls={false} animationDuration={600} />
                                     )}
@@ -1470,9 +1469,9 @@ export default function DashboardPage() {
                                     {(deptCode === "HAND" || deptCode === "SHELL" || deptCode === "PEEL_MC" || deptCode === "ALL" || deptCode === "STEAM" || isTotal || isFgwh) && (
                                         <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '4px', fontWeight: 600, color: '#64748b' }} iconType="plainline" />
                                     )}
-                            </ComposedChart>
-                        </ResponsiveContainer>
-                    </ChartWrapper>
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </ChartWrapper>
                     )}
                 </CardContent>
             </Card>
@@ -1481,754 +1480,750 @@ export default function DashboardPage() {
 
     return (
         <>
-        <DashboardLoader
-            isLoading={pageLoading}
-            deptCode={userProfile?.deptCode}
-            userName={userProfile?.userName}
-        />
-        <div
-            className="flex-col md:flex w-full relative z-0"
-            style={{
-                opacity: pageLoading ? 0 : 1,
-                transform: pageLoading ? 'translateY(12px)' : 'translateY(0)',
-                transition: 'opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s',
-            }}
-        >
-            {/* Ambient Background Gradient for Glassmorphism to pop out */}
-            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-emerald-50 pointer-events-none -z-10"></div>
-            
-            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 pb-2 md:pb-4 mb-2 md:mb-4 backdrop-blur-sm sticky top-0 z-40 bg-white/40 border-b border-white/60 rounded-b-2xl px-2">
-                    <div>
-                        <h2 className="text-xl md:text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 drop-shadow-sm">{t('command_center')}</h2>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
-                        <TabsList>
-                            <TabsTrigger value="stations">{t('tab_stations')}</TabsTrigger>
-                            <TabsTrigger value="regions">{t('tab_regions')}</TabsTrigger>
-                            <TabsTrigger value="overview">⚡ Overview</TabsTrigger>
-                            <TabsTrigger value="opex_report">📈 Opex Report</TabsTrigger>
-                        </TabsList>
-                        <div className="flex space-x-2">
-                            {/* Month selector */}
-                            <Select
-                                value={String(selectedMonth.getMonth() + 1)}
-                                onValueChange={(val) => {
-                                    const d = new Date(selectedMonth)
-                                    d.setMonth(Number(val) - 1)
-                                    setSelectedMonth(d)
-                                }}
-                            >
-                                <SelectTrigger className="w-[110px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Array.from({ length: 12 }, (_, i) => (
-                                        <SelectItem key={i + 1} value={String(i + 1)}>
-                                            Tháng {i + 1}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {/* Year selector */}
-                            <Select
-                                value={String(selectedMonth.getFullYear())}
-                                onValueChange={(val) => {
-                                    const d = new Date(selectedMonth)
-                                    d.setFullYear(Number(val))
-                                    setSelectedMonth(d)
-                                }}
-                            >
-                                <SelectTrigger className="w-[90px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {[2024, 2025, 2026, 2027].map(y => (
-                                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select value={selectedDept} onValueChange={setSelectedDept}>
-                                <SelectTrigger className="w-[180px] hidden md:flex">
-                                    <SelectValue placeholder={t('dropdown_placeholder')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">{t('all_factory')}</SelectItem>
-                                    {departments.map(d => (
-                                        <SelectItem key={d.id} value={d.id}>{d.name_en}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Button variant="outline" onClick={handleExportCSV}>
-                                <Download className="h-4 w-4 mr-2" />
-                                {t('export_btn')} <span className="hidden sm:inline">&nbsp;CSV</span>
-                            </Button>
+            <DashboardLoader
+                isLoading={pageLoading}
+                deptCode={userProfile?.deptCode}
+                userName={userProfile?.userName}
+            />
+            <div
+                className="flex-col md:flex w-full relative z-0"
+                style={{
+                    opacity: pageLoading ? 0 : 1,
+                    transform: pageLoading ? 'translateY(12px)' : 'translateY(0)',
+                    transition: 'opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s',
+                }}
+            >
+                {/* Ambient Background Gradient for Glassmorphism to pop out */}
+                <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-emerald-50 pointer-events-none -z-10"></div>
+
+                <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 pb-2 md:pb-4 mb-2 md:mb-4 backdrop-blur-sm sticky top-0 z-40 bg-white/40 border-b border-white/60 rounded-b-2xl px-2">
+                        <div>
+                            <h2 className="text-xl md:text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 drop-shadow-sm">{t('command_center')}</h2>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+                            <TabsList>
+                                <TabsTrigger value="stations">{t('tab_stations')}</TabsTrigger>
+                                <TabsTrigger value="regions">{t('tab_regions')}</TabsTrigger>
+                                <TabsTrigger value="overview">⚡ Overview</TabsTrigger>
+                            </TabsList>
+                            <div className="flex space-x-2">
+                                {/* Month selector */}
+                                <Select
+                                    value={String(selectedMonth.getMonth() + 1)}
+                                    onValueChange={(val) => {
+                                        const d = new Date(selectedMonth)
+                                        d.setMonth(Number(val) - 1)
+                                        setSelectedMonth(d)
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[110px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Array.from({ length: 12 }, (_, i) => (
+                                            <SelectItem key={i + 1} value={String(i + 1)}>
+                                                Tháng {i + 1}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {/* Year selector */}
+                                <Select
+                                    value={String(selectedMonth.getFullYear())}
+                                    onValueChange={(val) => {
+                                        const d = new Date(selectedMonth)
+                                        d.setFullYear(Number(val))
+                                        setSelectedMonth(d)
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[90px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[2024, 2025, 2026, 2027].map(y => (
+                                            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={selectedDept} onValueChange={setSelectedDept}>
+                                    <SelectTrigger className="w-[180px] hidden md:flex">
+                                        <SelectValue placeholder={t('dropdown_placeholder')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{t('all_factory')}</SelectItem>
+                                        {departments.map(d => (
+                                            <SelectItem key={d.id} value={d.id}>{d.name_en}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button variant="outline" onClick={handleExportCSV}>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    {t('export_btn')} <span className="hidden sm:inline">&nbsp;CSV</span>
+                                </Button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {selectedDept === 'all' && selectedTab !== 'overview' && (
-                    <FadeInStagger faster>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 mt-2">
-                            <FadeIn>
-                                {(() => {
-                                    const pct = kpiSummary.steamTarget > 0
-                                        ? (kpiSummary.steamActual / kpiSummary.steamTarget) * 100 : 0
-                                    const isGood = pct >= 100
-                                    const barColor = isGood ? '#10b981' : pct >= 85 ? '#f59e0b' : '#e63121'
-                                    return (
-                                        <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Hấp / Steam</span>
-                                                <BadgePulse
-                                                    label={isGood ? 'Đạt KH' : 'Chưa đạt'}
-                                                    color={isGood ? 'green' : 'red'}
-                                                />
-                                            </div>
-                                            {/* Big value */}
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">
-                                                    <AnimatedNumber value={kpiSummary.steamActual} />
-                                                </span>
-                                                <span className="text-[11px] text-slate-400 font-medium">
-                                                    / {Number(kpiSummary.steamTarget).toLocaleString(undefined, { maximumFractionDigits: 1 })} T
-                                                </span>
-                                            </div>
-                                            {/* Progress bar with % label */}
-                                            <div className="w-full">
-                                                <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full rounded-full transition-all duration-[1200ms] ease-out"
-                                                        style={{
-                                                            width: `${Math.min(pct, 100)}%`,
-                                                            background: isGood
-                                                                ? 'linear-gradient(90deg, #10b981, #34d399)'
-                                                                : pct >= 85
-                                                                    ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                                                                    : 'linear-gradient(90deg, #e63121, #f87171)',
-                                                        }}
-                                                    />
-                                                    <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)', animation: 'shimmer 2s infinite', backgroundSize: '200% 100%' }} />
-                                                </div>
-                                                <div className="flex justify-end mt-1">
-                                                    <span className="text-[10px] font-black tabular-nums" style={{ color: barColor }}>{pct.toFixed(1)}%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                })()}
-                            </FadeIn>
-                            <FadeIn>
-                                {(() => {
-                                    const pct = kpiSummary.contTarget > 0
-                                        ? (kpiSummary.contActual / kpiSummary.contTarget) * 100 : 0
-                                    const isGood = pct >= 100
-                                    const barColor = isGood ? '#10b981' : pct >= 85 ? '#f59e0b' : '#e63121'
-                                    return (
-                                        <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Container</span>
-                                                <BadgePulse
-                                                    label={isGood ? 'Đạt KH' : 'Chưa đạt'}
-                                                    color={isGood ? 'blue' : 'yellow'}
-                                                />
-                                            </div>
-                                            {/* Big value */}
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">
-                                                    <AnimatedNumber value={kpiSummary.contActual} />
-                                                </span>
-                                                <span className="text-[11px] text-slate-400 font-medium">
-                                                    / {Number(kpiSummary.contTarget).toLocaleString(undefined, { maximumFractionDigits: 1 })} Cont
-                                                </span>
-                                            </div>
-                                            {/* Progress bar with % label */}
-                                            <div className="w-full">
-                                                <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full rounded-full transition-all duration-[1200ms] ease-out"
-                                                        style={{
-                                                            width: `${Math.min(pct, 100)}%`,
-                                                            background: isGood
-                                                                ? 'linear-gradient(90deg, #10b981, #34d399)'
-                                                                : pct >= 85
-                                                                    ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                                                                    : 'linear-gradient(90deg, #e63121, #f87171)',
-                                                        }}
-                                                    />
-                                                    <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)', animation: 'shimmer 2s infinite', backgroundSize: '200% 100%' }} />
-                                                </div>
-                                                <div className="flex justify-end mt-1">
-                                                    <span className="text-[10px] font-black tabular-nums" style={{ color: barColor }}>{pct.toFixed(1)}%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                })()}
-                            </FadeIn>
-                            <FadeIn className="col-span-2 sm:col-span-1">
-                                {(() => {
-                                    const co2Pct = kpiSummary.totalEmissionTarget > 0
-                                        ? (kpiSummary.totalEmission / kpiSummary.totalEmissionTarget) * 100
-                                        : 0
-                                    const isGood = co2Pct <= 100
-                                    const barColor = isGood ? '#10b981' : '#e63121'
-
-
-                                    return (
-                                        <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">CO₂e (Scope 1+2)</span>
-                                                <BadgePulse
-                                                    label={isGood ? 'Trong mục tiêu' : 'Vượt mục tiêu'}
-                                                    color={isGood ? 'green' : 'red'}
-                                                />
-                                            </div>
-                                            {/* Big percentage */}
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-2xl md:text-3xl font-black tracking-tighter" style={{ color: barColor }}>
-                                                    {co2Pct.toFixed(1)}%
-                                                </span>
-                                                <span className="text-[10px] text-slate-400 font-medium">/ 100% target</span>
-                                            </div>
-                                            {/* Animated progress bar */}
-                                            <div className="w-full">
-                                                <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full rounded-full transition-all duration-[1200ms] ease-out"
-                                                        style={{
-                                                            width: `${Math.min(co2Pct, 100)}%`,
-                                                            background: isGood
-                                                                ? 'linear-gradient(90deg, #10b981, #34d399)'
-                                                                : 'linear-gradient(90deg, #e63121, #f87171)',
-                                                        }}
-                                                    />
-                                                    {/* Shimmer effect */}
-                                                    <div
-                                                        className="absolute inset-0 rounded-full"
-                                                        style={{
-                                                            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
-                                                            animation: 'shimmer 2s infinite',
-                                                            backgroundSize: '200% 100%',
-                                                        }}
+                    {selectedDept === 'all' && selectedTab !== 'overview' && (
+                        <FadeInStagger faster>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 mt-2">
+                                <FadeIn>
+                                    {(() => {
+                                        const pct = kpiSummary.steamTarget > 0
+                                            ? (kpiSummary.steamActual / kpiSummary.steamTarget) * 100 : 0
+                                        const isGood = pct >= 100
+                                        const barColor = isGood ? '#10b981' : pct >= 85 ? '#f59e0b' : '#e63121'
+                                        return (
+                                            <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Hấp / Steam</span>
+                                                    <BadgePulse
+                                                        label={isGood ? 'Đạt KH' : 'Chưa đạt'}
+                                                        color={isGood ? 'green' : 'red'}
                                                     />
                                                 </div>
-                                                <div className="flex justify-between mt-1">
-                                                    <span className="text-[9px] text-slate-400">
-                                                        {kpiSummary.totalEmission.toFixed(1)} T CO₂e
+                                                {/* Big value */}
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">
+                                                        <AnimatedNumber value={kpiSummary.steamActual} />
                                                     </span>
-                                                    <span className="text-[9px] text-slate-400">
-                                                        Target: {kpiSummary.totalEmissionTarget} T
+                                                    <span className="text-[11px] text-slate-400 font-medium">
+                                                        / {Number(kpiSummary.steamTarget).toLocaleString(undefined, { maximumFractionDigits: 1 })} T
                                                     </span>
                                                 </div>
+                                                {/* Progress bar with % label */}
+                                                <div className="w-full">
+                                                    <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full rounded-full transition-all duration-[1200ms] ease-out"
+                                                            style={{
+                                                                width: `${Math.min(pct, 100)}%`,
+                                                                background: isGood
+                                                                    ? 'linear-gradient(90deg, #10b981, #34d399)'
+                                                                    : pct >= 85
+                                                                        ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                                                                        : 'linear-gradient(90deg, #e63121, #f87171)',
+                                                            }}
+                                                        />
+                                                        <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)', animation: 'shimmer 2s infinite', backgroundSize: '200% 100%' }} />
+                                                    </div>
+                                                    <div className="flex justify-end mt-1">
+                                                        <span className="text-[10px] font-black tabular-nums" style={{ color: barColor }}>{pct.toFixed(1)}%</span>
+                                                    </div>
+                                                </div>
                                             </div>
+                                        )
+                                    })()}
+                                </FadeIn>
+                                <FadeIn>
+                                    {(() => {
+                                        const pct = kpiSummary.contTarget > 0
+                                            ? (kpiSummary.contActual / kpiSummary.contTarget) * 100 : 0
+                                        const isGood = pct >= 100
+                                        const barColor = isGood ? '#10b981' : pct >= 85 ? '#f59e0b' : '#e63121'
+                                        return (
+                                            <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">Container</span>
+                                                    <BadgePulse
+                                                        label={isGood ? 'Đạt KH' : 'Chưa đạt'}
+                                                        color={isGood ? 'blue' : 'yellow'}
+                                                    />
+                                                </div>
+                                                {/* Big value */}
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">
+                                                        <AnimatedNumber value={kpiSummary.contActual} />
+                                                    </span>
+                                                    <span className="text-[11px] text-slate-400 font-medium">
+                                                        / {Number(kpiSummary.contTarget).toLocaleString(undefined, { maximumFractionDigits: 1 })} Cont
+                                                    </span>
+                                                </div>
+                                                {/* Progress bar with % label */}
+                                                <div className="w-full">
+                                                    <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full rounded-full transition-all duration-[1200ms] ease-out"
+                                                            style={{
+                                                                width: `${Math.min(pct, 100)}%`,
+                                                                background: isGood
+                                                                    ? 'linear-gradient(90deg, #10b981, #34d399)'
+                                                                    : pct >= 85
+                                                                        ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                                                                        : 'linear-gradient(90deg, #e63121, #f87171)',
+                                                            }}
+                                                        />
+                                                        <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)', animation: 'shimmer 2s infinite', backgroundSize: '200% 100%' }} />
+                                                    </div>
+                                                    <div className="flex justify-end mt-1">
+                                                        <span className="text-[10px] font-black tabular-nums" style={{ color: barColor }}>{pct.toFixed(1)}%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })()}
+                                </FadeIn>
+                                <FadeIn className="col-span-2 sm:col-span-1">
+                                    {(() => {
+                                        const co2Pct = kpiSummary.totalEmissionTarget > 0
+                                            ? (kpiSummary.totalEmission / kpiSummary.totalEmissionTarget) * 100
+                                            : 0
+                                        const isGood = co2Pct <= 100
+                                        const barColor = isGood ? '#10b981' : '#e63121'
 
-                                        </div>
-                                    )
+
+                                        return (
+                                            <div className="flex flex-col justify-between p-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all h-full gap-2">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">CO₂e (Scope 1+2)</span>
+                                                    <BadgePulse
+                                                        label={isGood ? 'Trong mục tiêu' : 'Vượt mục tiêu'}
+                                                        color={isGood ? 'green' : 'red'}
+                                                    />
+                                                </div>
+                                                {/* Big percentage */}
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-2xl md:text-3xl font-black tracking-tighter" style={{ color: barColor }}>
+                                                        {co2Pct.toFixed(1)}%
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 font-medium">/ 100% target</span>
+                                                </div>
+                                                {/* Animated progress bar */}
+                                                <div className="w-full">
+                                                    <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full rounded-full transition-all duration-[1200ms] ease-out"
+                                                            style={{
+                                                                width: `${Math.min(co2Pct, 100)}%`,
+                                                                background: isGood
+                                                                    ? 'linear-gradient(90deg, #10b981, #34d399)'
+                                                                    : 'linear-gradient(90deg, #e63121, #f87171)',
+                                                            }}
+                                                        />
+                                                        {/* Shimmer effect */}
+                                                        <div
+                                                            className="absolute inset-0 rounded-full"
+                                                            style={{
+                                                                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+                                                                animation: 'shimmer 2s infinite',
+                                                                backgroundSize: '200% 100%',
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex justify-between mt-1">
+                                                        <span className="text-[9px] text-slate-400">
+                                                            {kpiSummary.totalEmission.toFixed(1)} T CO₂e
+                                                        </span>
+                                                        <span className="text-[9px] text-slate-400">
+                                                            Target: {kpiSummary.totalEmissionTarget} T
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        )
+                                    })()}
+                                </FadeIn>
+                            </div>
+                        </FadeInStagger>
+                    )}
+
+
+                    <TabsContent value="stations" className="mt-0 pt-2">
+                        <FadeInStagger faster>
+                            <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-2">
+                                {/* Steaming Card - primary card */}
+                                {(() => {
+                                    const steamDept = departments.find(d => d.code === 'STEAM');
+                                    return steamDept ? (
+                                        <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard(steamDept.id, language === 'vi' ? 'Hấp / Steaming' : 'Steaming')}</FadeIn>
+                                    ) : null;
                                 })()}
-                            </FadeIn>
+
+                                {/* Virtual Container Card */}
+                                <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard("virtual-container", "Container")}</FadeIn>
+                            </div>
+
+                            {/* DEPARTMENT MINI DASHBOARDS — exclude FGWH, STEAM (top), MAINT_SHELL (removed) */}
+                            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {departments.filter(d =>
+                                    !['FGWH', 'STEAM', 'MAINT_SHELL', 'PEEL', 'OFFICE', 'QC', 'CLEAN', 'MAINT_HCA', 'BOILER', 'HPEEL'].includes(d.code)
+                                ).map(d => (
+                                    <FadeIn key={d.id} className="h-full">
+                                        {renderMiniDashboard(d.id, d.name_en)}
+                                    </FadeIn>
+                                ))}
+
+                                {/* FGWH Finished Goods Warehouse Card */}
+                                <FadeIn className="h-full sm:col-span-2 lg:col-span-1 xl:col-span-2 2xl:col-span-1">{renderMiniDashboard("fgwh", "FGWH - Finished Goods", true)}</FadeIn>
+                            </div>
+                        </FadeInStagger>
+                    </TabsContent>
+
+                    <TabsContent value="regions" className="mt-0 pt-2">
+                        <FadeInStagger faster>
+                            <div className="grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-3">
+                                <FadeIn className="h-full">{renderMiniDashboard("region-RCN", t('region_rcn'), true)}</FadeIn>
+                                <FadeIn className="h-full">{renderMiniDashboard("region-LCA", t('region_lca'), true)}</FadeIn>
+                                <FadeIn className="h-full">{renderMiniDashboard("region-HCA", t('region_hca'), true)}</FadeIn>
+                            </div>
+                        </FadeInStagger>
+                    </TabsContent>
+
+                    <TabsContent value="overview" className="mt-0 pt-0">
+                        <OverviewTab
+                            selectedMonth={selectedMonth}
+                            departments={departments}
+                            dashboardsData={dashboardsData}
+                            kpiSummary={kpiSummary}
+                            seuData={{
+                                elecKwh: kpiSummary.elecActual,
+                                mnkKwh: otherElecSummary.compressorKwh,
+                                shellingKwh: otherElecSummary.shellingKwh,
+                                woodKg: kpiSummary.woodActual,
+                                // RCN = Steam department input (total RCN steamed this month)
+                                rcnTons: dashboardsData['all']?.summary?.totalActual || 0,
+                                // Peeling tons = PEEL_MC actual
+                                peelingTons: (() => {
+                                    const peelId = departments.find(d => d.code === 'PEEL_MC')?.id
+                                    return peelId ? (dashboardsData[peelId]?.summary?.totalActual || 0) : 0
+                                })(),
+                                // Shelling tons = SHELL actual
+                                shellingTons: (() => {
+                                    const shellId = departments.find(d => d.code === 'SHELL')?.id
+                                    return shellId ? (dashboardsData[shellId]?.summary?.totalActual || 0) : 0
+                                })(),
+                                // ISO 50001 baselines (from natural-resources-report/index.html store object)
+                                elecTarget: 248.94,   // kWh / RCN ton
+                                mnkTarget: 281.4,     // kWh / peeling ton
+                                shellingTarget: 0.0402, // kWh / kg shelling output
+                                woodTarget: 0.08,       // kg wood / kg RCN
+                            }}
+                        />
+                    </TabsContent>
+                </Tabs>
+
+                {
+                    selectedDept === 'all' && energyHistory.length > 0 && (
+                        <Card className="mt-3 md:mt-4 bg-white border border-slate-200 shadow-sm relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-blue-500/5 pointer-events-none"></div>
+                            <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-white/40 border-b border-white/50 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">
+                                    Theo dõi Điện - Nước - Củi ({format(selectedMonth, 'MM/yyyy')})
+                                </CardTitle>
+                                <div className="flex flex-wrap items-center gap-4 md:gap-6 bg-white/50 px-4 py-2 rounded-lg border border-white/80 shadow-sm">
+                                    <div className="flex flex-col items-start md:items-end">
+                                        <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Điện (kWh)</span>
+                                        <span className="text-sm font-black text-amber-600">{Number(kpiSummary.elecActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.elecTarget).toLocaleString()}</span></span>
+                                    </div>
+                                    <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
+                                    <div className="flex flex-col items-start md:items-end">
+                                        <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Nước (m³)</span>
+                                        <span className="text-sm font-black text-blue-600">{Number(kpiSummary.waterActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.waterTarget).toLocaleString()}</span></span>
+                                    </div>
+                                    <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
+                                    <div className="flex flex-col items-start md:items-end">
+                                        <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Củi (Tấn)</span>
+                                        <span className="text-sm font-black text-orange-600">{Number(kpiSummary.woodActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.woodTarget).toLocaleString()}</span></span>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-2 pt-4 md:p-5 md:pt-4 relative z-10">
+                                {/* DESKTOP VIEW: Combined Chart with 3 Y-Axes */}
+                                <div className="hidden md:block h-80 w-full pb-4">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={energyHistory} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                            <defs>
+                                                <linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9} /><stop offset="100%" stopColor="#059669" stopOpacity={0.7} /></linearGradient>
+                                                <linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9} /><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7} /></linearGradient>
+                                            </defs>
+                                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                                            <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#eab308" />
+                                            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" />
+                                            <YAxis yAxisId="right2" orientation="right" tick={{ fontSize: 12 }} stroke="#f97316" width={80} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
+                                            <Legend wrapperStyle={{ bottom: -5, fontSize: '11px' }} />
+                                            <Bar yAxisId="left" dataKey="ElectricityActual" name="Điện (kWh)" fill="#eab308" radius={[4, 4, 0, 0]} barSize={20} />
+                                            <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Target Điện" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                            <Bar yAxisId="right" dataKey="WaterActual" name="Nước (m³)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
+                                            <Line yAxisId="right" type="monotone" dataKey="WaterTarget" name="Target Nước" stroke="#2563eb" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                            <Bar yAxisId="right2" dataKey="WoodActual" name="Củi (Tấn)" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
+                                            <Line yAxisId="right2" type="monotone" dataKey="WoodTarget" name="Target Củi" stroke="#c2410c" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                            <YAxis yAxisId="emission" orientation="right" tick={{ fontSize: 12 }} stroke="#10b981" width={60} />
+                                            <Line yAxisId="emission" type="monotone" dataKey="Emission" name="Phát thải (TCO₂e)" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                {/* MOBILE VIEW: 3 Separate Charts for better readability */}
+                                <div className="md:hidden flex flex-col gap-10 py-4">
+                                    {/* Electricity Chart */}
+                                    <div className="h-48 w-full">
+                                        <p className="text-xs font-bold text-amber-600 mb-2 uppercase tracking-tight">Electricity Chart (kWh)</p>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <defs>
+                                                    <linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9} /><stop offset="100%" stopColor="#059669" stopOpacity={0.7} /></linearGradient>
+                                                    <linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9} /><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7} /></linearGradient>
+                                                </defs>
+                                                <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                                <YAxis tick={{ fontSize: 9 }} stroke="#eab308" />
+                                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
+                                                <Bar dataKey="ElectricityActual" name={t('legend.actual')} fill="#eab308" radius={[2, 2, 0, 0]} barSize={12} />
+                                                <Line type="monotone" dataKey="ElectricityTarget" name="Mục tiêu" stroke="#ca8a04" strokeDasharray="4 4" dot={false} strokeWidth={2} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    {/* Water Chart */}
+                                    <div className="h-48 w-full">
+                                        <p className="text-xs font-bold text-blue-600 mb-2 uppercase tracking-tight">Water Chart (m³)</p>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <defs>
+                                                    <linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9} /><stop offset="100%" stopColor="#059669" stopOpacity={0.7} /></linearGradient>
+                                                    <linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9} /><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7} /></linearGradient>
+                                                </defs>
+                                                <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                                <YAxis tick={{ fontSize: 9 }} stroke="#3b82f6" />
+                                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
+                                                <Bar dataKey="WaterActual" name={t('legend.actual')} fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={12} />
+                                                <Line type="monotone" dataKey="WaterTarget" name="Mục tiêu" stroke="#2563eb" strokeDasharray="4 4" dot={false} strokeWidth={2} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    {/* Wood Chart */}
+                                    <div className="h-48 w-full">
+                                        <p className="text-xs font-bold text-orange-600 mb-2 uppercase tracking-tight">Wood Chart (Tons)</p>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <defs>
+                                                    <linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9} /><stop offset="100%" stopColor="#059669" stopOpacity={0.7} /></linearGradient>
+                                                    <linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9} /><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7} /></linearGradient>
+                                                </defs>
+                                                <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                                <YAxis tick={{ fontSize: 9 }} stroke="#f97316" />
+                                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
+                                                <Bar dataKey="WoodActual" name={t('legend.actual')} fill="#f97316" radius={[2, 2, 0, 0]} barSize={12} />
+                                                <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={2} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    {/* Emission Chart */}
+                                    <div className="h-48 w-full">
+                                        <p className="text-xs font-bold text-emerald-600 mb-2 uppercase tracking-tight">Cacbon (TCO₂e)</p>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                                                <YAxis tick={{ fontSize: 9 }} stroke="#10b981" />
+                                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
+                                                <Line type="monotone" dataKey="Emission" name="Phát thải" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )
+                }
+
+                {/* ⚡ Sub-Energy Summary: Điện Shelling / MNK / Củi / Peeling */}
+                {selectedDept === 'all' && (shellingElecHistory.length > 0 || compressorHistory.length > 0) && (
+                    <div className="mt-3 md:mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                        {/* KPI Cards — top row: 4 energy items */}
+                        <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {/* Điện Shelling */}
+                            <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
+                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">⚡ Điện Shelling</span>
+                                <span className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter">
+                                    {otherElecSummary.shellingKwh.toLocaleString('vi-VN')}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium">kWh MTD</span>
+                                <div className="h-1.5 bg-orange-100 rounded-full overflow-hidden mt-1">
+                                    <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-500" style={{ width: '100%' }} />
+                                </div>
+                            </div>
+
+                            {/* Máy nén khí total */}
+                            <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
+                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🔧 Máy nén khí</span>
+                                <span className="text-xl md:text-2xl font-black text-purple-700 tracking-tighter">
+                                    {otherElecSummary.compressorKwh.toLocaleString('vi-VN')}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium">kWh MTD (3 cụm)</span>
+                                <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden mt-1">
+                                    <div className="h-full rounded-full bg-gradient-to-r from-purple-400 to-violet-500" style={{ width: '100%' }} />
+                                </div>
+                            </div>
+
+                            {/* Củi */}
+                            <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
+                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🪵 Củi (Biomass)</span>
+                                <span className="text-xl md:text-2xl font-black text-orange-700 tracking-tighter">
+                                    {(kpiSummary.woodActual / 1000).toFixed(1)}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                    Tấn MTD / {(kpiSummary.woodTarget / 1000).toFixed(1)} T KH
+                                </span>
+                                <div className="h-1.5 bg-orange-100 rounded-full overflow-hidden mt-1">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-600"
+                                        style={{ width: `${Math.min(kpiSummary.woodTarget > 0 ? (kpiSummary.woodActual / kpiSummary.woodTarget) * 100 : 0, 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Peeling Compressor */}
+                            <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
+                                <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🧊 Điện Peeling</span>
+                                <span className="text-xl md:text-2xl font-black text-cyan-700 tracking-tighter">
+                                    {otherElecSummary.peelingCompKwh > 0 ? otherElecSummary.peelingCompKwh.toLocaleString('vi-VN') : '—'}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium">kWh MTD (DB-AC HCA)</span>
+                                <div className="h-1.5 bg-cyan-100 rounded-full overflow-hidden mt-1">
+                                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-teal-500" style={{ width: '100%' }} />
+                                </div>
+                            </div>
                         </div>
-                    </FadeInStagger>
+
+                        {/* Điện Shelling Chart */}
+                        {shellingElecHistory.length > 0 && (
+                            <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
+                                <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-3">⚡ Điện Shelling (kWh/ngày)</p>
+                                <ChartWrapper className="h-[180px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={shellingElecHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="shellElecGrad" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#f97316" stopOpacity={0.9} />
+                                                    <stop offset="100%" stopColor="#ea580c" stopOpacity={0.7} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(shellingElecHistory.length / 6)} />
+                                            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)} width={32} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(249,115,22,0.08)' }} />
+                                            <Bar dataKey="kWh" name="Điện Shelling" fill="url(#shellElecGrad)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </ChartWrapper>
+                            </div>
+                        )}
+
+                        {/* Máy nén khí chart */}
+                        {compressorHistory.length > 0 && (
+                            <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
+                                <p className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3">🔧 Máy Nén Khí – 3 Cụm (kWh/ngày)</p>
+                                <ChartWrapper className="h-[180px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={compressorHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="mnk1Grad" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.6} />
+                                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.05} />
+                                                </linearGradient>
+                                                <linearGradient id="mnk2Grad" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.6} />
+                                                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0.05} />
+                                                </linearGradient>
+                                                <linearGradient id="mnk3Grad" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.6} />
+                                                    <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.05} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(compressorHistory.length / 6)} />
+                                            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)} width={32} />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
+                                            <Area type="monotone" dataKey="MNK1" name="Cụm #1" stroke="#8b5cf6" fill="url(#mnk1Grad)" strokeWidth={2} dot={false} />
+                                            <Area type="monotone" dataKey="MNK2" name="Cụm #2,4" stroke="#ec4899" fill="url(#mnk2Grad)" strokeWidth={2} dot={false} />
+                                            <Area type="monotone" dataKey="MNK3" name="Cụm #3,5,6" stroke="#14b8a6" fill="url(#mnk3Grad)" strokeWidth={2} dot={false} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </ChartWrapper>
+                            </div>
+                        )}
+
+                        {/* Củi chart */}
+                        {energyHistory.length > 0 && (
+                            <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
+                                <p className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-3">🪵 Củi Biomass (kg/ngày)</p>
+                                <ChartWrapper className="h-[180px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={energyHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#f97316" stopOpacity={0.85} />
+                                                    <stop offset="100%" stopColor="#c2410c" stopOpacity={0.6} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(energyHistory.length / 6)} />
+                                            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} width={32} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(249,115,22,0.08)' }} />
+                                            <Bar dataKey="WoodActual" name="Củi (kg)" fill="url(#woodGrad)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                            <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={1.5} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </ChartWrapper>
+                            </div>
+                        )}
+                    </div>
                 )}
 
 
-                <TabsContent value="stations" className="mt-0 pt-2">
-                    <FadeInStagger faster>
-                        <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-2">
-                            {/* Steaming Card - primary card */}
-                            {(() => {
-                                const steamDept = departments.find(d => d.code === 'STEAM');
-                                return steamDept ? (
-                                    <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard(steamDept.id, language === 'vi' ? 'Hấp / Steaming' : 'Steaming')}</FadeIn>
-                                ) : null;
-                            })()}
-
-                            {/* Virtual Container Card */}
-                            <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard("virtual-container", "Container")}</FadeIn>
-                        </div>
-
-                        {/* DEPARTMENT MINI DASHBOARDS — exclude FGWH, STEAM (top), MAINT_SHELL (removed) */}
-                        <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {departments.filter(d =>
-                                !['FGWH','STEAM','MAINT_SHELL','PEEL','OFFICE','QC','CLEAN','MAINT_HCA','BOILER','HPEEL'].includes(d.code)
-                            ).map(d => (
-                                <FadeIn key={d.id} className="h-full">
-                                    {renderMiniDashboard(d.id, d.name_en)}
-                                </FadeIn>
-                            ))}
-                            
-                            {/* FGWH Finished Goods Warehouse Card */}
-                            <FadeIn className="h-full sm:col-span-2 lg:col-span-1 xl:col-span-2 2xl:col-span-1">{renderMiniDashboard("fgwh", "FGWH - Finished Goods", true)}</FadeIn>
-                        </div>
-                    </FadeInStagger>
-                </TabsContent>
-
-                <TabsContent value="regions" className="mt-0 pt-2">
-                    <FadeInStagger faster>
-                        <div className="grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-3">
-                            <FadeIn className="h-full">{renderMiniDashboard("region-RCN", t('region_rcn'), true)}</FadeIn>
-                            <FadeIn className="h-full">{renderMiniDashboard("region-LCA", t('region_lca'), true)}</FadeIn>
-                            <FadeIn className="h-full">{renderMiniDashboard("region-HCA", t('region_hca'), true)}</FadeIn>
-                        </div>
-                    </FadeInStagger>
-                </TabsContent>
-
-                <TabsContent value="overview" className="mt-0 pt-0">
-                    <OverviewTab
-                        selectedMonth={selectedMonth}
-                        departments={departments}
-                        dashboardsData={dashboardsData}
-                        kpiSummary={kpiSummary}
-                        seuData={{
-                            elecKwh: kpiSummary.elecActual,
-                            mnkKwh: otherElecSummary.compressorKwh,
-                            shellingKwh: otherElecSummary.shellingKwh,
-                            woodKg: kpiSummary.woodActual,
-                            // RCN = Steam department input (total RCN steamed this month)
-                            rcnTons: dashboardsData['all']?.summary?.totalActual || 0,
-                            // Peeling tons = PEEL_MC actual
-                            peelingTons: (() => {
-                                const peelId = departments.find(d => d.code === 'PEEL_MC')?.id
-                                return peelId ? (dashboardsData[peelId]?.summary?.totalActual || 0) : 0
-                            })(),
-                            // Shelling tons = SHELL actual
-                            shellingTons: (() => {
-                                const shellId = departments.find(d => d.code === 'SHELL')?.id
-                                return shellId ? (dashboardsData[shellId]?.summary?.totalActual || 0) : 0
-                            })(),
-                            // ISO 50001 baselines (from natural-resources-report/index.html store object)
-                            elecTarget: 248.94,   // kWh / RCN ton
-                            mnkTarget: 281.4,     // kWh / peeling ton
-                            shellingTarget: 0.0402, // kWh / kg shelling output
-                            woodTarget: 0.08,       // kg wood / kg RCN
-                        }}
-                    />
-                </TabsContent>
-                <TabsContent value="opex_report" className="mt-0 pt-0">
-                    <OpexReportTab />
-                </TabsContent>
-            </Tabs>
-
-            {
-                selectedDept === 'all' && energyHistory.length > 0 && (
-                    <Card className="mt-3 md:mt-4 bg-white border border-slate-200 shadow-sm relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-blue-500/5 pointer-events-none"></div>
-                        <CardHeader className="p-3 pb-2 md:p-5 md:pb-3 bg-white/40 border-b border-white/50 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">
-                                Theo dõi Điện - Nước - Củi ({format(selectedMonth, 'MM/yyyy')})
-                            </CardTitle>
-                            <div className="flex flex-wrap items-center gap-4 md:gap-6 bg-white/50 px-4 py-2 rounded-lg border border-white/80 shadow-sm">
-                                <div className="flex flex-col items-start md:items-end">
-                                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Điện (kWh)</span>
-                                    <span className="text-sm font-black text-amber-600">{Number(kpiSummary.elecActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.elecTarget).toLocaleString()}</span></span>
-                                </div>
-                                <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
-                                <div className="flex flex-col items-start md:items-end">
-                                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Nước (m³)</span>
-                                    <span className="text-sm font-black text-blue-600">{Number(kpiSummary.waterActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.waterTarget).toLocaleString()}</span></span>
-                                </div>
-                                <div className="hidden sm:block w-px h-8 bg-slate-200"></div>
-                                <div className="flex flex-col items-start md:items-end">
-                                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Củi (Tấn)</span>
-                                    <span className="text-sm font-black text-orange-600">{Number(kpiSummary.woodActual).toLocaleString()} <span className="text-[11px] text-muted-foreground font-medium">/ {Number(kpiSummary.woodTarget).toLocaleString()}</span></span>
-                                </div>
+                {/* ⚡ Daily Electricity Intensity vs Shell+Peel Output — moved below energy card */}
+                {dailyElecVsProd.length > 0 && (
+                    <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 md:p-5 mt-3 md:mt-4 mb-3 md:mb-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">⚡ Phát thải điện vs Sản lượng (Shell + Peeling)</span>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Cột: Sản lượng output (T) · Đường: kWh/T · Shell output = Input × 0.22</p>
                             </div>
+                        </div>
+                        <ChartWrapper className="w-full">
+                            <ResponsiveContainer width="100%" height={200}>
+                                <ComposedChart data={dailyElecVsProd} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={32} unit="T" />
+                                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#f59e0b' }} axisLine={false} tickLine={false} width={44} unit=" k/T" />
+                                    <Tooltip
+                                        content={({ active, payload, label }) => {
+                                            if (!active || !payload?.length) return null;
+                                            return (
+                                                <div className="bg-white/98 border border-slate-100 rounded-xl shadow-xl p-3 text-xs min-w-[180px]">
+                                                    <p className="font-black text-slate-700 mb-2 border-b border-slate-100 pb-1">{label}</p>
+                                                    {payload.map((p: any, i: number) => (
+                                                        <div key={i} className="flex justify-between gap-6 py-0.5">
+                                                            <span className="flex items-center gap-1.5 text-slate-500">
+                                                                <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: p.color }} />
+                                                                {p.name}
+                                                            </span>
+                                                            <span className="font-bold text-slate-800 tabular-nums">{Number(p.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}{p.name === 'kWh/T' ? '' : ' T'}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        }}
+                                    />
+                                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, color: '#94a3b8' }} />
+                                    <Bar yAxisId="left" dataKey="ShellOut" name="Shell output (×0.22)" stackId="prod" fill="#6366f1" opacity={0.85} radius={[0, 0, 0, 0]} maxBarSize={28} />
+                                    <Bar yAxisId="left" dataKey="PeelOut" name="Peel output" stackId="prod" fill="#22d3ee" opacity={0.85} radius={[3, 3, 0, 0]} maxBarSize={28} />
+                                    <Line yAxisId="right" type="monotone" dataKey="KwhPerT" name="kWh/T" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </ChartWrapper>
+                    </div>
+                )}
+
+                <div className="grid gap-4 mt-4">
+                    <Card className="bg-white border border-slate-200 shadow-sm">
+                        <CardHeader className="border-b border-white/50 bg-white/40">
+                            <CardTitle className="text-xl font-bold text-slate-800">{t('master_data_table')}</CardTitle>
                         </CardHeader>
-                        <CardContent className="p-2 pt-4 md:p-5 md:pt-4 relative z-10">
-                            {/* DESKTOP VIEW: Combined Chart with 3 Y-Axes */}
-                            <div className="hidden md:block h-80 w-full pb-4">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={energyHistory} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                        <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
-</defs>
-<XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                                        <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#eab308" />
-                                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#3b82f6" />
-                                        <YAxis yAxisId="right2" orientation="right" tick={{ fontSize: 12 }} stroke="#f97316" width={80} />
-                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
-                                        <Legend wrapperStyle={{ bottom: -5, fontSize: '11px' }} />
-                                        <Bar yAxisId="left" dataKey="ElectricityActual" name="Điện (kWh)" fill="#eab308" radius={[4, 4, 0, 0]} barSize={20} />
-                                        <Line yAxisId="left" type="monotone" dataKey="ElectricityTarget" name="Target Điện" stroke="#ca8a04" strokeDasharray="5 5" dot={false} strokeWidth={2} />
-                                        <Bar yAxisId="right" dataKey="WaterActual" name="Nước (m³)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
-                                        <Line yAxisId="right" type="monotone" dataKey="WaterTarget" name="Target Nước" stroke="#2563eb" strokeDasharray="5 5" dot={false} strokeWidth={2} />
-                                        <Bar yAxisId="right2" dataKey="WoodActual" name="Củi (Tấn)" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
-                                        <Line yAxisId="right2" type="monotone" dataKey="WoodTarget" name="Target Củi" stroke="#c2410c" strokeDasharray="5 5" dot={false} strokeWidth={2} />
-                                        <YAxis yAxisId="emission" orientation="right" tick={{ fontSize: 12 }} stroke="#10b981" width={60} />
-                                        <Line yAxisId="emission" type="monotone" dataKey="Emission" name="Phát thải (TCO₂e)" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 5 }} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto w-full">
+                                <Table className="bg-white w-full text-xs sm:text-sm border-collapse">
+
+                                    <TableHeader className="bg-slate-50 border-b border-slate-200">
+                                        {selectedDept === 'all' ? (
+                                            <TableRow>
+                                                <TableHead>{t('col_dept')}</TableHead>
+                                                <TableHead className="text-right">{t('col_plan')}</TableHead>
+                                                <TableHead className="text-right">{t('col_actual')}</TableHead>
+                                                <TableHead className="text-right hidden sm:table-cell">{t('col_achv')}</TableHead>
+                                                <TableHead className="text-right hidden sm:table-cell">{t('col_variance')}</TableHead>
+                                                <TableHead className="text-right">{t('col_downtime')}</TableHead>
+                                            </TableRow>
+                                        ) : (
+                                            <TableRow>
+                                                <TableHead>Ngày / Date</TableHead>
+                                                <TableHead className="text-right">{t('col_plan')}</TableHead>
+                                                <TableHead className="text-right">{t('col_actual')}</TableHead>
+                                                <TableHead className="text-right hidden sm:table-cell">Input (Tấn)</TableHead>
+                                                <TableHead className="text-right hidden sm:table-cell">Output (Tấn)</TableHead>
+                                                {departments.find(d => d.id === selectedDept)?.code === 'PACK' && (
+                                                    <>
+                                                        <TableHead className="text-right hidden md:table-cell">Plan Cont</TableHead>
+                                                        <TableHead className="text-right hidden md:table-cell">Actual Cont</TableHead>
+                                                    </>
+                                                )}
+                                                {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (
+                                                    <TableHead className="text-right text-blue-600">ISP (T)</TableHead>
+                                                )}
+                                                <TableHead className="text-right">{t('col_downtime')}</TableHead>
+                                            </TableRow>
+                                        )}
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedDept === 'all' ? (
+                                            deptData.filter(d => d.Actual > 0 || d.Plan > 0).map((d) => {
+                                                const pct = d.Plan > 0 ? ((d.Actual / d.Plan) * 100).toFixed(1) : "0.0";
+                                                const variance = (d.Actual - d.Plan).toFixed(2);
+                                                return (
+                                                    <TableRow key={d.name}>
+                                                        <TableCell className="font-medium">{d.name}</TableCell>
+                                                        <TableCell className="text-right">{d.Plan.toFixed(1)}</TableCell>
+                                                        <TableCell className="text-right text-primary font-bold">{d.Actual.toFixed(1)}</TableCell>
+                                                        <TableCell className="text-right hidden sm:table-cell">{pct}%</TableCell>
+                                                        <TableCell className={`text-right hidden sm:table-cell ${Number(variance) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                                            {Number(variance) > 0 ? '+' : ''}{variance}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">{d.Down}</TableCell>
+                                                    </TableRow>
+                                                )
+                                            })
+                                        ) : (
+                                            dailyRecords.slice(tablePage * TABLE_PAGE_SIZE, (tablePage + 1) * TABLE_PAGE_SIZE).map((d) => (
+                                                <TableRow key={d.work_date}>
+                                                    <TableCell className="font-medium">{format(new Date(d.work_date), 'dd/MM/yyyy')}</TableCell>
+                                                    <TableCell className="text-right">{Number(d.plan_ton).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right text-primary font-bold">{Number(d.actual_ton).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right hidden sm:table-cell">{Number(d.input_ton).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right hidden sm:table-cell">{Number(d.good_output_ton).toFixed(2)}</TableCell>
+                                                    {d.dept_code === 'PACK' && (
+                                                        <>
+                                                            <TableCell className="text-right hidden md:table-cell">{Number(d.plan_container || 0).toFixed(2)}</TableCell>
+                                                            <TableCell className="text-right font-bold text-indigo-600 hidden md:table-cell">{Number(d.actual_container || 0).toFixed(2)}</TableCell>
+                                                        </>
+                                                    )}
+                                                    {['CS', 'HAND'].includes(d.dept_code) && (
+                                                        <TableCell className="text-right text-blue-600 font-medium">
+                                                            {Number(d.isp_ton || 0).toFixed(1)}
+                                                            <span className="text-[10px] text-muted-foreground ml-1 hidden sm:inline">/ {Number(d.plan_isp_ton || 0).toFixed(1)}</span>
+                                                        </TableCell>
+                                                    )}
+                                                    <TableCell className="text-right">{d.downtime_min}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
-
-                            {/* MOBILE VIEW: 3 Separate Charts for better readability */}
-                            <div className="md:hidden flex flex-col gap-10 py-4">
-                                {/* Electricity Chart */}
-                                <div className="h-48 w-full">
-                                    <p className="text-xs font-bold text-amber-600 mb-2 uppercase tracking-tight">Electricity Chart (kWh)</p>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
-</defs>
-<XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                                            <YAxis tick={{ fontSize: 9 }} stroke="#eab308" />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
-                                            <Bar dataKey="ElectricityActual" name={t('legend.actual')} fill="#eab308" radius={[2, 2, 0, 0]} barSize={12} />
-                                            <Line type="monotone" dataKey="ElectricityTarget" name="Mục tiêu" stroke="#ca8a04" strokeDasharray="4 4" dot={false} strokeWidth={2} />
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
+                            {selectedDept !== 'all' && dailyRecords.length > TABLE_PAGE_SIZE && (
+                                <div className="flex items-center justify-between px-4 py-2 border-t text-sm text-muted-foreground">
+                                    <span>{tablePage * TABLE_PAGE_SIZE + 1}–{Math.min((tablePage + 1) * TABLE_PAGE_SIZE, dailyRecords.length)} / {dailyRecords.length} dòng</span>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setTablePage(p => Math.max(0, p - 1))} disabled={tablePage === 0} className="px-2 py-1 rounded border disabled:opacity-40 hover:bg-slate-50">←</button>
+                                        <button onClick={() => setTablePage(p => p + 1)} disabled={(tablePage + 1) * TABLE_PAGE_SIZE >= dailyRecords.length} className="px-2 py-1 rounded border disabled:opacity-40 hover:bg-slate-50">→</button>
+                                    </div>
                                 </div>
-
-                                {/* Water Chart */}
-                                <div className="h-48 w-full">
-                                    <p className="text-xs font-bold text-blue-600 mb-2 uppercase tracking-tight">Water Chart (m³)</p>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
-</defs>
-<XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                                            <YAxis tick={{ fontSize: 9 }} stroke="#3b82f6" />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
-                                            <Bar dataKey="WaterActual" name={t('legend.actual')} fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={12} />
-                                            <Line type="monotone" dataKey="WaterTarget" name="Mục tiêu" stroke="#2563eb" strokeDasharray="4 4" dot={false} strokeWidth={2} />
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
-                                </div>
-
-                                {/* Wood Chart */}
-                                <div className="h-48 w-full">
-                                    <p className="text-xs font-bold text-orange-600 mb-2 uppercase tracking-tight">Wood Chart (Tons)</p>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <defs>
-<linearGradient id="actualGreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/><stop offset="100%" stopColor="#059669" stopOpacity={0.7}/></linearGradient>
-<linearGradient id="actualRedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e63121" stopOpacity={0.9}/><stop offset="100%" stopColor="#b91c1c" stopOpacity={0.7}/></linearGradient>
-</defs>
-<XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                                            <YAxis tick={{ fontSize: 9 }} stroke="#f97316" />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
-                                            <Bar dataKey="WoodActual" name={t('legend.actual')} fill="#f97316" radius={[2, 2, 0, 0]} barSize={12} />
-                                            <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={2} />
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
-                                </div>
-
-                                {/* Emission Chart */}
-                                <div className="h-48 w-full">
-                                    <p className="text-xs font-bold text-emerald-600 mb-2 uppercase tracking-tight">Cacbon (TCO₂e)</p>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ComposedChart data={energyHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                                            <YAxis tick={{ fontSize: 9 }} stroke="#10b981" />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} trigger="hover" />
-                                            <Line type="monotone" dataKey="Emission" name="Phát thải" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 5 }} />
-                                        </ComposedChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
-                )
-            }
-
-            {/* ⚡ Sub-Energy Summary: Điện Shelling / MNK / Củi / Peeling */}
-            {selectedDept === 'all' && (shellingElecHistory.length > 0 || compressorHistory.length > 0) && (
-                <div className="mt-3 md:mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                    {/* KPI Cards — top row: 4 energy items */}
-                    <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {/* Điện Shelling */}
-                        <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
-                            <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">⚡ Điện Shelling</span>
-                            <span className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter">
-                                {otherElecSummary.shellingKwh.toLocaleString('vi-VN')}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">kWh MTD</span>
-                            <div className="h-1.5 bg-orange-100 rounded-full overflow-hidden mt-1">
-                                <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-500" style={{ width: '100%' }} />
-                            </div>
-                        </div>
-
-                        {/* Máy nén khí total */}
-                        <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
-                            <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🔧 Máy nén khí</span>
-                            <span className="text-xl md:text-2xl font-black text-purple-700 tracking-tighter">
-                                {otherElecSummary.compressorKwh.toLocaleString('vi-VN')}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">kWh MTD (3 cụm)</span>
-                            <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden mt-1">
-                                <div className="h-full rounded-full bg-gradient-to-r from-purple-400 to-violet-500" style={{ width: '100%' }} />
-                            </div>
-                        </div>
-
-                        {/* Củi */}
-                        <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
-                            <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🪵 Củi (Biomass)</span>
-                            <span className="text-xl md:text-2xl font-black text-orange-700 tracking-tighter">
-                                {(kpiSummary.woodActual / 1000).toFixed(1)}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">
-                                Tấn MTD / {(kpiSummary.woodTarget / 1000).toFixed(1)} T KH
-                            </span>
-                            <div className="h-1.5 bg-orange-100 rounded-full overflow-hidden mt-1">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-600"
-                                    style={{ width: `${Math.min(kpiSummary.woodTarget > 0 ? (kpiSummary.woodActual / kpiSummary.woodTarget) * 100 : 0, 100)}%` }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Peeling Compressor */}
-                        <div className="flex flex-col gap-1.5 p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all">
-                            <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase">🧊 Điện Peeling</span>
-                            <span className="text-xl md:text-2xl font-black text-cyan-700 tracking-tighter">
-                                {otherElecSummary.peelingCompKwh > 0 ? otherElecSummary.peelingCompKwh.toLocaleString('vi-VN') : '—'}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">kWh MTD (DB-AC HCA)</span>
-                            <div className="h-1.5 bg-cyan-100 rounded-full overflow-hidden mt-1">
-                                <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-teal-500" style={{ width: '100%' }} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Điện Shelling Chart */}
-                    {shellingElecHistory.length > 0 && (
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
-                            <p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-3">⚡ Điện Shelling (kWh/ngày)</p>
-                            <ChartWrapper className="h-[180px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={shellingElecHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="shellElecGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#f97316" stopOpacity={0.9}/>
-                                                <stop offset="100%" stopColor="#ea580c" stopOpacity={0.7}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(shellingElecHistory.length / 6)} />
-                                        <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v)} width={32} />
-                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(249,115,22,0.08)' }} />
-                                        <Bar dataKey="kWh" name="Điện Shelling" fill="url(#shellElecGrad)" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </ChartWrapper>
-                        </div>
-                    )}
-
-                    {/* Máy nén khí chart */}
-                    {compressorHistory.length > 0 && (
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
-                            <p className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3">🔧 Máy Nén Khí – 3 Cụm (kWh/ngày)</p>
-                            <ChartWrapper className="h-[180px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={compressorHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="mnk1Grad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.6}/>
-                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.05}/>
-                                            </linearGradient>
-                                            <linearGradient id="mnk2Grad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#ec4899" stopOpacity={0.6}/>
-                                                <stop offset="95%" stopColor="#ec4899" stopOpacity={0.05}/>
-                                            </linearGradient>
-                                            <linearGradient id="mnk3Grad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.6}/>
-                                                <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.05}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(compressorHistory.length / 6)} />
-                                        <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v)} width={32} />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
-                                        <Area type="monotone" dataKey="MNK1" name="Cụm #1" stroke="#8b5cf6" fill="url(#mnk1Grad)" strokeWidth={2} dot={false} />
-                                        <Area type="monotone" dataKey="MNK2" name="Cụm #2,4" stroke="#ec4899" fill="url(#mnk2Grad)" strokeWidth={2} dot={false} />
-                                        <Area type="monotone" dataKey="MNK3" name="Cụm #3,5,6" stroke="#14b8a6" fill="url(#mnk3Grad)" strokeWidth={2} dot={false} />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </ChartWrapper>
-                        </div>
-                    )}
-
-                    {/* Củi chart */}
-                    {energyHistory.length > 0 && (
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4">
-                            <p className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-3">🪵 Củi Biomass (kg/ngày)</p>
-                            <ChartWrapper className="h-[180px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={energyHistory} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#f97316" stopOpacity={0.85}/>
-                                                <stop offset="100%" stopColor="#c2410c" stopOpacity={0.6}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.floor(energyHistory.length / 6)} />
-                                        <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} width={32} />
-                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(249,115,22,0.08)' }} />
-                                        <Bar dataKey="WoodActual" name="Củi (kg)" fill="url(#woodGrad)" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                                        <Line type="monotone" dataKey="WoodTarget" name="Mục tiêu" stroke="#c2410c" strokeDasharray="4 4" dot={false} strokeWidth={1.5} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </ChartWrapper>
-                        </div>
-                    )}
                 </div>
-            )}
-
-
-            {/* ⚡ Daily Electricity Intensity vs Shell+Peel Output — moved below energy card */}
-            {dailyElecVsProd.length > 0 && (
-                <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 md:p-5 mt-3 md:mt-4 mb-3 md:mb-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <div>
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">⚡ Phát thải điện vs Sản lượng (Shell + Peeling)</span>
-                            <p className="text-[10px] text-slate-400 mt-0.5">Cột: Sản lượng output (T) · Đường: kWh/T · Shell output = Input × 0.22</p>
-                        </div>
-                    </div>
-                    <ChartWrapper className="w-full">
-                        <ResponsiveContainer width="100%" height={200}>
-                            <ComposedChart data={dailyElecVsProd} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={32} unit="T" />
-                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#f59e0b' }} axisLine={false} tickLine={false} width={44} unit=" k/T" />
-                                <Tooltip
-                                    content={({ active, payload, label }) => {
-                                        if (!active || !payload?.length) return null;
-                                        return (
-                                            <div className="bg-white/98 border border-slate-100 rounded-xl shadow-xl p-3 text-xs min-w-[180px]">
-                                                <p className="font-black text-slate-700 mb-2 border-b border-slate-100 pb-1">{label}</p>
-                                                {payload.map((p: any, i: number) => (
-                                                    <div key={i} className="flex justify-between gap-6 py-0.5">
-                                                        <span className="flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: p.color }} />
-                                                            {p.name}
-                                                        </span>
-                                                        <span className="font-bold text-slate-800 tabular-nums">{Number(p.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}{p.name === 'kWh/T' ? '' : ' T'}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        );
-                                    }}
-                                />
-                                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10, color: '#94a3b8' }} />
-                                <Bar yAxisId="left" dataKey="ShellOut" name="Shell output (×0.22)" stackId="prod" fill="#6366f1" opacity={0.85} radius={[0, 0, 0, 0]} maxBarSize={28} />
-                                <Bar yAxisId="left" dataKey="PeelOut" name="Peel output" stackId="prod" fill="#22d3ee" opacity={0.85} radius={[3, 3, 0, 0]} maxBarSize={28} />
-                                <Line yAxisId="right" type="monotone" dataKey="KwhPerT" name="kWh/T" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }} activeDot={{ r: 5 }} />
-                            </ComposedChart>
-                        </ResponsiveContainer>
-                    </ChartWrapper>
-                </div>
-            )}
-
-            <div className="grid gap-4 mt-4">
-                <Card className="bg-white border border-slate-200 shadow-sm">
-                    <CardHeader className="border-b border-white/50 bg-white/40">
-                        <CardTitle className="text-xl font-bold text-slate-800">{t('master_data_table')}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="overflow-x-auto w-full">
-                        <Table className="bg-white w-full text-xs sm:text-sm border-collapse">
-
-                            <TableHeader className="bg-slate-50 border-b border-slate-200">
-                                {selectedDept === 'all' ? (
-                                    <TableRow>
-                                        <TableHead>{t('col_dept')}</TableHead>
-                                        <TableHead className="text-right">{t('col_plan')}</TableHead>
-                                        <TableHead className="text-right">{t('col_actual')}</TableHead>
-                                        <TableHead className="text-right hidden sm:table-cell">{t('col_achv')}</TableHead>
-                                        <TableHead className="text-right hidden sm:table-cell">{t('col_variance')}</TableHead>
-                                        <TableHead className="text-right">{t('col_downtime')}</TableHead>
-                                    </TableRow>
-                                ) : (
-                                    <TableRow>
-                                        <TableHead>Ngày / Date</TableHead>
-                                        <TableHead className="text-right">{t('col_plan')}</TableHead>
-                                        <TableHead className="text-right">{t('col_actual')}</TableHead>
-                                        <TableHead className="text-right hidden sm:table-cell">Input (Tấn)</TableHead>
-                                        <TableHead className="text-right hidden sm:table-cell">Output (Tấn)</TableHead>
-                                        {departments.find(d => d.id === selectedDept)?.code === 'PACK' && (
-                                            <>
-                                                <TableHead className="text-right hidden md:table-cell">Plan Cont</TableHead>
-                                                <TableHead className="text-right hidden md:table-cell">Actual Cont</TableHead>
-                                            </>
-                                        )}
-                                        {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (
-                                            <TableHead className="text-right text-blue-600">ISP (T)</TableHead>
-                                        )}
-                                        <TableHead className="text-right">{t('col_downtime')}</TableHead>
-                                    </TableRow>
-                                )}
-                            </TableHeader>
-                            <TableBody>
-                                {selectedDept === 'all' ? (
-                                    deptData.filter(d => d.Actual > 0 || d.Plan > 0).map((d) => {
-                                        const pct = d.Plan > 0 ? ((d.Actual / d.Plan) * 100).toFixed(1) : "0.0";
-                                        const variance = (d.Actual - d.Plan).toFixed(2);
-                                        return (
-                                            <TableRow key={d.name}>
-                                                <TableCell className="font-medium">{d.name}</TableCell>
-                                                <TableCell className="text-right">{d.Plan.toFixed(1)}</TableCell>
-                                                <TableCell className="text-right text-primary font-bold">{d.Actual.toFixed(1)}</TableCell>
-                                                <TableCell className="text-right hidden sm:table-cell">{pct}%</TableCell>
-                                                <TableCell className={`text-right hidden sm:table-cell ${Number(variance) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                                    {Number(variance) > 0 ? '+' : ''}{variance}
-                                                </TableCell>
-                                                <TableCell className="text-right">{d.Down}</TableCell>
-                                            </TableRow>
-                                        )
-                                    })
-                                ) : (
-                                    dailyRecords.slice(tablePage * TABLE_PAGE_SIZE, (tablePage + 1) * TABLE_PAGE_SIZE).map((d) => (
-                                        <TableRow key={d.work_date}>
-                                            <TableCell className="font-medium">{format(new Date(d.work_date), 'dd/MM/yyyy')}</TableCell>
-                                            <TableCell className="text-right">{Number(d.plan_ton).toFixed(2)}</TableCell>
-                                            <TableCell className="text-right text-primary font-bold">{Number(d.actual_ton).toFixed(2)}</TableCell>
-                                            <TableCell className="text-right hidden sm:table-cell">{Number(d.input_ton).toFixed(2)}</TableCell>
-                                            <TableCell className="text-right hidden sm:table-cell">{Number(d.good_output_ton).toFixed(2)}</TableCell>
-                                            {d.dept_code === 'PACK' && (
-                                                <>
-                                                    <TableCell className="text-right hidden md:table-cell">{Number(d.plan_container || 0).toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right font-bold text-indigo-600 hidden md:table-cell">{Number(d.actual_container || 0).toFixed(2)}</TableCell>
-                                                </>
-                                            )}
-                                            {['CS', 'HAND'].includes(d.dept_code) && (
-                                                <TableCell className="text-right text-blue-600 font-medium">
-                                                    {Number(d.isp_ton || 0).toFixed(1)}
-                                                    <span className="text-[10px] text-muted-foreground ml-1 hidden sm:inline">/ {Number(d.plan_isp_ton || 0).toFixed(1)}</span>
-                                                </TableCell>
-                                            )}
-                                            <TableCell className="text-right">{d.downtime_min}</TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                        </div>
-                        {selectedDept !== 'all' && dailyRecords.length > TABLE_PAGE_SIZE && (
-                            <div className="flex items-center justify-between px-4 py-2 border-t text-sm text-muted-foreground">
-                                <span>{tablePage * TABLE_PAGE_SIZE + 1}–{Math.min((tablePage + 1) * TABLE_PAGE_SIZE, dailyRecords.length)} / {dailyRecords.length} dòng</span>
-                                <div className="flex gap-2">
-                                    <button onClick={() => setTablePage(p => Math.max(0, p - 1))} disabled={tablePage === 0} className="px-2 py-1 rounded border disabled:opacity-40 hover:bg-slate-50">←</button>
-                                    <button onClick={() => setTablePage(p => p + 1)} disabled={(tablePage + 1) * TABLE_PAGE_SIZE >= dailyRecords.length} className="px-2 py-1 rounded border disabled:opacity-40 hover:bg-slate-50">→</button>
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-        </div >
+            </div >
         </>
     )
 }
