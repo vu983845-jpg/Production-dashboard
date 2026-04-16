@@ -21,7 +21,7 @@ const DEPT_DISPLAY: Record<string, string> = {
     HPEEL: "Hand Peeling",              // Real dept: Hand Peeling
     HPEEL_GRADING: "Manual Grading (Ms Hu\u1ec7)",
     HPEEL_DUNG: "Manual Peeling (Dung)",
-    HPEEL_LOAN: "Manual Peeling (Loan)",
+    HPEEL_LOAN: "Manual Grading (Ms Hu\u1ec7)",
     RCN: "RCN", MAINT_SHELL: "Maint Shelling",
     MAINT_HCA: "Maintenance HCA", OFFICE: "Office", CLEAN: "Cleaning",
 }

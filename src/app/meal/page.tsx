@@ -6,13 +6,13 @@ import { IntersnackLogo } from "@/components/intersnack-logo"
 
 interface Dept { id: string; code: string; name_en: string }
 
-const MULTI_SHIFT_CODES = new Set(["QC", "BOILER", "CLEAN"])
+const MULTI_SHIFT_CODES = new Set(["QC", "BOILER", "CLEAN", "MAINT_HCA"])
 
 const HPEEL_SUBGROUPS = [
     { key: "HPEEL_LIEN", label: "Tổ Liên", dept_name: "Manual Peeling (Liên)" },
     { key: "HPEEL_DUNG", label: "Tổ Dung", dept_name: "Manual Peeling (Dung)" },
     { key: "HPEEL_GRADING", label: "Ms Huệ (Grading)", dept_name: "Manual Grading (Ms Huệ)" },
-    { key: "HPEEL_LOAN", label: "Ms Loan", dept_name: "Manual Peeling (Loan)" },
+    { key: "HPEEL_LOAN", label: "Ms Loan", dept_name: "Manual Grading (Ms Huệ)" },
 ]
 
 const SHIFTS_NORMAL = [{ value: "1", label: "Ca 1" }, { value: "2", label: "Ca 2" }, { value: "3", label: "Ca 3" }]
@@ -319,7 +319,7 @@ export default function PublicMealPage() {
                 {/* Absent */}
                 {!hideAbsent && (
                     <>
-                        <div className="subsection-label" style={{ marginTop: 12 }}>❌ Vắng mặt <span className="opt-tag">nếu có</span></div>
+                        <div className="subsection-label" style={{ marginTop: 8 }}>❌ Vắng mặt <span className="opt-tag">nếu có</span></div>
                         <div className="row2">
                             <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
                                 <label>Chính thức</label>
@@ -337,12 +337,12 @@ export default function PublicMealPage() {
 
                 {/* OT */}
                 {!data.showOT ? (
-                    <button type="button" className="ghost-btn" style={{ marginTop: 12, padding: "10px", width: "100%", border: "1.5px dashed #f97316", background: "#fff7ed", color: "#c2410c" }} onClick={() => update("showOT", true)}>
+                    <button type="button" className="ghost-btn" style={{ marginTop: 8, padding: "8px", width: "100%", border: "1.5px dashed #f97316", background: "#fff7ed", color: "#c2410c" }} onClick={() => update("showOT", true)}>
                         + Thêm báo cơm Tăng ca (OT)
                     </button>
                 ) : (
                     <>
-                        <div className="subsection-label" style={{ marginTop: 12 }}>⏰ Tăng ca (OT) <span className="opt-tag">nếu có</span></div>
+                        <div className="subsection-label" style={{ marginTop: 8 }}>⏰ Tăng ca (OT) <span className="opt-tag">nếu có</span></div>
                         <div className="row2">
                             <div className="field-sm">
                                 <label>Tổng phần OT</label>
@@ -881,8 +881,8 @@ function Style() {
             .radio-btn input { display: none; }
 
             /* Shift block */
-            .shift-block { background: white; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-            .shift-block-label { font-size: 15px; font-weight: 800; color: #c2410c; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1.5px solid #f1f5f9; }
+            .shift-block { background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
+            .shift-block-label { font-weight: 700; color: #1e293b; margin-bottom: 8px; font-size: 14px; }
 
             /* Vegetarian breakdown */
             .breakdown-box { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px; margin: 8px 0 4px; }
