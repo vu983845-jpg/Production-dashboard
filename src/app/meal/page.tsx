@@ -9,14 +9,14 @@ interface Dept { id: string; code: string; name_en: string }
 const MULTI_SHIFT_CODES = new Set(["QC", "BOILER"])
 
 const HPEEL_SUBGROUPS = [
-    { key: "HPEEL_LIEN",    label: "Tổ Liên",          dept_name: "Manual Peeling (Liên)" },
-    { key: "HPEEL_DUNG",    label: "Tổ Dung",           dept_name: "Manual Peeling (Dung)" },
-    { key: "HPEEL_GRADING", label: "Ms Huệ (Grading)",  dept_name: "Manual Grading (Ms Huệ)" },
+    { key: "HPEEL_LIEN", label: "Tổ Liên", dept_name: "Manual Peeling (Liên)" },
+    { key: "HPEEL_DUNG", label: "Tổ Dung", dept_name: "Manual Peeling (Dung)" },
+    { key: "HPEEL_GRADING", label: "Ms Huệ (Grading)", dept_name: "Manual Grading (Ms Huệ)" },
 ]
 
-const SHIFTS_NORMAL  = [{ value: "1", label: "Ca 1" }, { value: "2", label: "Ca 2" }, { value: "3", label: "Ca 3" }]
+const SHIFTS_NORMAL = [{ value: "1", label: "Ca 1" }, { value: "2", label: "Ca 2" }, { value: "3", label: "Ca 3" }]
 const SHIFTS_WITH_HC = [...SHIFTS_NORMAL, { value: "HC", label: "HC" }]
-const MULTI_SHIFTS   = ["1", "2", "3"]
+const MULTI_SHIFTS = ["1", "2", "3"]
 
 // OT default meal time per shift
 const OT_DEFAULT_TIME: Record<string, string> = { "1": "14:00", "2": "18:00", "3": "06:00", "HC": "17:00" }
@@ -50,7 +50,7 @@ interface ConfirmRow {
 interface OTRecord { ot_count: number; ot_vegetarian: number; official_present: number; seasonal_present: number; vegetarian: number }
 interface SummaryRow { department_name: string; shift: string; official_present: number; seasonal_present: number; official_absent: number; seasonal_absent: number; ot_count: number; vegetarian: number; ot_vegetarian: number; note?: string }
 type PageMode = "report" | "edit-ot" | "summary"
-type OTStep  = "select" | "edit" | "confirm" | "done"
+type OTStep = "select" | "edit" | "confirm" | "done"
 
 // ── helpers ──
 const n = (s: string) => { const v = parseInt(s); return isNaN(v) || v < 0 ? 0 : v }
@@ -58,49 +58,49 @@ const calcMalan = (total: string, chay: string) => Math.max(0, n(total) - n(chay
 const totalPresent = (d: ShiftData) => n(d.officialPresent) + n(d.seasonalPresent)
 
 export default function PublicMealPage() {
-    const [depts, setDepts]       = useState<Dept[]>([])
-    const [loading, setLoading]   = useState(true)
+    const [depts, setDepts] = useState<Dept[]>([])
+    const [loading, setLoading] = useState(true)
     const [pageMode, setPageMode] = useState<PageMode>("report")
 
     // Report state
-    const [deptId, setDeptId]         = useState("")
-    const [hpeelSub, setHpeelSub]     = useState("")
-    const [shift, setShift]           = useState("")
-    const [workDate, setWorkDate]     = useState(format(new Date(), "yyyy-MM-dd"))
+    const [deptId, setDeptId] = useState("")
+    const [hpeelSub, setHpeelSub] = useState("")
+    const [shift, setShift] = useState("")
+    const [workDate, setWorkDate] = useState(format(new Date(), "yyyy-MM-dd"))
     const [reporterName, setReporterName] = useState("")
     const [singleData, setSingleData] = useState<ShiftData>(blank())
-    const [multiData, setMultiData]   = useState<Record<string, ShiftData>>({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
+    const [multiData, setMultiData] = useState<Record<string, ShiftData>>({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
     const [confirmRows, setConfirmRows] = useState<ConfirmRow[]>([])
     const [showConfirm, setShowConfirm] = useState(false)
-    const [success, setSuccess]       = useState(false)
-    const [error, setError]           = useState("")
+    const [success, setSuccess] = useState(false)
+    const [error, setError] = useState("")
     const [submitting, setSubmitting] = useState(false)
 
     // OT edit state
-    const [otStep, setOtStep]           = useState<OTStep>("select")
-    const [otDeptId, setOtDeptId]       = useState("")
-    const [otHpeelSub, setOtHpeelSub]   = useState("")
-    const [otShift, setOtShift]         = useState("")
-    const [otDate, setOtDate]           = useState(format(new Date(), "yyyy-MM-dd"))
-    const [otRecord, setOtRecord]       = useState<OTRecord | null>(null)
-    const [otNewTotal, setOtNewTotal]   = useState("")
-    const [otNewVeg, setOtNewVeg]       = useState("")
-    const [otNewTime, setOtNewTime]     = useState("")
-    const [otNotFound, setOtNotFound]   = useState(false)
-    const [otLooking, setOtLooking]     = useState(false)
+    const [otStep, setOtStep] = useState<OTStep>("select")
+    const [otDeptId, setOtDeptId] = useState("")
+    const [otHpeelSub, setOtHpeelSub] = useState("")
+    const [otShift, setOtShift] = useState("")
+    const [otDate, setOtDate] = useState(format(new Date(), "yyyy-MM-dd"))
+    const [otRecord, setOtRecord] = useState<OTRecord | null>(null)
+    const [otNewTotal, setOtNewTotal] = useState("")
+    const [otNewVeg, setOtNewVeg] = useState("")
+    const [otNewTime, setOtNewTime] = useState("")
+    const [otNotFound, setOtNotFound] = useState(false)
+    const [otLooking, setOtLooking] = useState(false)
     const [otSubmitting, setOtSubmitting] = useState(false)
-    const [otError, setOtError]         = useState("")
+    const [otError, setOtError] = useState("")
 
     // Summary state
-    const [sumDate, setSumDate]       = useState(format(new Date(), "yyyy-MM-dd"))
-    const [sumRows, setSumRows]       = useState<SummaryRow[]>([])
+    const [sumDate, setSumDate] = useState(format(new Date(), "yyyy-MM-dd"))
+    const [sumRows, setSumRows] = useState<SummaryRow[]>([])
     const [sumLoading, setSumLoading] = useState(false)
-    const [sumError, setSumError]     = useState("")
-    const [sumLoaded, setSumLoaded]   = useState(false)
+    const [sumError, setSumError] = useState("")
+    const [sumLoaded, setSumLoaded] = useState(false)
 
     const loadSummary = async (date: string) => {
         setSumLoading(true); setSumError(""); setSumLoaded(false)
-        const res  = await fetch(`/api/public-meal?summary_date=${date}`)
+        const res = await fetch(`/api/public-meal?summary_date=${date}`)
         const data = await res.json()
         setSumLoading(false)
         if (data.error) { setSumError(data.error); return }
@@ -115,15 +115,15 @@ export default function PublicMealPage() {
             .catch(() => setLoading(false))
     }, [])
 
-    const selectedDept   = depts.find(d => d.id === deptId)
-    const isMultiShift   = !!(selectedDept && MULTI_SHIFT_CODES.has(selectedDept.code))
-    const isHpeel        = selectedDept?.code === "HPEEL" || selectedDept?.code === "HAND"
-    const isOffice       = selectedDept?.code === "OFFICE"
-    const shifts         = isOffice ? SHIFTS_WITH_HC : SHIFTS_NORMAL
+    const selectedDept = depts.find(d => d.id === deptId)
+    const isMultiShift = !!(selectedDept && MULTI_SHIFT_CODES.has(selectedDept.code))
+    const isHpeel = selectedDept?.code === "HPEEL" || selectedDept?.code === "HAND"
+    const isOffice = selectedDept?.code === "OFFICE"
+    const shifts = (isOffice || isHpeel) ? SHIFTS_WITH_HC : SHIFTS_NORMAL
     const otSelectedDept = depts.find(d => d.id === otDeptId)
-    const isOtHpeel      = otSelectedDept?.code === "HPEEL" || otSelectedDept?.code === "HAND"
-    const isOtOffice     = otSelectedDept?.code === "OFFICE"
-    const otShifts       = isOtOffice ? SHIFTS_WITH_HC : SHIFTS_NORMAL
+    const isOtHpeel = otSelectedDept?.code === "HPEEL" || otSelectedDept?.code === "HAND"
+    const isOtOffice = otSelectedDept?.code === "OFFICE"
+    const otShifts = (isOtOffice || isOtHpeel) ? SHIFTS_WITH_HC : SHIFTS_NORMAL
 
     const getEffectiveDeptName = (id = deptId, sub = hpeelSub) => {
         const dept = depts.find(d => d.id === id)
@@ -138,9 +138,9 @@ export default function PublicMealPage() {
             department_id: deptId, department_name: getEffectiveDeptName(),
             work_date: workDate, shift: shiftVal,
             official_present: n(data.officialPresent), seasonal_present: n(data.seasonalPresent),
-            official_absent:  n(data.officialAbsent),  seasonal_absent:  n(data.seasonalAbsent),
-            ot_count:      otMalan,
-            vegetarian:    n(data.vegCount),
+            official_absent: n(data.officialAbsent), seasonal_absent: n(data.seasonalAbsent),
+            ot_count: otMalan,
+            vegetarian: n(data.vegCount),
             ot_vegetarian: n(data.otVeg),
             reporter_name: (reporterName.trim() + timeNote).trim(),
         }
@@ -157,7 +157,7 @@ export default function PublicMealPage() {
 
     const handleSubmit = async () => {
         setSubmitting(true); setError("")
-        const res  = await fetch("/api/public-meal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(confirmRows) })
+        const res = await fetch("/api/public-meal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(confirmRows) })
         const data = await res.json()
         setSubmitting(false)
         if (data.success) { setSuccess(true); setShowConfirm(false) }
@@ -178,7 +178,7 @@ export default function PublicMealPage() {
         setOtLooking(true); setOtError(""); setOtNotFound(false)
         const deptName = getEffectiveDeptName(otDeptId, otHpeelSub)
         const url = `/api/public-meal?dept_id=${otDeptId}&work_date=${otDate}&shift=${otShift}&dept_name=${encodeURIComponent(deptName)}`
-        const res  = await fetch(url); const data = await res.json()
+        const res = await fetch(url); const data = await res.json()
         setOtLooking(false)
         if (!data.record) {
             // create default 0 record if not found
@@ -201,9 +201,9 @@ export default function PublicMealPage() {
     const handleOtSubmit = async () => {
         setOtSubmitting(true); setOtError("")
         const deptName = getEffectiveDeptName(otDeptId, otHpeelSub)
-        const otMalan  = calcMalan(otNewTotal, otNewVeg)
+        const otMalan = calcMalan(otNewTotal, otNewVeg)
         const timeNote = otNewTime ? `Giờ ăn OT: ${otNewTime}` : ""
-        const payload  = {
+        const payload = {
             department_id: otDeptId, department_name: deptName,
             work_date: otDate, shift: otShift,
             official_present: otRecord?.official_present ?? 0,
@@ -213,7 +213,7 @@ export default function PublicMealPage() {
             ot_count: otMalan, ot_vegetarian: n(otNewVeg),
             reporter_name: timeNote,
         }
-        const res  = await fetch("/api/public-meal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify([payload]) })
+        const res = await fetch("/api/public-meal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify([payload]) })
         const data = await res.json()
         setOtSubmitting(false)
         if (data.success) setOtStep("done")
@@ -254,14 +254,14 @@ export default function PublicMealPage() {
         data: ShiftData; update: (f: keyof ShiftData, v: any) => void
         shiftLabel?: string; shiftVal?: string
     }) => {
-        const total     = totalPresent(data)
-        const chay      = n(data.vegCount)
-        const malan     = Math.max(0, total - chay)
-        const hasTotal  = total > 0
-        const otTotalN  = n(data.otTotal)
-        const otChayN   = n(data.otVeg)
-        const otMalanN  = calcMalan(data.otTotal, data.otVeg)
-        const hasOT     = otTotalN > 0
+        const total = totalPresent(data)
+        const chay = n(data.vegCount)
+        const malan = Math.max(0, total - chay)
+        const hasTotal = total > 0
+        const otTotalN = n(data.otTotal)
+        const otChayN = n(data.otVeg)
+        const otMalanN = calcMalan(data.otTotal, data.otVeg)
+        const hasOT = otTotalN > 0
 
         return (
             <div className="shift-block">
@@ -336,26 +336,26 @@ export default function PublicMealPage() {
                                 <input type="number" min="0" max={otTotalN || 999} placeholder="0" value={data.otVeg} onChange={e => update("otVeg", e.target.value)} />
                             </div>
                         </div>
-                {hasOT && (
-                    <div className="ot-breakdown">
-                        <span>Mặn OT: <strong>{otMalanN}</strong></span>
-                        <span className="dot">·</span>
-                        <span>Chay OT: <strong>{otChayN}</strong></span>
-                            <div className="ot-time-row">
-                                <span>🕐 Giờ ăn OT:</span>
-                                <input
-                                    type="time"
-                                    value={data.otTime || (OT_DEFAULT_TIME[shiftVal ?? shift] ?? "")}
-                                    onChange={e => update("otTime", e.target.value)}
-                                    className="time-input"
-                                />
+                        {hasOT && (
+                            <div className="ot-breakdown">
+                                <span>Mặn OT: <strong>{otMalanN}</strong></span>
+                                <span className="dot">·</span>
+                                <span>Chay OT: <strong>{otChayN}</strong></span>
+                                <div className="ot-time-row">
+                                    <span>🕐 Giờ ăn OT:</span>
+                                    <input
+                                        type="time"
+                                        value={data.otTime || (OT_DEFAULT_TIME[shiftVal ?? shift] ?? "")}
+                                        onChange={e => update("otTime", e.target.value)}
+                                        className="time-input"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    )}
-                    <button type="button" className="ghost-btn" style={{ marginTop: 6, padding: "8px", fontSize: 13, color: "#ef4444", border: "1px solid #fee2e2", background: "#fef2f2" }} onClick={() => { update("showOT", false); update("otTotal", ""); update("otVeg", ""); }}>
-                        ❌ Hủy phần OT ca này
-                    </button>
-                </>
+                        )}
+                        <button type="button" className="ghost-btn" style={{ marginTop: 6, padding: "8px", fontSize: 13, color: "#ef4444", border: "1px solid #fee2e2", background: "#fef2f2" }} onClick={() => { update("showOT", false); update("otTotal", ""); update("otVeg", ""); }}>
+                            ❌ Hủy phần OT ca này
+                        </button>
+                    </>
                 )}
             </div>
         )
@@ -373,12 +373,12 @@ export default function PublicMealPage() {
     // ─────── SUMMARY MODE ───────
     if ((pageMode as string) === "summary") {
         const totalRow = sumRows.reduce((acc, r) => ({
-            present:  acc.present  + r.official_present + r.seasonal_present,
-            absent:   acc.absent   + r.official_absent  + r.seasonal_absent,
-            malan:    acc.malan    + (r.official_present + r.seasonal_present - r.vegetarian),
-            chay:     acc.chay     + r.vegetarian,
-            otMalan:  acc.otMalan  + r.ot_count,
-            otChay:   acc.otChay   + r.ot_vegetarian,
+            present: acc.present + r.official_present + r.seasonal_present,
+            absent: acc.absent + r.official_absent + r.seasonal_absent,
+            malan: acc.malan + (r.official_present + r.seasonal_present - r.vegetarian),
+            chay: acc.chay + r.vegetarian,
+            otMalan: acc.otMalan + r.ot_count,
+            otChay: acc.otChay + r.ot_vegetarian,
         }), { present: 0, absent: 0, malan: 0, chay: 0, otMalan: 0, otChay: 0 })
 
         return (
@@ -663,8 +663,8 @@ export default function PublicMealPage() {
 
             <div className="mode-tabs">
                 <button className={`mode-tab ${pageMode === "report" ? "active" : ""}`} onClick={() => setPageMode("report")}>🍽️ Báo cơm</button>
-                <button className={`mode-tab ${ (pageMode as string) === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
-                <button className={`mode-tab ${ (pageMode as string) === "summary" ? "active" : ""}`} onClick={() => { setPageMode("summary" as PageMode); if (!sumLoaded) loadSummary(sumDate) }}>📊 Tổng hợp</button>
+                <button className={`mode-tab ${(pageMode as string) === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
+                <button className={`mode-tab ${(pageMode as string) === "summary" ? "active" : ""}`} onClick={() => { setPageMode("summary" as PageMode); if (!sumLoaded) loadSummary(sumDate) }}>📊 Tổng hợp</button>
             </div>
             <div className="zalo-banner">💬 Mọi người nhớ báo <strong>dự trù cơm</strong> trên nhóm <strong>Zalo</strong> giúp em nha!</div>
 

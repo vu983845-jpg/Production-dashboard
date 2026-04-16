@@ -80,10 +80,10 @@ CA LÀM VIỆC:
 - "Ca 1", "S1", "shift 1", "buổi sáng" → "1"
 - "Ca 2", "S2", "shift 2", "buổi chiều" → "2"
 - "Ca 3", "S3", "shift 3", "ca đêm" → "3"
-- "hành chánh", "HC" → "1"
+- "hành chánh", "ca hành chính", "HC" → "HC"
 
 QUY TẮC CA ĐẶC BIỆT (QUAN TRỌNG):
-- OFFICE: CHỈ làm Ca 1. Nếu user nhập OFFICE ca 2 hoặc ca 3 → vẫn dùng shift="1" và ghi chú cảnh báo.
+- OFFICE: CHỈ làm Ca 1 hoặc HC. Nếu user nhập OFFICE ca 2 hoặc ca 3 → vẫn dùng shift="1" và ghi chú cảnh báo.
 - FGWH (Loading/WH): Chỉ Ca 1 và OT. Nếu nhập Ca 2 hoặc Ca 3 → dùng shift="1" và ghi chú.
 
 NGÀY:

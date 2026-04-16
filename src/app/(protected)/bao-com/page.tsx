@@ -269,8 +269,8 @@ const DEPT_MAP: Record<string, string> = {
 // HPEEL sub-group display names (used as department_name in DB)
 const HPEEL_SUBGROUP_DISPLAY: Record<string, string> = {
     HPEEL_GRADING: 'Manual Grading (Ms Hu\u1ec7)',
-    HPEEL_LIEN:    'Manual Peeling (Li\u00ean)',
-    HPEEL_DUNG:    'Manual Peeling (Dung)',
+    HPEEL_LIEN: 'Manual Peeling (Li\u00ean)',
+    HPEEL_DUNG: 'Manual Peeling (Dung)',
 }
 // Virtual sub-group codes mapping to HPEEL department_id
 const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG"])
@@ -659,10 +659,10 @@ function expandMultiShiftRecord(record: HeadcountRecord): HeadcountRecord[] {
     return shiftNums.map(s => ({
         ...record,
         shift: s,
-        officialPresent:  div(record.officialPresent),
-        officialAbsent:   div(record.officialAbsent),
-        seasonalPresent:  div(record.seasonalPresent),
-        seasonalAbsent:   div(record.seasonalAbsent),
+        officialPresent: div(record.officialPresent),
+        officialAbsent: div(record.officialAbsent),
+        seasonalPresent: div(record.seasonalPresent),
+        seasonalAbsent: div(record.seasonalAbsent),
     }))
 }
 
@@ -977,50 +977,50 @@ export default function BaoCom() {
     }
 
     // Thứ tự bộ phận theo layout Excel
-    const DEPT_ORDER = ['FGWH','STEAM','SHELL','MAINT_SHELL','BORMA','PEEL','CS','HPEEL','PACK','BOILER','MAINT_HCA','CLEAN','QC','OFFICE']
-    const SHIFT_ORDER = ['1','2','3','OT']
+    const DEPT_ORDER = ['FGWH', 'STEAM', 'SHELL', 'MAINT_SHELL', 'BORMA', 'PEEL', 'CS', 'HPEEL', 'PACK', 'BOILER', 'MAINT_HCA', 'CLEAN', 'QC', 'OFFICE']
+    const SHIFT_ORDER = ['1', '2', '3', 'HC', 'OT']
     // Alias: these dept codes are merged into another group in the monthly report
     // HAND (HANDPEELING) contains sub-supervisors Liên/Dung → merge into HPEEL group
     const DEPT_CODE_ALIAS: Record<string, string> = { PEEL_MC: 'PEEL', HAND: 'HPEEL' }
 
     // Tên hiển thị đẹp như trong Excel
     const DEPT_DISPLAY: Record<string, string> = {
-        FGWH:       'Loading',
-        STEAM:      'Steaming',
-        SHELL:      'Shelling',
-        MAINT_SHELL:'Maintenance shelling',
-        BORMA:      'Borma',
-        PEEL:       'Peeling',
-        CS:         'Machine Grading',
-        HPEEL:      'Hand Peeling',
-        PACK:       'Packing',
-        BOILER:     'Boiler worker',
-        MAINT_HCA:  'Maintenance',
-        CLEAN:      'Cleaning worker',
-        QC:         'QC',
-        OFFICE:     'Office',
+        FGWH: 'Loading',
+        STEAM: 'Steaming',
+        SHELL: 'Shelling',
+        MAINT_SHELL: 'Maintenance shelling',
+        BORMA: 'Borma',
+        PEEL: 'Peeling',
+        CS: 'Machine Grading',
+        HPEEL: 'Hand Peeling',
+        PACK: 'Packing',
+        BOILER: 'Boiler worker',
+        MAINT_HCA: 'Maintenance',
+        CLEAN: 'Cleaning worker',
+        QC: 'QC',
+        OFFICE: 'Office',
     }
 
     // Excel Section row order within each dept group
     const SECTION_ORDER: Record<string, string[]> = {
-        FGWH:       ['Loading S1','Loading S2','Loading S3'],
-        STEAM:      ['Steaming S1','Steaming S2','Steaming S3'],
-        SHELL:      ['Shelling S1','Shelling thời vụ S1','Shelling S2','Shelling thời vụ S2','Shelling S3','Shelling thời vụ S3'],
-        MAINT_SHELL:['Maintenance shelling S1','Maintenance shelling S2','Maintenance shelling S3'],
-        BORMA:      ['Borma S1','Borma thời vụ S1','Borma S2','Borma thời vụ S2','Borma S3','Borma thời vụ S3'],
-        PEEL:       ['Peeling S1','Peeling thời vụ S1','Peeling S2','Peeling thời vụ S2','Peeling S3','Peeling thời vụ S3'],
-        CS:         ['Machine Grading - shift 1','Machine Grading  - thời vụ 1','Machine Grading  - shift 2','Machine Grading  thời vụ - shift 2','Machine Grading  - shift 3','Machine Grading  thời vụ- shift 3'],
-        HPEEL:      ['Manual Grading -Shift 1 (Ms Huệ)','Manual Grading Thời vụ -Shift 1 (Ms Huệ)','Manual Grading -Shift 2 (Ms Huệ)','Manual Grading Thời vụ -Shift 2 (Ms Huệ)','Manual Grading -Shift 3 (Ms Huệ)','Manual Grading Thời vụ -Shift 3 (Ms Huệ)','Manual peeling S1 - Liên','Manual peeling S1 thời vụ - Liên','Manual peeling S1 - Dung','Manual peeling S1 thời vụ - Dung','Manual peeling S2 - Liên','Manual peeling S2 thời vụ - Liên','Manual peeling S2 - Dung','Manual peeling S2 thời vụ - Dung','Manual peeling S3 - Liên','Manual peeling S3 thời vụ - Liên','Manual peeling S3 - Dung','Manual peeling S3 thời vụ - Dung','Hand Peeling OT'],
-        PACK:       ['Packing S1','Packing thời vụ S1','Packing S2','Packing thời vụ S2','Packing S3'],
-        BOILER:     ['Boiler worker S1','Boiler worker S2','Boiler worker S3'],
-        MAINT_HCA:  ['Maintenance S1','Maintenance S2','Maintenance S3'],
-        CLEAN:      ['Cleaning worker S1','Cleaning worker S2','Cleaning worker S3'],
-        QC:         ['QC S1','QC S2','QC S3'],
-        OFFICE:     ['Office S1','Office S2','Office S3'],
+        FGWH: ['Loading S1', 'Loading S2', 'Loading S3'],
+        STEAM: ['Steaming S1', 'Steaming S2', 'Steaming S3'],
+        SHELL: ['Shelling S1', 'Shelling thời vụ S1', 'Shelling S2', 'Shelling thời vụ S2', 'Shelling S3', 'Shelling thời vụ S3'],
+        MAINT_SHELL: ['Maintenance shelling S1', 'Maintenance shelling S2', 'Maintenance shelling S3'],
+        BORMA: ['Borma S1', 'Borma thời vụ S1', 'Borma S2', 'Borma thời vụ S2', 'Borma S3', 'Borma thời vụ S3'],
+        PEEL: ['Peeling S1', 'Peeling thời vụ S1', 'Peeling S2', 'Peeling thời vụ S2', 'Peeling S3', 'Peeling thời vụ S3'],
+        CS: ['Machine Grading - shift 1', 'Machine Grading  - thời vụ 1', 'Machine Grading  - shift 2', 'Machine Grading  thời vụ - shift 2', 'Machine Grading  - shift 3', 'Machine Grading  thời vụ- shift 3'],
+        HPEEL: ['Manual Grading -Shift 1 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 1 (Ms Huệ)', 'Manual Grading -Shift 2 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 2 (Ms Huệ)', 'Manual Grading -Shift 3 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 3 (Ms Huệ)', 'Manual Grading -Shift HC (Ms Huệ)', 'Manual peeling S1 - Liên', 'Manual peeling S1 thời vụ - Liên', 'Manual peeling S1 - Dung', 'Manual peeling S1 thời vụ - Dung', 'Manual peeling S2 - Liên', 'Manual peeling S2 thời vụ - Liên', 'Manual peeling S2 - Dung', 'Manual peeling S2 thời vụ - Dung', 'Manual peeling S3 - Liên', 'Manual peeling S3 thời vụ - Liên', 'Manual peeling S3 - Dung', 'Manual peeling S3 thời vụ - Dung', 'Manual peeling HC - Liên', 'Manual peeling HC - Dung', 'Hand Peeling OT'],
+        PACK: ['Packing S1', 'Packing thời vụ S1', 'Packing S2', 'Packing thời vụ S2', 'Packing S3'],
+        BOILER: ['Boiler worker S1', 'Boiler worker S2', 'Boiler worker S3'],
+        MAINT_HCA: ['Maintenance S1', 'Maintenance S2', 'Maintenance S3'],
+        CLEAN: ['Cleaning worker S1', 'Cleaning worker S2', 'Cleaning worker S3'],
+        QC: ['QC S1', 'QC S2', 'QC S3'],
+        OFFICE: ['Office S1', 'Office S2', 'Office S3'],
     }
 
     type ShiftEntry = { deptKey: string; deptName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; otDays: Map<string, number>; dayRowIds: Map<string, string[]> }
-    type DeptGroup  = { deptKey: string; name: string; code: string; shifts: ShiftEntry[]; sectionRows: SectionRow[] }
+    type DeptGroup = { deptKey: string; name: string; code: string; shifts: ShiftEntry[]; sectionRows: SectionRow[] }
     // SectionRow: 1 row per department_name (the Excel "Section" name)
     // dayRowIds: date → list of statsData row IDs (used for direct save without UUID re-lookup)
     type SectionRow = { sectionName: string; deptCode: string; deptKey: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; dayRowIds: Map<string, string[]>; departmentIds: Set<string> }
@@ -1041,22 +1041,23 @@ export default function BaoCom() {
         // Helper: normalize HPEEL non-canonical section names → canonical SECTION_ORDER name
         const normalizeHpeelSectionName = (name: string, shift: string): string => {
             const n = name.toLowerCase()
-            const s = /^[123]$/.test(shift) ? shift : '1'
+            const s = /^[123]$/.test(shift) ? shift : (shift === 'HC' ? 'HC' : '1')
+            const sPrefix = s === 'HC' ? 'HC' : `S${s}`
             // Ms Huệ / Grading → Manual Grading -Shift N (Ms Huệ)
             if (/hu[eệ]/i.test(n) || /grading/i.test(n)) {
                 return `Manual Grading -Shift ${s} (Ms Huệ)`
             }
             // Liên → Manual peeling SN - Liên
             if (/li[êẻen]n/i.test(n)) {
-                return `Manual peeling S${s} - Liên`
+                return `Manual peeling ${sPrefix} - Liên`
             }
             // Dung → Manual peeling SN - Dung
             if (/dung/i.test(n)) {
-                return `Manual peeling S${s} - Dung`
+                return `Manual peeling ${sPrefix} - Dung`
             }
             // Generic hand peeling / manual peeling without supervisor → map to Liên (ca1 default)
             if (/hand.?peel|manual.?peel/i.test(n)) {
-                return `Manual peeling S${s} - Liên`
+                return `Manual peeling ${sPrefix} - Liên`
             }
             return name
         }
@@ -1115,16 +1116,16 @@ export default function BaoCom() {
             e.dayRowIds.get(r.work_date)!.push(r.id)
             if (total > 0) {
                 e.days.set(r.work_date, (e.days.get(r.work_date) ?? 0) + total)
-                if ((r.official_present ?? 0) > 0)  e.officialDays.set(r.work_date, (e.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
-                if ((r.seasonal_present ?? 0) > 0)  e.seasonalDays.set(r.work_date, (e.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
+                if ((r.official_present ?? 0) > 0) e.officialDays.set(r.work_date, (e.officialDays.get(r.work_date) ?? 0) + (r.official_present ?? 0))
+                if ((r.seasonal_present ?? 0) > 0) e.seasonalDays.set(r.work_date, (e.seasonalDays.get(r.work_date) ?? 0) + (r.seasonal_present ?? 0))
             }
         })
 
         const shiftMap = new Map<string, ShiftEntry>()
         rows.forEach(r => {
-            let deptCode  = deptList.find(d => d.id === r.department_id)?.code ?? ''
+            let deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
             deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC → PEEL
-            const deptKey  = (DEPT_CODE_ALIAS[deptList.find(d => d.id === r.department_id)?.code ?? ''] ? deptList.find(d => d.code === deptCode)?.id : r.department_id) ?? r.department_id ?? r.department_name
+            const deptKey = (DEPT_CODE_ALIAS[deptList.find(d => d.id === r.department_id)?.code ?? ''] ? deptList.find(d => d.code === deptCode)?.id : r.department_id) ?? r.department_id ?? r.department_name
             const deptName = DEPT_DISPLAY[deptCode] ?? r.department_name
             const shift = r.shift ?? '1'
             const groupKey = deptCode || deptKey
@@ -1138,7 +1139,7 @@ export default function BaoCom() {
             let sea = r.seasonal_present ?? 0
             const v = r.vegetarian ?? 0
             if (off + sea < v) off += v - (off + sea)
-            
+
             // Total = official + seasonal (vegetarian is subset, NOT additive)
             const count = off + sea
             if (count > 0) entry.days.set(r.work_date, (entry.days.get(r.work_date) ?? 0) + count)
@@ -1219,20 +1220,22 @@ export default function BaoCom() {
         })
         // Footer rows
         const totalRow = ['Total', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift !== 'OT').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0) + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)),
-            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift !== 'OT').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0) + (dg.shifts.find(sh=>sh.shift==='OT') ? [...dg.shifts.find(sh=>sh.shift==='OT')!.days.values()].reduce((a,b)=>a+b,0) : 0), 0)]
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift !== 'OT').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a, b) => a + b, 0), 0) + (dg.shifts.find(sh => sh.shift === 'OT') ? [...dg.shifts.find(sh => sh.shift === 'OT')!.days.values()].reduce((a, b) => a + b, 0) : 0), 0)]
         const ca1Row = ['Ca 1:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '1').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
-            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '1').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '1').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a, b) => a + b, 0), 0), 0)]
         const ca2Row = ['Ca 2:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '2').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
-            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '2').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '2').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a, b) => a + b, 0), 0), 0)]
         const ca3Row = ['Ca 3:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '3').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
-            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '3').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a,b)=>a+b,0), 0), 0)]
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === '3').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a, b) => a + b, 0), 0), 0)]
+        const hcRow = ['Ca HC:', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === 'HC').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0)),
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === 'HC').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a, b) => a + b, 0), 0), 0)]
         const otRow = ['OT', ...days.map(d => deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)),
-            deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh=>sh.shift==='OT') ? [...dg.shifts.find(sh=>sh.shift==='OT')!.days.values()].reduce((a,b)=>a+b,0) : 0), 0)]
+            deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh => sh.shift === 'OT') ? [...dg.shifts.find(sh => sh.shift === 'OT')!.days.values()].reduce((a, b) => a + b, 0) : 0), 0)]
         const tvRow = ['Thời vụ', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.seasonalDays.get(d) ?? 0), 0), 0)),
-            deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.seasonalDays.values()].reduce((a,b)=>a+b,0), 0), 0)]
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.seasonalDays.values()].reduce((a, b) => a + b, 0), 0), 0)]
         const ctRow = ['Chính thức', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.officialDays.get(d) ?? 0), 0), 0)),
-            deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.officialDays.values()].reduce((a,b)=>a+b,0), 0), 0)]
-        const wsData = [titleRow, periodRow, header, ...dataRows, totalRow, ca1Row, ca2Row, ca3Row, otRow, tvRow, ctRow]
+            deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.officialDays.values()].reduce((a, b) => a + b, 0), 0), 0)]
+        const wsData = [titleRow, periodRow, header, ...dataRows, totalRow, ca1Row, ca2Row, ca3Row, hcRow, otRow, tvRow, ctRow]
         const ws = XLSX.utils.aoa_to_sheet(wsData)
         ws["!cols"] = [{ wch: 32 }, ...days.map(() => ({ wch: 5 })), { wch: 8 }]
         const wb = XLSX.utils.book_new()
@@ -1280,7 +1283,7 @@ export default function BaoCom() {
             const ca3 = rows.filter(r => r.shift === '3').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
             // OT: tổng ot_count từ tất cả ca + shift='OT' riêng
             const totalOTMan = rows.filter(r => r.shift !== 'OT').reduce((s, r) => s + (r.ot_count ?? 0), 0)
-                             + rows.filter(r => r.shift === 'OT').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0) + (r.ot_count ?? 0), 0)
+                + rows.filter(r => r.shift === 'OT').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0) + (r.ot_count ?? 0), 0)
             const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
             const totalOT = totalOTMan + totalOTVeg
             const grand = ca1 + ca2 + ca3 + totalOT
@@ -1327,23 +1330,23 @@ export default function BaoCom() {
             // (e.g. HPEEL has both "Manual Grading -Shift 1 (Ms Huệ)" AND "Manual peeling S1 - Dung"
             //  — they must be SUMMED, not deduped)
             const aggMap = new Map<string, SavedRecord>()
-            ;(data ?? []).forEach(r => {
-                const key = r.department_id ?? r.department_name
-                if (!aggMap.has(key)) {
-                    // Clone first record as the base
-                    aggMap.set(key, { ...r })
-                } else {
-                    // Sum numeric fields into the base record
-                    const base = aggMap.get(key)!
-                    base.official_present  = (base.official_present  ?? 0) + (r.official_present  ?? 0)
-                    base.official_absent   = (base.official_absent   ?? 0) + (r.official_absent   ?? 0)
-                    base.seasonal_present  = (base.seasonal_present  ?? 0) + (r.seasonal_present  ?? 0)
-                    base.seasonal_absent   = (base.seasonal_absent   ?? 0) + (r.seasonal_absent   ?? 0)
-                    base.vegetarian        = (base.vegetarian        ?? 0) + (r.vegetarian        ?? 0)
-                    base.ot_count          = (base.ot_count          ?? 0) + (r.ot_count          ?? 0)
-                    base.ot_vegetarian     = (base.ot_vegetarian     ?? 0) + (r.ot_vegetarian     ?? 0)
-                }
-            })
+                ; (data ?? []).forEach(r => {
+                    const key = r.department_id ?? r.department_name
+                    if (!aggMap.has(key)) {
+                        // Clone first record as the base
+                        aggMap.set(key, { ...r })
+                    } else {
+                        // Sum numeric fields into the base record
+                        const base = aggMap.get(key)!
+                        base.official_present = (base.official_present ?? 0) + (r.official_present ?? 0)
+                        base.official_absent = (base.official_absent ?? 0) + (r.official_absent ?? 0)
+                        base.seasonal_present = (base.seasonal_present ?? 0) + (r.seasonal_present ?? 0)
+                        base.seasonal_absent = (base.seasonal_absent ?? 0) + (r.seasonal_absent ?? 0)
+                        base.vegetarian = (base.vegetarian ?? 0) + (r.vegetarian ?? 0)
+                        base.ot_count = (base.ot_count ?? 0) + (r.ot_count ?? 0)
+                        base.ot_vegetarian = (base.ot_vegetarian ?? 0) + (r.ot_vegetarian ?? 0)
+                    }
+                })
             setSummaryData([...aggMap.values()].sort((a, b) => a.department_name.localeCompare(b.department_name)))
 
         } catch (e: unknown) {
@@ -1475,12 +1478,12 @@ export default function BaoCom() {
 
     // ─── Parse handlers ───
     const [aiParsing, setAiParsing] = useState(false)
-    const [aiError, setAiError]     = useState<string | null>(null)
+    const [aiError, setAiError] = useState<string | null>(null)
     const [aiTruncated, setAiTruncated] = useState(false)
     const [confirmedRows, setConfirmedRows] = useState<Set<number>>(new Set())
     const [expandedSource, setExpandedSource] = useState<Set<number>>(new Set())
     const [confirmingRow, setConfirmingRow] = useState<number | null>(null)
-    const [confirmMsg, setConfirmMsg] = useState<Record<number, { type: 'ok'|'err'; text: string }>>({})
+    const [confirmMsg, setConfirmMsg] = useState<Record<number, { type: 'ok' | 'err'; text: string }>>({})
     // ── Overwrite confirmation modal ──
     // Used by both single-row confirm and bulk save
     const [overwriteModal, setOverwriteModal] = useState<{
@@ -1609,18 +1612,18 @@ export default function BaoCom() {
             // Map AI response → HeadcountRecord[]
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const aiRecords: HeadcountRecord[] = (json.records as any[]).map((r: any) => ({
-                senderHint:         r.senderHint ?? '',
-                date:               r.date ?? '',
-                area:               r.area ?? '',
-                shift:              String(r.shift ?? '1'),
-                officialPresent:    r.officialPresent != null ? Number(r.officialPresent) : null,
+                senderHint: r.senderHint ?? '',
+                date: r.date ?? '',
+                area: r.area ?? '',
+                shift: String(r.shift ?? '1'),
+                officialPresent: r.officialPresent != null ? Number(r.officialPresent) : null,
                 officialPresentNote: r.officialPresentNote ?? '',
-                officialAbsent:     r.officialAbsent != null ? Number(r.officialAbsent) : null,
-                seasonalPresent:    r.seasonalPresent != null ? Number(r.seasonalPresent) : null,
-                seasonalAbsent:     r.seasonalAbsent != null ? Number(r.seasonalAbsent) : null,
-                ot:                 String(r.ot ?? ''),
-                vegetarian:         r.vegetarian != null ? Number(r.vegetarian) : null,
-                raw:                rawText,   // Always show full pasted text as source
+                officialAbsent: r.officialAbsent != null ? Number(r.officialAbsent) : null,
+                seasonalPresent: r.seasonalPresent != null ? Number(r.seasonalPresent) : null,
+                seasonalAbsent: r.seasonalAbsent != null ? Number(r.seasonalAbsent) : null,
+                ot: String(r.ot ?? ''),
+                vegetarian: r.vegetarian != null ? Number(r.vegetarian) : null,
+                raw: rawText,   // Always show full pasted text as source
             }))
             setRecords(deduplicateRecords(aiRecords))
             setParsed(true)
@@ -1668,7 +1671,7 @@ export default function BaoCom() {
             const resolvedCode = HPEEL_SUBCODES.has(code) ? 'HPEEL' : code
             const dept = deptList.find((d) => d.code === resolvedCode)
             if (dept) return dept.id
-            }
+        }
         // 2. Fallback: AI may return the DB code directly (e.g. "STEAM", "HPEEL", "MAINT_SHELL")
         const upperDirect = areaName.toUpperCase().trim()
         if (HPEEL_SUBCODES.has(upperDirect)) { return deptList.find((d) => d.code === 'HPEEL')?.id || null }
@@ -1715,20 +1718,20 @@ export default function BaoCom() {
                 const canonicalName = getCanonicalDeptName(r, i, deptId)
                 const { otCount, otVegetarian } = parseOTString(r.ot)
                 return {
-                work_date: dateToISO(r.date),
-                department_name: canonicalName,
-                department_id: deptId,
-                shift: r.shift.replace(/[^1-3]/g, "") || "1",
-                official_present: r.officialPresent ?? 0,
-                official_absent: r.officialAbsent ?? 0,
-                seasonal_present: r.seasonalPresent ?? 0,
-                seasonal_absent: r.seasonalAbsent ?? 0,
-                ot_count: otCount,
-                ot_vegetarian: otVegetarian,
-                vegetarian: r.vegetarian ?? 0,
-                note: null,
-                created_by: user?.id,
-                updated_at: new Date().toISOString(),
+                    work_date: dateToISO(r.date),
+                    department_name: canonicalName,
+                    department_id: deptId,
+                    shift: r.shift.replace(/[^1-3]/g, "") || "1",
+                    official_present: r.officialPresent ?? 0,
+                    official_absent: r.officialAbsent ?? 0,
+                    seasonal_present: r.seasonalPresent ?? 0,
+                    seasonal_absent: r.seasonalAbsent ?? 0,
+                    ot_count: otCount,
+                    ot_vegetarian: otVegetarian,
+                    vegetarian: r.vegetarian ?? 0,
+                    note: null,
+                    created_by: user?.id,
+                    updated_at: new Date().toISOString(),
                 }
             })
 
@@ -1846,1566 +1849,1548 @@ export default function BaoCom() {
 
     return (
         <>
-        {/* ── Overwrite Confirmation Modal ── */}
-        {overwriteModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-                {/* Backdrop */}
-                <div
-                    className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                    onClick={overwriteModal.onCancel}
-                />
-                {/* Dialog */}
-                <div className="relative z-10 bg-white rounded-2xl shadow-2xl border-2 border-orange-200 w-full max-w-md mx-4 overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4">
-                        <h2 className="text-white font-bold text-lg">{overwriteModal.title}</h2>
-                    </div>
-                    {/* Body */}
-                    <div className="px-5 py-4 space-y-1">
-                        {overwriteModal.lines.map((line, idx) =>
-                            line === '' ? <div key={idx} className="h-2" /> : (
-                                <p
-                                    key={idx}
-                                    className={
-                                        line.startsWith('📅') ? 'text-sm font-semibold text-gray-800' :
-                                        line.startsWith('🏭') || line.startsWith('📊') ? 'text-sm text-gray-700' :
-                                        line.startsWith('⚠️') || line.startsWith('🔒') ? 'text-sm font-bold text-orange-700' :
-                                        line.startsWith('   •') ? 'text-xs text-gray-600 pl-2' :
-                                        line.startsWith('   ...') ? 'text-xs text-gray-400 pl-2 italic' :
-                                        line.includes('chắc') || line.includes('muốn') ? 'text-sm font-semibold text-red-600 mt-1' :
-                                        'text-sm text-gray-700'
-                                    }
-                                >
-                                    {line}
-                                </p>
-                            )
-                        )}
-                    </div>
-                    {/* Footer */}
-                    <div className="px-5 py-3 bg-gray-50 border-t flex justify-end gap-3">
-                        <button
-                            onClick={overwriteModal.onCancel}
-                            className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-100 transition-colors"
-                        >
-                            ❌ Hủy bỏ
-                        </button>
-                        <button
-                            onClick={overwriteModal.onConfirm}
-                            className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition-colors shadow-sm"
-                        >
-                            ✅ Xác nhận ghi đè
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-        <div className="max-w-7xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-orange-100 border border-orange-200">
-                        <UtensilsCrossed className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Meal Reporting — Headcount Tracker</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Paste Zalo messages · Parse · Save to DB · View history
-                        </p>
+            {/* ── Overwrite Confirmation Modal ── */}
+            {overwriteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={overwriteModal.onCancel}
+                    />
+                    {/* Dialog */}
+                    <div className="relative z-10 bg-white rounded-2xl shadow-2xl border-2 border-orange-200 w-full max-w-md mx-4 overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4">
+                            <h2 className="text-white font-bold text-lg">{overwriteModal.title}</h2>
+                        </div>
+                        {/* Body */}
+                        <div className="px-5 py-4 space-y-1">
+                            {overwriteModal.lines.map((line, idx) =>
+                                line === '' ? <div key={idx} className="h-2" /> : (
+                                    <p
+                                        key={idx}
+                                        className={
+                                            line.startsWith('📅') ? 'text-sm font-semibold text-gray-800' :
+                                                line.startsWith('🏭') || line.startsWith('📊') ? 'text-sm text-gray-700' :
+                                                    line.startsWith('⚠️') || line.startsWith('🔒') ? 'text-sm font-bold text-orange-700' :
+                                                        line.startsWith('   •') ? 'text-xs text-gray-600 pl-2' :
+                                                            line.startsWith('   ...') ? 'text-xs text-gray-400 pl-2 italic' :
+                                                                line.includes('chắc') || line.includes('muốn') ? 'text-sm font-semibold text-red-600 mt-1' :
+                                                                    'text-sm text-gray-700'
+                                        }
+                                    >
+                                        {line}
+                                    </p>
+                                )
+                            )}
+                        </div>
+                        {/* Footer */}
+                        <div className="px-5 py-3 bg-gray-50 border-t flex justify-end gap-3">
+                            <button
+                                onClick={overwriteModal.onCancel}
+                                className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-100 transition-colors"
+                            >
+                                ❌ Hủy bỏ
+                            </button>
+                            <button
+                                onClick={overwriteModal.onConfirm}
+                                className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition-colors shadow-sm"
+                            >
+                                ✅ Xác nhận ghi đè
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+            <div className="max-w-7xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-orange-100 border border-orange-200">
+                            <UtensilsCrossed className="h-6 w-6 text-orange-600" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">Meal Reporting — Headcount Tracker</h1>
+                            <p className="text-sm text-muted-foreground">
+                                Paste Zalo messages · Parse · Save to DB · View history
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-            {/* Tab navigation */}
-            <div className="flex border-b">
+                {/* Tab navigation */}
+                <div className="flex border-b">
 
-                <button
-                    onClick={() => setActiveTab("history")}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                        activeTab === "history"
+                    <button
+                        onClick={() => setActiveTab("history")}
+                        className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "history"
                             ? "border-blue-500 text-blue-600"
                             : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                    <History className="h-4 w-4" />
-                    Saved Records
-                </button>
-                <button
-                    onClick={() => setActiveTab("kitchen")}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                        activeTab === "kitchen"
+                            }`}
+                    >
+                        <History className="h-4 w-4" />
+                        Saved Records
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("kitchen")}
+                        className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "kitchen"
                             ? "border-green-500 text-green-600"
                             : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                    <MessageSquare className="h-4 w-4" />
-                    🍳 Kitchen Summary
-                </button>
-                <button
-                    onClick={() => setActiveTab("monthly")}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                        activeTab === "monthly"
+                            }`}
+                    >
+                        <MessageSquare className="h-4 w-4" />
+                        🍳 Kitchen Summary
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("monthly")}
+                        className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "monthly"
                             ? "border-purple-500 text-purple-600"
                             : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                    <span className="text-base leading-none">📅</span>
-                    Monthly Report
-                </button>
-                {canEdit && (
-                    <button
-                        onClick={() => setActiveTab("ai-chat")}
-                        className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-                            activeTab === "ai-chat"
+                            }`}
+                    >
+                        <span className="text-base leading-none">📅</span>
+                        Monthly Report
+                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={() => setActiveTab("ai-chat")}
+                            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "ai-chat"
                                 ? "border-orange-500 text-orange-600"
                                 : "border-transparent text-muted-foreground hover:text-foreground"
-                        }`}
-                    >
-                        <span className="text-base leading-none">🤖</span>
-                        AI Nhập Nhanh
-                    </button>
+                                }`}
+                        >
+                            <span className="text-base leading-none">🤖</span>
+                            AI Nhập Nhanh
+                        </button>
+                    )}
+                </div>
+
+                {/* ═══════════════════════════════════════════ */}
+                {/* TAB: AI CHAT NHP NHANH                       */}
+                {/* ═══════════════════════════════════════════ */}
+                {activeTab === "ai-chat" && canEdit && (
+                    <MealAiChat
+                        deptList={deptList}
+                        onSaveSuccess={() => setHistoryRefreshKey(k => k + 1)}
+                    />
                 )}
-            </div>
 
-            {/* ═══════════════════════════════════════════ */}
-            {/* TAB: AI CHAT NHP NHANH                       */}
-            {/* ═══════════════════════════════════════════ */}
-            {activeTab === "ai-chat" && canEdit && (
-                <MealAiChat
-                    deptList={deptList}
-                    onSaveSuccess={() => setHistoryRefreshKey(k => k + 1)}
-                />
-            )}
-
-            {/* ═══════════════════════════════════════════ */}
-            {/* TAB 3: KITCHEN / BÁO CƠM NHÀ ĂN               */}
-            {/* ═══════════════════════════════════════════ */}
-            {activeTab === "kitchen" && (
-                <div className="space-y-5">
-                    <div className="flex items-center gap-2 font-semibold text-green-700 text-lg">
-                        <MessageSquare className="h-5 w-5" />
-                        Tổng hợp báo cơm nhà ăn
-                    </div>
-
-                    {/* ── CHỐT SỐ GỬI NHÀ ĂN (tất cả ca trong ngày hôm qua) ── */}
-                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <Bell className="h-5 w-5 text-orange-500" />
-                            <span className="font-bold text-orange-700 text-base">Chốt số gửi nhà ăn</span>
-                            <span className="text-xs text-orange-500">(tổng hợp tất cả ca)</span>
+                {/* ═══════════════════════════════════════════ */}
+                {/* TAB 3: KITCHEN / BÁO CƠM NHÀ ĂN               */}
+                {/* ═══════════════════════════════════════════ */}
+                {activeTab === "kitchen" && (
+                    <div className="space-y-5">
+                        <div className="flex items-center gap-2 font-semibold text-green-700 text-lg">
+                            <MessageSquare className="h-5 w-5" />
+                            Tổng hợp báo cơm nhà ăn
                         </div>
-                        <div className="flex flex-wrap items-center gap-4">
-                            {/* Date picker cho chốt số — default hôm qua, có thể chọn */}
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs font-medium text-orange-600">Ngày chốt</label>
-                                <input
-                                    type="date"
-                                    value={dailyDate}
-                                    onChange={e => { setDailyDate(e.target.value); setDailyMsg(null) }}
-                                    className="border border-orange-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                />
+
+                        {/* ── CHỐT SỐ GỬI NHÀ ĂN (tất cả ca trong ngày hôm qua) ── */}
+                        <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Bell className="h-5 w-5 text-orange-500" />
+                                <span className="font-bold text-orange-700 text-base">Chốt số gửi nhà ăn</span>
+                                <span className="text-xs text-orange-500">(tổng hợp tất cả ca)</span>
                             </div>
-                            <button
-                                onClick={fetchDailySummary}
-                                disabled={dailyLoading}
-                                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-all shadow-sm disabled:opacity-50"
-                            >
-                                <Bell className="h-4 w-4" />
-                                {dailyLoading ? "Đang tổng hợp..." : "Tổng hợp & Chốt số"}
-                            </button>
-                        </div>
-                        {dailyError && (
-                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{dailyError}</div>
-                        )}
-                        {dailyMsg && (
-                            <div className="bg-white rounded-xl border-2 border-orange-300 shadow-sm p-4">
-                                <div className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2">📋 Tin nhắn chốt số — copy gửi nhà ăn</div>
-                                <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed text-base">{dailyMsg}</pre>
+                            <div className="flex flex-wrap items-center gap-4">
+                                {/* Date picker cho chốt số — default hôm qua, có thể chọn */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-medium text-orange-600">Ngày chốt</label>
+                                    <input
+                                        type="date"
+                                        value={dailyDate}
+                                        onChange={e => { setDailyDate(e.target.value); setDailyMsg(null) }}
+                                        className="border border-orange-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                    />
+                                </div>
                                 <button
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(dailyMsg)
-                                        setCopiedDaily(true)
-                                        setTimeout(() => setCopiedDaily(false), 2000)
-                                    }}
-                                    className={`mt-3 flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                                        copiedDaily ? "bg-orange-500 text-white" : "bg-orange-100 hover:bg-orange-200 text-orange-700"
-                                    }`}
+                                    onClick={fetchDailySummary}
+                                    disabled={dailyLoading}
+                                    className="flex items-center gap-2 px-5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-all shadow-sm disabled:opacity-50"
                                 >
-                                    {copiedDaily ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                    {copiedDaily ? "Đã copy!" : "Copy tin nhắn"}
+                                    <Bell className="h-4 w-4" />
+                                    {dailyLoading ? "Đang tổng hợp..." : "Tổng hợp & Chốt số"}
                                 </button>
                             </div>
-                        )}
-                    </div>
-
-                    {/* ── Chi tiết theo ca (per-shift) ── */}
-                    <div className="border-t border-dashed border-green-200 pt-4">
-                    <div className="flex items-center gap-2 font-semibold text-green-600 text-sm mb-3">
-                        <BarChart3 className="h-4 w-4" />
-                        Chi tiết từng ca (để kiểm tra)
-                    </div>
-
-                    {/* Date + Shift selectors */}
-                    <div className="flex flex-wrap items-end gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-green-700">Ngày</label>
-                            <input
-                                type="date"
-                                value={summaryDate}
-                                onChange={e => setSummaryDate(e.target.value)}
-                                className="border border-green-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-green-700">Ca</label>
-                            <div className="flex gap-1">
-                                {["1", "2", "3"].map(s => (
-                                    <button
-                                        key={s}
-                                        onClick={() => setSummaryShift(s)}
-                                        className={`px-4 py-1.5 rounded-lg text-sm font-bold border transition-colors ${
-                                            summaryShift === s
-                                                ? "bg-green-500 text-white border-green-500"
-                                                : "bg-white text-green-700 border-green-300 hover:bg-green-100"
-                                        }`}
-                                    >{s}</button>
-                                ))}
-                            </div>
-                        </div>
-                        <button
-                            onClick={fetchSummaryFromDB}
-                            disabled={summaryLoading}
-                            className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
-                        >
-                            <BarChart3 className="h-4 w-4" />
-                            {summaryLoading ? "Đang tải..." : "Tổng hợp"}
-                        </button>
-                    </div>
-                    </div>
-
-                    {summaryError && (
-                        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{summaryError}</div>
-                    )}
-
-                    {summaryData !== null && (() => {
-                        if (summaryData.length === 0) return (
-                            <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                                ⚠️ Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
-                            </div>
-                        )
-                        const msgText = buildDBSummaryText(summaryData)
-                        const missingDepts = getDBMissingDepts(summaryData, summaryShift)
-                        return (
-                            <div className="space-y-4">
-                                {/* Kitchen message box */}
-                                <div className="bg-white rounded-xl border-2 border-green-200 shadow-sm p-4">
-                                    <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">Tin nhắn gửi nhà ăn</div>
-                                    <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">{msgText}</pre>
+                            {dailyError && (
+                                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{dailyError}</div>
+                            )}
+                            {dailyMsg && (
+                                <div className="bg-white rounded-xl border-2 border-orange-300 shadow-sm p-4">
+                                    <div className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2">📋 Tin nhắn chốt số — copy gửi nhà ăn</div>
+                                    <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed text-base">{dailyMsg}</pre>
                                     <button
                                         onClick={() => {
-                                            navigator.clipboard.writeText(msgText)
-                                            setCopiedSummary(true)
-                                            setTimeout(() => setCopiedSummary(false), 2000)
+                                            navigator.clipboard.writeText(dailyMsg)
+                                            setCopiedDaily(true)
+                                            setTimeout(() => setCopiedDaily(false), 2000)
                                         }}
-                                        className={`mt-3 flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                                            copiedSummary ? "bg-green-600 text-white" : "bg-green-100 hover:bg-green-200 text-green-700"
-                                        }`}
+                                        className={`mt-3 flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${copiedDaily ? "bg-orange-500 text-white" : "bg-orange-100 hover:bg-orange-200 text-orange-700"
+                                            }`}
                                     >
-                                        {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                        {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
+                                        {copiedDaily ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                        {copiedDaily ? "Đã copy!" : "Copy tin nhắn"}
                                     </button>
                                 </div>
-
-                                {/* Per-dept breakdown */}
-                                <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                                    <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b">
-                                        <span className="text-sm font-semibold">Chi tiết từng bộ phận</span>
-                                        {canEdit && (
-                                        <button
-                                            onClick={() => setAddRow({ deptId: "", officialPresent: 0, seasonalPresent: 0, vegetarian: 0, otCount: 0 })}
-                                            className="flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-900 bg-green-50 border border-green-200 px-2 py-1 rounded-lg transition-colors"
-                                        >
-                                            <span className="text-base leading-none">+</span> Add Department
-                                        </button>
-                                        )}
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide text-left">
-                                                    <th className="px-3 py-2 font-semibold">Bộ phận</th>
-                                                    <th className="px-3 py-2 font-semibold text-right">CT HĐ</th>
-                                                    <th className="px-3 py-2 font-semibold text-right">TV HĐ</th>
-                                                    <th className="px-3 py-2 font-semibold text-right">Tổng</th>
-                                                    <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
-                                                    <th className="px-3 py-2 font-semibold text-right">OT</th>
-                                                    <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥬 Chay OT</th>
-                                                    <th className="px-3 py-2"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {summaryData.map(r => {
-                                                    const isEditing = editingRowId === r.id
-                                                    const deptName = r.department_id
-                                                        ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
-                                                        : r.department_name
-                                                    return (
-                                                        <tr key={r.id} className={isEditing ? "bg-blue-50" : "hover:bg-muted/30"}>
-                                                            <td className="px-3 py-2 font-medium whitespace-nowrap">{deptName}</td>
-                                                            {isEditing ? (<>
-                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={editFields.official_present} onChange={e => setEditFields(f => ({ ...f, official_present: +e.target.value }))} /></td>
-                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={editFields.seasonal_present} onChange={e => setEditFields(f => ({ ...f, seasonal_present: +e.target.value }))} /></td>
-                                                                <td className="px-3 py-2 text-right font-bold text-blue-600">{editFields.official_present + editFields.seasonal_present}</td>
-                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.vegetarian} onChange={e => setEditFields(f => ({ ...f, vegetarian: +e.target.value }))} /></td>
-                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={editFields.ot_count} onChange={e => setEditFields(f => ({ ...f, ot_count: +e.target.value }))} /></td>
-                                                                <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.ot_vegetarian} onChange={e => setEditFields(f => ({ ...f, ot_vegetarian: +e.target.value }))} /></td>
-                                                                <td className="px-2 py-1 whitespace-nowrap">
-                                                                    <button onClick={() => handleSaveEdit(r.id)} className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 mr-1">Lưu</button>
-                                                                    <button onClick={() => setEditingRowId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded hover:bg-gray-300">Hủy</button>
-                                                                </td>
-                                                            </>) : (<>
-                                                                <td className="px-3 py-2 text-right font-semibold text-green-700">{r.official_present ?? 0}</td>
-                                                                <td className="px-3 py-2 text-right">{r.seasonal_present ?? 0}</td>
-                                                                <td className="px-3 py-2 text-right font-bold">{Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0)}</td>
-                                                                <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
-                                                                <td className="px-3 py-2 text-right font-semibold">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) > 0 ? (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) : 0}</td>
-                                                                <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{(r.ot_vegetarian ?? 0) > 0 ? r.ot_vegetarian : <span className="text-gray-300">—</span>}</td>
-                                                                <td className="px-2 py-2 whitespace-nowrap">
-                                                                    {canEdit && (
-                                                                    <>
-                                                                    <button onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">✏️ Edit</button>
-                                                                    <button onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">🗑 Delete</button>
-                                                                    </>
-                                                                    )}
-                                                                </td>
-                                                            </>)}
-                                                        </tr>
-                                                    )
-                                                })}
-
-                                                {/* Add-row form */}
-                                                {addRow && (
-                                                    <tr className="bg-green-50 border-t-2 border-green-200">
-                                                        <td className="px-2 py-1">
-                                                            <select
-                                                                className="w-full border border-green-300 rounded px-1 py-0.5 text-sm bg-white"
-                                                                value={addRow.deptId}
-                                                                onChange={e => setAddRow(r => r ? { ...r, deptId: e.target.value } : r)}
-                                                            >
-                                                                <option value="">-- Chọn bộ phận --</option>
-                                                                {deptList.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
-                                                            </select>
-                                                        </td>
-                                                        <td className="px-1 py-1"><input type="number" min={0} placeholder="CT" className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={addRow.officialPresent || ""} onChange={e => setAddRow(r => r ? { ...r, officialPresent: +e.target.value } : r)} /></td>
-                                                        <td className="px-1 py-1"><input type="number" min={0} placeholder="TV" className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={addRow.seasonalPresent || ""} onChange={e => setAddRow(r => r ? { ...r, seasonalPresent: +e.target.value } : r)} /></td>
-                                                        <td className="px-3 py-2 text-right text-muted-foreground text-sm">{(addRow.officialPresent || 0) + (addRow.seasonalPresent || 0)}</td>
-                                                        <td className="px-1 py-1"><input type="number" min={0} placeholder="Chay" className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={addRow.vegetarian || ""} onChange={e => setAddRow(r => r ? { ...r, vegetarian: +e.target.value } : r)} /></td>
-                                                        <td className="px-1 py-1"><input type="number" min={0} placeholder="OT" className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={addRow.otCount || ""} onChange={e => setAddRow(r => r ? { ...r, otCount: +e.target.value } : r)} /></td>
-                                                        <td className="px-2 py-1 whitespace-nowrap">
-                                                            <button onClick={handleAddRowSave} className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700 mr-1">Lưu</button>
-                                                            <button onClick={() => setAddRow(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Hủy</button>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                            <tfoot>
-                                                <tr className="bg-muted/60 font-bold border-t-2 text-sm">
-                                                    <td className="px-3 py-2">TỔNG</td>
-                                                    <td className="px-3 py-2 text-right text-green-700">{summaryData.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
-                                                    <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
-                                                    <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)}</td>
-                                                    <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
-                                                    <td className="px-3 py-2 text-right font-bold">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0), 0)}</td>
-                                                    <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) > 0 ? summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) : <span className="text-gray-300">—</span>}</td>
-                                                    <td />
-                                                </tr>
-                                            </tfoot>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                {/* Missing depts */}
-                                {missingDepts.length > 0 && (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
-                                        <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
-                                            <Bell className="h-4 w-4" />
-                                            Chưa có dữ liệu từ:
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {missingDepts.map(d => (
-                                                <span key={d.code} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2.5 py-1 rounded-full font-medium">{d.name}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })()}
-                </div>
-            )}
-
-            {/* ═════════════════════════════════════════════ */}
-            {/* TAB 4: MONTHLY STATS                          */}
-            {/* ═════════════════════════════════════════════ */}
-            {activeTab === "monthly" && (
-                <div className="space-y-5">
-                    <div className="flex items-center gap-2 font-semibold text-purple-700 text-lg">
-                        <span className="text-xl">📅</span>
-                        Thống kê suất cơm theo tháng
-                    </div>
-
-                    {/* Month picker + fetch */}
-                    <div className="flex flex-wrap items-end gap-3 bg-purple-50 border border-purple-200 rounded-xl p-4">
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-purple-700">Tháng thanh toán</label>
-                            <input
-                                type="month"
-                                value={statsMonth}
-                                onChange={e => setStatsMonth(e.target.value)}
-                                className="border rounded-lg px-3 py-1.5 text-sm bg-white"
-                            />
-                        </div>
-                        {/* Billing cycle badge */}
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs font-medium text-purple-700">Chu kỳ</label>
-                            <div className="flex items-center gap-1.5 bg-purple-100 border border-purple-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-purple-800">
-                                <CalendarDays className="h-3.5 w-3.5" />
-                                {getBillingCycle(statsMonth).label}
-                            </div>
-                        </div>
-                        <button
-                            onClick={fetchMonthStats}
-                            disabled={statsLoading}
-                            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
-                        >
-                            {statsLoading ? (
-                                <span className="animate-spin text-base">↻</span>
-                            ) : (
-                                <span>🔍</span>
                             )}
-                            Xem thống kê
-                        </button>
-                        {statsData && statsData.length > 0 && (
-                            <button
-                                onClick={exportMonthlyExcel}
-                                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-                            >
-                                <FileSpreadsheet className="h-4 w-4" />
-                                Xuất Excel
-                            </button>
-                        )}
-                    </div>
+                        </div>
 
-                    {statsError && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{statsError}</div>
-                    )}
+                        {/* ── Chi tiết theo ca (per-shift) ── */}
+                        <div className="border-t border-dashed border-green-200 pt-4">
+                            <div className="flex items-center gap-2 font-semibold text-green-600 text-sm mb-3">
+                                <BarChart3 className="h-4 w-4" />
+                                Chi tiết từng ca (để kiểm tra)
+                            </div>
 
-                    {statsData !== null && (() => {
-                        if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">Không có dữ liệu trong tháng này</div>
-                        const { days, deptGroups } = buildMonthlyPivot(statsData)
-                        // Total per day (all sections including OT)
-                        // Note: filter sr.shift !== 'OT' to avoid double-counting HPEEL OT
-                        // which exists in both sectionRows ('Hand Peeling OT') AND dg.shifts (OT ShiftEntry)
-                        const dayTotals = days.map(d =>
-                            deptGroups.reduce((s, dg) =>
-                                s + dg.sectionRows.filter(sr => sr.shift !== 'OT').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0)
-                                  + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)
-                        )
-                        const grandTotal = dayTotals.reduce((a, b) => a + b, 0)
-                        // Ca subtotals
-                        const caTotal = (caNum: string) => days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === caNum).reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0))
-                        const otDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0))
-                        const tvDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.seasonalDays.get(d) ?? 0), 0), 0))
-                        const ctDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.officialDays.get(d) ?? 0), 0), 0))
-                        const ca1Totals = caTotal('1'); const ca2Totals = caTotal('2'); const ca3Totals = caTotal('3')
-                        return (
-                            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                                <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
-                                    <div>
-                                        <div className="font-bold text-sm">TIỀN CƠM CÁN BỘ CÔNG NHÂN VIÊN THÁNG {statsMonth}</div>
-                                        <div className="text-xs text-muted-foreground font-normal">Chu kỳ: {getBillingCycle(statsMonth).label}</div>
-                                    </div>
-                                    <button onClick={exportMonthlyExcel} className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-                                        <FileSpreadsheet className="h-3.5 w-3.5" /> Xuất Excel
-                                    </button>
+                            {/* Date + Shift selectors */}
+                            <div className="flex flex-wrap items-end gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-medium text-green-700">Ngày</label>
+                                    <input
+                                        type="date"
+                                        value={summaryDate}
+                                        onChange={e => setSummaryDate(e.target.value)}
+                                        className="border border-green-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
+                                    />
                                 </div>
-                                <div className="overflow-x-auto">
-                                    <table className="text-xs min-w-full border-collapse">
-                                        <thead>
-                                            <tr className="bg-slate-100 text-slate-700 border-b-2 border-slate-300">
-                                                <th className="px-3 py-2 font-bold text-left sticky left-0 bg-slate-100 z-10 min-w-[160px] border-r border-slate-300">
-                                                    Bộ phận
-                                                </th>
-                                                <th className="px-2 py-2 font-bold text-center sticky left-[160px] bg-slate-100 z-10 w-10 border-r border-slate-300">
-                                                    Ca
-                                                </th>
-                                                {days.map(d => {
-                                                    const isSunday = new Date(d + "T00:00:00").getDay() === 0
-                                                    return (
-                                                        <th key={d} className={`px-1.5 py-2 font-bold text-center w-8 ${isSunday ? "bg-orange-100 text-orange-600" : ""}`}>
-                                                            {parseInt(d.slice(8), 10)}
-                                                            {isSunday && <div className="text-[9px] font-normal leading-none">CN</div>}
-                                                        </th>
-                                                    )
-                                                })}
-                                                <th className="px-2 py-2 font-bold text-center bg-slate-200 border-l border-slate-300">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {deptGroups.map(dept => {
-                                                const deptOT = dept.shifts.find(sh => sh.shift === 'OT')
-                                                const deptOTTotal = deptOT ? [...deptOT.days.values()].reduce((a,b)=>a+b,0) : 0
-                                                // filter shift !== 'OT' to avoid double-counting with deptOTTotal (from shiftMap)
-                                const deptTotal = dept.sectionRows.filter(sr => sr.shift !== 'OT').reduce((s, sr) => s + [...sr.days.values()].reduce((a,b)=>a+b,0), 0) + (deptOTTotal ?? 0)
-                                                return (
-                                                <Fragment key={dept.code || dept.deptKey}>
-                                                    {/* Dept group header row */}
-                                                    <tr className="bg-slate-200 border-t-2 border-slate-400">
-                                                        <td colSpan={days.length + 3}
-                                                            className="px-3 py-1 sticky left-0 font-bold text-slate-700 text-xs uppercase tracking-wide">
-                                                            📦 {dept.name}
-                                                            <span className="ml-2 text-slate-500 font-normal normal-case tracking-normal">
-                                                                — Tổng: {deptTotal > 0 ? deptTotal : 0} phần
-                                                            </span>
-                                                        </td>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-medium text-green-700">Ca</label>
+                                    <div className="flex gap-1">
+                                        {["1", "2", "3"].map(s => (
+                                            <button
+                                                key={s}
+                                                onClick={() => setSummaryShift(s)}
+                                                className={`px-4 py-1.5 rounded-lg text-sm font-bold border transition-colors ${summaryShift === s
+                                                    ? "bg-green-500 text-white border-green-500"
+                                                    : "bg-white text-green-700 border-green-300 hover:bg-green-100"
+                                                    }`}
+                                            >{s}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={fetchSummaryFromDB}
+                                    disabled={summaryLoading}
+                                    className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                                >
+                                    <BarChart3 className="h-4 w-4" />
+                                    {summaryLoading ? "Đang tải..." : "Tổng hợp"}
+                                </button>
+                            </div>
+                        </div>
+
+                        {summaryError && (
+                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{summaryError}</div>
+                        )}
+
+                        {summaryData !== null && (() => {
+                            if (summaryData.length === 0) return (
+                                <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                    ⚠️ Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
+                                </div>
+                            )
+                            const msgText = buildDBSummaryText(summaryData)
+                            const missingDepts = getDBMissingDepts(summaryData, summaryShift)
+                            return (
+                                <div className="space-y-4">
+                                    {/* Kitchen message box */}
+                                    <div className="bg-white rounded-xl border-2 border-green-200 shadow-sm p-4">
+                                        <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">Tin nhắn gửi nhà ăn</div>
+                                        <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">{msgText}</pre>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(msgText)
+                                                setCopiedSummary(true)
+                                                setTimeout(() => setCopiedSummary(false), 2000)
+                                            }}
+                                            className={`mt-3 flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${copiedSummary ? "bg-green-600 text-white" : "bg-green-100 hover:bg-green-200 text-green-700"
+                                                }`}
+                                        >
+                                            {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                            {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
+                                        </button>
+                                    </div>
+
+                                    {/* Per-dept breakdown */}
+                                    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                                        <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b">
+                                            <span className="text-sm font-semibold">Chi tiết từng bộ phận</span>
+                                            {canEdit && (
+                                                <button
+                                                    onClick={() => setAddRow({ deptId: "", officialPresent: 0, seasonalPresent: 0, vegetarian: 0, otCount: 0 })}
+                                                    className="flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-900 bg-green-50 border border-green-200 px-2 py-1 rounded-lg transition-colors"
+                                                >
+                                                    <span className="text-base leading-none">+</span> Add Department
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide text-left">
+                                                        <th className="px-3 py-2 font-semibold">Bộ phận</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">CT HĐ</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">TV HĐ</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">Tổng</th>
+                                                        <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">OT</th>
+                                                        <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥬 Chay OT</th>
+                                                        <th className="px-3 py-2"></th>
                                                     </tr>
-                                                    {/* Section data rows — exclude shift='OT' since OT is shown in the deptOT row below */}
-                                                    {dept.sectionRows.filter(sr => sr.shift !== 'OT').map((sr, sIdx) => {
-                                                        const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
-                                                        const isTV = /thời vụ/i.test(sr.sectionName)
-                                                        const shiftLabel = sr.shift === 'OT' ? 'OT' : `S${sr.shift}`
-                                                        const shiftColor = sr.shift === '1' ? 'bg-blue-100 text-blue-700' : sr.shift === '2' ? 'bg-emerald-100 text-emerald-700' : sr.shift === '3' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
-                                                        const rowKey = `${sr.sectionName}|${sr.shift}`
-                                                        const isRowEditing = editingRowKey === rowKey
+                                                </thead>
+                                                <tbody className="divide-y">
+                                                    {summaryData.map(r => {
+                                                        const isEditing = editingRowId === r.id
+                                                        const deptName = r.department_id
+                                                            ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
+                                                            : r.department_name
                                                         return (
-                                                            <tr key={rowKey}
-                                                                className={`group border-b border-slate-100 ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
-                                                                <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium text-xs ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/60 italic text-blue-600' : 'bg-white text-slate-600'}`}>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="whitespace-nowrap">{sr.sectionName}</span>
+                                                            <tr key={r.id} className={isEditing ? "bg-blue-50" : "hover:bg-muted/30"}>
+                                                                <td className="px-3 py-2 font-medium whitespace-nowrap">{deptName}</td>
+                                                                {isEditing ? (<>
+                                                                    <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={editFields.official_present} onChange={e => setEditFields(f => ({ ...f, official_present: +e.target.value }))} /></td>
+                                                                    <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={editFields.seasonal_present} onChange={e => setEditFields(f => ({ ...f, seasonal_present: +e.target.value }))} /></td>
+                                                                    <td className="px-3 py-2 text-right font-bold text-blue-600">{editFields.official_present + editFields.seasonal_present}</td>
+                                                                    <td className="px-1 py-1"><input type="number" min={0} className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.vegetarian} onChange={e => setEditFields(f => ({ ...f, vegetarian: +e.target.value }))} /></td>
+                                                                    <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={editFields.ot_count} onChange={e => setEditFields(f => ({ ...f, ot_count: +e.target.value }))} /></td>
+                                                                    <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.ot_vegetarian} onChange={e => setEditFields(f => ({ ...f, ot_vegetarian: +e.target.value }))} /></td>
+                                                                    <td className="px-2 py-1 whitespace-nowrap">
+                                                                        <button onClick={() => handleSaveEdit(r.id)} className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 mr-1">Lưu</button>
+                                                                        <button onClick={() => setEditingRowId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded hover:bg-gray-300">Hủy</button>
+                                                                    </td>
+                                                                </>) : (<>
+                                                                    <td className="px-3 py-2 text-right font-semibold text-green-700">{r.official_present ?? 0}</td>
+                                                                    <td className="px-3 py-2 text-right">{r.seasonal_present ?? 0}</td>
+                                                                    <td className="px-3 py-2 text-right font-bold">{Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0)}</td>
+                                                                    <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
+                                                                    <td className="px-3 py-2 text-right font-semibold">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) > 0 ? (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) : 0}</td>
+                                                                    <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{(r.ot_vegetarian ?? 0) > 0 ? r.ot_vegetarian : <span className="text-gray-300">—</span>}</td>
+                                                                    <td className="px-2 py-2 whitespace-nowrap">
                                                                         {canEdit && (
-                                                                            isRowEditing ? (
-                                                                                <div className="flex gap-1 ml-1 shrink-0">
-                                                                                    <button
-                                                                                        disabled={rowSaving}
-                                                                                        onClick={async () => {
-                                                                                            setRowSaving(true)
-                                                                                            // Rebuild pivot fresh from latest statsData to avoid stale closure issue
-                                                                                            // (sr captured in closure may have outdated dayRowIds after prior saves)
-                                                                                            const freshPivot = buildMonthlyPivot(statsData ?? [])
-                                                                                            const freshSr = freshPivot.deptGroups
-                                                                                                .flatMap(dg => dg.sectionRows)
-                                                                                                .find(s => s.sectionName === sr.sectionName && s.shift === sr.shift) ?? sr
-                                                                                            let savedCount = 0
-                                                                                            for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
-                                                                                                const newVal = parseInt(draftVal) || 0
-                                                                                                const orig = freshSr.days.get(date) ?? 0
-                                                                                                if (newVal === orig) continue
-                                                                                                // Find the DB record: prefer dayRowIds (direct), fallback to statsData search
-                                                                                                let rec: MealStatRow | undefined
-                                                                                                const rowIds = freshSr.dayRowIds.get(date) ?? []
-                                                                                                if (rowIds.length > 0) {
-                                                                                                    rec = (statsData ?? []).find(r => r.id === rowIds[0])
-                                                                                                }
-                                                                                                if (!rec) {
-                                                                                                    // Fallback: search by date + shift + any department_id that contributed to this section
-                                                                                                    rec = (statsData ?? []).find(r =>
-                                                                                                        r.work_date === date && r.shift === freshSr.shift &&
-                                                                                                        ((r.department_id != null && freshSr.departmentIds.has(r.department_id)) ||
-                                                                                                         r.department_name.toLowerCase().includes(freshSr.sectionName.split(' ')[0].toLowerCase()) ||
-                                                                                                         freshSr.sectionName.toLowerCase().startsWith(r.department_name.toLowerCase().split(' ')[0]))
-                                                                                                    )
-                                                                                                }
-                                                                                                if (!rec) continue  // No record to update, skip
-                                                                                                const diff = newVal - orig
-                                                                                                // Apply diff to official first; if official goes negative, carry remainder into seasonal
-                                                                                                const oldOfficial = rec.official_present ?? 0
-                                                                                                const oldSeasonal = rec.seasonal_present ?? 0
-                                                                                                let newOfficial = oldOfficial + diff
-                                                                                                let newSeasonal = oldSeasonal
-                                                                                                if (newOfficial < 0) {
-                                                                                                    newSeasonal = Math.max(0, oldSeasonal + newOfficial)
-                                                                                                    newOfficial = 0
-                                                                                                }
-                                                                                                // Cap vegetarian to not exceed new total (official + seasonal)
-                                                                                                const newTotal = newOfficial + newSeasonal
-                                                                                                const newVegetarian = Math.min(rec.vegetarian ?? 0, newTotal)
-                                                                                                const res = await fetch('/api/meal-headcount', {
-                                                                                                    method: 'PATCH',
-                                                                                                    headers: { 'Content-Type': 'application/json' },
-                                                                                                    body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian, ot_count: rec.ot_count ?? 0, ot_vegetarian: rec.ot_vegetarian ?? 0 })
-                                                                                                })
-                                                                                                if (res.ok) {
-                                                                                                    savedCount++
-                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec!.id ? { ...r, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian } : r) : prev)
-                                                                                                } else {
-                                                                                                    const j = await res.json()
-                                                                                                    alert('Lỗi lưu: ' + (j.error || res.statusText))
-                                                                                                }
-                                                                                            }
-                                                                                            if (savedCount === 0) {
-                                                                                                alert('Không có thay đổi nào được lưu — vui lòng đổi số trước khi bấm 💾')
-                                                                                            }
-                                                                                            setRowSaving(false)
-                                                                                            setEditingRowKey(null)
-                                                                                            setRowEditDrafts({})
-                                                                                        }}
-                                                                                        className="px-1.5 py-0.5 bg-green-500 hover:bg-green-600 text-white text-[9px] font-bold rounded disabled:opacity-50 transition-colors"
-                                                                                    >{rowSaving ? '...' : '💾'}</button>
-                                                                                    <button
-                                                                                        onClick={() => { setEditingRowKey(null); setRowEditDrafts({}) }}
-                                                                                        className="px-1.5 py-0.5 bg-slate-400 hover:bg-slate-500 text-white text-[9px] font-bold rounded transition-colors"
-                                                                                    >✕</button>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        setEditingRowKey(rowKey)
-                                                                                        const drafts: Record<string, string> = {}
-                                                                                        days.forEach(d => { drafts[d] = String(sr.days.get(d) ?? 0) })
-                                                                                        setRowEditDrafts(drafts)
-                                                                                    }}
-                                                                                    className="shrink-0 px-2 py-0.5 bg-amber-100 hover:bg-amber-400 hover:text-white text-amber-700 text-[10px] font-bold rounded border border-amber-300 transition-colors"
-                                                                                >✏️ Sửa</button>
-                                                                            )
+                                                                            <>
+                                                                                <button onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">✏️ Edit</button>
+                                                                                <button onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">🗑 Delete</button>
+                                                                            </>
                                                                         )}
-                                                                    </div>
-                                                                </td>
-                                                                <td className={`px-1 py-1 sticky left-[160px] z-10 text-center border-r border-slate-200 ${isRowEditing ? 'bg-yellow-50' : 'bg-white'}`}>
-                                                                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${shiftColor}`}>{shiftLabel}</span>
-                                                                </td>
-                                                                {days.map(d => {
-                                                                    const isSunday = new Date(d + "T00:00:00").getDay() === 0
-                                                                    const v = isRowEditing ? (parseInt(rowEditDrafts[d]) || 0) : (sr.days.get(d) ?? 0)
-                                                                    const origV = sr.days.get(d) ?? 0
-                                                                    const changed = isRowEditing && parseInt(rowEditDrafts[d] ?? '') !== origV
-                                                                    return (
-                                                                        <td key={d}
-                                                                            className={`px-0 py-0 text-center text-xs ${
-                                                                                isRowEditing ? (changed ? 'bg-yellow-100' : 'bg-yellow-50') :
-                                                                                isSunday ? 'bg-orange-50 text-orange-400' :
-                                                                                origV > 0 ? (isTV ? 'text-blue-600 font-semibold' : 'font-semibold text-slate-800') : 'text-slate-200'
-                                                                            }`}
-                                                                        >
-                                                                            {isRowEditing ? (
-                                                                                <input
-                                                                                    type="number"
-                                                                                    min={0}
-                                                                                    value={rowEditDrafts[d] ?? ''}
-                                                                                    onChange={e => setRowEditDrafts(prev => ({ ...prev, [d]: e.target.value }))}
-                                                                                    onKeyDown={e => { if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
-                                                                                    className={`w-10 h-6 text-center text-xs rounded outline-none font-semibold ${
-                                                                                        changed ? 'border-2 border-amber-400 bg-amber-50' : 'border border-slate-200 bg-yellow-50'
-                                                                                    }`}
-                                                                                />
-                                                                            ) : (
-                                                                                <span className="block px-1.5 py-1">
-                                                                                    {origV > 0 ? origV : '—'}
-                                                                                </span>
-                                                                            )}
-                                                                        </td>
-                                                                    )
-                                                                })}
-                                                                <td className={`px-2 py-1 text-center font-bold border-l border-slate-200 text-xs ${
-                                                                    rowTotal > 0 ? (isTV ? 'text-blue-700' : 'text-slate-700') : 'text-slate-300'
-                                                                }`}>
-                                                                    {rowTotal > 0 ? rowTotal : ''}
-                                                                </td>
+                                                                    </td>
+                                                                </>)}
                                                             </tr>
                                                         )
                                                     })}
-                                                    {/* OT row for this dept group - always show */}
-                                                    {(() => {
-                                                        const otRowKey = `${dept.name}|OT`
-                                                        const isOTEditing = editingRowKey === otRowKey
-                                                        return (
-                                                            <tr className={`group border-b border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
-                                                                <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-orange-100 font-semibold text-xs ${isOTEditing ? 'bg-yellow-50 text-orange-700' : 'bg-orange-50 text-orange-700 italic'}`}>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="whitespace-nowrap">{dept.name} (OT)</span>
-                                                                        {canEdit && (
-                                                                            isOTEditing ? (
-                                                                                <div className="flex gap-1 ml-1 shrink-0">
-                                                                                    <button
-                                                                                        disabled={rowSaving}
-                                                                                        onClick={async () => {
-                                                                                            setRowSaving(true)
-                                                                                            for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
-                                                                                                const newVal = parseInt(draftVal) || 0
-                                                                                                const orig = deptOT?.days.get(date) ?? 0
-                                                                                                if (newVal === orig) continue
-                                                                                                // Use dayRowIds from OT ShiftEntry
-                                                                                                const rowIds = deptOT?.dayRowIds.get(date) ?? []
-                                                                                                if (rowIds.length === 0) continue
-                                                                                                const rec = (statsData ?? []).find(r => r.id === rowIds[0])
-                                                                                                if (!rec) continue
-                                                                                                // newVal is ot_count + ot_vegetarian (combined display); compute actual ot_count to store
-                                                                                                const newOtCount = Math.max(0, newVal - (rec.ot_vegetarian ?? 0))
-                                                                                                const res = await fetch('/api/meal-headcount', {
-                                                                                                    method: 'PATCH',
-                                                                                                    headers: { 'Content-Type': 'application/json' },
-                                                                                                    body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newOtCount, ot_vegetarian: rec.ot_vegetarian ?? 0 })
-                                                                                                })
-                                                                                                if (res.ok) {
-                                                                                                    setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newOtCount } : r) : prev)
-                                                                                                } else {
-                                                                                                    const j = await res.json()
-                                                                                                    alert('Lỗi lưu OT: ' + (j.error || res.statusText))
-                                                                                                }
-                                                                                            }
-                                                                                            setRowSaving(false)
-                                                                                            setEditingRowKey(null)
-                                                                                            setRowEditDrafts({})
-                                                                                        }}
-                                                                                        className="px-1.5 py-0.5 bg-green-500 hover:bg-green-600 text-white text-[9px] font-bold rounded disabled:opacity-50 transition-colors"
-                                                                                    >{rowSaving ? '...' : '💾'}</button>
-                                                                                    <button
-                                                                                        onClick={() => { setEditingRowKey(null); setRowEditDrafts({}) }}
-                                                                                        className="px-1.5 py-0.5 bg-slate-400 hover:bg-slate-500 text-white text-[9px] font-bold rounded transition-colors"
-                                                                                    >✕</button>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        setEditingRowKey(otRowKey)
-                                                                                        const drafts: Record<string, string> = {}
-                                                                                        days.forEach(d => { drafts[d] = String(deptOT?.days.get(d) ?? 0) })
-                                                                                        setRowEditDrafts(drafts)
-                                                                                    }}
-                                                                                    className="shrink-0 px-2 py-0.5 bg-orange-100 hover:bg-orange-400 hover:text-white text-orange-700 text-[10px] font-bold rounded border border-orange-300 transition-colors"
-                                                                                >✏️ Sửa</button>
-                                                                            )
-                                                                        )}
-                                                                    </div>
-                                                                </td>
-                                                                <td className={`px-1 py-1 sticky left-[160px] z-10 text-center border-r border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
-                                                                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">OT</span>
-                                                                </td>
-                                                                {days.map(d => {
-                                                                    const origV = deptOT?.days.get(d) ?? 0
-                                                                    const changed = isOTEditing && parseInt(rowEditDrafts[d] ?? '') !== origV
-                                                                    return (
-                                                                        <td key={d} className={`px-0 py-0 text-center text-xs ${
-                                                                            isOTEditing ? (changed ? 'bg-yellow-100' : 'bg-yellow-50') :
-                                                                            origV > 0 ? 'text-orange-600 font-semibold' : 'text-orange-200'
-                                                                        }`}>
-                                                                            {isOTEditing ? (
-                                                                                <input
-                                                                                    type="number"
-                                                                                    min={0}
-                                                                                    value={rowEditDrafts[d] ?? ''}
-                                                                                    onChange={e => setRowEditDrafts(prev => ({ ...prev, [d]: e.target.value }))}
-                                                                                    onKeyDown={e => { if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
-                                                                                    className={`w-10 h-6 text-center text-xs rounded outline-none font-semibold ${
-                                                                                        changed ? 'border-2 border-amber-400 bg-amber-50' : 'border border-slate-200 bg-yellow-50'
-                                                                                    }`}
-                                                                                />
-                                                                            ) : (
-                                                                                <span className="block px-1.5 py-1">{origV > 0 ? origV : '—'}</span>
-                                                                            )}
-                                                                        </td>
-                                                                    )
-                                                                })}
-                                                                <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100 text-xs">
-                                                                    {deptOTTotal > 0 ? deptOTTotal : '—'}
-                                                                </td>
-                                                            </tr>
-                                                        )
-                                                    })()}
-                                                </Fragment>
-                                                )
-                                            })}
-                                        </tbody>
-                                        {/* Footer rows matching Excel format */}
-                                        <tfoot>
-                                            <tr className="bg-slate-700 text-white font-bold border-t-2 border-slate-500">
-                                                <td className="px-3 py-2 sticky left-0 bg-slate-700 z-10 border-r border-slate-500">TỔNG</td>
-                                                <td className="px-2 py-2 sticky left-[160px] bg-slate-700 z-10 border-r border-slate-500"></td>
-                                                {dayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-2 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
-                                                <td className="px-2 py-2 text-center border-l border-slate-500">{grandTotal}</td>
-                                            </tr>
-                                            <tr className="bg-blue-600 text-white text-[11px]">
-                                                <td className="px-3 py-1.5 sticky left-0 bg-blue-600 z-10 font-semibold border-r border-blue-400">Ca 1:</td>
-                                                <td className="px-2 py-1.5 sticky left-[160px] bg-blue-600 z-10 border-r border-blue-400"></td>
-                                                {ca1Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
-                                                <td className="px-2 py-1.5 text-center font-bold border-l border-blue-400">{ca1Totals.reduce((a,b)=>a+b,0)}</td>
-                                            </tr>
-                                            <tr className="bg-blue-500 text-white text-[11px]">
-                                                <td className="px-3 py-1.5 sticky left-0 bg-blue-500 z-10 font-semibold border-r border-blue-300">Ca 2:</td>
-                                                <td className="px-2 py-1.5 sticky left-[160px] bg-blue-500 z-10 border-r border-blue-300"></td>
-                                                {ca2Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
-                                                <td className="px-2 py-1.5 text-center font-bold border-l border-blue-300">{ca2Totals.reduce((a,b)=>a+b,0)}</td>
-                                            </tr>
-                                            <tr className="bg-blue-400 text-white text-[11px]">
-                                                <td className="px-3 py-1.5 sticky left-0 bg-blue-400 z-10 font-semibold border-r border-blue-200">Ca 3:</td>
-                                                <td className="px-2 py-1.5 sticky left-[160px] bg-blue-400 z-10 border-r border-blue-200"></td>
-                                                {ca3Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
-                                                <td className="px-2 py-1.5 text-center font-bold border-l border-blue-200">{ca3Totals.reduce((a,b)=>a+b,0)}</td>
-                                            </tr>
-                                            <tr className="bg-orange-500 text-white text-[11px]">
-                                                <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">OT</td>
-                                                <td className="px-2 py-1.5 sticky left-[160px] bg-orange-500 z-10 border-r border-orange-300"></td>
-                                                {otDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
-                                                <td className="px-2 py-1.5 text-center font-bold border-l border-orange-300">{otDayTotals.reduce((a,b)=>a+b,0)}</td>
-                                            </tr>
-                                            <tr className="bg-purple-100 text-purple-800 text-[11px]">
-                                                <td className="px-3 py-1.5 sticky left-0 bg-purple-100 z-10 font-semibold border-r border-purple-200">Thời vụ</td>
-                                                <td className="px-2 py-1.5 sticky left-[160px] bg-purple-100 z-10 border-r border-purple-200"></td>
-                                                {tvDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-purple-800/30" : ""}`}>{v > 0 ? v : ''}</td> })}
-                                                <td className="px-2 py-1.5 text-center font-bold border-l border-purple-200">{tvDayTotals.reduce((a,b)=>a+b,0)}</td>
-                                            </tr>
-                                            <tr className="bg-green-100 text-green-800 text-[11px]">
-                                                <td className="px-3 py-1.5 sticky left-0 bg-green-100 z-10 font-semibold border-r border-green-200">Chính thức</td>
-                                                <td className="px-2 py-1.5 sticky left-[160px] bg-green-100 z-10 border-r border-green-200"></td>
-                                                {ctDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-green-800/30" : ""}`}>{v > 0 ? v : ''}</td> })}
-                                                <td className="px-2 py-1.5 text-center font-bold border-l border-green-200">{ctDayTotals.reduce((a,b)=>a+b,0)}</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            </div>
-                        )
-                    })()}
-                </div>
-            )}
 
-            {/* ═══════════════════════════════════════════ */}
-            {/* TAB 1: PARSE & SAVE                        */}
-            {/* ═══════════════════════════════════════════ */}
-            {false && (
-                <>
-                    {/* Paste area */}
-                    {!parsed && (
-                        <div className="bg-card rounded-xl border shadow-sm p-4 space-y-4">
-                            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                                <ClipboardPaste className="h-4 w-4" />
-                                Paste nội dung chat Zalo vào đây (copy tất cả các tin nhắn báo cơm của ngày)
-                            </div>
-                            <textarea
-                                id="zalo-paste-area"
-                                value={rawText}
-                                onChange={(e) => setRawText(e.target.value)}
-                                placeholder={`Ví dụ:\n28.3.2026\nKhu vực : Boiler\nCa: 1.2.3\nChính thức hiện diện: 3\nChính thức vắng: 0\n2Thời vụ hiện diện:0\nThời vụ vắng :0\nOT:\n\nDate: 28/03/2026\nKhu vực : Peeling mc\nCa: 1\nChính thức hiện diện: 7\n...`}
-                                rows={16}
-                                className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400 resize-y"
-                                style={{ minHeight: "260px" }}
-                            />
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                                <p className="text-xs text-muted-foreground">
-                                    💡 Không cần xóa tên người gửi hay timestamp — hệ thống tự bỏ qua.
-                                </p>
-                                <div className="flex gap-2">
-                                    {/* AI Parse button */}
-                                    <Button
-                                        id="ai-parse-btn"
-                                        onClick={handleAIParse}
-                                        disabled={!rawText.trim() || aiParsing}
-                                        className="gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5"
-                                    >
-                                        {aiParsing ? (
-                                            <RefreshCw className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Sparkles className="h-4 w-4" />
-                                        )}
-                                        {aiParsing ? "AI đang xử lý..." : "🤖 AI Phân tích"}
-                                    </Button>
-                                    {/* Manual parse button */}
-                                    <Button
-                                        id="parse-btn"
-                                        onClick={handleParse}
-                                        disabled={!rawText.trim()}
-                                        className="gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6"
-                                    >
-                                        <Sparkles className="h-4 w-4" />
-                                        Phân tích ngay
-                                    </Button>
-                                </div>
-                            </div>
-                            {aiError && (
-                                <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">
-                                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                    <span>AI lỗi: {aiError}</span>
-                                </div>
-                            )}
-                            {aiTruncated && (
-                                <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
-                                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                    <span>⚠️ Text quá dài — AI chỉ đọc được phần đầu (~8000 ký tự). Kết quả có thể thiếu. Hãy paste từng ca riêng để đảm bảo đầy đủ.</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-
-                    {/* Results */}
-                    {parsed && (
-                        <>
-                            {/* Action buttons */}
-                            <div className="flex flex-wrap gap-2">
-                                <Button variant="outline" size="sm" onClick={handleCopyTable} className="gap-2">
-                                    {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                    {copied ? "Đã copy!" : "Copy bảng"}
-                                </Button>
-                                <Button size="sm" onClick={() => exportCSV(records)} className="gap-2 bg-green-600 hover:bg-green-700 text-white">
-                                    <Download className="h-4 w-4" />
-                                    Xuất Excel (.csv)
-                                </Button>
-                                {canSave && records.length > 0 && (
-                                    <Button
-                                        size="sm"
-                                        onClick={handleSaveToDB}
-                                        disabled={saving}
-                                        className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                                    >
-                                        <Save className="h-4 w-4" />
-                                        {saving ? "Đang lưu..." : `💾 Lưu ${records.length} bản ghi vào DB`}
-                                    </Button>
-                                )}
-                                <Button
-                                    size="sm"
-                                    onClick={() => setShowSummary(s => !s)}
-                                    className={`gap-2 ${showSummary ? "bg-orange-600 hover:bg-orange-700" : "bg-orange-500 hover:bg-orange-600"} text-white`}
-                                >
-                                    <BarChart3 className="h-4 w-4" />
-                                    Tổng hợp báo cơm
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
-                                    <RefreshCw className="h-4 w-4" />
-                                    Làm mới
-                                </Button>
-                            </div>
-
-
-                            {/* Summary panel */}
-                            {showSummary && (
-                                <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-4">
-                                    <div className="flex items-center gap-2 font-semibold text-orange-700">
-                                        <MessageSquare className="h-4 w-4" />
-                                        Tổng hợp báo cơm nhà ăn
+                                                    {/* Add-row form */}
+                                                    {addRow && (
+                                                        <tr className="bg-green-50 border-t-2 border-green-200">
+                                                            <td className="px-2 py-1">
+                                                                <select
+                                                                    className="w-full border border-green-300 rounded px-1 py-0.5 text-sm bg-white"
+                                                                    value={addRow.deptId}
+                                                                    onChange={e => setAddRow(r => r ? { ...r, deptId: e.target.value } : r)}
+                                                                >
+                                                                    <option value="">-- Chọn bộ phận --</option>
+                                                                    {deptList.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+                                                                </select>
+                                                            </td>
+                                                            <td className="px-1 py-1"><input type="number" min={0} placeholder="CT" className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={addRow.officialPresent || ""} onChange={e => setAddRow(r => r ? { ...r, officialPresent: +e.target.value } : r)} /></td>
+                                                            <td className="px-1 py-1"><input type="number" min={0} placeholder="TV" className="w-16 border rounded px-1 py-0.5 text-sm text-right" value={addRow.seasonalPresent || ""} onChange={e => setAddRow(r => r ? { ...r, seasonalPresent: +e.target.value } : r)} /></td>
+                                                            <td className="px-3 py-2 text-right text-muted-foreground text-sm">{(addRow.officialPresent || 0) + (addRow.seasonalPresent || 0)}</td>
+                                                            <td className="px-1 py-1"><input type="number" min={0} placeholder="Chay" className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={addRow.vegetarian || ""} onChange={e => setAddRow(r => r ? { ...r, vegetarian: +e.target.value } : r)} /></td>
+                                                            <td className="px-1 py-1"><input type="number" min={0} placeholder="OT" className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={addRow.otCount || ""} onChange={e => setAddRow(r => r ? { ...r, otCount: +e.target.value } : r)} /></td>
+                                                            <td className="px-2 py-1 whitespace-nowrap">
+                                                                <button onClick={handleAddRowSave} className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700 mr-1">Lưu</button>
+                                                                <button onClick={() => setAddRow(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Hủy</button>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr className="bg-muted/60 font-bold border-t-2 text-sm">
+                                                        <td className="px-3 py-2">TỔNG</td>
+                                                        <td className="px-3 py-2 text-right text-green-700">{summaryData.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
+                                                        <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
+                                                        <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)}</td>
+                                                        <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
+                                                        <td className="px-3 py-2 text-right font-bold">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0), 0)}</td>
+                                                        <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) > 0 ? summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) : <span className="text-gray-300">—</span>}</td>
+                                                        <td />
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
                                     </div>
 
-                                    {/* Date + Shift selectors */}
-                                    <div className="flex flex-wrap items-end gap-3">
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-orange-700">Ngày</label>
-                                            <input
-                                                type="date"
-                                                value={summaryDate}
-                                                onChange={e => setSummaryDate(e.target.value)}
-                                                className="border border-orange-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-xs font-medium text-orange-700">Ca</label>
-                                            <div className="flex gap-1">
-                                                {["1", "2", "3"].map(s => (
-                                                    <button
-                                                        key={s}
-                                                        onClick={() => setSummaryShift(s)}
-                                                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${
-                                                            summaryShift === s
-                                                                ? "bg-orange-500 text-white border-orange-500"
-                                                                : "bg-white text-orange-700 border-orange-300 hover:bg-orange-100"
-                                                        }`}
-                                                    >{s}</button>
+                                    {/* Missing depts */}
+                                    {missingDepts.length > 0 && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+                                            <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
+                                                <Bell className="h-4 w-4" />
+                                                Chưa có dữ liệu từ:
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {missingDepts.map(d => (
+                                                    <span key={d.code} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2.5 py-1 rounded-full font-medium">{d.name}</span>
                                                 ))}
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={fetchSummaryFromDB}
-                                            disabled={summaryLoading}
-                                            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors disabled:opacity-50"
-                                        >
-                                            <BarChart3 className="h-4 w-4" />
-                                            {summaryLoading ? "Đang tải..." : "Tổng hợp"}
+                                    )}
+                                </div>
+                            )
+                        })()}
+                    </div>
+                )}
+
+                {/* ═════════════════════════════════════════════ */}
+                {/* TAB 4: MONTHLY STATS                          */}
+                {/* ═════════════════════════════════════════════ */}
+                {activeTab === "monthly" && (
+                    <div className="space-y-5">
+                        <div className="flex items-center gap-2 font-semibold text-purple-700 text-lg">
+                            <span className="text-xl">📅</span>
+                            Thống kê suất cơm theo tháng
+                        </div>
+
+                        {/* Month picker + fetch */}
+                        <div className="flex flex-wrap items-end gap-3 bg-purple-50 border border-purple-200 rounded-xl p-4">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-medium text-purple-700">Tháng thanh toán</label>
+                                <input
+                                    type="month"
+                                    value={statsMonth}
+                                    onChange={e => setStatsMonth(e.target.value)}
+                                    className="border rounded-lg px-3 py-1.5 text-sm bg-white"
+                                />
+                            </div>
+                            {/* Billing cycle badge */}
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-medium text-purple-700">Chu kỳ</label>
+                                <div className="flex items-center gap-1.5 bg-purple-100 border border-purple-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-purple-800">
+                                    <CalendarDays className="h-3.5 w-3.5" />
+                                    {getBillingCycle(statsMonth).label}
+                                </div>
+                            </div>
+                            <button
+                                onClick={fetchMonthStats}
+                                disabled={statsLoading}
+                                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
+                            >
+                                {statsLoading ? (
+                                    <span className="animate-spin text-base">↻</span>
+                                ) : (
+                                    <span>🔍</span>
+                                )}
+                                Xem thống kê
+                            </button>
+                            {statsData && statsData.length > 0 && (
+                                <button
+                                    onClick={exportMonthlyExcel}
+                                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                                >
+                                    <FileSpreadsheet className="h-4 w-4" />
+                                    Xuất Excel
+                                </button>
+                            )}
+                        </div>
+
+                        {statsError && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{statsError}</div>
+                        )}
+
+                        {statsData !== null && (() => {
+                            if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">Không có dữ liệu trong tháng này</div>
+                            const { days, deptGroups } = buildMonthlyPivot(statsData)
+                            // Total per day (all sections including OT)
+                            // Note: filter sr.shift !== 'OT' to avoid double-counting HPEEL OT
+                            // which exists in both sectionRows ('Hand Peeling OT') AND dg.shifts (OT ShiftEntry)
+                            const dayTotals = days.map(d =>
+                                deptGroups.reduce((s, dg) =>
+                                    s + dg.sectionRows.filter(sr => sr.shift !== 'OT').reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0)
+                                    + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)
+                            )
+                            const grandTotal = dayTotals.reduce((a, b) => a + b, 0)
+                            // Ca subtotals
+                            const caTotal = (caNum: string) => days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === caNum).reduce((ss, sr) => ss + (sr.days.get(d) ?? 0), 0), 0))
+                            const otDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0))
+                            const tvDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.seasonalDays.get(d) ?? 0), 0), 0))
+                            const ctDayTotals = days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.officialDays.get(d) ?? 0), 0), 0))
+                            const ca1Totals = caTotal('1'); const ca2Totals = caTotal('2'); const ca3Totals = caTotal('3')
+                            return (
+                                <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                                    <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
+                                        <div>
+                                            <div className="font-bold text-sm">TIỀN CƠM CÁN BỘ CÔNG NHÂN VIÊN THÁNG {statsMonth}</div>
+                                            <div className="text-xs text-muted-foreground font-normal">Chu kỳ: {getBillingCycle(statsMonth).label}</div>
+                                        </div>
+                                        <button onClick={exportMonthlyExcel} className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                                            <FileSpreadsheet className="h-3.5 w-3.5" /> Xuất Excel
                                         </button>
                                     </div>
-
-                                    {summaryError && (
-                                        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{summaryError}</div>
-                                    )}
-
-                                    {summaryData !== null && (() => {
-                                        if (summaryData!.length === 0) return (
-                                            <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                                Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
-                                            </div>
-                                        )
-                                        const msgText = buildDBSummaryText(summaryData!)
-                                        const missingDepts = getDBMissingDepts(summaryData!, summaryShift)
-                                        return (
-                                            <div className="space-y-3">
-                                                {/* Kitchen message */}
-                                                <div className="bg-white rounded-lg border border-orange-100 p-3 font-mono text-sm whitespace-pre-wrap text-gray-800">
-                                                    {msgText}
-                                                </div>
-                                                <button
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(msgText)
-                                                        setCopiedSummary(true)
-                                                        setTimeout(() => setCopiedSummary(false), 2000)
-                                                    }}
-                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                                                        copiedSummary ? "bg-green-600 text-white" : "bg-orange-600 hover:bg-orange-700 text-white"
-                                                    }`}
-                                                >
-                                                    {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                                    {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
-                                                </button>
-
-                                                {/* Per-dept breakdown */}
-                                                <div className="overflow-x-auto">
-                                                    <table className="w-full text-xs border rounded-lg overflow-hidden">
-                                                        <thead>
-                                                            <tr className="bg-orange-100 text-orange-700 text-left">
-                                                                <th className="px-2 py-1.5 font-semibold">Bộ phận</th>
-                                                                <th className="px-2 py-1.5 font-semibold text-right">CT HĐ</th>
-                                                                <th className="px-2 py-1.5 font-semibold text-right">TV HĐ</th>
-                                                                <th className="px-2 py-1.5 font-semibold text-right">Chay</th>
-                                                                <th className="px-2 py-1.5 font-semibold text-right">OT</th>
+                                    <div className="overflow-x-auto">
+                                        <table className="text-xs min-w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-100 text-slate-700 border-b-2 border-slate-300">
+                                                    <th className="px-3 py-2 font-bold text-left sticky left-0 bg-slate-100 z-10 min-w-[160px] border-r border-slate-300">
+                                                        Bộ phận
+                                                    </th>
+                                                    <th className="px-2 py-2 font-bold text-center sticky left-[160px] bg-slate-100 z-10 w-10 border-r border-slate-300">
+                                                        Ca
+                                                    </th>
+                                                    {days.map(d => {
+                                                        const isSunday = new Date(d + "T00:00:00").getDay() === 0
+                                                        return (
+                                                            <th key={d} className={`px-1.5 py-2 font-bold text-center w-8 ${isSunday ? "bg-orange-100 text-orange-600" : ""}`}>
+                                                                {parseInt(d.slice(8), 10)}
+                                                                {isSunday && <div className="text-[9px] font-normal leading-none">CN</div>}
+                                                            </th>
+                                                        )
+                                                    })}
+                                                    <th className="px-2 py-2 font-bold text-center bg-slate-200 border-l border-slate-300">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {deptGroups.map(dept => {
+                                                    const deptOT = dept.shifts.find(sh => sh.shift === 'OT')
+                                                    const deptOTTotal = deptOT ? [...deptOT.days.values()].reduce((a, b) => a + b, 0) : 0
+                                                    // filter shift !== 'OT' to avoid double-counting with deptOTTotal (from shiftMap)
+                                                    const deptTotal = dept.sectionRows.filter(sr => sr.shift !== 'OT').reduce((s, sr) => s + [...sr.days.values()].reduce((a, b) => a + b, 0), 0) + (deptOTTotal ?? 0)
+                                                    return (
+                                                        <Fragment key={dept.code || dept.deptKey}>
+                                                            {/* Dept group header row */}
+                                                            <tr className="bg-slate-200 border-t-2 border-slate-400">
+                                                                <td colSpan={days.length + 3}
+                                                                    className="px-3 py-1 sticky left-0 font-bold text-slate-700 text-xs uppercase tracking-wide">
+                                                                    📦 {dept.name}
+                                                                    <span className="ml-2 text-slate-500 font-normal normal-case tracking-normal">
+                                                                        — Tổng: {deptTotal > 0 ? deptTotal : 0} phần
+                                                                    </span>
+                                                                </td>
                                                             </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y">
-                                                            {summaryData!.map(r => (
-                                                                <tr key={r.id} className="hover:bg-orange-50">
-                                                                    <td className="px-2 py-1 font-medium">
-                                                                        {r.department_id
-                                                                            ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
-                                                                            : r.department_name}
-                                                                    </td>
-                                                                    <td className="px-2 py-1 text-right text-green-700 font-semibold">{r.official_present ?? 0}</td>
-                                                                    <td className="px-2 py-1 text-right">{r.seasonal_present ?? 0}</td>
-                                                                    <td className="px-2 py-1 text-right text-emerald-600">{r.vegetarian ?? 0}</td>
-                                                                    <td className="px-2 py-1 text-right font-semibold">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)}</td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-
-                                                {/* Missing depts */}
-                                                {missingDepts.length > 0 && (
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
-                                                            <Bell className="h-4 w-4" />
-                                                            Chưa có dữ liệu từ các bộ phận:
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-1.5">
-                                                            {missingDepts.map(d => (
-                                                                <span key={d.code} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded-full font-medium">{d.name}</span>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )
-                                    })()}
+                                                            {/* Section data rows — exclude shift='OT' since OT is shown in the deptOT row below */}
+                                                            {dept.sectionRows.filter(sr => sr.shift !== 'OT').map((sr, sIdx) => {
+                                                                const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
+                                                                const isTV = /thời vụ/i.test(sr.sectionName)
+                                                                const shiftLabel = sr.shift === 'OT' ? 'OT' : `S${sr.shift}`
+                                                                const shiftColor = sr.shift === '1' ? 'bg-blue-100 text-blue-700' : sr.shift === '2' ? 'bg-emerald-100 text-emerald-700' : sr.shift === '3' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
+                                                                const rowKey = `${sr.sectionName}|${sr.shift}`
+                                                                const isRowEditing = editingRowKey === rowKey
+                                                                return (
+                                                                    <tr key={rowKey}
+                                                                        className={`group border-b border-slate-100 ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/40 text-blue-700' : 'hover:bg-amber-50/40'}`}>
+                                                                        <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-slate-200 font-medium text-xs ${isRowEditing ? 'bg-yellow-50' : isTV ? 'bg-blue-50/60 italic text-blue-600' : 'bg-white text-slate-600'}`}>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <span className="whitespace-nowrap">{sr.sectionName}</span>
+                                                                                {canEdit && (
+                                                                                    isRowEditing ? (
+                                                                                        <div className="flex gap-1 ml-1 shrink-0">
+                                                                                            <button
+                                                                                                disabled={rowSaving}
+                                                                                                onClick={async () => {
+                                                                                                    setRowSaving(true)
+                                                                                                    // Rebuild pivot fresh from latest statsData to avoid stale closure issue
+                                                                                                    // (sr captured in closure may have outdated dayRowIds after prior saves)
+                                                                                                    const freshPivot = buildMonthlyPivot(statsData ?? [])
+                                                                                                    const freshSr = freshPivot.deptGroups
+                                                                                                        .flatMap(dg => dg.sectionRows)
+                                                                                                        .find(s => s.sectionName === sr.sectionName && s.shift === sr.shift) ?? sr
+                                                                                                    let savedCount = 0
+                                                                                                    for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
+                                                                                                        const newVal = parseInt(draftVal) || 0
+                                                                                                        const orig = freshSr.days.get(date) ?? 0
+                                                                                                        if (newVal === orig) continue
+                                                                                                        // Find the DB record: prefer dayRowIds (direct), fallback to statsData search
+                                                                                                        let rec: MealStatRow | undefined
+                                                                                                        const rowIds = freshSr.dayRowIds.get(date) ?? []
+                                                                                                        if (rowIds.length > 0) {
+                                                                                                            rec = (statsData ?? []).find(r => r.id === rowIds[0])
+                                                                                                        }
+                                                                                                        if (!rec) {
+                                                                                                            // Fallback: search by date + shift + any department_id that contributed to this section
+                                                                                                            rec = (statsData ?? []).find(r =>
+                                                                                                                r.work_date === date && r.shift === freshSr.shift &&
+                                                                                                                ((r.department_id != null && freshSr.departmentIds.has(r.department_id)) ||
+                                                                                                                    r.department_name.toLowerCase().includes(freshSr.sectionName.split(' ')[0].toLowerCase()) ||
+                                                                                                                    freshSr.sectionName.toLowerCase().startsWith(r.department_name.toLowerCase().split(' ')[0]))
+                                                                                                            )
+                                                                                                        }
+                                                                                                        if (!rec) continue  // No record to update, skip
+                                                                                                        const diff = newVal - orig
+                                                                                                        // Apply diff to official first; if official goes negative, carry remainder into seasonal
+                                                                                                        const oldOfficial = rec.official_present ?? 0
+                                                                                                        const oldSeasonal = rec.seasonal_present ?? 0
+                                                                                                        let newOfficial = oldOfficial + diff
+                                                                                                        let newSeasonal = oldSeasonal
+                                                                                                        if (newOfficial < 0) {
+                                                                                                            newSeasonal = Math.max(0, oldSeasonal + newOfficial)
+                                                                                                            newOfficial = 0
+                                                                                                        }
+                                                                                                        // Cap vegetarian to not exceed new total (official + seasonal)
+                                                                                                        const newTotal = newOfficial + newSeasonal
+                                                                                                        const newVegetarian = Math.min(rec.vegetarian ?? 0, newTotal)
+                                                                                                        const res = await fetch('/api/meal-headcount', {
+                                                                                                            method: 'PATCH',
+                                                                                                            headers: { 'Content-Type': 'application/json' },
+                                                                                                            body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian, ot_count: rec.ot_count ?? 0, ot_vegetarian: rec.ot_vegetarian ?? 0 })
+                                                                                                        })
+                                                                                                        if (res.ok) {
+                                                                                                            savedCount++
+                                                                                                            setStatsData(prev => prev ? prev.map(r => r.id === rec!.id ? { ...r, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian } : r) : prev)
+                                                                                                        } else {
+                                                                                                            const j = await res.json()
+                                                                                                            alert('Lỗi lưu: ' + (j.error || res.statusText))
+                                                                                                        }
+                                                                                                    }
+                                                                                                    if (savedCount === 0) {
+                                                                                                        alert('Không có thay đổi nào được lưu — vui lòng đổi số trước khi bấm 💾')
+                                                                                                    }
+                                                                                                    setRowSaving(false)
+                                                                                                    setEditingRowKey(null)
+                                                                                                    setRowEditDrafts({})
+                                                                                                }}
+                                                                                                className="px-1.5 py-0.5 bg-green-500 hover:bg-green-600 text-white text-[9px] font-bold rounded disabled:opacity-50 transition-colors"
+                                                                                            >{rowSaving ? '...' : '💾'}</button>
+                                                                                            <button
+                                                                                                onClick={() => { setEditingRowKey(null); setRowEditDrafts({}) }}
+                                                                                                className="px-1.5 py-0.5 bg-slate-400 hover:bg-slate-500 text-white text-[9px] font-bold rounded transition-colors"
+                                                                                            >✕</button>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                setEditingRowKey(rowKey)
+                                                                                                const drafts: Record<string, string> = {}
+                                                                                                days.forEach(d => { drafts[d] = String(sr.days.get(d) ?? 0) })
+                                                                                                setRowEditDrafts(drafts)
+                                                                                            }}
+                                                                                            className="shrink-0 px-2 py-0.5 bg-amber-100 hover:bg-amber-400 hover:text-white text-amber-700 text-[10px] font-bold rounded border border-amber-300 transition-colors"
+                                                                                        >✏️ Sửa</button>
+                                                                                    )
+                                                                                )}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className={`px-1 py-1 sticky left-[160px] z-10 text-center border-r border-slate-200 ${isRowEditing ? 'bg-yellow-50' : 'bg-white'}`}>
+                                                                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${shiftColor}`}>{shiftLabel}</span>
+                                                                        </td>
+                                                                        {days.map(d => {
+                                                                            const isSunday = new Date(d + "T00:00:00").getDay() === 0
+                                                                            const v = isRowEditing ? (parseInt(rowEditDrafts[d]) || 0) : (sr.days.get(d) ?? 0)
+                                                                            const origV = sr.days.get(d) ?? 0
+                                                                            const changed = isRowEditing && parseInt(rowEditDrafts[d] ?? '') !== origV
+                                                                            return (
+                                                                                <td key={d}
+                                                                                    className={`px-0 py-0 text-center text-xs ${isRowEditing ? (changed ? 'bg-yellow-100' : 'bg-yellow-50') :
+                                                                                        isSunday ? 'bg-orange-50 text-orange-400' :
+                                                                                            origV > 0 ? (isTV ? 'text-blue-600 font-semibold' : 'font-semibold text-slate-800') : 'text-slate-200'
+                                                                                        }`}
+                                                                                >
+                                                                                    {isRowEditing ? (
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min={0}
+                                                                                            value={rowEditDrafts[d] ?? ''}
+                                                                                            onChange={e => setRowEditDrafts(prev => ({ ...prev, [d]: e.target.value }))}
+                                                                                            onKeyDown={e => { if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
+                                                                                            className={`w-10 h-6 text-center text-xs rounded outline-none font-semibold ${changed ? 'border-2 border-amber-400 bg-amber-50' : 'border border-slate-200 bg-yellow-50'
+                                                                                                }`}
+                                                                                        />
+                                                                                    ) : (
+                                                                                        <span className="block px-1.5 py-1">
+                                                                                            {origV > 0 ? origV : '—'}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </td>
+                                                                            )
+                                                                        })}
+                                                                        <td className={`px-2 py-1 text-center font-bold border-l border-slate-200 text-xs ${rowTotal > 0 ? (isTV ? 'text-blue-700' : 'text-slate-700') : 'text-slate-300'
+                                                                            }`}>
+                                                                            {rowTotal > 0 ? rowTotal : ''}
+                                                                        </td>
+                                                                    </tr>
+                                                                )
+                                                            })}
+                                                            {/* OT row for this dept group - always show */}
+                                                            {(() => {
+                                                                const otRowKey = `${dept.name}|OT`
+                                                                const isOTEditing = editingRowKey === otRowKey
+                                                                return (
+                                                                    <tr className={`group border-b border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
+                                                                        <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-orange-100 font-semibold text-xs ${isOTEditing ? 'bg-yellow-50 text-orange-700' : 'bg-orange-50 text-orange-700 italic'}`}>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <span className="whitespace-nowrap">{dept.name} (OT)</span>
+                                                                                {canEdit && (
+                                                                                    isOTEditing ? (
+                                                                                        <div className="flex gap-1 ml-1 shrink-0">
+                                                                                            <button
+                                                                                                disabled={rowSaving}
+                                                                                                onClick={async () => {
+                                                                                                    setRowSaving(true)
+                                                                                                    for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
+                                                                                                        const newVal = parseInt(draftVal) || 0
+                                                                                                        const orig = deptOT?.days.get(date) ?? 0
+                                                                                                        if (newVal === orig) continue
+                                                                                                        // Use dayRowIds from OT ShiftEntry
+                                                                                                        const rowIds = deptOT?.dayRowIds.get(date) ?? []
+                                                                                                        if (rowIds.length === 0) continue
+                                                                                                        const rec = (statsData ?? []).find(r => r.id === rowIds[0])
+                                                                                                        if (!rec) continue
+                                                                                                        // newVal is ot_count + ot_vegetarian (combined display); compute actual ot_count to store
+                                                                                                        const newOtCount = Math.max(0, newVal - (rec.ot_vegetarian ?? 0))
+                                                                                                        const res = await fetch('/api/meal-headcount', {
+                                                                                                            method: 'PATCH',
+                                                                                                            headers: { 'Content-Type': 'application/json' },
+                                                                                                            body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newOtCount, ot_vegetarian: rec.ot_vegetarian ?? 0 })
+                                                                                                        })
+                                                                                                        if (res.ok) {
+                                                                                                            setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newOtCount } : r) : prev)
+                                                                                                        } else {
+                                                                                                            const j = await res.json()
+                                                                                                            alert('Lỗi lưu OT: ' + (j.error || res.statusText))
+                                                                                                        }
+                                                                                                    }
+                                                                                                    setRowSaving(false)
+                                                                                                    setEditingRowKey(null)
+                                                                                                    setRowEditDrafts({})
+                                                                                                }}
+                                                                                                className="px-1.5 py-0.5 bg-green-500 hover:bg-green-600 text-white text-[9px] font-bold rounded disabled:opacity-50 transition-colors"
+                                                                                            >{rowSaving ? '...' : '💾'}</button>
+                                                                                            <button
+                                                                                                onClick={() => { setEditingRowKey(null); setRowEditDrafts({}) }}
+                                                                                                className="px-1.5 py-0.5 bg-slate-400 hover:bg-slate-500 text-white text-[9px] font-bold rounded transition-colors"
+                                                                                            >✕</button>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <button
+                                                                                            onClick={() => {
+                                                                                                setEditingRowKey(otRowKey)
+                                                                                                const drafts: Record<string, string> = {}
+                                                                                                days.forEach(d => { drafts[d] = String(deptOT?.days.get(d) ?? 0) })
+                                                                                                setRowEditDrafts(drafts)
+                                                                                            }}
+                                                                                            className="shrink-0 px-2 py-0.5 bg-orange-100 hover:bg-orange-400 hover:text-white text-orange-700 text-[10px] font-bold rounded border border-orange-300 transition-colors"
+                                                                                        >✏️ Sửa</button>
+                                                                                    )
+                                                                                )}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className={`px-1 py-1 sticky left-[160px] z-10 text-center border-r border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
+                                                                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">OT</span>
+                                                                        </td>
+                                                                        {days.map(d => {
+                                                                            const origV = deptOT?.days.get(d) ?? 0
+                                                                            const changed = isOTEditing && parseInt(rowEditDrafts[d] ?? '') !== origV
+                                                                            return (
+                                                                                <td key={d} className={`px-0 py-0 text-center text-xs ${isOTEditing ? (changed ? 'bg-yellow-100' : 'bg-yellow-50') :
+                                                                                    origV > 0 ? 'text-orange-600 font-semibold' : 'text-orange-200'
+                                                                                    }`}>
+                                                                                    {isOTEditing ? (
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min={0}
+                                                                                            value={rowEditDrafts[d] ?? ''}
+                                                                                            onChange={e => setRowEditDrafts(prev => ({ ...prev, [d]: e.target.value }))}
+                                                                                            onKeyDown={e => { if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
+                                                                                            className={`w-10 h-6 text-center text-xs rounded outline-none font-semibold ${changed ? 'border-2 border-amber-400 bg-amber-50' : 'border border-slate-200 bg-yellow-50'
+                                                                                                }`}
+                                                                                        />
+                                                                                    ) : (
+                                                                                        <span className="block px-1.5 py-1">{origV > 0 ? origV : '—'}</span>
+                                                                                    )}
+                                                                                </td>
+                                                                            )
+                                                                        })}
+                                                                        <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100 text-xs">
+                                                                            {deptOTTotal > 0 ? deptOTTotal : '—'}
+                                                                        </td>
+                                                                    </tr>
+                                                                )
+                                                            })()}
+                                                        </Fragment>
+                                                    )
+                                                })}
+                                            </tbody>
+                                            {/* Footer rows matching Excel format */}
+                                            <tfoot>
+                                                <tr className="bg-slate-700 text-white font-bold border-t-2 border-slate-500">
+                                                    <td className="px-3 py-2 sticky left-0 bg-slate-700 z-10 border-r border-slate-500">TỔNG</td>
+                                                    <td className="px-2 py-2 sticky left-[160px] bg-slate-700 z-10 border-r border-slate-500"></td>
+                                                    {dayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-2 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
+                                                    <td className="px-2 py-2 text-center border-l border-slate-500">{grandTotal}</td>
+                                                </tr>
+                                                <tr className="bg-blue-600 text-white text-[11px]">
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-blue-600 z-10 font-semibold border-r border-blue-400">Ca 1:</td>
+                                                    <td className="px-2 py-1.5 sticky left-[160px] bg-blue-600 z-10 border-r border-blue-400"></td>
+                                                    {ca1Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
+                                                    <td className="px-2 py-1.5 text-center font-bold border-l border-blue-400">{ca1Totals.reduce((a, b) => a + b, 0)}</td>
+                                                </tr>
+                                                <tr className="bg-blue-500 text-white text-[11px]">
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-blue-500 z-10 font-semibold border-r border-blue-300">Ca 2:</td>
+                                                    <td className="px-2 py-1.5 sticky left-[160px] bg-blue-500 z-10 border-r border-blue-300"></td>
+                                                    {ca2Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
+                                                    <td className="px-2 py-1.5 text-center font-bold border-l border-blue-300">{ca2Totals.reduce((a, b) => a + b, 0)}</td>
+                                                </tr>
+                                                <tr className="bg-blue-400 text-white text-[11px]">
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-blue-400 z-10 font-semibold border-r border-blue-200">Ca 3:</td>
+                                                    <td className="px-2 py-1.5 sticky left-[160px] bg-blue-400 z-10 border-r border-blue-200"></td>
+                                                    {ca3Totals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-blue-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
+                                                    <td className="px-2 py-1.5 text-center font-bold border-l border-blue-200">{ca3Totals.reduce((a, b) => a + b, 0)}</td>
+                                                </tr>
+                                                <tr className="bg-orange-500 text-white text-[11px]">
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">OT</td>
+                                                    <td className="px-2 py-1.5 sticky left-[160px] bg-orange-500 z-10 border-r border-orange-300"></td>
+                                                    {otDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
+                                                    <td className="px-2 py-1.5 text-center font-bold border-l border-orange-300">{otDayTotals.reduce((a, b) => a + b, 0)}</td>
+                                                </tr>
+                                                <tr className="bg-purple-100 text-purple-800 text-[11px]">
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-purple-100 z-10 font-semibold border-r border-purple-200">Thời vụ</td>
+                                                    <td className="px-2 py-1.5 sticky left-[160px] bg-purple-100 z-10 border-r border-purple-200"></td>
+                                                    {tvDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-purple-800/30" : ""}`}>{v > 0 ? v : ''}</td> })}
+                                                    <td className="px-2 py-1.5 text-center font-bold border-l border-purple-200">{tvDayTotals.reduce((a, b) => a + b, 0)}</td>
+                                                </tr>
+                                                <tr className="bg-green-100 text-green-800 text-[11px]">
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-green-100 z-10 font-semibold border-r border-green-200">Chính thức</td>
+                                                    <td className="px-2 py-1.5 sticky left-[160px] bg-green-100 z-10 border-r border-green-200"></td>
+                                                    {ctDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-green-800/30" : ""}`}>{v > 0 ? v : ''}</td> })}
+                                                    <td className="px-2 py-1.5 text-center font-bold border-l border-green-200">{ctDayTotals.reduce((a, b) => a + b, 0)}</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
                                 </div>
-                            )}
+                            )
+                        })()}
+                    </div>
+                )}
 
-                            {/* Save message */}
-                            {saveMsg && (
-                                <div className={`rounded-lg px-4 py-2.5 text-sm font-medium ${
-                                    saveMsg!.type === "ok"
+                {/* ═══════════════════════════════════════════ */}
+                {/* TAB 1: PARSE & SAVE                        */}
+                {/* ═══════════════════════════════════════════ */}
+                {false && (
+                    <>
+                        {/* Paste area */}
+                        {!parsed && (
+                            <div className="bg-card rounded-xl border shadow-sm p-4 space-y-4">
+                                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                    <ClipboardPaste className="h-4 w-4" />
+                                    Paste nội dung chat Zalo vào đây (copy tất cả các tin nhắn báo cơm của ngày)
+                                </div>
+                                <textarea
+                                    id="zalo-paste-area"
+                                    value={rawText}
+                                    onChange={(e) => setRawText(e.target.value)}
+                                    placeholder={`Ví dụ:\n28.3.2026\nKhu vực : Boiler\nCa: 1.2.3\nChính thức hiện diện: 3\nChính thức vắng: 0\n2Thời vụ hiện diện:0\nThời vụ vắng :0\nOT:\n\nDate: 28/03/2026\nKhu vực : Peeling mc\nCa: 1\nChính thức hiện diện: 7\n...`}
+                                    rows={16}
+                                    className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400 resize-y"
+                                    style={{ minHeight: "260px" }}
+                                />
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <p className="text-xs text-muted-foreground">
+                                        💡 Không cần xóa tên người gửi hay timestamp — hệ thống tự bỏ qua.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        {/* AI Parse button */}
+                                        <Button
+                                            id="ai-parse-btn"
+                                            onClick={handleAIParse}
+                                            disabled={!rawText.trim() || aiParsing}
+                                            className="gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5"
+                                        >
+                                            {aiParsing ? (
+                                                <RefreshCw className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Sparkles className="h-4 w-4" />
+                                            )}
+                                            {aiParsing ? "AI đang xử lý..." : "🤖 AI Phân tích"}
+                                        </Button>
+                                        {/* Manual parse button */}
+                                        <Button
+                                            id="parse-btn"
+                                            onClick={handleParse}
+                                            disabled={!rawText.trim()}
+                                            className="gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6"
+                                        >
+                                            <Sparkles className="h-4 w-4" />
+                                            Phân tích ngay
+                                        </Button>
+                                    </div>
+                                </div>
+                                {aiError && (
+                                    <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">
+                                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                        <span>AI lỗi: {aiError}</span>
+                                    </div>
+                                )}
+                                {aiTruncated && (
+                                    <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                        <span>⚠️ Text quá dài — AI chỉ đọc được phần đầu (~8000 ký tự). Kết quả có thể thiếu. Hãy paste từng ca riêng để đảm bảo đầy đủ.</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+
+                        {/* Results */}
+                        {parsed && (
+                            <>
+                                {/* Action buttons */}
+                                <div className="flex flex-wrap gap-2">
+                                    <Button variant="outline" size="sm" onClick={handleCopyTable} className="gap-2">
+                                        {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                        {copied ? "Đã copy!" : "Copy bảng"}
+                                    </Button>
+                                    <Button size="sm" onClick={() => exportCSV(records)} className="gap-2 bg-green-600 hover:bg-green-700 text-white">
+                                        <Download className="h-4 w-4" />
+                                        Xuất Excel (.csv)
+                                    </Button>
+                                    {canSave && records.length > 0 && (
+                                        <Button
+                                            size="sm"
+                                            onClick={handleSaveToDB}
+                                            disabled={saving}
+                                            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                            <Save className="h-4 w-4" />
+                                            {saving ? "Đang lưu..." : `💾 Lưu ${records.length} bản ghi vào DB`}
+                                        </Button>
+                                    )}
+                                    <Button
+                                        size="sm"
+                                        onClick={() => setShowSummary(s => !s)}
+                                        className={`gap-2 ${showSummary ? "bg-orange-600 hover:bg-orange-700" : "bg-orange-500 hover:bg-orange-600"} text-white`}
+                                    >
+                                        <BarChart3 className="h-4 w-4" />
+                                        Tổng hợp báo cơm
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
+                                        <RefreshCw className="h-4 w-4" />
+                                        Làm mới
+                                    </Button>
+                                </div>
+
+
+                                {/* Summary panel */}
+                                {showSummary && (
+                                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-4">
+                                        <div className="flex items-center gap-2 font-semibold text-orange-700">
+                                            <MessageSquare className="h-4 w-4" />
+                                            Tổng hợp báo cơm nhà ăn
+                                        </div>
+
+                                        {/* Date + Shift selectors */}
+                                        <div className="flex flex-wrap items-end gap-3">
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-medium text-orange-700">Ngày</label>
+                                                <input
+                                                    type="date"
+                                                    value={summaryDate}
+                                                    onChange={e => setSummaryDate(e.target.value)}
+                                                    className="border border-orange-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-xs font-medium text-orange-700">Ca</label>
+                                                <div className="flex gap-1">
+                                                    {["1", "2", "3"].map(s => (
+                                                        <button
+                                                            key={s}
+                                                            onClick={() => setSummaryShift(s)}
+                                                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${summaryShift === s
+                                                                ? "bg-orange-500 text-white border-orange-500"
+                                                                : "bg-white text-orange-700 border-orange-300 hover:bg-orange-100"
+                                                                }`}
+                                                        >{s}</button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={fetchSummaryFromDB}
+                                                disabled={summaryLoading}
+                                                className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                                            >
+                                                <BarChart3 className="h-4 w-4" />
+                                                {summaryLoading ? "Đang tải..." : "Tổng hợp"}
+                                            </button>
+                                        </div>
+
+                                        {summaryError && (
+                                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{summaryError}</div>
+                                        )}
+
+                                        {summaryData !== null && (() => {
+                                            if (summaryData!.length === 0) return (
+                                                <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                                    Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
+                                                </div>
+                                            )
+                                            const msgText = buildDBSummaryText(summaryData!)
+                                            const missingDepts = getDBMissingDepts(summaryData!, summaryShift)
+                                            return (
+                                                <div className="space-y-3">
+                                                    {/* Kitchen message */}
+                                                    <div className="bg-white rounded-lg border border-orange-100 p-3 font-mono text-sm whitespace-pre-wrap text-gray-800">
+                                                        {msgText}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(msgText)
+                                                            setCopiedSummary(true)
+                                                            setTimeout(() => setCopiedSummary(false), 2000)
+                                                        }}
+                                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${copiedSummary ? "bg-green-600 text-white" : "bg-orange-600 hover:bg-orange-700 text-white"
+                                                            }`}
+                                                    >
+                                                        {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                                        {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
+                                                    </button>
+
+                                                    {/* Per-dept breakdown */}
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-xs border rounded-lg overflow-hidden">
+                                                            <thead>
+                                                                <tr className="bg-orange-100 text-orange-700 text-left">
+                                                                    <th className="px-2 py-1.5 font-semibold">Bộ phận</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">CT HĐ</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">TV HĐ</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">Chay</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">OT</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y">
+                                                                {summaryData!.map(r => (
+                                                                    <tr key={r.id} className="hover:bg-orange-50">
+                                                                        <td className="px-2 py-1 font-medium">
+                                                                            {r.department_id
+                                                                                ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
+                                                                                : r.department_name}
+                                                                        </td>
+                                                                        <td className="px-2 py-1 text-right text-green-700 font-semibold">{r.official_present ?? 0}</td>
+                                                                        <td className="px-2 py-1 text-right">{r.seasonal_present ?? 0}</td>
+                                                                        <td className="px-2 py-1 text-right text-emerald-600">{r.vegetarian ?? 0}</td>
+                                                                        <td className="px-2 py-1 text-right font-semibold">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0)}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                    {/* Missing depts */}
+                                                    {missingDepts.length > 0 && (
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
+                                                                <Bell className="h-4 w-4" />
+                                                                Chưa có dữ liệu từ các bộ phận:
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {missingDepts.map(d => (
+                                                                    <span key={d.code} className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded-full font-medium">{d.name}</span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
+                                    </div>
+                                )}
+
+                                {/* Save message */}
+                                {saveMsg && (
+                                    <div className={`rounded-lg px-4 py-2.5 text-sm font-medium ${saveMsg!.type === "ok"
                                         ? "bg-green-50 text-green-700 border border-green-200"
                                         : "bg-red-50 text-red-700 border border-red-200"
-                                }`}>
-                                    {saveMsg!.text}
-                                </div>
-                            )}
-
-                            {/* Summary cards */}
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                                {[
-                                    { label: "Bộ phận", value: records.length, unit: "KV", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
-                                    { label: "CT Hiện diện", value: summary.totalOfficial, unit: "người", bg: "bg-green-50", text: "text-green-600", border: "border-green-200" },
-                                    { label: "CT Vắng", value: summary.totalAbsent, unit: "người", bg: "bg-red-50", text: "text-red-600", border: "border-red-200" },
-                                    { label: "TV Hiện diện", value: summary.totalSeasonal, unit: "người", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
-                                    { label: "Chay hôm nay", value: summary.totalVeg || "—", unit: summary.totalVeg ? "suất" : "", bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-200" },
-                                ].map((s) => (
-                                    <div key={s.label} className={`rounded-xl border p-4 shadow-sm ${s.bg} ${s.border}`}>
-                                        <p className="text-xs text-muted-foreground">{s.label}</p>
-                                        <p className={`text-3xl font-bold ${s.text} mt-1`}>{s.value}</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">{s.unit}</p>
+                                        }`}>
+                                        {saveMsg!.text}
                                     </div>
-                                ))}
+                                )}
+
+                                {/* Summary cards */}
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                    {[
+                                        { label: "Bộ phận", value: records.length, unit: "KV", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
+                                        { label: "CT Hiện diện", value: summary.totalOfficial, unit: "người", bg: "bg-green-50", text: "text-green-600", border: "border-green-200" },
+                                        { label: "CT Vắng", value: summary.totalAbsent, unit: "người", bg: "bg-red-50", text: "text-red-600", border: "border-red-200" },
+                                        { label: "TV Hiện diện", value: summary.totalSeasonal, unit: "người", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
+                                        { label: "Chay hôm nay", value: summary.totalVeg || "—", unit: summary.totalVeg ? "suất" : "", bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-200" },
+                                    ].map((s) => (
+                                        <div key={s.label} className={`rounded-xl border p-4 shadow-sm ${s.bg} ${s.border}`}>
+                                            <p className="text-xs text-muted-foreground">{s.label}</p>
+                                            <p className={`text-3xl font-bold ${s.text} mt-1`}>{s.value}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{s.unit}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {records.length === 0 ? (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center space-y-2">
+                                        <AlertCircle className="h-8 w-8 text-yellow-500 mx-auto" />
+                                        <p className="font-semibold text-yellow-800">Không tìm thấy dữ liệu hợp lệ</p>
+                                        <p className="text-sm text-yellow-700">
+                                            Hệ thống cần tìm thấy các từ khóa như &quot;Khu vực&quot;, &quot;Chính thức hiện diện&quot;, cùng với ngày tháng.
+                                        </p>
+                                        <Button variant="outline" size="sm" onClick={handleReset} className="mt-2 gap-2">
+                                            <RefreshCw className="h-4 w-4" /> Thử lại
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/40">
+                                            <div className="flex items-center gap-2">
+                                                <TableIcon className="h-4 w-4 text-muted-foreground" />
+                                                <span className="font-semibold text-sm">
+                                                    Kết quả — {uniqueDates.join(", ")} &nbsp;|&nbsp; {records.length} khu vực
+                                                </span>
+                                            </div>
+                                            <span className="text-xs text-muted-foreground">
+                                                CT = Chính thức &nbsp;·&nbsp; TV = Thời vụ
+                                            </span>
+                                        </div>
+
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="bg-muted/60 text-left text-xs text-muted-foreground uppercase tracking-wide">
+                                                        <th className="px-3 py-2.5 font-semibold">#</th>
+                                                        <th className="px-3 py-2.5 font-semibold">Ngày</th>
+                                                        <th className="px-3 py-2.5 font-semibold">Khu vực</th>
+                                                        <th className="px-3 py-2.5 font-semibold">Ca</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">CT HĐ</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">CT Vắng</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">TV HĐ</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">TV Vắng</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">OT</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">🥦 Chay</th>
+                                                        <th className="px-3 py-2.5 font-semibold">DB Link</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-center">Nguồn</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-center w-24">Confirm</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y">
+                                                    {records.map((r, i) => {
+                                                        const effArea = getEffectiveArea(r, i)
+                                                        const deptId = getEffectiveDeptId(r, i)
+                                                        const linked = deptList.find((d) => d.id === deptId)
+                                                        const isUnknown = !linked && !hasDeptRule(effArea)
+                                                        return (
+                                                            <>
+                                                                <tr className="hover:bg-muted/30 transition-colors">
+                                                                    <td className="px-3 py-2.5 text-muted-foreground">{i + 1}</td>
+                                                                    <td className="px-3 py-2.5 font-mono text-xs whitespace-nowrap">
+                                                                        {r.date || <span className="text-yellow-500">?</span>}
+                                                                    </td>
+                                                                    <td className="px-3 py-2.5 font-medium whitespace-nowrap">{effArea}</td>
+                                                                    <td className="px-3 py-2.5 text-center">
+                                                                        <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                                                                            Ca {r.shift === 'OT' ? 'OT' : (r.shift?.replace(/[^1-3]/g, '') || '1')}
+                                                                        </span>
+                                                                    </td>
+                                                                    {/* CT HĐ — editable */}
+                                                                    <td className="px-3 py-2.5 text-right">
+                                                                        {editingCell?.row === i && editingCell?.field === 'officialPresent' ? (
+                                                                            <input autoFocus type="number" value={editDraft}
+                                                                                onChange={e => setEditDraft(e.target.value)}
+                                                                                onBlur={() => commitEdit(i, 'officialPresent')}
+                                                                                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                                className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                        ) : (
+                                                                            <span className="font-bold text-green-700 cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click để sửa"
+                                                                                onClick={() => { setEditingCell({ row: i, field: 'officialPresent' }); setEditDraft(String(r.officialPresent ?? '')) }}>
+                                                                                {r.officialPresent ?? <span className="text-muted-foreground font-normal">—</span>}
+                                                                                {r.officialPresentNote && <span className="text-xs font-normal text-muted-foreground ml-1">{r.officialPresentNote}</span>}
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    {/* CT Vắng — editable */}
+                                                                    <td className="px-3 py-2.5 text-right">
+                                                                        {editingCell?.row === i && editingCell?.field === 'officialAbsent' ? (
+                                                                            <input autoFocus type="number" value={editDraft}
+                                                                                onChange={e => setEditDraft(e.target.value)}
+                                                                                onBlur={() => commitEdit(i, 'officialAbsent')}
+                                                                                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                                className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                        ) : (
+                                                                            <span className={`cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 ${r.officialAbsent != null && r.officialAbsent > 0 ? 'font-bold text-red-600' : 'text-muted-foreground'}`}
+                                                                                title="Click để sửa"
+                                                                                onClick={() => { setEditingCell({ row: i, field: 'officialAbsent' }); setEditDraft(String(r.officialAbsent ?? '')) }}>
+                                                                                {r.officialAbsent ?? '—'}
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    {/* TV HĐ — editable */}
+                                                                    <td className="px-3 py-2.5 text-right">
+                                                                        {editingCell?.row === i && editingCell?.field === 'seasonalPresent' ? (
+                                                                            <input autoFocus type="number" value={editDraft}
+                                                                                onChange={e => setEditDraft(e.target.value)}
+                                                                                onBlur={() => commitEdit(i, 'seasonalPresent')}
+                                                                                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                                className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                        ) : (
+                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click để sửa"
+                                                                                onClick={() => { setEditingCell({ row: i, field: 'seasonalPresent' }); setEditDraft(String(r.seasonalPresent ?? '')) }}>
+                                                                                {r.seasonalPresent ?? '—'}
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    {/* TV Vắng — editable */}
+                                                                    <td className="px-3 py-2.5 text-right">
+                                                                        {editingCell?.row === i && editingCell?.field === 'seasonalAbsent' ? (
+                                                                            <input autoFocus type="number" value={editDraft}
+                                                                                onChange={e => setEditDraft(e.target.value)}
+                                                                                onBlur={() => commitEdit(i, 'seasonalAbsent')}
+                                                                                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                                className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                        ) : (
+                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click để sửa"
+                                                                                onClick={() => { setEditingCell({ row: i, field: 'seasonalAbsent' }); setEditDraft(String(r.seasonalAbsent ?? '')) }}>
+                                                                                {r.seasonalAbsent ?? '—'}
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    {/* OT — editable + shift timing label */}
+                                                                    <td className="px-3 py-2.5 text-right text-xs">
+                                                                        {editingCell?.row === i && editingCell?.field === 'ot' ? (
+                                                                            <input autoFocus type="text" value={editDraft}
+                                                                                onChange={e => setEditDraft(e.target.value)}
+                                                                                onBlur={() => commitEdit(i, 'ot')}
+                                                                                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                                className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                        ) : (
+                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click để sửa"
+                                                                                onClick={() => { setEditingCell({ row: i, field: 'ot' }); setEditDraft(r.ot) }}>
+                                                                                {r.ot && r.ot !== '0' && r.ot !== '' ? (
+                                                                                    <>{r.ot}<span className="text-muted-foreground ml-0.5">({OT_HOUR[r.shift] ?? ''})</span></>
+                                                                                ) : <span className="text-muted-foreground">—</span>}
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    {/* Chay — editable */}
+                                                                    <td className="px-3 py-2.5 text-right">
+                                                                        {editingCell?.row === i && editingCell?.field === 'vegetarian' ? (
+                                                                            <input autoFocus type="number" value={editDraft}
+                                                                                onChange={e => setEditDraft(e.target.value)}
+                                                                                onBlur={() => commitEdit(i, 'vegetarian')}
+                                                                                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
+                                                                                className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
+                                                                        ) : (
+                                                                            <span className={`cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 ${r.vegetarian != null && r.vegetarian > 0 ? 'font-semibold text-emerald-600' : 'text-muted-foreground'}`}
+                                                                                title="Click để sửa"
+                                                                                onClick={() => { setEditingCell({ row: i, field: 'vegetarian' }); setEditDraft(String(r.vegetarian ?? '')) }}>
+                                                                                {r.vegetarian != null && r.vegetarian > 0 ? r.vegetarian : '—'}
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-3 py-2.5">
+                                                                        {linked ? (
+                                                                            <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">
+                                                                                <Database className="h-3 w-3" />
+                                                                                {linked.name_en}
+                                                                            </span>
+                                                                        ) : isUnknown ? (
+                                                                            <div className="flex flex-col gap-1 min-w-[150px]">
+                                                                                <span className="text-xs text-amber-600 font-semibold">⚠ Không rõ: &quot;{effArea}&quot;</span>
+                                                                                <select
+                                                                                    className="text-xs border border-amber-300 rounded px-1 py-0.5 bg-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                                                                    value={areaOverrides[i] ?? ""}
+                                                                                    onChange={(e) => setAreaOverrides(prev => ({ ...prev, [i]: e.target.value }))}
+                                                                                >
+                                                                                    <option value="">-- Chọn bộ phận --</option>
+                                                                                    {deptList.map(d => (
+                                                                                        <option key={d.id} value={d.name_en}>{d.name_en}</option>
+                                                                                    ))}
+                                                                                </select>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-xs text-muted-foreground">—</span>
+                                                                        )}
+                                                                    </td>
+                                                                    {/* Source toggle */}
+                                                                    <td className="px-2 py-2 text-center">
+                                                                        {r.raw ? (
+                                                                            <button
+                                                                                onClick={() => toggleSource(i)}
+                                                                                title="Xem nguồn"
+                                                                                className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${expandedSource.has(i)
+                                                                                    ? 'bg-slate-200 border-slate-400 text-slate-700'
+                                                                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                                                                                    }`}
+                                                                            >
+                                                                                {expandedSource.has(i) ? '▲ Ẩn' : '▼ Xem'}
+                                                                            </button>
+                                                                        ) : <span className="text-muted-foreground text-xs">—</span>}
+                                                                    </td>
+                                                                    {/* Per-row confirm */}
+                                                                    <td className="px-2 py-2 text-center">
+                                                                        {canSave && (
+                                                                            confirmedRows.has(i) ? (
+                                                                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                                                                    <CheckCircle2 className="h-3 w-3" /> Đã lưu
+                                                                                </span>
+                                                                            ) : (
+                                                                                <button
+                                                                                    onClick={() => handleConfirmOne(i)}
+                                                                                    disabled={confirmingRow === i}
+                                                                                    className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50"
+                                                                                >
+                                                                                    {confirmingRow === i ? '...' : '✓ Lưu'}
+                                                                                </button>
+                                                                            )
+                                                                        )}
+                                                                        {confirmMsg[i] && !confirmedRows.has(i) && (
+                                                                            <div className={`text-[10px] mt-0.5 ${confirmMsg[i].type === 'ok' ? 'text-emerald-600' : 'text-red-500'
+                                                                                }`}>{confirmMsg[i].text}</div>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                                {/* Expandable source row */}
+                                                                {expandedSource.has(i) && r.raw && (
+                                                                    <tr className="bg-slate-50 border-b border-slate-100">
+                                                                        <td colSpan={13} className="px-4 py-2">
+                                                                            <div className="flex items-start gap-2">
+                                                                                <span className="text-[10px] font-bold uppercase text-slate-400 mt-0.5 shrink-0">Nguồn:</span>
+                                                                                <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded-lg px-3 py-2 flex-1 leading-relaxed">{r.raw}</pre>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                            </>
+                                                        )
+                                                    })}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr className="bg-muted/60 font-bold border-t-2 text-sm">
+                                                        <td className="px-3 py-2.5" colSpan={4}>
+                                                            TỔNG ({records.length} khu vực)
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-right text-green-700">{summary.totalOfficial}</td>
+                                                        <td className="px-3 py-2.5 text-right text-red-600">{summary.totalAbsent}</td>
+                                                        <td className="px-3 py-2.5 text-right">{summary.totalSeasonal}</td>
+                                                        <td className="px-3 py-2.5 text-right">—</td>
+                                                        <td className="px-3 py-2.5 text-right">—</td>
+                                                        <td className="px-3 py-2.5 text-right text-emerald-600">
+                                                            {summary.totalVeg > 0 ? summary.totalVeg : "—"}
+                                                        </td>
+                                                        <td />
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Back button */}
+                                <div className="flex justify-start">
+                                    <Button variant="ghost" size="sm" onClick={handleReset} className="gap-2 text-muted-foreground">
+                                        <RefreshCw className="h-3 w-3" /> Paste dữ liệu mới
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </>
+                )}
+
+                {/* ═══════════════════════════════════════════ */}
+                {/* TAB 2: HISTORY                              */}
+                {/* ═══════════════════════════════════════════ */}
+                {activeTab === "history" && (() => {
+                    // Build pivot from historyRecords
+                    // rows: dept×shift, cols: dates
+                    const pivotDays = [...new Set(historyRecords.map(r => r.work_date))].sort()
+                    type PivotKey = string // `${dept_id|dept_name}|${shift}`
+                    const pivotMap = new Map<PivotKey, { deptCode: string; deptName: string; shift: string; days: Map<string, { present: number; ot: number; veg: number }> }>()
+                    historyRecords.forEach(r => {
+                        const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
+                        const deptName = DEPT_DISPLAY[deptCode]
+                            ?? (r.department_id ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name) : r.department_name)
+                        const key: PivotKey = `${r.department_id ?? r.department_name}|${r.shift}`
+                        if (!pivotMap.has(key)) pivotMap.set(key, { deptCode, deptName, shift: r.shift, days: new Map() })
+                        pivotMap.get(key)!.days.set(r.work_date, {
+                            present: Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0),
+                            ot: r.ot_count ?? 0,
+                            veg: r.vegetarian ?? 0,
+                        })
+                    })
+                    // Sort rows by DEPT_ORDER then shift
+                    const pivotRows = [...pivotMap.entries()].sort(([, a], [, b]) => {
+                        const ai = DEPT_ORDER.indexOf(a.deptCode); const bi = DEPT_ORDER.indexOf(b.deptCode)
+                        if (ai !== bi) return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+                        return SHIFT_ORDER.indexOf(a.shift) - SHIFT_ORDER.indexOf(b.shift)
+                    })
+
+                    return (
+                        <div className="space-y-4">
+                            {/* Filter bar */}
+                            <div className="bg-card rounded-xl border shadow-sm p-4">
+                                <div className="flex flex-wrap items-end gap-3">
+                                    <div>
+                                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Từ ngày</label>
+                                        <input type="date" value={historyFrom}
+                                            onChange={e => setHistoryFrom(e.target.value)}
+                                            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Đến ngày</label>
+                                        <input type="date" value={historyTo}
+                                            onChange={e => setHistoryTo(e.target.value)}
+                                            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    </div>
+                                    {/* Quick-pick buttons */}
+                                    <div className="flex gap-1.5" style={{ paddingBottom: '0px' }}>
+                                        {([
+                                            { label: '7 ngày', days: 6 },
+                                            { label: '14 ngày', days: 13 },
+                                            { label: '30 ngày', days: 29 },
+                                        ] as { label: string; days: number }[]).map(opt => {
+                                            const to = new Date().toISOString().slice(0, 10)
+                                            const from = (() => { const d = new Date(); d.setDate(d.getDate() - opt.days); return d.toISOString().slice(0, 10) })()
+                                            const active = historyFrom === from && historyTo === to
+                                            return (
+                                                <button key={opt.label}
+                                                    onClick={() => { setHistoryFrom(from); setHistoryTo(to) }}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${active ? 'bg-primary text-white border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'
+                                                        }`}>
+                                                    {opt.label}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <Button onClick={fetchHistory} disabled={historyLoading} className="gap-2">
+                                        <CalendarDays className="h-4 w-4" />
+                                        {historyLoading ? 'Đang tải...' : 'Xem dữ liệu'}
+                                    </Button>
+                                    {historyRecords.length > 0 && (
+                                        <Button variant="outline" onClick={() => exportHistoryCSV(historyRecords)}
+                                            className="gap-2 text-green-700 border-green-300 hover:bg-green-50">
+                                            <FileSpreadsheet className="h-4 w-4" />
+                                            Xuất CSV
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
 
-                            {records.length === 0 ? (
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center space-y-2">
-                                    <AlertCircle className="h-8 w-8 text-yellow-500 mx-auto" />
-                                    <p className="font-semibold text-yellow-800">Không tìm thấy dữ liệu hợp lệ</p>
-                                    <p className="text-sm text-yellow-700">
-                                        Hệ thống cần tìm thấy các từ khóa như &quot;Khu vực&quot;, &quot;Chính thức hiện diện&quot;, cùng với ngày tháng.
-                                    </p>
-                                    <Button variant="outline" size="sm" onClick={handleReset} className="mt-2 gap-2">
-                                        <RefreshCw className="h-4 w-4" /> Thử lại
-                                    </Button>
+                            {/* Pivot table */}
+                            {historyLoading ? (
+                                <div className="text-center py-12 text-muted-foreground">
+                                    <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3" />
+                                    Đang tải dữ liệu...
+                                </div>
+                            ) : historyRecords.length === 0 ? (
+                                <div className="bg-muted/30 rounded-xl border p-8 text-center text-muted-foreground">
+                                    <Database className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                    <p className="font-medium">Chưa có dữ liệu trong khoảng thời gian này</p>
+                                    <p className="text-sm mt-1">Paste dữ liệu Zalo ở tab &quot;Nhập &amp; Phân tích&quot; rồi bấm Lưu vào DB</p>
                                 </div>
                             ) : (
                                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                                    <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/40">
+                                    <div className="px-4 py-3 border-b bg-muted/40 flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <TableIcon className="h-4 w-4 text-muted-foreground" />
+                                            <History className="h-4 w-4 text-muted-foreground" />
                                             <span className="font-semibold text-sm">
-                                                Kết quả — {uniqueDates.join(", ")} &nbsp;|&nbsp; {records.length} khu vực
+                                                Lịch sử — {pivotDays.length} ngày · {pivotRows.length} bộ phận/ca
                                             </span>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">
-                                            CT = Chính thức &nbsp;·&nbsp; TV = Thời vụ
-                                        </span>
+                                        <span className="text-xs text-muted-foreground">Số liệu: CT + TV hiện diện</span>
                                     </div>
-
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                        <table className="text-xs min-w-full">
                                             <thead>
-                                                <tr className="bg-muted/60 text-left text-xs text-muted-foreground uppercase tracking-wide">
-                                                    <th className="px-3 py-2.5 font-semibold">#</th>
-                                                    <th className="px-3 py-2.5 font-semibold">Ngày</th>
-                                                    <th className="px-3 py-2.5 font-semibold">Khu vực</th>
-                                                    <th className="px-3 py-2.5 font-semibold">Ca</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">CT HĐ</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">CT Vắng</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">TV HĐ</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">TV Vắng</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">OT</th>
-                                                    <th className="px-3 py-2.5 font-semibold text-right">🥦 Chay</th>
-                                                    <th className="px-3 py-2.5 font-semibold">DB Link</th>
-                                                     <th className="px-3 py-2.5 font-semibold text-center">Nguồn</th>
-                                                     <th className="px-3 py-2.5 font-semibold text-center w-24">Confirm</th>
-                                                 </tr>
+                                                <tr className="bg-muted/60 text-muted-foreground">
+                                                    <th className="px-3 py-2 text-left font-semibold sticky left-0 bg-muted/60 min-w-[120px]">Bộ phận</th>
+                                                    <th className="px-2 py-2 text-center font-semibold sticky left-[120px] bg-muted/60 min-w-[44px]">Ca</th>
+                                                    {pivotDays.map(d => (
+                                                        <th key={d} className="px-2 py-2 text-center font-semibold min-w-[42px] whitespace-nowrap">
+                                                            {parseInt(d.slice(8), 10)}/{parseInt(d.slice(5, 7), 10)}
+                                                        </th>
+                                                    ))}
+                                                    <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">TỔNG</th>
+                                                    {canEdit && <th className="px-2 py-2 text-center font-semibold text-muted-foreground min-w-[72px]">Edit / Delete</th>}
+                                                </tr>
                                             </thead>
                                             <tbody className="divide-y">
-                                                {records.map((r, i) => {
-                                                    const effArea = getEffectiveArea(r, i)
-                                                    const deptId = getEffectiveDeptId(r, i)
-                                                    const linked = deptList.find((d) => d.id === deptId)
-                                                    const isUnknown = !linked && !hasDeptRule(effArea)
+                                                {pivotRows.map(([key, row]) => {
+                                                    const rowTotal = [...row.days.values()].reduce((s, v) => s + v.present, 0)
+                                                    const hasData = rowTotal > 0
                                                     return (
-                                                        <>
-                                                        <tr className="hover:bg-muted/30 transition-colors">
-                                                            <td className="px-3 py-2.5 text-muted-foreground">{i + 1}</td>
-                                                            <td className="px-3 py-2.5 font-mono text-xs whitespace-nowrap">
-                                                                {r.date || <span className="text-yellow-500">?</span>}
+                                                        <tr key={key} className={`transition-colors hover:bg-muted/30 ${!hasData ? 'opacity-40' : ''}`}>
+                                                            <td className="px-3 py-2 font-medium sticky left-0 bg-card whitespace-nowrap border-r">{row.deptName}</td>
+                                                            <td className="px-2 py-2 text-center sticky left-[120px] bg-card border-r">
+                                                                <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">{row.shift}</span>
                                                             </td>
-                                                            <td className="px-3 py-2.5 font-medium whitespace-nowrap">{effArea}</td>
-                                                            <td className="px-3 py-2.5 text-center">
-                                                                <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                                                    Ca {r.shift === 'OT' ? 'OT' : (r.shift?.replace(/[^1-3]/g, '') || '1')}
-                                                                </span>
-                                                            </td>
-                                                            {/* CT HĐ — editable */}
-                                                            <td className="px-3 py-2.5 text-right">
-                                                                {editingCell?.row === i && editingCell?.field === 'officialPresent' ? (
-                                                                    <input autoFocus type="number" value={editDraft}
-                                                                        onChange={e => setEditDraft(e.target.value)}
-                                                                        onBlur={() => commitEdit(i, 'officialPresent')}
-                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
-                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
-                                                                ) : (
-                                                                    <span className="font-bold text-green-700 cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click để sửa"
-                                                                        onClick={() => { setEditingCell({ row: i, field: 'officialPresent' }); setEditDraft(String(r.officialPresent ?? '')) }}>
-                                                                        {r.officialPresent ?? <span className="text-muted-foreground font-normal">—</span>}
-                                                                        {r.officialPresentNote && <span className="text-xs font-normal text-muted-foreground ml-1">{r.officialPresentNote}</span>}
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            {/* CT Vắng — editable */}
-                                                            <td className="px-3 py-2.5 text-right">
-                                                                {editingCell?.row === i && editingCell?.field === 'officialAbsent' ? (
-                                                                    <input autoFocus type="number" value={editDraft}
-                                                                        onChange={e => setEditDraft(e.target.value)}
-                                                                        onBlur={() => commitEdit(i, 'officialAbsent')}
-                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
-                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
-                                                                ) : (
-                                                                    <span className={`cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 ${r.officialAbsent != null && r.officialAbsent > 0 ? 'font-bold text-red-600' : 'text-muted-foreground'}`}
-                                                                        title="Click để sửa"
-                                                                        onClick={() => { setEditingCell({ row: i, field: 'officialAbsent' }); setEditDraft(String(r.officialAbsent ?? '')) }}>
-                                                                        {r.officialAbsent ?? '—'}
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            {/* TV HĐ — editable */}
-                                                            <td className="px-3 py-2.5 text-right">
-                                                                {editingCell?.row === i && editingCell?.field === 'seasonalPresent' ? (
-                                                                    <input autoFocus type="number" value={editDraft}
-                                                                        onChange={e => setEditDraft(e.target.value)}
-                                                                        onBlur={() => commitEdit(i, 'seasonalPresent')}
-                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
-                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
-                                                                ) : (
-                                                                    <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click để sửa"
-                                                                        onClick={() => { setEditingCell({ row: i, field: 'seasonalPresent' }); setEditDraft(String(r.seasonalPresent ?? '')) }}>
-                                                                        {r.seasonalPresent ?? '—'}
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            {/* TV Vắng — editable */}
-                                                            <td className="px-3 py-2.5 text-right">
-                                                                {editingCell?.row === i && editingCell?.field === 'seasonalAbsent' ? (
-                                                                    <input autoFocus type="number" value={editDraft}
-                                                                        onChange={e => setEditDraft(e.target.value)}
-                                                                        onBlur={() => commitEdit(i, 'seasonalAbsent')}
-                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
-                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
-                                                                ) : (
-                                                                    <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click để sửa"
-                                                                        onClick={() => { setEditingCell({ row: i, field: 'seasonalAbsent' }); setEditDraft(String(r.seasonalAbsent ?? '')) }}>
-                                                                        {r.seasonalAbsent ?? '—'}
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            {/* OT — editable + shift timing label */}
-                                                            <td className="px-3 py-2.5 text-right text-xs">
-                                                                {editingCell?.row === i && editingCell?.field === 'ot' ? (
-                                                                    <input autoFocus type="text" value={editDraft}
-                                                                        onChange={e => setEditDraft(e.target.value)}
-                                                                        onBlur={() => commitEdit(i, 'ot')}
-                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
-                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
-                                                                ) : (
-                                                                    <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click để sửa"
-                                                                        onClick={() => { setEditingCell({ row: i, field: 'ot' }); setEditDraft(r.ot) }}>
-                                                                        {r.ot && r.ot !== '0' && r.ot !== '' ? (
-                                                                            <>{r.ot}<span className="text-muted-foreground ml-0.5">({OT_HOUR[r.shift] ?? ''})</span></>
-                                                                        ) : <span className="text-muted-foreground">—</span>}
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            {/* Chay — editable */}
-                                                            <td className="px-3 py-2.5 text-right">
-                                                                {editingCell?.row === i && editingCell?.field === 'vegetarian' ? (
-                                                                    <input autoFocus type="number" value={editDraft}
-                                                                        onChange={e => setEditDraft(e.target.value)}
-                                                                        onBlur={() => commitEdit(i, 'vegetarian')}
-                                                                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
-                                                                        className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
-                                                                ) : (
-                                                                    <span className={`cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 ${r.vegetarian != null && r.vegetarian > 0 ? 'font-semibold text-emerald-600' : 'text-muted-foreground'}`}
-                                                                        title="Click để sửa"
-                                                                        onClick={() => { setEditingCell({ row: i, field: 'vegetarian' }); setEditDraft(String(r.vegetarian ?? '')) }}>
-                                                                        {r.vegetarian != null && r.vegetarian > 0 ? r.vegetarian : '—'}
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-3 py-2.5">
-                                                                {linked ? (
-                                                                    <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">
-                                                                        <Database className="h-3 w-3" />
-                                                                        {linked.name_en}
-                                                                    </span>
-                                                                ) : isUnknown ? (
-                                                                    <div className="flex flex-col gap-1 min-w-[150px]">
-                                                                        <span className="text-xs text-amber-600 font-semibold">⚠ Không rõ: &quot;{effArea}&quot;</span>
-                                                                         <select
-                                                                             className="text-xs border border-amber-300 rounded px-1 py-0.5 bg-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                                                                             value={areaOverrides[i] ?? ""}
-                                                                             onChange={(e) => setAreaOverrides(prev => ({ ...prev, [i]: e.target.value }))}
-                                                                         >
-                                                                             <option value="">-- Chọn bộ phận --</option>
-                                                                             {deptList.map(d => (
-                                                                                 <option key={d.id} value={d.name_en}>{d.name_en}</option>
-                                                                             ))}
-                                                                         </select>
-                                                                     </div>
-                                                                 ) : (
-                                                                     <span className="text-xs text-muted-foreground">—</span>
-                                                                 )}
-                                                             </td>
-                                                             {/* Source toggle */}
-                                                             <td className="px-2 py-2 text-center">
-                                                                 {r.raw ? (
-                                                                     <button
-                                                                         onClick={() => toggleSource(i)}
-                                                                         title="Xem nguồn"
-                                                                         className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${
-                                                                             expandedSource.has(i)
-                                                                                 ? 'bg-slate-200 border-slate-400 text-slate-700'
-                                                                                 : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
-                                                                         }`}
-                                                                     >
-                                                                         {expandedSource.has(i) ? '▲ Ẩn' : '▼ Xem'}
-                                                                     </button>
-                                                                 ) : <span className="text-muted-foreground text-xs">—</span>}
-                                                             </td>
-                                                             {/* Per-row confirm */}
-                                                             <td className="px-2 py-2 text-center">
-                                                                 {canSave && (
-                                                                     confirmedRows.has(i) ? (
-                                                                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                                                                             <CheckCircle2 className="h-3 w-3" /> Đã lưu
-                                                                         </span>
-                                                                     ) : (
-                                                                         <button
-                                                                             onClick={() => handleConfirmOne(i)}
-                                                                             disabled={confirmingRow === i}
-                                                                             className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50"
-                                                                         >
-                                                                             {confirmingRow === i ? '...' : '✓ Lưu'}
-                                                                         </button>
-                                                                     )
-                                                                 )}
-                                                                 {confirmMsg[i] && !confirmedRows.has(i) && (
-                                                                     <div className={`text-[10px] mt-0.5 ${
-                                                                         confirmMsg[i].type === 'ok' ? 'text-emerald-600' : 'text-red-500'
-                                                                     }`}>{confirmMsg[i].text}</div>
-                                                                 )}
-                                                             </td>
-                                                        </tr>
-                                                        {/* Expandable source row */}
-                                                        {expandedSource.has(i) && r.raw && (
-                                                            <tr className="bg-slate-50 border-b border-slate-100">
-                                                                <td colSpan={13} className="px-4 py-2">
-                                                                    <div className="flex items-start gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase text-slate-400 mt-0.5 shrink-0">Nguồn:</span>
-                                                                        <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded-lg px-3 py-2 flex-1 leading-relaxed">{r.raw}</pre>
+                                                            {pivotDays.map(d => {
+                                                                const cell = row.days.get(d)
+                                                                const n = cell?.present ?? 0
+                                                                return (
+                                                                    <td key={d} className="px-2 py-2 text-center">
+                                                                        {n > 0 ? (
+                                                                            <span className="font-bold text-green-700">{n}</span>
+                                                                        ) : <span className="text-muted-foreground/40">—</span>}
+                                                                    </td>
+                                                                )
+                                                            })}
+                                                            <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || '—'}</td>
+                                                            {canEdit && (
+                                                                <td className="px-2 py-2 text-center">
+                                                                    <div className="flex items-center justify-center gap-1">
+                                                                        {/* Edit: go to kitchen tab for the latest date of this row */}
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                // Find the most recent date that has data for this row
+                                                                                const latestDay = [...row.days.entries()]
+                                                                                    .filter(([, v]) => v.present > 0)
+                                                                                    .sort(([a], [b]) => b.localeCompare(a))[0]?.[0]
+                                                                                if (latestDay) {
+                                                                                    setSummaryDate(latestDay)
+                                                                                    setSummaryShift(row.shift === 'OT' ? '1' : row.shift)
+                                                                                }
+                                                                                setActiveTab('kitchen')
+                                                                            }}
+                                                                            className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded px-1.5 py-0.5 text-xs transition-colors"
+                                                                            title="Sửa số liệu"
+                                                                        >
+                                                                            ✏️
+                                                                        </button>
+                                                                        {/* Delete */}
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                if (!confirm(`Xóa TẤT CẢ bản ghi của "${row.deptName}" Ca ${row.shift} trong khoảng ngày đã chọn?`)) return
+                                                                                const ids = historyRecords
+                                                                                    .filter(r => (r.department_id ?? r.department_name) + '|' + r.shift === key)
+                                                                                    .map(r => r.id)
+                                                                                await supabase.from('meal_headcount').delete().in('id', ids)
+                                                                                setHistoryRecords(prev => prev.filter(r => !ids.includes(r.id)))
+                                                                            }}
+                                                                            className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1.5 py-0.5 text-xs transition-colors"
+                                                                            title="Xóa hàng này"
+                                                                        >
+                                                                            🗑
+                                                                        </button>
                                                                     </div>
                                                                 </td>
-                                                            </tr>
-                                                        )}
-                                                        </>
+                                                            )}
+                                                        </tr>
                                                     )
                                                 })}
                                             </tbody>
                                             <tfoot>
-                                                <tr className="bg-muted/60 font-bold border-t-2 text-sm">
-                                                    <td className="px-3 py-2.5" colSpan={4}>
-                                                        TỔNG ({records.length} khu vực)
+                                                <tr className="bg-muted/60 font-bold border-t-2">
+                                                    <td colSpan={2} className="px-3 py-2 sticky left-0 bg-muted/60">TỔNG NGÀY</td>
+                                                    {pivotDays.map(d => {
+                                                        const total = historyRecords
+                                                            .filter(r => r.work_date === d)
+                                                            .reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
+                                                        return <td key={d} className="px-2 py-2 text-center text-primary">{total || '—'}</td>
+                                                    })}
+                                                    <td className="px-2 py-2 text-center text-primary border-l">
+                                                        {historyRecords.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}
                                                     </td>
-                                                    <td className="px-3 py-2.5 text-right text-green-700">{summary.totalOfficial}</td>
-                                                    <td className="px-3 py-2.5 text-right text-red-600">{summary.totalAbsent}</td>
-                                                    <td className="px-3 py-2.5 text-right">{summary.totalSeasonal}</td>
-                                                    <td className="px-3 py-2.5 text-right">—</td>
-                                                    <td className="px-3 py-2.5 text-right">—</td>
-                                                    <td className="px-3 py-2.5 text-right text-emerald-600">
-                                                        {summary.totalVeg > 0 ? summary.totalVeg : "—"}
-                                                    </td>
-                                                    <td />
+                                                    {canEdit && <td />}
                                                 </tr>
                                             </tfoot>
                                         </table>
                                     </div>
                                 </div>
                             )}
-
-                            {/* Back button */}
-                            <div className="flex justify-start">
-                                <Button variant="ghost" size="sm" onClick={handleReset} className="gap-2 text-muted-foreground">
-                                    <RefreshCw className="h-3 w-3" /> Paste dữ liệu mới
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </>
-            )}
-
-            {/* ═══════════════════════════════════════════ */}
-            {/* TAB 2: HISTORY                              */}
-            {/* ═══════════════════════════════════════════ */}
-            {activeTab === "history" && (() => {
-                // Build pivot from historyRecords
-                // rows: dept×shift, cols: dates
-                const pivotDays = [...new Set(historyRecords.map(r => r.work_date))].sort()
-                type PivotKey = string // `${dept_id|dept_name}|${shift}`
-                const pivotMap = new Map<PivotKey, { deptCode: string; deptName: string; shift: string; days: Map<string, { present: number; ot: number; veg: number }> }>()
-                historyRecords.forEach(r => {
-                    const deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
-                    const deptName = DEPT_DISPLAY[deptCode]
-                        ?? (r.department_id ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name) : r.department_name)
-                    const key: PivotKey = `${r.department_id ?? r.department_name}|${r.shift}`
-                    if (!pivotMap.has(key)) pivotMap.set(key, { deptCode, deptName, shift: r.shift, days: new Map() })
-                    pivotMap.get(key)!.days.set(r.work_date, {
-                        present: Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0),
-                        ot: r.ot_count ?? 0,
-                        veg: r.vegetarian ?? 0,
-                    })
-                })
-                // Sort rows by DEPT_ORDER then shift
-                const pivotRows = [...pivotMap.entries()].sort(([, a], [, b]) => {
-                    const ai = DEPT_ORDER.indexOf(a.deptCode); const bi = DEPT_ORDER.indexOf(b.deptCode)
-                    if (ai !== bi) return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
-                    return SHIFT_ORDER.indexOf(a.shift) - SHIFT_ORDER.indexOf(b.shift)
-                })
-
-                return (
-                <div className="space-y-4">
-                    {/* Filter bar */}
-                    <div className="bg-card rounded-xl border shadow-sm p-4">
-                        <div className="flex flex-wrap items-end gap-3">
-                            <div>
-                                <label className="text-xs font-semibold text-muted-foreground block mb-1">Từ ngày</label>
-                                <input type="date" value={historyFrom}
-                                    onChange={e => setHistoryFrom(e.target.value)}
-                                    className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-muted-foreground block mb-1">Đến ngày</label>
-                                <input type="date" value={historyTo}
-                                    onChange={e => setHistoryTo(e.target.value)}
-                                    className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                            </div>
-                            {/* Quick-pick buttons */}
-                            <div className="flex gap-1.5" style={{paddingBottom:'0px'}}>
-                                {([
-                                    { label: '7 ngày', days: 6 },
-                                    { label: '14 ngày', days: 13 },
-                                    { label: '30 ngày', days: 29 },
-                                ] as { label: string; days: number }[]).map(opt => {
-                                    const to = new Date().toISOString().slice(0, 10)
-                                    const from = (() => { const d = new Date(); d.setDate(d.getDate() - opt.days); return d.toISOString().slice(0, 10) })()
-                                    const active = historyFrom === from && historyTo === to
-                                    return (
-                                        <button key={opt.label}
-                                            onClick={() => { setHistoryFrom(from); setHistoryTo(to) }}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                                                active ? 'bg-primary text-white border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'
-                                            }`}>
-                                            {opt.label}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                            <Button onClick={fetchHistory} disabled={historyLoading} className="gap-2">
-                                <CalendarDays className="h-4 w-4" />
-                                {historyLoading ? 'Đang tải...' : 'Xem dữ liệu'}
-                            </Button>
-                            {historyRecords.length > 0 && (
-                                <Button variant="outline" onClick={() => exportHistoryCSV(historyRecords)}
-                                    className="gap-2 text-green-700 border-green-300 hover:bg-green-50">
-                                    <FileSpreadsheet className="h-4 w-4" />
-                                    Xuất CSV
-                                </Button>
-                            )}
                         </div>
-                    </div>
+                    )
+                })()}
 
-                    {/* Pivot table */}
-                    {historyLoading ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3" />
-                            Đang tải dữ liệu...
-                        </div>
-                    ) : historyRecords.length === 0 ? (
-                        <div className="bg-muted/30 rounded-xl border p-8 text-center text-muted-foreground">
-                            <Database className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                            <p className="font-medium">Chưa có dữ liệu trong khoảng thời gian này</p>
-                            <p className="text-sm mt-1">Paste dữ liệu Zalo ở tab &quot;Nhập &amp; Phân tích&quot; rồi bấm Lưu vào DB</p>
-                        </div>
-                    ) : (
-                        <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                            <div className="px-4 py-3 border-b bg-muted/40 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <History className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-semibold text-sm">
-                                        Lịch sử — {pivotDays.length} ngày · {pivotRows.length} bộ phận/ca
-                                    </span>
-                                </div>
-                                <span className="text-xs text-muted-foreground">Số liệu: CT + TV hiện diện</span>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="text-xs min-w-full">
-                                    <thead>
-                                        <tr className="bg-muted/60 text-muted-foreground">
-                                            <th className="px-3 py-2 text-left font-semibold sticky left-0 bg-muted/60 min-w-[120px]">Bộ phận</th>
-                                            <th className="px-2 py-2 text-center font-semibold sticky left-[120px] bg-muted/60 min-w-[44px]">Ca</th>
-                                            {pivotDays.map(d => (
-                                                <th key={d} className="px-2 py-2 text-center font-semibold min-w-[42px] whitespace-nowrap">
-                                                    {parseInt(d.slice(8), 10)}/{parseInt(d.slice(5,7), 10)}
-                                                </th>
-                                            ))}
-                                            <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">TỔNG</th>
-                                            {canEdit && <th className="px-2 py-2 text-center font-semibold text-muted-foreground min-w-[72px]">Edit / Delete</th>}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {pivotRows.map(([key, row]) => {
-                                            const rowTotal = [...row.days.values()].reduce((s, v) => s + v.present, 0)
-                                            const hasData = rowTotal > 0
-                                            return (
-                                                <tr key={key} className={`transition-colors hover:bg-muted/30 ${!hasData ? 'opacity-40' : ''}`}>
-                                                    <td className="px-3 py-2 font-medium sticky left-0 bg-card whitespace-nowrap border-r">{row.deptName}</td>
-                                                    <td className="px-2 py-2 text-center sticky left-[120px] bg-card border-r">
-                                                        <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">{row.shift}</span>
-                                                    </td>
-                                                    {pivotDays.map(d => {
-                                                        const cell = row.days.get(d)
-                                                        const n = cell?.present ?? 0
-                                                        return (
-                                                            <td key={d} className="px-2 py-2 text-center">
-                                                                {n > 0 ? (
-                                                                    <span className="font-bold text-green-700">{n}</span>
-                                                                ) : <span className="text-muted-foreground/40">—</span>}
-                                                            </td>
-                                                        )
-                                                    })}
-                                                    <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || '—'}</td>
-                                                    {canEdit && (
-                                                        <td className="px-2 py-2 text-center">
-                                                            <div className="flex items-center justify-center gap-1">
-                                                                {/* Edit: go to kitchen tab for the latest date of this row */}
-                                                                <button
-                                                                    onClick={() => {
-                                                                        // Find the most recent date that has data for this row
-                                                                        const latestDay = [...row.days.entries()]
-                                                                            .filter(([, v]) => v.present > 0)
-                                                                            .sort(([a], [b]) => b.localeCompare(a))[0]?.[0]
-                                                                        if (latestDay) {
-                                                                            setSummaryDate(latestDay)
-                                                                            setSummaryShift(row.shift === 'OT' ? '1' : row.shift)
-                                                                        }
-                                                                        setActiveTab('kitchen')
-                                                                    }}
-                                                                    className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded px-1.5 py-0.5 text-xs transition-colors"
-                                                                    title="Sửa số liệu"
-                                                                >
-                                                                    ✏️
-                                                                </button>
-                                                                {/* Delete */}
-                                                                <button
-                                                                    onClick={async () => {
-                                                                        if (!confirm(`Xóa TẤT CẢ bản ghi của "${row.deptName}" Ca ${row.shift} trong khoảng ngày đã chọn?`)) return
-                                                                        const ids = historyRecords
-                                                                            .filter(r => (r.department_id ?? r.department_name) + '|' + r.shift === key)
-                                                                            .map(r => r.id)
-                                                                        await supabase.from('meal_headcount').delete().in('id', ids)
-                                                                        setHistoryRecords(prev => prev.filter(r => !ids.includes(r.id)))
-                                                                    }}
-                                                                    className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1.5 py-0.5 text-xs transition-colors"
-                                                                    title="Xóa hàng này"
-                                                                >
-                                                                    🗑
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    )}
-                                                </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr className="bg-muted/60 font-bold border-t-2">
-                                            <td colSpan={2} className="px-3 py-2 sticky left-0 bg-muted/60">TỔNG NGÀY</td>
-                                            {pivotDays.map(d => {
-                                                const total = historyRecords
-                                                    .filter(r => r.work_date === d)
-                                                    .reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
-                                                return <td key={d} className="px-2 py-2 text-center text-primary">{total || '—'}</td>
-                                            })}
-                                            <td className="px-2 py-2 text-center text-primary border-l">
-                                                {historyRecords.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}
-                                            </td>
-                                            {canEdit && <td />}
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-                </div>
-                )
-            })()}
-
-        </div>
+            </div>
         </>
     )
 }
