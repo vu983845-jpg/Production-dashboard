@@ -823,7 +823,7 @@ export default function PublicMealPage() {
                     <>
                         <div className="field-sm">
                             <label>Ngày <span className="req">*</span></label>
-                            <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} max={format(new Date(), "yyyy-MM-dd")} required />
+                            <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} required />
                         </div>
                         <div className="info-banner">📌 Điền thông tin cho cả {activeMultiShifts.length} ca bên dưới</div>
                         {activeMultiShifts.map(s => (
@@ -853,7 +853,7 @@ export default function PublicMealPage() {
                                         setExistingRecord(null); setIsUpdate(false)
                                         fetchExistingRecord(deptId, shift, e.target.value, hpeelSub)
                                     }
-                                }} max={format(new Date(), "yyyy-MM-dd")} required />
+                                }} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} required />
                             </div>
                         </div>
                         {existingLoading && <div className="info-banner">⏳ Đang kiểm tra dữ liệu đã báo...</div>}

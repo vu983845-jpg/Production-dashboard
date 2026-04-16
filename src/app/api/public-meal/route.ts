@@ -197,6 +197,9 @@ export async function POST(req: NextRequest) {
             if (work_date > todayStr) {
                 return NextResponse.json({ error: "Không thể báo cơm cho ngày tương lai" }, { status: 400 })
             }
+            if (work_date < todayStr) {
+                return NextResponse.json({ error: "Không thể chỉnh sửa báo cơm ngày đã qua. Liên hệ Ms Chi để điều chỉnh." }, { status: 400 })
+            }
         }
 
         // Extract old_data before building payloads
