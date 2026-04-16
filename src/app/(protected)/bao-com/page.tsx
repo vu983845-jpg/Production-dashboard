@@ -1010,7 +1010,7 @@ export default function BaoCom() {
         BORMA: ['Borma S1', 'Borma thời vụ S1', 'Borma S2', 'Borma thời vụ S2', 'Borma S3', 'Borma thời vụ S3'],
         PEEL: ['Peeling S1', 'Peeling thời vụ S1', 'Peeling S2', 'Peeling thời vụ S2', 'Peeling S3', 'Peeling thời vụ S3'],
         CS: ['Machine Grading - shift 1', 'Machine Grading  - thời vụ 1', 'Machine Grading  - shift 2', 'Machine Grading  thời vụ - shift 2', 'Machine Grading  - shift 3', 'Machine Grading  thời vụ- shift 3'],
-        HPEEL: ['Manual Grading -Shift 1 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 1 (Ms Huệ)', 'Manual Grading -Shift 2 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 2 (Ms Huệ)', 'Manual Grading -Shift 3 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 3 (Ms Huệ)', 'Manual Grading -Shift HC (Ms Huệ)', 'Manual peeling S1 - Liên', 'Manual peeling S1 thời vụ - Liên', 'Manual peeling S1 - Dung', 'Manual peeling S1 thời vụ - Dung', 'Manual peeling S1 - Loan', 'Manual peeling S1 thời vụ - Loan', 'Manual peeling S2 - Liên', 'Manual peeling S2 thời vụ - Liên', 'Manual peeling S2 - Dung', 'Manual peeling S2 thời vụ - Dung', 'Manual peeling S2 - Loan', 'Manual peeling S2 thời vụ - Loan', 'Manual peeling S3 - Liên', 'Manual peeling S3 thời vụ - Liên', 'Manual peeling S3 - Dung', 'Manual peeling S3 thời vụ - Dung', 'Manual peeling S3 - Loan', 'Manual peeling S3 thời vụ - Loan', 'Manual peeling HC - Liên', 'Manual peeling HC - Dung', 'Manual peeling HC - Loan', 'Hand Peeling OT'],
+        HPEEL: ['Manual Grading -Shift 1 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 1 (Ms Huệ)', 'Manual Grading -Shift 2 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 2 (Ms Huệ)', 'Manual Grading -Shift 3 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 3 (Ms Huệ)', 'Manual peeling S1 - Liên', 'Manual peeling S1 thời vụ - Liên', 'Manual peeling S1 - Dung', 'Manual peeling S1 thời vụ - Dung', 'Manual peeling S1 - Loan', 'Manual peeling S1 thời vụ - Loan', 'Manual peeling S2 - Liên', 'Manual peeling S2 thời vụ - Liên', 'Manual peeling S2 - Dung', 'Manual peeling S2 thời vụ - Dung', 'Manual peeling S2 - Loan', 'Manual peeling S2 thời vụ - Loan', 'Manual peeling S3 - Liên', 'Manual peeling S3 thời vụ - Liên', 'Manual peeling S3 - Dung', 'Manual peeling S3 thời vụ - Dung', 'Manual peeling S3 - Loan', 'Manual peeling S3 thời vụ - Loan', 'Hand Peeling OT'],
         PACK: ['Packing S1', 'Packing thời vụ S1', 'Packing S2', 'Packing thời vụ S2', 'Packing S3'],
         BOILER: ['Boiler worker S1', 'Boiler worker S2', 'Boiler worker S3'],
         MAINT_HCA: ['Maintenance S1', 'Maintenance S2', 'Maintenance S3'],
@@ -1072,7 +1072,9 @@ export default function BaoCom() {
             let deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
             deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC → PEEL
             let sectionName = r.department_name   // e.g. "Loading S1", "Shelling S2"
-            const shift = r.shift ?? '1'
+            let shift = r.shift ?? '1'
+            // [NOTE] For pivot purposes, ALL HC (Hành chính) reports are consolidated into Ca 1
+            if (shift === 'HC') shift = '1'
             // Normalize: if sectionName is not a known section for this dept (e.g. kitchen tab saves
             // 'Shelling', 'STEAMING', 'FGWH' instead of canonical 'Shelling S2', 'Steaming S1',
             // 'Loading S1'), derive the proper section name from dept display name + shift
