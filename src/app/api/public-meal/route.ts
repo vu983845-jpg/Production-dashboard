@@ -127,14 +127,48 @@ export async function GET(req: NextRequest) {
     if (deptId && workDate && shift && deptName) {
         const { data, error } = await supabaseAdmin
             .from("meal_headcount")
-            .select("ot_count, ot_vegetarian, official_present, seasonal_present, vegetarian")
+            .select("ot_count, ot_vegetarian, official_present, seasonal_present, vegetarian, official_absent, seasonal_absent, department_name")
             .eq("department_id", deptId)
             .eq("work_date", workDate)
             .eq("shift", shift)
-            .eq("department_name", deptName)
-            .maybeSingle()
+
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-        return NextResponse.json({ record: data })
+
+        let bestRecord = null
+        if (data && data.length > 0) {
+            // Fuzzy match logic:
+            // 1. Try exact match
+            bestRecord = data.find(r => r.department_name.toLowerCase() === deptName.toLowerCase())
+            // 2. Try 'includes' match (e.g. "Dung" in "Manual peeling S1 - Dung")
+            if (!bestRecord) {
+                // Determine a strong keyword from deptName (e.g. supervisor name or base name)
+                const keyword = deptName.toLowerCase().replace(/ca\s*\d|s\d|thời\s*vụ|-/gi, "").trim()
+                const parts = keyword.split(" ").filter(Boolean)
+                // Sort records by how many parts they match
+                let maxMatches = 0
+                for (const r of data) {
+                    const dbNameLower = r.department_name.toLowerCase()
+                    let matches = 0
+                    for (const p of parts) if (dbNameLower.includes(p)) matches++
+                    // Also if we're HPEEL, Supervisor names are critical
+                    if (deptName.toLowerCase().includes("huệ") && dbNameLower.includes("huệ")) matches += 10
+                    if (deptName.toLowerCase().includes("dung") && dbNameLower.includes("dung")) matches += 10
+                    if (deptName.toLowerCase().includes("liên") && dbNameLower.includes("liên")) matches += 10
+                    if (deptName.toLowerCase().includes("loan") && dbNameLower.includes("loan")) matches += 10
+
+                    if (matches > maxMatches) {
+                        maxMatches = matches
+                        bestRecord = r
+                    }
+                }
+                // If it's the only record for this dept + shift (e.g. QC), just use it blindly
+                if (!bestRecord && data.length === 1) {
+                    bestRecord = data[0]
+                }
+            }
+        }
+
+        return NextResponse.json({ record: bestRecord })
     }
 
     // Default: return dept list
