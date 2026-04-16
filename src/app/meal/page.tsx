@@ -399,7 +399,7 @@ export default function PublicMealPage() {
     const isHpeel = selectedDept?.code === "HPEEL" || selectedDept?.code === "HAND"
     const isOffice = selectedDept?.code === "OFFICE"
     const shifts = (isOffice || isHpeel) ? SHIFTS_WITH_HC : SHIFTS_NORMAL
-    const hideSeasonal = !!(selectedDept && ["BOILER", "QC", "OFFICE", "MAINT_SHELL", "MAINT_HCA"].includes(selectedDept.code))
+    const hideSeasonal = !!(selectedDept && ["BOILER", "QC", "OFFICE", "MAINT_SHELL", "MAINT_HCA", "CLEAN"].includes(selectedDept.code))
     const hideAbsent = selectedDept?.code === "BOILER"
 
     const otSelectedDept = depts.find(d => d.id === otDeptId)
