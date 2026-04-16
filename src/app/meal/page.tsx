@@ -58,6 +58,21 @@ const n = (s: string) => { const v = parseInt(s); return isNaN(v) || v < 0 ? 0 :
 const calcMalan = (total: string, chay: string) => Math.max(0, n(total) - n(chay))
 const totalPresent = (d: ShiftData) => n(d.officialPresent) + n(d.seasonalPresent)
 
+const getLockStatus = (shiftVal: string | undefined, workDateStr: string) => {
+    if (!shiftVal || !workDateStr) return false;
+    const vnDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+    const vnNow = new Date(vnDateString)
+    const todayStr = `${vnNow.getFullYear()}-${String(vnNow.getMonth() + 1).padStart(2, "0")}-${String(vnNow.getDate()).padStart(2, "0")}`
+
+    if (workDateStr < todayStr) return true;
+    if (workDateStr > todayStr) return false;
+
+    const currentMins = vnNow.getHours() * 60 + vnNow.getMinutes();
+    if (shiftVal === "1") return currentMins >= 10 * 60; // 10:00
+    if (shiftVal === "2") return currentMins >= 15 * 60 + 30; // 15:30
+    return false;
+}
+
 export default function PublicMealPage() {
     const [depts, setDepts] = useState<Dept[]>([])
     const [loading, setLoading] = useState(true)
@@ -140,6 +155,16 @@ export default function PublicMealPage() {
         setSumRows(mergedRows)
         setSumLoaded(true)
     }
+
+    // Timer for countdown
+    const [now, setNow] = useState<Date | null>(null)
+    useEffect(() => {
+        setNow(new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })))
+        const timer = setInterval(() => {
+            setNow(new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })))
+        }, 1000)
+        return () => clearInterval(timer)
+    }, [])
 
     useEffect(() => {
         fetch("/api/public-meal")
@@ -336,10 +361,12 @@ export default function PublicMealPage() {
     )
 
     // Main meal fields component
-    const ShiftFields = ({ data, update, shiftLabel, shiftVal }: {
+    const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr }: {
         data: ShiftData; update: (f: keyof ShiftData, v: any) => void
-        shiftLabel?: string; shiftVal?: string
+        shiftLabel?: string; shiftVal?: string; workDateStr: string
     }) => {
+        const isLocked = getLockStatus(shiftVal, workDateStr)
+
         const total = totalPresent(data)
         const chay = n(data.vegCount)
         const malan = Math.max(0, total - chay)
@@ -350,26 +377,30 @@ export default function PublicMealPage() {
         const hasOT = otTotalN > 0
 
         return (
-            <div className="shift-block">
-                {shiftLabel && <div className="shift-block-label">📅 {shiftLabel}</div>}
+            <div className={`shift-block ${isLocked ? "locked" : ""}`}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    {shiftLabel && <div className="shift-block-label">📅 {shiftLabel}</div>}
+                    {isLocked && <div className="locked-badge">🔒 Đã khóa (chỉ được báo OT)</div>}
+                </div>
 
                 {/* Present */}
-                <div className="subsection-label">👥 Hiện diện</div>
+                <div className="subsection-label">👥 Hiện diện {isLocked && <span className="opt-tag">Bị khóa</span>}</div>
                 <div className="row2">
                     <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
                         <label>Chính thức</label>
-                        <input type="number" min="0" max="999" placeholder="0" value={data.officialPresent} onChange={e => update("officialPresent", e.target.value)} />
+                        <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.officialPresent} onChange={e => update("officialPresent", e.target.value)} />
                     </div>
                     {!hideSeasonal && (
                         <div className="field-sm">
                             <label>Thời vụ</label>
-                            <input type="number" min="0" max="999" placeholder="0" value={data.seasonalPresent} onChange={e => update("seasonalPresent", e.target.value)} />
+                            <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.seasonalPresent} onChange={e => update("seasonalPresent", e.target.value)} />
                         </div>
                     )}
                 </div>
 
                 {/* Vegetarian breakdown — shows after entering total */}
                 {hasTotal && (
+
                     <div className="breakdown-box">
                         <div className="breakdown-total">Tổng: <strong>{total} phần</strong></div>
                         <div className="breakdown-row">
@@ -379,9 +410,10 @@ export default function PublicMealPage() {
                             </div>
                             <div className="breakdown-sep">+</div>
                             <div className="breakdown-item chay">
-                                <span>🥬 Chay</span>
+                                <span>🥬 Chay {isLocked && "🔒"}</span>
                                 <input
                                     type="number" min="0" max={total} placeholder="0"
+                                    disabled={isLocked}
                                     value={data.vegCount}
                                     onChange={e => update("vegCount", e.target.value)}
                                     className="chay-input"
@@ -396,16 +428,16 @@ export default function PublicMealPage() {
                 {/* Absent */}
                 {!hideAbsent && (
                     <>
-                        <div className="subsection-label" style={{ marginTop: 8 }}>❌ Vắng mặt <span className="opt-tag">nếu có</span></div>
+                        <div className="subsection-label" style={{ marginTop: 8 }}>❌ Vắng mặt {isLocked ? <span className="opt-tag">Bị khóa</span> : <span className="opt-tag">nếu có</span>}</div>
                         <div className="row2">
                             <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
                                 <label>Chính thức</label>
-                                <input type="number" min="0" max="999" placeholder="0" value={data.officialAbsent} onChange={e => update("officialAbsent", e.target.value)} />
+                                <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.officialAbsent} onChange={e => update("officialAbsent", e.target.value)} />
                             </div>
                             {!hideSeasonal && (
                                 <div className="field-sm">
                                     <label>Thời vụ</label>
-                                    <input type="number" min="0" max="999" placeholder="0" value={data.seasonalAbsent} onChange={e => update("seasonalAbsent", e.target.value)} />
+                                    <input type="number" min="0" max="999" placeholder="0" disabled={isLocked} value={data.seasonalAbsent} onChange={e => update("seasonalAbsent", e.target.value)} />
                                 </div>
                             )}
                         </div>
@@ -455,14 +487,23 @@ export default function PublicMealPage() {
         )
     }
 
-    if (loading) return (
-        <div className="loading-screen">
-            <div className="bg-white rounded-2xl shadow-md w-16 h-16 overflow-hidden flex items-center justify-center border border-slate-100 logo-spin mb-4">
-                <IntersnackLogo className="w-12 h-12" />
+    const FullScreenLoader = ({ text }: { text: string }) => (
+        <div className="full-screen-loader">
+            <div className="loader-card">
+                <div className="loader-logo-spin">
+                    <IntersnackLogo className="w-12 h-12" />
+                </div>
+                <div className="loader-text">{text}</div>
+                <div className="loader-dots">
+                    <div className="ldot" />
+                    <div className="ldot" style={{ animationDelay: '0.2s' }} />
+                    <div className="ldot" style={{ animationDelay: '0.4s' }} />
+                </div>
             </div>
-            <div className="loading-text">Đang tải...</div>
         </div>
     )
+
+    if (loading) return <FullScreenLoader text="Đang tải dữ liệu..." />
 
     // ─────── SUMMARY MODE ───────
     if ((pageMode as string) === "summary") {
@@ -765,9 +806,67 @@ export default function PublicMealPage() {
         </PageShell>
     )
 
+    const CountdownWidget = () => {
+        if (!now) return null;
+
+        const vnDateString = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+        const vnNow = new Date(vnDateString)
+        const currentMins = vnNow.getHours() * 60 + vnNow.getMinutes();
+
+        let targetMins = 0;
+        let targetLabel = "";
+
+        if (currentMins < 10 * 60) {
+            targetMins = 10 * 60;
+            targetLabel = "Ca 1";
+        } else if (currentMins < 15 * 60 + 30) {
+            targetMins = 15 * 60 + 30;
+            targetLabel = "Ca 2";
+        } else {
+            return (
+                <div className="countdown-widget done">
+                    <div className="cw-icon">✅</div>
+                    <div>
+                        <div className="cw-title">Đã qua giờ khóa báo cơm hôm nay</div>
+                        <div className="cw-sub">OT vẫn có thể cập nhật bình thường.</div>
+                    </div>
+                </div>
+            )
+        }
+
+        const diffMinsTotal = targetMins - currentMins - 1;
+        const diffSecs = 59 - vnNow.getSeconds();
+        const h = Math.floor(diffMinsTotal / 60);
+        const m = diffMinsTotal % 60;
+        const s = diffSecs;
+
+        const isUrgent = diffMinsTotal < 30;
+
+        return (
+            <div className={`countdown-widget ${isUrgent ? "urgent" : "active"}`}>
+                <div className="cw-icon">{isUrgent ? "⏳" : "⏱️"}</div>
+                <div className="cw-content">
+                    <div className="cw-title">Sắp khóa báo cơm <strong>{targetLabel}</strong></div>
+                    <div className="cw-timer">
+                        Còn <span>{String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}</span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <PageShell>
-            {/* Header with logo */}
+            {(submitting || sumLoading || existingLoading || otLooking || otSubmitting) && (
+                <FullScreenLoader text={
+                    submitting ? "Đang gửi báo cáo..." :
+                        sumLoading ? "Đang lấy tổng hợp..." :
+                            existingLoading ? "Đang kiểm tra lịch sử..." :
+                                otSubmitting ? "Đang cập nhật OT..." :
+                                    otLooking ? "Đang tìm dữ liệu OT..." : "Đang xử lý..."
+                } />
+            )}
+
             <div className="app-header">
                 <div className="bg-white rounded-lg shadow-sm w-[44px] h-[44px] overflow-hidden flex items-center justify-center shrink-0 border border-slate-100">
                     <IntersnackLogo className="w-9 h-9" />
@@ -783,6 +882,8 @@ export default function PublicMealPage() {
                 <button className={`mode-tab ${(pageMode as string) === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
                 <button className={`mode-tab ${(pageMode as string) === "summary" ? "active" : ""}`} onClick={() => { setPageMode("summary" as PageMode); if (!sumLoaded) loadSummary(sumDate) }}>📊 Tổng hợp</button>
             </div>
+
+            {pageMode === "report" && <CountdownWidget />}
 
             <form onSubmit={handlePreview}>
                 <div className="section-label">📋 Thông tin ca làm việc</div>
@@ -827,7 +928,7 @@ export default function PublicMealPage() {
                         </div>
                         <div className="info-banner">📌 Điền thông tin cho cả {activeMultiShifts.length} ca bên dưới</div>
                         {activeMultiShifts.map(s => (
-                            <ShiftFields key={s} shiftLabel={`Ca ${s}`} shiftVal={s} data={multiData[s]} update={(f, v) => updateMulti(s, f, v)} />
+                            <ShiftFields key={s} shiftLabel={`Ca ${s}`} shiftVal={s} data={multiData[s]} update={(f, v) => updateMulti(s, f, v)} workDateStr={workDate} />
                         ))}
                     </>
                 ) : (
@@ -866,7 +967,7 @@ export default function PublicMealPage() {
                                 </div>
                             </div>
                         )}
-                        <ShiftFields data={singleData} update={updateSingle} shiftVal={shift} />
+                        <ShiftFields data={singleData} update={updateSingle} shiftVal={shift} workDateStr={workDate} />
                     </>
                 )}
 
@@ -881,7 +982,7 @@ export default function PublicMealPage() {
                     🔍 Xem lại & Xác nhận
                 </button>
             </form>
-        </PageShell>
+        </PageShell >
     )
 }
 
@@ -1107,6 +1208,43 @@ function Style() {
             .logo-spin { width: 56px; height: 56px; object-fit: contain; animation: spin 1.2s linear infinite; }
             @keyframes spin { to { transform: rotate(360deg); } }
             .loading-text { font-size: 15px; font-weight: 600; color: #64748b; }
+
+            /* Full Screen Loader */
+            .full-screen-loader {
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(8px);
+                z-index: 9999; display: flex; align-items: center; justify-content: center;
+            }
+            .loader-card {
+                background: white; border: 1.5px solid #e2e8f0; border-radius: 20px;
+                padding: 24px 32px; display: flex; flex-direction: column; align-items: center;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            }
+            .loader-logo-spin { width: 64px; height: 64px; border-radius: 16px; border: 1px solid #f1f5f9; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); animation: spinLogo 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite; margin-bottom: 16px; }
+            @keyframes spinLogo { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+            .loader-text { font-size: 15px; font-weight: 700; color: #ea580c; margin-bottom: 8px; }
+            .loader-dots { display: flex; gap: 6px; }
+            .ldot { width: 8px; height: 8px; border-radius: 50%; background: #fb923c; animation: bounce 1.4s infinite ease-in-out both; }
+            @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+            /* Countdown Widget */
+            .countdown-widget { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+            .countdown-widget.active { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1.5px solid #bbf7d0; }
+            .countdown-widget.urgent { background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1.5px solid #fecaca; animation: pulseGlow 2s infinite; }
+            .countdown-widget.done { background: #f8fafc; border: 1.5px solid #e2e8f0; }
+            @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
+            .cw-icon { font-size: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+            .cw-title { font-size: 13px; color: #475569; font-weight: 600; margin-bottom: 2px; }
+            .cw-title strong { color: #1e293b; font-weight: 800; }
+            .cw-timer { font-size: 13px; color: #64748b; font-weight: 600; }
+            .cw-timer span { font-size: 18px; font-weight: 800; color: #16a34a; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+            .countdown-widget.urgent .cw-timer span { color: #dc2626; }
+            .countdown-widget.done .cw-title { color: #1e293b; }
+            .countdown-widget.done .cw-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+            
+            /* Locked state */
+            .shift-block.locked { opacity: 0.8; background: #f1f5f9; border-color: #cbd5e1; }
+            .locked-badge { font-size: 11px; background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 12px; font-weight: 700; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
 
             /* Summary */
             .sum-date-row { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; }
