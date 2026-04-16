@@ -1041,10 +1041,10 @@ export default function BaoCom() {
         // Helper: normalize HPEEL non-canonical section names → canonical SECTION_ORDER name
         const normalizeHpeelSectionName = (name: string, shift: string): string => {
             const n = name.toLowerCase()
-            const s = /^[123]$/.test(shift) ? shift : (shift === 'HC' ? 'HC' : '1')
+            const s = /^[123]$/.test(shift) ? shift : (shift === 'HC' ? '1' : '1')
             const sPrefix = s === 'HC' ? 'HC' : `S${s}`
-            // Ms Huệ / Grading → Manual Grading -Shift N (Ms Huệ)
-            if (/hu[eệ]/i.test(n) || /grading/i.test(n)) {
+            // Ms Huệ / Grading / Loan → Manual Grading -Shift N (Ms Huệ)
+            if (/hu[eệ]/i.test(n) || /grading/i.test(n) || /loan/i.test(n)) {
                 return `Manual Grading -Shift ${s} (Ms Huệ)`
             }
             // Liên → Manual peeling SN - Liên
@@ -1054,10 +1054,6 @@ export default function BaoCom() {
             // Dung → Manual peeling SN - Dung
             if (/dung/i.test(n)) {
                 return `Manual peeling ${sPrefix} - Dung`
-            }
-            // Loan → Manual peeling SN - Loan
-            if (/loan/i.test(n)) {
-                return `Manual peeling ${sPrefix} - Loan`
             }
             // Generic hand peeling / manual peeling without supervisor → map to Liên (ca1 default)
             if (/hand.?peel|manual.?peel/i.test(n)) {
@@ -1700,11 +1696,12 @@ export default function BaoCom() {
         const isDung = /dung/i.test(lower)
         const isLien = /li[ênế]n/i.test(lower)
         const isHue = /hu[ệê]/i.test(lower)
+        const isLoan = /loan/i.test(lower)
         // Handpeeling/Manual peeling with supervisor → shift-specific name
         if ((isDung || isLien) && (lower.includes('handpeeling') || lower.includes('manual peeling') || lower.includes('peeling'))) {
             return `Manual peeling S${s} - ${isDung ? 'Dung' : 'Liên'}`
         }
-        if (isHue && (lower.includes('grading') || lower.includes('manual'))) {
+        if ((isHue || isLoan) && (lower.includes('grading') || lower.includes('manual') || lower.includes('loan'))) {
             return `Manual Grading -Shift ${s} (Ms Huệ)`
         }
         // Tập vụ
