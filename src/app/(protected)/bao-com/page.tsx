@@ -1283,6 +1283,10 @@ export default function BaoCom() {
                 .eq("work_date", dailyDate)
             if (error) throw error
             const rows = (data ?? []) as { shift: string; official_present: number; seasonal_present: number; ot_count: number; vegetarian: number; ot_vegetarian: number }[]
+
+            // Map HC directly to 1 globally for the daily summary computation
+            rows.forEach(r => { if (r.shift === 'HC') r.shift = '1' })
+
             // Tổng theo từng ca
             const ca1 = rows.filter(r => r.shift === '1').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
             const ca2 = rows.filter(r => r.shift === '2').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
@@ -1325,11 +1329,12 @@ export default function BaoCom() {
         setEditingRowId(null)
         setAddRow(null)
         try {
+            const shiftFilter = summaryShift === "1" ? ["1", "HC"] : [summaryShift]
             const { data, error } = await supabase
                 .from("meal_headcount")
                 .select("*")
                 .eq("work_date", summaryDate)
-                .eq("shift", summaryShift)
+                .in("shift", shiftFilter)
                 .order("department_name")
             if (error) throw error
             // Aggregate: sum up all sub-section records that share the same department_id
