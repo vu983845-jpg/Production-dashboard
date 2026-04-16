@@ -105,7 +105,34 @@ export default function PublicMealPage() {
         const data = await res.json()
         setSumLoading(false)
         if (data.error) { setSumError(data.error); return }
-        setSumRows(data.summary ?? [])
+        const mergedMap = new Map<string, SummaryRow>()
+        const rawRows: SummaryRow[] = data.summary ?? []
+        for (const r of rawRows) {
+            let deptName = r.department_name
+            if (deptName.includes("Loan")) deptName = "Manual Grading (Ms Huệ)"
+            const shift = r.shift === "HC" ? "1" : r.shift
+            const key = `${deptName}|${shift}`
+            const existing = mergedMap.get(key)
+            if (existing) {
+                existing.official_present += r.official_present
+                existing.seasonal_present += r.seasonal_present
+                existing.official_absent += r.official_absent
+                existing.seasonal_absent += r.seasonal_absent
+                existing.ot_count += r.ot_count
+                existing.vegetarian += r.vegetarian
+                existing.ot_vegetarian += r.ot_vegetarian
+                if (r.note) existing.note = existing.note ? `${existing.note} & ${r.note}` : r.note
+            } else {
+                mergedMap.set(key, { ...r, department_name: deptName, shift })
+            }
+        }
+
+        const mergedRows = Array.from(mergedMap.values()).sort((a, b) => {
+            if (a.department_name !== b.department_name) return a.department_name.localeCompare(b.department_name)
+            return a.shift.localeCompare(b.shift)
+        })
+
+        setSumRows(mergedRows)
         setSumLoaded(true)
     }
 
