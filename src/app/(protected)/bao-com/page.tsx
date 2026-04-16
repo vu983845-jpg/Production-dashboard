@@ -1276,10 +1276,10 @@ export default function BaoCom() {
         try {
             const { data, error } = await supabase
                 .from("meal_headcount")
-                .select("shift, official_present, seasonal_present, ot_count, vegetarian, ot_vegetarian")
+                .select("shift, official_present, seasonal_present, ot_count, vegetarian, ot_vegetarian, note")
                 .eq("work_date", dailyDate)
             if (error) throw error
-            const rows = (data ?? []) as { shift: string; official_present: number; seasonal_present: number; ot_count: number; vegetarian: number; ot_vegetarian: number }[]
+            const rows = (data ?? []) as { shift: string; official_present: number; seasonal_present: number; ot_count: number; vegetarian: number; ot_vegetarian: number; note: string | null }[]
 
             // Map HC directly to 1 globally for the daily summary computation
             rows.forEach(r => { if (r.shift === 'HC') r.shift = '1' })
@@ -1288,24 +1288,63 @@ export default function BaoCom() {
             const ca1 = rows.filter(r => r.shift === '1').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
             const ca2 = rows.filter(r => r.shift === '2').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
             const ca3 = rows.filter(r => r.shift === '3').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
-            // OT: tổng ot_count từ tất cả ca + shift='OT' riêng
-            const totalOTMan = rows.filter(r => r.shift !== 'OT').reduce((s, r) => s + (r.ot_count ?? 0), 0)
-                + rows.filter(r => r.shift === 'OT').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0) + (r.ot_count ?? 0), 0)
-            const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
-            const totalOT = totalOTMan + totalOTVeg
+
+            // Analyze OT grouped by specifically matched times
+            const otGroups = new Map<string, { man: number, chay: number }>()
+
+            rows.forEach(r => {
+                const isOtShift = r.shift === 'OT'
+
+                let man = (r.ot_count ?? 0)
+                let chay = (r.ot_vegetarian ?? 0)
+
+                if (isOtShift) {
+                    const shiftTotal = Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0)
+                    const shiftVeg = r.vegetarian ?? 0
+                    const shiftMan = Math.max(0, shiftTotal - shiftVeg)
+
+                    man += shiftMan
+                    chay += shiftVeg
+                }
+
+                if (man > 0 || chay > 0) {
+                    const timeMatch = r.note?.match(/Giờ ăn OT:\s*([0-9]{2}:[0-9]{2}|[0-9]{1,2}h(?:[0-9]{2})?)/i)
+                    const time = timeMatch ? timeMatch[1] : "Không báo giờ"
+                    if (!otGroups.has(time)) otGroups.set(time, { man: 0, chay: 0 })
+                    const group = otGroups.get(time)!
+                    group.man += man
+                    group.chay += chay
+                }
+            })
+
+            const totalOT = Array.from(otGroups.values()).reduce((sum, g) => sum + g.man + g.chay, 0)
             const grand = ca1 + ca2 + ca3 + totalOT
             const dateDisplay = format(parseISO(dailyDate), "d/M/yyyy")
+
             let msg = `Ngày ${dateDisplay}\n`
             if (ca1 > 0) msg += `Ca 1: ${ca1}\n`
             if (ca2 > 0) msg += `Ca 2: ${ca2}\n`
             if (ca3 > 0) msg += `Ca 3: ${ca3}\n`
+
             if (totalOT > 0) {
-                if (totalOTVeg > 0) {
-                    msg += `OT: ${totalOT} (${totalOTMan} mặn, ${totalOTVeg} chay)\n`
-                } else {
-                    msg += `OT: ${totalOT}\n`
+                msg += `OT: ${totalOT}\n`
+                const sortedTimes = Array.from(otGroups.keys()).sort((a, b) => {
+                    if (a === "Không báo giờ") return 1
+                    if (b === "Không báo giờ") return -1
+                    return a.localeCompare(b)
+                })
+
+                for (const time of sortedTimes) {
+                    const g = otGroups.get(time)!
+                    const groupTotal = g.man + g.chay
+                    if (g.chay > 0) {
+                        msg += `  - Lúc ${time}: ${groupTotal} phần (${g.man} mặn, ${g.chay} chay)\n`
+                    } else {
+                        msg += `  - Lúc ${time}: ${groupTotal} phần\n`
+                    }
                 }
             }
+
             msg += `Tổng: ${grand}`
             if (grand === 0) {
                 setDailyError("⚠️ Không có dữ liệu cho ngày " + dateDisplay + " — hãy kiểm tra lại.")
@@ -1444,23 +1483,59 @@ export default function BaoCom() {
     const buildDBSummaryText = (rows: SavedRecord[]): string => {
         const totalPresent = rows.reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
         const totalVeg = rows.reduce((s, r) => s + (r.vegetarian ?? 0), 0)
-        // ot_count = số phần MẶN OT, ot_vegetarian = số phần CHAY OT
-        const totalOTMan = rows.reduce((s, r) => s + (r.ot_count ?? 0), 0)
-        const totalOTVeg = rows.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0)
-        const totalOT = totalOTMan + totalOTVeg
         const man = Math.max(0, totalPresent - totalVeg)
-        const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
-        const otHour = OT_HOUR[summaryShift] ?? ""
-        let msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}`
-        if (totalOT > 0) {
-            if (totalOTVeg > 0) {
-                msg += `; số phần OT là ${totalOT} (${totalOTMan} mặn, ${totalOTVeg} chay)`
-            } else {
-                msg += `; số phần OT là ${totalOT}`
+
+        // Analyze OT grouped by specifically matched times
+        const otGroups = new Map<string, { man: number, chay: number }>()
+
+        rows.forEach(r => {
+            const isOtShift = r.shift === 'OT'
+            let manOt = (r.ot_count ?? 0)
+            let chayOt = (r.ot_vegetarian ?? 0)
+
+            if (isOtShift) {
+                const shiftTotal = Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0)
+                const shiftVeg = r.vegetarian ?? 0
+                const shiftMan = Math.max(0, shiftTotal - shiftVeg)
+                manOt += shiftMan
+                chayOt += shiftVeg
             }
-            msg += ` (ăn lúc ${otHour})`
+
+            if (manOt > 0 || chayOt > 0) {
+                const timeMatch = r.note?.match(/Giờ ăn OT:\s*([0-9]{2}:[0-9]{2}|[0-9]{1,2}h(?:[0-9]{2})?)/i)
+                const time = timeMatch ? timeMatch[1] : (OT_HOUR[summaryShift] ?? "Không báo giờ")
+                if (!otGroups.has(time)) otGroups.set(time, { man: 0, chay: 0 })
+                const group = otGroups.get(time)!
+                group.man += manOt
+                group.chay += chayOt
+            }
+        })
+
+        const totalOT = Array.from(otGroups.values()).reduce((sum, g) => sum + g.man + g.chay, 0)
+        const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
+
+        let msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}`
+
+        if (totalOT > 0) {
+            msg += `\nOT: ${totalOT}\n`
+            const sortedTimes = Array.from(otGroups.keys()).sort((a, b) => {
+                if (a === "Không báo giờ") return 1
+                if (b === "Không báo giờ") return -1
+                return a.localeCompare(b)
+            })
+
+            for (const time of sortedTimes) {
+                const g = otGroups.get(time)!
+                const groupTotal = g.man + g.chay
+                if (g.chay > 0) {
+                    msg += `  - Lúc ${time}: ${groupTotal} phần (${g.man} mặn, ${g.chay} chay)\n`
+                } else {
+                    msg += `  - Lúc ${time}: ${groupTotal} phần\n`
+                }
+            }
         }
-        return msg
+
+        return msg.trim()
     }
 
     const getDBMissingDepts = (rows: SavedRecord[], shift: string): { code: string; name: string }[] => {
