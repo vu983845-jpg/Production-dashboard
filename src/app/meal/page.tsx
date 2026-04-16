@@ -112,7 +112,11 @@ export default function PublicMealPage() {
     useEffect(() => {
         fetch("/api/public-meal")
             .then(r => r.json())
-            .then(d => { setDepts(d.depts || []); setLoading(false) })
+            .then(d => {
+                const sorted = (d.depts || []).sort((a: Dept, b: Dept) => a.name_en.localeCompare(b.name_en))
+                setDepts(sorted)
+                setLoading(false)
+            })
             .catch(() => setLoading(false))
     }, [])
 
@@ -657,7 +661,6 @@ export default function PublicMealPage() {
                     <div><span>Số ca đã báo</span><strong>{confirmRows.length}</strong></div>
                     {reporterName && <div><span>Người báo</span><strong>{reporterName}</strong></div>}
                 </div>
-                <div className="zalo-banner">💬 Nhớ báo <strong>dự trù cơm</strong> trên nhóm Zalo nha!</div>
                 <button className="outline-btn" onClick={handleReset}>🔄 Báo thêm ca khác</button>
             </div>
         </PageShell>
@@ -681,7 +684,6 @@ export default function PublicMealPage() {
                 <button className={`mode-tab ${(pageMode as string) === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
                 <button className={`mode-tab ${(pageMode as string) === "summary" ? "active" : ""}`} onClick={() => { setPageMode("summary" as PageMode); if (!sumLoaded) loadSummary(sumDate) }}>📊 Tổng hợp</button>
             </div>
-            <div className="zalo-banner">💬 Mọi người nhớ báo <strong>dự trù cơm</strong> trên nhóm <strong>Zalo</strong> giúp em nha!</div>
 
             <form onSubmit={handlePreview}>
                 <div className="section-label">📋 Thông tin ca làm việc</div>
