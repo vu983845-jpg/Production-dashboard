@@ -886,8 +886,9 @@ export default function ReportPage() {
     const peelingLeaderSummary = useMemo(() => {
         if (selectedDept !== 'PEEL_MC' || !peelingLines.length) return []
         const map = new Map<string, { leader: string; totalTon: number; totalPass2: number; brokenW: number; unpeelW: number; shifts: number }>()
-        peelingLines.forEach(r => {
-            const leader = r.shift_leader || 'Chưa xác định'
+        // Only include records that have a shift_leader (skip old data without leader)
+        peelingLines.filter(r => r.shift_leader && r.shift_leader.trim() !== '').forEach(r => {
+            const leader = r.shift_leader!.trim()
             if (!map.has(leader)) map.set(leader, { leader, totalTon: 0, totalPass2: 0, brokenW: 0, unpeelW: 0, shifts: 0 })
             const curr = map.get(leader)!
             const ton = Number(r.actual_ton || 0)
