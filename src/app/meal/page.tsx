@@ -121,6 +121,9 @@ export default function PublicMealPage() {
     const isHpeel = selectedDept?.code === "HPEEL" || selectedDept?.code === "HAND"
     const isOffice = selectedDept?.code === "OFFICE"
     const shifts = (isOffice || isHpeel) ? SHIFTS_WITH_HC : SHIFTS_NORMAL
+    const hideSeasonal = !!(selectedDept && ["BOILER", "QC", "OFFICE", "MAINT_SHELL", "MAINT_HCA"].includes(selectedDept.code))
+    const hideAbsent = selectedDept?.code === "BOILER"
+
     const otSelectedDept = depts.find(d => d.id === otDeptId)
     const isOtHpeel = otSelectedDept?.code === "HPEEL" || otSelectedDept?.code === "HAND"
     const isOtOffice = otSelectedDept?.code === "OFFICE"
@@ -271,14 +274,16 @@ export default function PublicMealPage() {
                 {/* Present */}
                 <div className="subsection-label">👥 Hiện diện</div>
                 <div className="row2">
-                    <div className="field-sm">
+                    <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
                         <label>Chính thức</label>
                         <input type="number" min="0" max="999" placeholder="0" value={data.officialPresent} onChange={e => update("officialPresent", e.target.value)} />
                     </div>
-                    <div className="field-sm">
-                        <label>Thời vụ</label>
-                        <input type="number" min="0" max="999" placeholder="0" value={data.seasonalPresent} onChange={e => update("seasonalPresent", e.target.value)} />
-                    </div>
+                    {!hideSeasonal && (
+                        <div className="field-sm">
+                            <label>Thời vụ</label>
+                            <input type="number" min="0" max="999" placeholder="0" value={data.seasonalPresent} onChange={e => update("seasonalPresent", e.target.value)} />
+                        </div>
+                    )}
                 </div>
 
                 {/* Vegetarian breakdown — shows after entering total */}
@@ -307,17 +312,23 @@ export default function PublicMealPage() {
                 )}
 
                 {/* Absent */}
-                <div className="subsection-label" style={{ marginTop: 12 }}>❌ Vắng mặt <span className="opt-tag">nếu có</span></div>
-                <div className="row2">
-                    <div className="field-sm">
-                        <label>Chính thức</label>
-                        <input type="number" min="0" max="999" placeholder="0" value={data.officialAbsent} onChange={e => update("officialAbsent", e.target.value)} />
-                    </div>
-                    <div className="field-sm">
-                        <label>Thời vụ</label>
-                        <input type="number" min="0" max="999" placeholder="0" value={data.seasonalAbsent} onChange={e => update("seasonalAbsent", e.target.value)} />
-                    </div>
-                </div>
+                {!hideAbsent && (
+                    <>
+                        <div className="subsection-label" style={{ marginTop: 12 }}>❌ Vắng mặt <span className="opt-tag">nếu có</span></div>
+                        <div className="row2">
+                            <div className="field-sm" style={{ flex: hideSeasonal ? "none" : 1, width: hideSeasonal ? "100%" : "auto" }}>
+                                <label>Chính thức</label>
+                                <input type="number" min="0" max="999" placeholder="0" value={data.officialAbsent} onChange={e => update("officialAbsent", e.target.value)} />
+                            </div>
+                            {!hideSeasonal && (
+                                <div className="field-sm">
+                                    <label>Thời vụ</label>
+                                    <input type="number" min="0" max="999" placeholder="0" value={data.seasonalAbsent} onChange={e => update("seasonalAbsent", e.target.value)} />
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
 
                 {/* OT */}
                 {!data.showOT ? (
@@ -676,7 +687,21 @@ export default function PublicMealPage() {
                 <div className="section-label">📋 Thông tin ca làm việc</div>
                 <div className="field-sm">
                     <label>Bộ phận <span className="req">*</span></label>
-                    <select value={deptId} onChange={e => { setDeptId(e.target.value); setHpeelSub(""); setShift("") }} required>
+                    <select value={deptId} onChange={e => {
+                        const newId = e.target.value
+                        const newDept = depts.find(d => d.id === newId)
+                        setDeptId(newId); setHpeelSub(""); setShift("")
+                        if (newDept?.code === "BOILER") {
+                            setMultiData({
+                                "1": { ...blank("1"), officialPresent: "1" },
+                                "2": { ...blank("2"), officialPresent: "1" },
+                                "3": { ...blank("3"), officialPresent: "1" }
+                            })
+                        } else {
+                            setMultiData({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
+                            setSingleData(blank())
+                        }
+                    }} required>
                         <option value="">— Chọn bộ phận —</option>
                         {depts.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
                     </select>
