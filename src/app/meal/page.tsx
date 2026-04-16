@@ -602,7 +602,7 @@ export default function PublicMealPage() {
                                 </tfoot>
                             </table>
                         </div>
-                        <div className="sum-note">📞 Dữ liệu do các bộ phận tự báo. Sai sót liên hệ <strong>Ms Chi</strong>.</div>
+                        <div className="sum-note">📞 Dữ liệu do các bộ phận tự báo. Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi</a>.</div>
                     </>
                 )}
             </PageShell>
@@ -619,7 +619,7 @@ export default function PublicMealPage() {
                     </div>
                     <div className="success-icon">✅</div>
                     <div className="success-title">OT đã được cập nhật!</div>
-                    <p className="success-sub">Sai sót liên hệ <strong>Ms Chi</strong> nhé!</p>
+                    <p className="success-sub">Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi</a> nhé!</p>
                     <div className="success-card">
                         <div><span>Bộ phận</span><strong>{getEffectiveDeptName(otDeptId, otHpeelSub)}</strong></div>
                         <div><span>Ngày</span><strong>{format(new Date(otDate + "T00:00:00"), "dd/MM/yyyy")}</strong></div>
@@ -650,7 +650,7 @@ export default function PublicMealPage() {
                     </div>
                 </div>
                 {otNewTime && <div className="info-row">🕐 Giờ ăn OT: <strong>{otNewTime}</strong></div>}
-                <div className="contact-note">📞 Có sai sót liên hệ <strong>Ms Chi</strong> nhé!</div>
+                <div className="contact-note">📞 Có sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi</a> nhé!</div>
                 {otError && <div className="err-box">⚠️ {otError}</div>}
                 <button className="primary-btn" onClick={handleOtSubmit} disabled={otSubmitting}>
                     {otSubmitting ? "⏳ Đang lưu..." : "✅ Xác nhận cập nhật OT"}
@@ -778,7 +778,7 @@ export default function PublicMealPage() {
                 </div>
             ))}
             {error && <div className="err-box">⚠️ {error}</div>}
-            <div className="contact-note">📞 Sai sót liên hệ <strong>Ms Chi</strong> để điều chỉnh nhé!</div>
+            <div className="contact-note">📞 Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi (+84393984738)</a> để điều chỉnh nhé!</div>
             <button className="primary-btn" onClick={handleSubmit} disabled={submitting} style={isUpdate ? { background: "#dc2626" } : {}}>
                 {submitting ? "⏳ Đang gửi..." : isUpdate ? "⚠️ Xác nhận THAY ĐỔI" : "✅ Xác nhận & Gửi báo cơm"}
             </button>
@@ -794,7 +794,7 @@ export default function PublicMealPage() {
                 </div>
                 <div className="success-icon">✅</div>
                 <div className="success-title">Đã báo cơm thành công!</div>
-                <p className="success-sub">Cảm ơn bạn đã báo cơm! 🙏<br /><small>Sai sót liên hệ <strong>Ms Chi</strong> nhé!</small></p>
+                <p className="success-sub">Cảm ơn bạn đã báo cơm! 🙏<br /><small>Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi (+84393984738)</a> nhé!</small></p>
                 <div className="success-card">
                     <div><span>Bộ phận</span><strong>{getEffectiveDeptName()}</strong></div>
                     <div><span>Ngày</span><strong>{format(new Date(workDate + "T00:00:00"), "dd/MM/yyyy")}</strong></div>
@@ -883,7 +883,24 @@ export default function PublicMealPage() {
                 <button className={`mode-tab ${(pageMode as string) === "summary" ? "active" : ""}`} onClick={() => { setPageMode("summary" as PageMode); if (!sumLoaded) loadSummary(sumDate) }}>📊 Tổng hợp</button>
             </div>
 
-            {pageMode === "report" && <CountdownWidget />}
+            {pageMode === "report" && (
+                <>
+                    <CountdownWidget />
+                    <div className="info-banner" style={{ marginTop: 8, background: "#f0fdfa", color: "#0f766e", border: "1px solid #ccfbf1", borderRadius: 8, padding: 12 }}>
+                        <strong>📌 Quy định báo cơm:</strong>
+                        <ul style={{ marginLeft: 20, marginTop: 4, listStyleType: "disc", lineHeight: "1.5" }}>
+                            <li><strong>Ca 1:</strong> Khóa lúc 10:00</li>
+                            <li><strong>Ca 2:</strong> Khóa lúc 15:30</li>
+                            <li><strong>Ca 3:</strong> Cập nhật bình thường</li>
+                            <li><strong>OT (Tăng ca):</strong> Luôn cập nhật bình thường (chọn "Sửa OT").</li>
+                        </ul>
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #99f6e4", display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 16 }}>📞</span>
+                            <span>Sai sót/Trễ giờ, liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi (+84393984738)</a></span>
+                        </div>
+                    </div>
+                </>
+            )}
 
             <form onSubmit={handlePreview}>
                 <div className="section-label">📋 Thông tin ca làm việc</div>
