@@ -592,17 +592,23 @@ export default function PublicMealPage() {
             "2": new Set(byShift["2"].map(r => r.department_name)),
             "3": new Set(byShift["3"].map(r => r.department_name)),
         }
-        // We expect all non-office, non-maintenance departments to report
+        // We expect all non-office, non-maintenance, non-boiler departments to report
         const expectedDepts = depts.filter(d => !["OFFICE", "MAINT_HCA", "MAINT_SHELL", "BOILER"].includes(d.code))
         const getMissing = (shift: string) => {
             const expected = shift === "3"
                 ? expectedDepts.filter(d => d.code !== "CLEAN")
                 : expectedDepts
             return expected.filter(d => {
-                const name = d.name_en
-                return !reportedDeptsByShift[shift]?.has(name) &&
-                    // For HPEEL, check if any subgroup name is in the set
-                    !([...reportedDeptsByShift[shift]].some(rn => rn.toLowerCase().includes(d.code.toLowerCase().replace('HPEEL', 'manual').replace('_', ' '))))
+                const reportedSet = reportedDeptsByShift[shift] ?? new Set()
+                // Direct match by name
+                if (reportedSet.has(d.name_en)) return false
+                // HPEEL reports as subgroup names containing "manual" or "grading"
+                if (d.code === "HPEEL") {
+                    return ![...reportedSet].some(rn =>
+                        rn.toLowerCase().includes("manual") || rn.toLowerCase().includes("grading")
+                    )
+                }
+                return true
             })
         }
 
