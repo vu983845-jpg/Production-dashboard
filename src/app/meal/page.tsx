@@ -708,11 +708,16 @@ export default function PublicMealPage() {
                             const shiftMalan = rows.reduce((acc, r) => acc + Math.max(0, r.official_present + r.seasonal_present - r.vegetarian), 0)
                             const shiftChay = rows.reduce((acc, r) => acc + r.vegetarian, 0)
                             const shiftOT = rows.reduce((acc, r) => acc + r.ot_count + r.ot_vegetarian, 0)
+                            const shiftOTMalan = rows.reduce((acc, r) => acc + r.ot_count, 0)
+                            const shiftOTChay = rows.reduce((acc, r) => acc + r.ot_vegetarian, 0)
                             return (
                                 <div key={shiftNum} style={{ marginBottom: 16 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
                                         <div style={{ fontWeight: 800, fontSize: 14, color: '#c2410c' }}>Ca {shiftNum}</div>
-                                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>HD: {shiftTotal} · 🍽️ {shiftMalan + shiftChay} · OT: {shiftOT}</div>
+                                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textAlign: 'right', lineHeight: 1.7 }}>
+                                            <div>HD: {shiftTotal} · 🍖 {shiftMalan} · 🥬 {shiftChay}</div>
+                                            {shiftOT > 0 && <div style={{ color: '#7c3aed' }}>OT: {shiftOT} · 🍖 {shiftOTMalan} · 🥬 {shiftOTChay}</div>}
+                                        </div>
                                     </div>
                                     {rows.length > 0 && (
                                         <div className="sum-table-wrap">
