@@ -5,7 +5,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PU
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Peeling MC dept ID
-const PEEL_MC_DEPT_ID = 'be1d8dd5-a1ab-45e0-bc05-21bdfba7872c';
+const PEEL_MC_DEPT_ID = '4dafa191-cb40-4ff4-9156-4a3f93d338f8';
 
 // Raw data: Date, Pass1 (kg), Pass2 (kg)
 const rawData = [
