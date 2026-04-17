@@ -118,16 +118,15 @@ export default function ReportPage() {
 
 
     // Báo cơm dept code (meal_headcount.department_id lookup) may differ from report code
-    // PEEL_MC in report = PEEL in meal_headcount
-    const MEAL_CODE_MAP: Record<string, string> = { PEEL_MC: 'PEEL' }
+    const MEAL_CODE_MAP: Record<string, string> = {}
     const getMealCode = (code: string) => MEAL_CODE_MAP[code] ?? code
 
     // Priority order for department dropdown
-    const DEPT_PRIORITY = ['SHELL', 'STEAM', 'PEEL_MC', 'HPEEL', 'CS', 'BORMA', 'PACK', 'FGWH', 'BOILER', 'QC', 'HAND', 'OFFICE']
+    const DEPT_PRIORITY = ['SHELL', 'STEAM', 'PEEL', 'HPEEL', 'CS', 'BORMA', 'PACK', 'FGWH', 'BOILER', 'QC', 'OFFICE']
 
     // Only show departments that have production plans + output tracked (exclude MAINT)
     const PRODUCTION_DEPT_CODES = new Set([
-        'STEAM', 'SHELL', 'BORMA', 'PEEL_MC', 'CS', 'HAND', 'PACK', 'FGWH',
+        'STEAM', 'SHELL', 'BORMA', 'PEEL', 'CS', 'HPEEL', 'PACK', 'FGWH',
     ])
 
     // Load departments from DB (same as dashboard)
@@ -279,8 +278,8 @@ export default function ReportPage() {
             setShellingEnergyMonthly([])
         }
 
-        // Peeling line daily for PEEL_MC quality analysis
-        if (selectedDept === "PEEL_MC" && dept?.id) {
+        // Peeling line daily for PEEL quality analysis
+        if (selectedDept === "PEEL" && dept?.id) {
             const { data: peelingData } = await supabase
                 .from("peeling_line_daily")
                 .select("work_date,line_code,shift_name,shift_leader,actual_ton,pass2_ton,broken_pct,unpeel_pct,note")
@@ -294,8 +293,8 @@ export default function ReportPage() {
             setPeelingLines([])
         }
 
-        // Fetch compressor data for PEEL_MC and CS
-        if (['PEEL_MC', 'CS'].includes(selectedDept)) {
+        // Fetch compressor data for PEEL and CS
+        if (['PEEL', 'CS'].includes(selectedDept)) {
             const { data: compData } = await supabase
                 .from('daily_compressor')
                 .select('work_date, meter1, meter2, meter3')

@@ -48,7 +48,7 @@ interface ConfirmRow {
     ot_count: number; vegetarian: number; ot_vegetarian: number; reporter_name: string
 }
 
-interface OTRecord { ot_count: number; ot_vegetarian: number; official_present: number; seasonal_present: number; vegetarian: number }
+interface OTRecord { ot_count: number; ot_vegetarian: number; official_present: number; seasonal_present: number; vegetarian: number; official_absent?: number; seasonal_absent?: number; department_name?: string }
 interface SummaryRow { department_name: string; shift: string; official_present: number; seasonal_present: number; official_absent: number; seasonal_absent: number; ot_count: number; vegetarian: number; ot_vegetarian: number; note?: string }
 type PageMode = "report" | "edit-ot" | "summary"
 type OTStep = "select" | "edit" | "confirm" | "done"
@@ -533,12 +533,14 @@ export default function PublicMealPage() {
         setOtNewTotal(String(oldTotal))
         setOtNewVeg(String(rec.ot_vegetarian ?? 0))
         setOtNewTime(OT_DEFAULT_TIME[otShift] ?? "")
-        setOtStep("edit")
+        setOtStep("edit")  // department_name stored in rec.department_name for exact upsert matching
     }
 
     const handleOtSubmit = async () => {
         setOtSubmitting(true); setOtError("")
-        const deptName = getEffectiveDeptName(otDeptId, otHpeelSub)
+        // Use DB department_name from the found record to ensure upsert targets the right row.
+        // Fallback to UI-generated name only if no existing record was found.
+        const deptName = otRecord?.department_name ?? getEffectiveDeptName(otDeptId, otHpeelSub)
         const otMalan = calcMalan(otNewTotal, otNewVeg)
         const timeNote = otNewTime ? `Giờ ăn OT: ${otNewTime}` : ""
         const payload = {
@@ -546,8 +548,8 @@ export default function PublicMealPage() {
             work_date: otDate, shift: otShift,
             official_present: otRecord?.official_present ?? 0,
             seasonal_present: otRecord?.seasonal_present ?? 0,
-            official_absent: (otRecord as any)?.official_absent ?? 0,
-            seasonal_absent: (otRecord as any)?.seasonal_absent ?? 0,
+            official_absent: otRecord?.official_absent ?? 0,
+            seasonal_absent: otRecord?.seasonal_absent ?? 0,
             vegetarian: otRecord?.vegetarian ?? 0,
             ot_count: otMalan, ot_vegetarian: n(otNewVeg),
             reporter_name: timeNote,
