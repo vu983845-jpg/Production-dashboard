@@ -9,8 +9,8 @@ interface Dept { id: string; code: string; name_en: string }
 const MULTI_SHIFT_CODES = new Set(["QC", "BOILER", "CLEAN", "MAINT_HCA"])
 
 const HPEEL_SUBGROUPS = [
-    { key: "HPEEL_LIEN", label: "Tổ Liên", dept_name: "Manual Peeling (Liên)" },
-    { key: "HPEEL_DUNG", label: "Tổ Dung", dept_name: "Manual Peeling (Dung)" },
+    { key: "HPEEL_LIEN", label: "Tổ Liên", dept_name: "Hand Peeling (Liên)" },
+    { key: "HPEEL_DUNG", label: "Tổ Dung", dept_name: "Hand Peeling (Dung)" },
     { key: "HPEEL_GRADING", label: "Ms Huệ (Grading)", dept_name: "Manual Grading (Ms Huệ)" },
     { key: "HPEEL_LOAN", label: "Ms Loan", dept_name: "Manual Grading (Ms Huệ)" },
 ]
@@ -603,12 +603,16 @@ export default function PublicMealPage() {
             ).filter(d => !(d.code === "OFFICE" && shift !== "1"))
             return expected.filter(d => {
                 const reportedSet = reportedDeptsByShift[shift] ?? new Set()
-                // Direct match by name
-                if (reportedSet.has(d.name_en)) return false
-                // HPEEL reports as subgroup names containing "manual" or "grading"
+                // Direct match by name (case-insensitive)
+                if ([...reportedSet].some(rn => rn.toLowerCase() === d.name_en.toLowerCase())) return false
+                // PEEL reports as "Peeling" or "Peeling MC"
+                if (d.code === "PEEL") {
+                    return ![...reportedSet].some(rn => rn.toLowerCase().includes("peeling"))
+                }
+                // HPEEL reports as subgroup names containing "hand", "manual" or "grading"
                 if (d.code === "HPEEL") {
                     return ![...reportedSet].some(rn =>
-                        rn.toLowerCase().includes("manual") || rn.toLowerCase().includes("grading")
+                        rn.toLowerCase().includes("manual") || rn.toLowerCase().includes("grading") || rn.toLowerCase().includes("hand")
                     )
                 }
                 return true
