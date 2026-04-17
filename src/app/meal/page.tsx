@@ -196,21 +196,34 @@ const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr, hideSeas
                 <>
                     <div className="subsection-label" style={{ marginTop: 8 }}>⏰ Tăng ca (OT) <span className="opt-tag">nếu có</span></div>
                     <div className="row2">
-                        <div className="field-sm">
+                        <div className="field-sm" style={{ flex: 1, width: "100%" }}>
                             <label>Tổng phần OT</label>
                             <input type="number" min="0" max="999" placeholder="0" value={data.otTotal} onChange={e => update("otTotal", e.target.value)} />
                         </div>
-                        <div className="field-sm">
-                            <label>Trong đó chay</label>
-                            <input type="number" min="0" max={otTotalN || 999} placeholder="0" value={data.otVeg} onChange={e => update("otVeg", e.target.value)} />
-                        </div>
                     </div>
                     {hasOT && (
-                        <div className="ot-breakdown">
-                            <span>Mặn OT: <strong>{otMalanN}</strong></span>
-                            <span className="dot">·</span>
-                            <span>Chay OT: <strong>{otChayN}</strong></span>
-                            <div className="ot-time-row">
+                        <div className="breakdown-box" style={{ marginTop: 12 }}>
+                            <div className="breakdown-total">Tổng OT: <strong>{otTotalN} phần</strong></div>
+                            <div className="breakdown-row">
+                                <div className="breakdown-item man">
+                                    <span>🍖 Mặn</span>
+                                    <strong>{otMalanN}</strong>
+                                </div>
+                                <div className="breakdown-sep">+</div>
+                                <div className="breakdown-item chay">
+                                    <span>🥬 Chay</span>
+                                    <input
+                                        type="number" min="0" max={otTotalN} placeholder="0"
+                                        value={data.otVeg}
+                                        onChange={e => update("otVeg", e.target.value)}
+                                        className="chay-input"
+                                    />
+                                </div>
+                                <div className="breakdown-sep">= {otTotalN}</div>
+                            </div>
+                            {otChayN > otTotalN && <div className="breakdown-warn">⚠️ Số chay không thể lớn hơn tổng!</div>}
+
+                            <div className="ot-time-row" style={{ marginTop: 12, borderTop: "1px dashed #e2e8f0", paddingTop: 12 }}>
                                 <span>🕐 Giờ ăn OT:</span>
                                 <input
                                     type="time"
@@ -222,7 +235,7 @@ const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr, hideSeas
                         </div>
                     )}
                     <button type="button" className="ghost-btn" style={{ marginTop: 6, padding: "8px", fontSize: 13, color: "#ef4444", border: "1px solid #fee2e2", background: "#fef2f2" }} onClick={() => { update("showOT", false); update("otTotal", ""); update("otVeg", ""); }}>
-                        ❌ Hủy phần OT ca này
+                        ❌ Hủy báo OT ca này
                     </button>
                 </>
             )}
@@ -795,21 +808,34 @@ export default function PublicMealPage() {
 
                 <div className="section-label">✏️ Nhập số OT mới</div>
                 <div className="row2">
-                    <div className="field-sm">
+                    <div className="field-sm" style={{ flex: 1, width: "100%" }}>
                         <label>Tổng phần OT</label>
                         <input type="number" min="0" max="999" placeholder="0" value={otNewTotal} onChange={e => setOtNewTotal(e.target.value)} />
                     </div>
-                    <div className="field-sm">
-                        <label>Trong đó chay</label>
-                        <input type="number" min="0" max={n(otNewTotal) || 999} placeholder="0" value={otNewVeg} onChange={e => setOtNewVeg(e.target.value)} />
-                    </div>
                 </div>
                 {n(otNewTotal) > 0 && (
-                    <div className="ot-breakdown">
-                        <span>🍖 Mặn: <strong>{calcMalan(otNewTotal, otNewVeg)}</strong></span>
-                        <span className="dot">·</span>
-                        <span>🥬 Chay: <strong>{n(otNewVeg)}</strong></span>
-                        <div className="ot-time-row">
+                    <div className="breakdown-box" style={{ marginTop: 12 }}>
+                        <div className="breakdown-total">Tổng OT mới: <strong>{otNewTotal} phần</strong></div>
+                        <div className="breakdown-row">
+                            <div className="breakdown-item man">
+                                <span>🍖 Mặn</span>
+                                <strong>{calcMalan(otNewTotal, otNewVeg)}</strong>
+                            </div>
+                            <div className="breakdown-sep">+</div>
+                            <div className="breakdown-item chay">
+                                <span>🥬 Chay</span>
+                                <input
+                                    type="number" min="0" max={n(otNewTotal)} placeholder="0"
+                                    value={otNewVeg}
+                                    onChange={e => setOtNewVeg(e.target.value)}
+                                    className="chay-input"
+                                />
+                            </div>
+                            <div className="breakdown-sep">= {otNewTotal}</div>
+                        </div>
+                        {n(otNewVeg) > n(otNewTotal) && <div className="breakdown-warn">⚠️ Số chay không thể lớn hơn tổng!</div>}
+
+                        <div className="ot-time-row" style={{ marginTop: 12, borderTop: "1px dashed #e2e8f0", paddingTop: 12 }}>
                             <span>🕐 Giờ ăn OT:</span>
                             <input type="time" value={otNewTime} onChange={e => setOtNewTime(e.target.value)} className="time-input" />
                         </div>
