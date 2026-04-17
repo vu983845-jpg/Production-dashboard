@@ -505,7 +505,7 @@ export default function InputPage() {
                 fetchShellingLineData();
             }
         }
-        if (deptCodeLine === 'PEEL_MC') {
+        if (deptCodeLine === 'PEEL') {
             const cacheKey = `${selectedDept}-${format(date, "yyyy-MM-dd")}`;
             if (peelingFetchRef.current !== cacheKey) {
                 peelingFetchRef.current = cacheKey;
@@ -1700,7 +1700,7 @@ export default function InputPage() {
                                 </TabsList>
 
                                 <TabsContent value="actual" className="space-y-4">
-                                    <div className={`rounded-xl border bg-card text-card-foreground shadow${['PEEL_MC', 'CS'].includes(departments.find(d => d.id === selectedDept)?.code || '') ? ' hidden' : ''}`}>    
+                                    <div className={`rounded-xl border bg-card text-card-foreground shadow${['PEEL', 'CS'].includes(departments.find(d => d.id === selectedDept)?.code || '') ? ' hidden' : ''}`}>    
                                           <div className="p-6">    
                                               <Form {...formActual}>    
                                                   <form onSubmit={formActual.handleSubmit(onSubmitActual)} className="space-y-6 max-w-2xl">    
@@ -1986,7 +1986,7 @@ export default function InputPage() {
                                                                                   )} />    
                                                                               </TableCell>    
                                                                           </TableRow>    
-                                                                      </>                                                                  ) : departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' ? (    
+                                                                      </>                                                                  ) : departments.find(d => d.id === selectedDept)?.code === 'PEEL' ? (    
                                                                       <>    
                                                                           <TableRow className="bg-emerald-50">    
                                                                               <TableCell className="font-semibold text-emerald-800">Tổng sản lượng Các Size (Tấn)</TableCell>    
@@ -2007,7 +2007,7 @@ export default function InputPage() {
                                                                           </TableCell>    
                                                                       </TableRow>    
                                                                   )}    
-                                                                  {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (    
+                                                                  {['CS', 'HPEEL'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (    
                                                                       <TableRow>    
                                                                           <TableCell className="font-medium text-blue-600 align-middle">Sản lượng ISP (Tấn)</TableCell>    
                                                                           <TableCell className="p-2 align-middle">    
@@ -2063,7 +2063,7 @@ export default function InputPage() {
                                           </div>
                                     </div>
                                     {/* ── Peeling breakdown card ── */}
-                                    {departments.find(d => d.id === selectedDept)?.code === 'PEEL_MC' && (
+                                    {departments.find(d => d.id === selectedDept)?.code === 'PEEL' && (
                                         <div className="rounded-xl border bg-card text-card-foreground shadow mt-4">
                                             <div className="p-6 space-y-4">
                                                 <div className="flex justify-between items-center">
@@ -2382,7 +2382,7 @@ export default function InputPage() {
                                                                         );
                                                                     }
 
-                                                                    if (selectedDeptCode === "PEEL_MC") {
+                                                                    if (selectedDeptCode === "PEEL") {
                                                                         return (
                                                                             <>
                                                                                 <Row label="Tỷ lệ Bể (Broken %)" name="broken_pct" step="0.1" />
@@ -2391,7 +2391,7 @@ export default function InputPage() {
                                                                         );
                                                                     }
 
-                                                                    if (selectedDeptCode === "HAND") {
+                                                                    if (selectedDeptCode === "HPEEL") {
                                                                         return (
                                                                             <>
                                                                                 <Row label="WIP Tồn đầu ngày (Tấn)" name="wip_open_ton" step="0.001" />
@@ -2541,7 +2541,7 @@ export default function InputPage() {
                                                             'Không có nguyên liệu',
                                                         ],
                                                     },
-                                                    PEEL_MC: {
+                                                    PEEL: {
                                                         BD: [
                                                             'Máy nén khí hỏng',
                                                             'Áp suất khí thấp',
@@ -3274,3 +3274,5 @@ setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
 
 
 
+
+
