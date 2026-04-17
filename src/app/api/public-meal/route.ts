@@ -205,8 +205,17 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: "Không thể báo cơm cho ngày tương lai" }, { status: 400 })
             }
             if (work_date < todayStr) {
+                // Ca 3 of yesterday is allowed until noon
                 const isShift3Exception = shift === "3" && work_date === yesterdayStr && currentMins < 12 * 60;
-                if (!isShift3Exception) {
+                // Yesterday OT is still allowed anytime
+                const isYesterdayOtOnly = work_date === yesterdayStr && (row.ot_count ?? 0) > 0 || (row.ot_vegetarian ?? 0) > 0;
+                // Everything 2+ days ago is fully locked
+                const isTooOld = work_date < yesterdayStr;
+
+                if (isTooOld) {
+                    return NextResponse.json({ error: "Ngày này đã bị khóa (chỉ chỉnh sửa trong vòng 1 ngày). Liên hệ Ms Chi nếu cần điều chỉnh." }, { status: 400 })
+                }
+                if (!isShift3Exception && !isYesterdayOtOnly) {
                     return NextResponse.json({ error: "Không thể chỉnh sửa báo cơm ngày đã qua. Liên hệ Ms Chi để điều chỉnh." }, { status: 400 })
                 }
             }

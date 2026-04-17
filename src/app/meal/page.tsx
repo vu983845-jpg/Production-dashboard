@@ -90,6 +90,25 @@ const getLockStatus = (shiftVal: string | undefined, workDateStr: string) => {
     return false;
 }
 
+// Returns true if OT is completely locked for this date (2+ days ago)
+const getOTLockStatus = (workDateStr: string) => {
+    if (!workDateStr) return false;
+    const vnDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+    const vnNow = new Date(vnDateString)
+    const vnYesterday = new Date(vnNow)
+    vnYesterday.setDate(vnYesterday.getDate() - 1)
+    const yesterdayStr = `${vnYesterday.getFullYear()}-${String(vnYesterday.getMonth() + 1).padStart(2, "0")}-${String(vnYesterday.getDate()).padStart(2, "0")}`
+    return workDateStr < yesterdayStr; // strictly before yesterday == 2+ days ago
+}
+
+// Returns the minimum selectable date (yesterday)
+const getMinDate = () => {
+    const vnNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }))
+    const vnYesterday = new Date(vnNow)
+    vnYesterday.setDate(vnYesterday.getDate() - 1)
+    return `${vnYesterday.getFullYear()}-${String(vnYesterday.getMonth() + 1).padStart(2, "0")}-${String(vnYesterday.getDate()).padStart(2, "0")}`
+}
+
 // ── Sub-components ──
 const HpeelPicker = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
     <div className="radio-group">
@@ -119,6 +138,7 @@ const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr, hideSeas
     hideSeasonal?: boolean; hideAbsent?: boolean
 }) => {
     const isLocked = getLockStatus(shiftVal, workDateStr)
+    const isOTLocked = getOTLockStatus(workDateStr)
 
     const total = totalPresent(data)
     const chay = n(data.vegCount)
@@ -133,7 +153,9 @@ const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr, hideSeas
         <div className={`shift-block ${isLocked ? "locked" : ""}`}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 {shiftLabel && <div className="shift-block-label">📅 {shiftLabel}</div>}
-                {isLocked && <div className="locked-badge">🔒 Đã khóa (chỉ được báo OT)</div>}
+                {isOTLocked
+                    ? <div className="locked-badge">🔒 Đã khóa hoàn toàn</div>
+                    : isLocked && <div className="locked-badge">🔒 Đã khóa (chỉ được báo OT)</div>}
             </div>
 
             {/* Present */}
@@ -198,7 +220,9 @@ const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr, hideSeas
             )}
 
             {/* OT */}
-            {!data.showOT ? (
+            {isOTLocked ? (
+                <div style={{ marginTop: 8, padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>🔒 OT đã bị khóa (quá 1 ngày)</div>
+            ) : !data.showOT ? (
                 <button type="button" className="ghost-btn" style={{ marginTop: 8, padding: "8px", width: "100%", border: "1.5px dashed #f97316", background: "#fff7ed", color: "#c2410c" }} onClick={() => update("showOT", true)}>
                     + Thêm báo cơm Tăng ca (OT)
                 </button>
@@ -1145,7 +1169,7 @@ export default function PublicMealPage() {
                                         setExistingRecord(null); setIsUpdate(false);
                                         // For multi-shift departments, we're not pre-filling existing records yet in this UI.
                                     }
-                                }} max={format(new Date(), "yyyy-MM-dd")} required />
+                                }} min={getMinDate()} max={format(new Date(), "yyyy-MM-dd")} required />
                             </div>
                         ) : (
                             <div className="row2" style={{ marginBottom: 14 }}>
@@ -1168,7 +1192,7 @@ export default function PublicMealPage() {
                                             setExistingRecord(null); setIsUpdate(false)
                                             fetchExistingRecord(deptId, shift, dt, hpeelSub)
                                         }
-                                    }} max={format(new Date(), "yyyy-MM-dd")} required />
+                                    }} min={getMinDate()} max={format(new Date(), "yyyy-MM-dd")} required />
                                 </div>
                             </div>
                         )}
