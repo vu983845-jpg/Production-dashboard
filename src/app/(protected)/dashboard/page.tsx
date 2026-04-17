@@ -325,7 +325,7 @@ export default function DashboardPage() {
                 supabase
                     .from('departments')
                     .select('id, code')
-                    .in('code', ['SHELL', 'PEEL_MC']),
+                    .in('code', ['SHELL', 'PEEL']),
                 // Shelling electricity (meter index) - need +1 day for delta
                 (async () => {
                     const { data: shellDept } = await supabase.from('departments').select('id').eq('code', 'SHELL').single()
@@ -453,7 +453,7 @@ export default function DashboardPage() {
                 // Fetch dept IDs inline to avoid race condition with departments state
 
                 const shellDeptObj = deptRows?.find((d: any) => d.code === 'SHELL');
-                const peelDeptObj = deptRows?.find((d: any) => d.code === 'PEEL_MC');
+                const peelDeptObj = deptRows?.find((d: any) => d.code === 'PEEL');
                 const SHELL_RECOVERY_FETCH = 0.22;
                 const shellByDate: Record<string, number> = {};
                 const peelByDate: Record<string, number> = {};
@@ -488,7 +488,7 @@ export default function DashboardPage() {
                 // Map LCA: STEAM, SHELL, BORMA
                 // Map HCA: PEEL_MC, CS, HAND, PACK
                 const mappingLCA = ["STEAM", "SHELL", "BORMA"];
-                const mappingHCA = ["PEEL_MC", "CS", "HAND", "PACK"];
+                const mappingHCA = ["PEEL", "CS", "HPEEL", "PACK"];
 
                 const grouped = dData.reduce((acc: any, curr: any) => {
                     // Group by stations setup
@@ -689,7 +689,7 @@ export default function DashboardPage() {
                     const recordsInfo = grouped[key] || [];
                     const dCode = recordsInfo.length > 0 ? recordsInfo[0].dept_code : null;
 
-                    if (dCode === 'PEEL_MC') {
+                    if (dCode === 'PEEL') {
                         dashboards[key].summary.totalCompressorKwhMtd = totalCompressorKwhMtd;
 
                         // Inject into history for the line chart
