@@ -194,11 +194,21 @@ export async function POST(req: NextRequest) {
             const vnDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
             const vnNow = new Date(vnDateString)
             const todayStr = `${vnNow.getFullYear()}-${String(vnNow.getMonth() + 1).padStart(2, "0")}-${String(vnNow.getDate()).padStart(2, "0")}`
+
+            const vnYesterday = new Date(vnNow)
+            vnYesterday.setDate(vnYesterday.getDate() - 1)
+            const yesterdayStr = `${vnYesterday.getFullYear()}-${String(vnYesterday.getMonth() + 1).padStart(2, "0")}-${String(vnYesterday.getDate()).padStart(2, "0")}`
+
+            const currentMins = vnNow.getHours() * 60 + vnNow.getMinutes();
+
             if (work_date > todayStr) {
                 return NextResponse.json({ error: "Không thể báo cơm cho ngày tương lai" }, { status: 400 })
             }
             if (work_date < todayStr) {
-                return NextResponse.json({ error: "Không thể chỉnh sửa báo cơm ngày đã qua. Liên hệ Ms Chi để điều chỉnh." }, { status: 400 })
+                const isShift3Exception = shift === "3" && work_date === yesterdayStr && currentMins < 12 * 60;
+                if (!isShift3Exception) {
+                    return NextResponse.json({ error: "Không thể chỉnh sửa báo cơm ngày đã qua. Liên hệ Ms Chi để điều chỉnh." }, { status: 400 })
+                }
             }
         }
 

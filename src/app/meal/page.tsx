@@ -71,10 +71,20 @@ const getLockStatus = (shiftVal: string | undefined, workDateStr: string) => {
     const vnNow = new Date(vnDateString)
     const todayStr = `${vnNow.getFullYear()}-${String(vnNow.getMonth() + 1).padStart(2, "0")}-${String(vnNow.getDate()).padStart(2, "0")}`
 
-    if (workDateStr < todayStr) return true;
-    if (workDateStr > todayStr) return false;
+    const vnYesterday = new Date(vnNow)
+    vnYesterday.setDate(vnYesterday.getDate() - 1)
+    const yesterdayStr = `${vnYesterday.getFullYear()}-${String(vnYesterday.getMonth() + 1).padStart(2, "0")}-${String(vnYesterday.getDate()).padStart(2, "0")}`
 
     const currentMins = vnNow.getHours() * 60 + vnNow.getMinutes();
+
+    if (workDateStr < todayStr) {
+        if (shiftVal === "3" && workDateStr === yesterdayStr && currentMins < 12 * 60) {
+            return false;
+        }
+        return true;
+    }
+    if (workDateStr > todayStr) return false;
+
     if (shiftVal === "1") return currentMins >= 10 * 60; // 10:00
     if (shiftVal === "2") return currentMins >= 15 * 60 + 30; // 15:30
     return false;
@@ -362,13 +372,21 @@ export default function PublicMealPage() {
         const data = await res.json()
         setSumLoading(false)
         if (data.error) { setSumError(data.error); return }
+        // Normalize department name: Title Case with special handling for known variants
+        const normalizeDeptName = (name: string): string => {
+            if (name.includes("Loan")) return "Manual Grading (Ms Huệ)"
+            // Title Case: capitalize first letter of each word, lowercase the rest
+            return name
+                .toLowerCase()
+                .replace(/\b\w/g, c => c.toUpperCase())
+        }
+
         const mergedMap = new Map<string, SummaryRow>()
         const rawRows: SummaryRow[] = data.summary ?? []
         for (const r of rawRows) {
-            let deptName = r.department_name
-            if (deptName.includes("Loan")) deptName = "Manual Grading (Ms Huệ)"
+            const deptName = normalizeDeptName(r.department_name)
             const shift = r.shift === "HC" ? "1" : r.shift
-            const key = `${deptName}|${shift}`
+            const key = `${deptName.toLowerCase()}|${shift}`
             const existing = mergedMap.get(key)
             if (existing) {
                 existing.official_present += r.official_present
@@ -860,7 +878,7 @@ export default function PublicMealPage() {
                         <label>Bộ phận <span className="req">*</span></label>
                         <select value={otDeptId} onChange={e => { setOtDeptId(e.target.value); setOtHpeelSub(""); setOtShift("") }}>
                             <option value="">— Chọn bộ phận —</option>
-                            {depts.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+                            {depts.map((d, idx) => <option key={d.id} value={d.id}>{idx + 1}. {d.name_en}</option>)}
                         </select>
                     </div>
                     {isOtHpeel && (
@@ -1027,7 +1045,7 @@ export default function PublicMealPage() {
                             }
                         }} required>
                             <option value="">— Chọn bộ phận —</option>
-                            {depts.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
+                            {depts.map((d, idx) => <option key={d.id} value={d.id}>{idx + 1}. {d.name_en}</option>)}
                         </select>
                     </div>
                     {isHpeel && (
