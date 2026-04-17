@@ -873,7 +873,7 @@ export default function BaoCom() {
         init()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const canEdit = ["hr_admin", "hse_admin", "admin"].includes(userRole)
+    const canEdit = ["hr", "hr_admin", "HSE", "hse", "hse_admin", "admin", "plant_manager"].includes(userRole)
     const canSave = canEdit
 
     // ─── Build summary text for kitchen ───
@@ -909,9 +909,11 @@ export default function BaoCom() {
 
     // ─── History edit / delete handlers ───
     const handleHistSave = async (id: string) => {
-        const { error } = await supabase
-            .from("meal_headcount")
-            .update({
+        const res = await fetch('/api/meal-headcount', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id,
                 official_present: histEditFields.official_present,
                 official_absent: histEditFields.official_absent,
                 seasonal_present: histEditFields.seasonal_present,
@@ -919,8 +921,12 @@ export default function BaoCom() {
                 ot_count: histEditFields.ot_count,
                 vegetarian: histEditFields.vegetarian,
             })
-            .eq("id", id)
-        if (error) { alert("Lỗi: " + error.message); return }
+        })
+        const json = await res.json()
+        if (!res.ok) {
+            alert('Lỗi lưu: ' + (json.error || res.statusText))
+            return
+        }
         setHistoryRecords(prev => prev.map(r => r.id === id ? { ...r, ...histEditFields } : r))
         // Cập nhật luôn summaryData nếu đang hiển
         setSummaryData(prev => prev ? prev.map(r =>
@@ -931,8 +937,12 @@ export default function BaoCom() {
 
     const handleHistDelete = async (id: string) => {
         if (!confirm("Xóa bản ghi này?")) return
-        const { error } = await supabase.from("meal_headcount").delete().eq("id", id)
-        if (error) { alert("Lỗi: " + error.message); return }
+        const res = await fetch(`/api/meal-headcount?id=${id}`, { method: 'DELETE' })
+        const json = await res.json()
+        if (!res.ok) {
+            alert("Lỗi: " + (json.error || res.statusText))
+            return
+        }
         setHistoryRecords(prev => prev.filter(r => r.id !== id))
         // Cập nhật luôn summaryData nếu đang hiển
         setSummaryData(prev => prev ? prev.filter(r => r.id !== id) : prev)
@@ -1406,9 +1416,10 @@ export default function BaoCom() {
 
     const handleDeleteRow = async (id: string) => {
         if (!confirm("Đồng ý xóa bản ghi này?")) return
-        const { error } = await supabase.from("meal_headcount").delete().eq("id", id)
-        if (error) {
-            alert("Lỗi xóa: " + error.message)
+        const res = await fetch(`/api/meal-headcount?id=${id}`, { method: 'DELETE' })
+        const json = await res.json()
+        if (!res.ok) {
+            alert("Lỗi xóa: " + (json.error || res.statusText))
             return
         }
         // Xóa luôn trong historyRecords (state local)
@@ -1469,14 +1480,21 @@ export default function BaoCom() {
             created_by: user?.id,
             updated_at: new Date().toISOString(),
         }
-        const { error } = await supabase.from("meal_headcount").upsert(payload, { onConflict: "work_date,department_id,shift" })
-        if (!error) {
+
+        const res = await fetch('/api/meal-headcount', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        const json = await res.json()
+
+        if (res.ok) {
             setAddRow(null)
             await fetchSummaryFromDB()
             // Đồng bộ: đánh dấu để re-fetch lịch sử khi chuyển tab
             setHistoryRefreshKey(k => k + 1)
         } else {
-            alert("Lỗi lưu: " + error.message)
+            alert("Lỗi lưu: " + (json.error || res.statusText))
         }
     }
 
@@ -1653,8 +1671,13 @@ export default function BaoCom() {
                 created_by: user?.id,
                 updated_at: new Date().toISOString(),
             }
-            const { error } = await supabase.from('meal_headcount').upsert([payload], { onConflict: 'work_date,department_name,shift' })
-            if (error) throw error
+            const res = await fetch('/api/meal-headcount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error || res.statusText)
 
             setConfirmedRows(prev => new Set([...prev, i]))
             setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: existing ? '✓ Đã ghi đè' : '✓ Đã lưu' } }))
@@ -1870,11 +1893,14 @@ export default function BaoCom() {
                 }
             }
 
-            const { error } = await supabase.from("meal_headcount").upsert(payload, {
-                onConflict: "work_date,department_name,shift",
+            const res = await fetch('/api/meal-headcount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error || res.statusText)
 
-            if (error) throw error
             setSaveMsg({ type: "ok", text: `✅ Đã lưu ${payload.length} bản ghi thành công!` })
         } catch (err: unknown) {
             if (err instanceof Error && err.message === 'cancelled') return
