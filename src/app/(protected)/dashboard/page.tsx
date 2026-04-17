@@ -831,7 +831,7 @@ export default function DashboardPage() {
                     setDashboardsData(prev => {
                         const peelKey = Object.keys(prev).find(k => {
                             const recs = (dData || []).filter((r: any) => r.department_id === k);
-                            return recs.length > 0 && recs[0].dept_code === 'PEEL_MC';
+                            return recs.length > 0 && recs[0].dept_code === 'PEEL';
                         });
                         if (!peelKey) return prev;
                         return {
@@ -1125,12 +1125,12 @@ export default function DashboardPage() {
                                     💔 {summary.brokenPct.toFixed(1)}% <span className="font-normal opacity-70">{language === 'vi' ? 'bể' : 'broken'}</span>
                                 </span>
                             )}
-                            {deptCode === 'PEEL_MC' && summary.brokenPct > 0 && (
+                            {deptCode === 'PEEL' && summary.brokenPct > 0 && (
                                 <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-normal normal-case border ${summary.brokenPct <= 20 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
                                     💔 {summary.brokenPct.toFixed(1)}% <span className="font-normal opacity-70">{language === 'vi' ? 'bể' : 'broken'}</span>
                                 </span>
                             )}
-                            {deptCode === 'PEEL_MC' && summary.unpeelPct > 0 && (
+                            {deptCode === 'PEEL' && summary.unpeelPct > 0 && (
                                 <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-normal normal-case border bg-amber-50 text-amber-700 border-amber-200`}>
                                     🍂 {summary.unpeelPct.toFixed(1)}% <span className="font-normal opacity-70">{language === 'vi' ? 'sót lụa' : 'unpeel'}</span>
                                 </span>
@@ -1143,7 +1143,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Row 2: Stats compact inline */}
-                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((deptCode === 'PEEL_MC' && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-0 divide-x divide-slate-200/60 bg-white/60 rounded-lg border border-slate-100/80`}>
+                    <div className={`grid ${id === 'virtual-container' ? 'grid-cols-2' : ((deptCode === 'PEEL' && !isTotal) ? 'grid-cols-4' : 'grid-cols-3')} gap-0 divide-x divide-slate-200/60 bg-white/60 rounded-lg border border-slate-100/80`}>
                         <div className="flex flex-col items-center py-1.5 px-1">
                             <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">{t('stat.mtd_plan')}</span>
                             <div className="flex items-baseline gap-0.5">
@@ -1173,7 +1173,7 @@ export default function DashboardPage() {
                             </div>
                         )}
 
-                        {(deptCode === 'PEEL_MC' && !isTotal) && (
+                        {(deptCode === 'PEEL' && !isTotal) && (
                             <div className="flex flex-col items-center py-1.5 px-1">
                                 <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">{t('stat.compressor')}</span>
                                 <div className="font-bold text-purple-600 text-xs md:text-sm">
@@ -1189,7 +1189,7 @@ export default function DashboardPage() {
                     {/* Fixed-height toggle row — always present so charts align across all cards */}
                     {!(isTotal || isFgwh) && (
                         <div className="h-7 flex items-center">
-                            {(["PEEL_MC", "SHELL", "HAND", "BORMA", "CS"].includes(deptCode)) && (
+                            {(["PEEL", "SHELL", "HPEEL", "BORMA", "CS"].includes(deptCode)) && (
                                 <div className="flex items-center gap-1 w-full justify-center bg-slate-100/50 rounded-md p-0.5">
                                     <button onClick={() => setDeptViewModes(p => ({ ...p, [id]: 'chart' }))}
                                         className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${(!deptViewModes[id] || deptViewModes[id] === 'chart') ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
@@ -1205,7 +1205,7 @@ export default function DashboardPage() {
                                             By Line
                                         </button>
                                     )}
-                                    {['CS', 'HAND'].includes(deptCode) && (
+                                    {['CS', 'HPEEL'].includes(deptCode) && (
                                         <button onClick={() => setDeptViewModes(p => ({ ...p, [id]: 'isp' }))}
                                             className={`text-[9px] uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm transition-all flex-1 ${deptViewModes[id] === 'isp' ? 'bg-white text-slate-800 font-bold border border-slate-200' : 'text-muted-foreground'}`}>
                                             ISP
@@ -1431,7 +1431,7 @@ export default function DashboardPage() {
                                     {id === 'virtual-container' && !isReached && Number(dailyNeeded) > 0 && remainingDays > 0 && (
                                         <Line type="step" dataKey="DailyNeeded" stroke="#10b981" strokeDasharray="3 3" dot={false} strokeWidth={2} name={t('legend.daily_needed')} connectNulls={false} animationDuration={600} />
                                     )}
-                                    {(deptCode === "SHELL" || deptCode === "PEEL_MC") && (
+                                    {(deptCode === "SHELL" || deptCode === "PEEL") && (
                                         <>
                                             <YAxis yAxisId="intensity" orientation="right" tick={{ fontSize: 10, fill: '#f59e0b', fontWeight: 600 }} tickLine={false} axisLine={false} width={30} tickFormatter={(v) => v.toFixed(0)} />
                                             <Line yAxisId="intensity" type="monotone" dataKey="Intensity" stroke="#f59e0b" dot={false} strokeWidth={2} name={t('legend.intensity')} animationDuration={700} />
@@ -1445,7 +1445,7 @@ export default function DashboardPage() {
                                     </Bar>
                                     <Line type="monotone" dataKey="Plan" stroke="#94a3b8" strokeDasharray="4 3" dot={false} strokeWidth={1.5} name={t('legend.plan')} animationDuration={600} legendType="none" />
 
-                                    {deptCode === "HAND" && (
+                                    {deptCode === "HPEEL" && (
                                         <Line
                                             type="monotone"
                                             dataKey="IspActual"
@@ -1466,7 +1466,7 @@ export default function DashboardPage() {
                                         </>
                                     )}
                                     {/* CO2e/T chart line for STEAM - hidden */}
-                                    {(deptCode === "HAND" || deptCode === "SHELL" || deptCode === "PEEL_MC" || deptCode === "ALL" || deptCode === "STEAM" || isTotal || isFgwh) && (
+                                    {(deptCode === "HPEEL" || deptCode === "SHELL" || deptCode === "PEEL" || deptCode === "ALL" || deptCode === "STEAM" || isTotal || isFgwh) && (
                                         <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', paddingTop: '4px', fontWeight: 600, color: '#64748b' }} iconType="plainline" />
                                     )}
                                 </ComposedChart>
@@ -2159,7 +2159,7 @@ export default function DashboardPage() {
                                                         <TableHead className="text-right hidden md:table-cell">Actual Cont</TableHead>
                                                     </>
                                                 )}
-                                                {['CS', 'HAND'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (
+                                                {['CS', 'HPEEL'].includes(departments.find(d => d.id === selectedDept)?.code || '') && (
                                                     <TableHead className="text-right text-blue-600">ISP (T)</TableHead>
                                                 )}
                                                 <TableHead className="text-right">{t('col_downtime')}</TableHead>
@@ -2198,7 +2198,7 @@ export default function DashboardPage() {
                                                             <TableCell className="text-right font-bold text-indigo-600 hidden md:table-cell">{Number(d.actual_container || 0).toFixed(2)}</TableCell>
                                                         </>
                                                     )}
-                                                    {['CS', 'HAND'].includes(d.dept_code) && (
+                                                    {['CS', 'HPEEL'].includes(d.dept_code) && (
                                                         <TableCell className="text-right text-blue-600 font-medium">
                                                             {Number(d.isp_ton || 0).toFixed(1)}
                                                             <span className="text-[10px] text-muted-foreground ml-1 hidden sm:inline">/ {Number(d.plan_isp_ton || 0).toFixed(1)}</span>

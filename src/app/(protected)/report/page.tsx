@@ -883,7 +883,7 @@ export default function ReportPage() {
 
     // ── PEEL_MC Quality Analysis Computed Data ──────────────────────────────
     const peelingLeaderSummary = useMemo(() => {
-        if (selectedDept !== 'PEEL_MC' || !peelingLines.length) return []
+        if (selectedDept !== 'PEEL' || !peelingLines.length) return []
         const map = new Map<string, { leader: string; totalTon: number; totalPass2: number; brokenW: number; unpeelW: number; shifts: number }>()
         // Only include records that have a shift_leader (skip old data without leader)
         peelingLines.filter(r => r.shift_leader && r.shift_leader.trim() !== '').forEach(r => {
@@ -908,7 +908,7 @@ export default function ReportPage() {
     }, [selectedDept, peelingLines])
 
     const peelingDailyQuality = useMemo(() => {
-        if (selectedDept !== 'PEEL_MC' || !peelingLines.length) return []
+        if (selectedDept !== 'PEEL' || !peelingLines.length) return []
         const map = new Map<string, { brokenW: number; unpeelW: number; totalTon: number }>()
         peelingLines.forEach(r => {
             const d = format(parseISO(r.work_date), 'dd/MM')
@@ -928,7 +928,7 @@ export default function ReportPage() {
     }, [selectedDept, peelingLines])
 
     const peelingShiftSummary = useMemo(() => {
-        if (selectedDept !== 'PEEL_MC' || !peelingLines.length) return []
+        if (selectedDept !== 'PEEL' || !peelingLines.length) return []
         const shifts = ['Ca 1', 'Ca 2', 'Ca 3']
         return shifts.map(shift => {
             const rows = peelingLines.filter(r => r.shift_name === shift)
@@ -947,7 +947,7 @@ export default function ReportPage() {
     }, [selectedDept, peelingLines])
 
     const peelingLineSummary = useMemo(() => {
-        if (selectedDept !== 'PEEL_MC' || !peelingLines.length) return []
+        if (selectedDept !== 'PEEL' || !peelingLines.length) return []
         const lines = ['A', 'B', 'C', 'D1', 'D2']
         return lines.map(line => {
             const rows = peelingLines.filter(r => r.line_code === line)
@@ -968,7 +968,7 @@ export default function ReportPage() {
     }, [selectedDept, peelingLines])
 
     const peelingInsights = useMemo(() => {
-        if (selectedDept !== 'PEEL_MC' || !peelingLeaderSummary.length) return []
+        if (selectedDept !== 'PEEL' || !peelingLeaderSummary.length) return []
         const insights: { icon: string; text: string; color: string }[] = []
         // Worst/best leader by broken
         const withBroken = peelingLeaderSummary.filter(l => l.Broken > 0)
@@ -1244,8 +1244,8 @@ export default function ReportPage() {
                                 { id: 'report-manpower', icon: '👷', label: language === 'vi' ? 'Nhân lực' : 'Manpower', show: Object.keys(headcountDaily).length > 0 },
                                 { id: 'report-shelling', icon: '🦐', label: language === 'vi' ? 'Shelling Lines' : 'Shelling', show: selectedDept === 'SHELL' },
                                 { id: 'report-oee', icon: '⚙️', label: 'OEE', show: selectedDept === 'SHELL' },
-                                { id: 'report-quality', icon: '🔬', label: language === 'vi' ? 'Chất lượng' : 'Quality', show: ['PEEL_MC', 'CS'].includes(selectedDept) },
-                                { id: 'report-energy', icon: '⚡', label: language === 'vi' ? 'Năng lượng' : 'Energy', show: ['PEEL_MC', 'CS'].includes(selectedDept) },
+                                { id: 'report-quality', icon: '🔬', label: language === 'vi' ? 'Chất lượng' : 'Quality', show: ['PEEL', 'CS'].includes(selectedDept) },
+                                { id: 'report-energy', icon: '⚡', label: language === 'vi' ? 'Năng lượng' : 'Energy', show: ['PEEL', 'CS'].includes(selectedDept) },
                                 { id: 'report-table', icon: '🗒️', label: language === 'vi' ? 'Chi tiết' : 'Detail Table', always: true },
                             ].filter(s => s.always || s.show).map(s => (
                                 <button
@@ -2603,7 +2603,7 @@ export default function ReportPage() {
 
                     {/* ── PEEL_MC Quality Deep-Dive ────────────────────────── */}
                     <div id="report-quality" />
-                    {selectedDept === 'PEEL_MC' && peelingLines.length > 0 && (
+                    {selectedDept === 'PEEL' && peelingLines.length > 0 && (
                         <Card className="border-teal-100">
                             <CardHeader className="pb-3 border-b bg-teal-50/40">
                                 <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -2872,7 +2872,7 @@ export default function ReportPage() {
 
                     {/* Compressor kWh vs Production Chart */}
                     <div id="report-energy" />
-                    {['PEEL_MC', 'CS'].includes(selectedDept) && compressorMonthly.length > 0 && (() => {
+                    {['PEEL', 'CS'].includes(selectedDept) && compressorMonthly.length > 0 && (() => {
                         const chartData = records.map(r => {
                             const comp = compressorMonthly.find(c => c.work_date === r.work_date)
                             const kwh = comp?.total_kwh || 0
