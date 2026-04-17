@@ -53,6 +53,13 @@ interface SummaryRow { department_name: string; shift: string; official_present:
 type PageMode = "report" | "edit-ot" | "summary"
 type OTStep = "select" | "edit" | "confirm" | "done"
 
+const VN_DAYS = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"]
+
+// Departments that report per-shift (Ca 1, 2, 3)
+const ALL_SHIFTS = ["1", "2", "3"]
+// Departments where only Ca 1+2 are expected for meal report
+const CLEAN_SHIFTS = ["1", "2"]
+
 // ── helpers ──
 const n = (s: string) => { const v = parseInt(s); return isNaN(v) || v < 0 ? 0 : v }
 const calcMalan = (total: string, chay: string) => Math.max(0, n(total) - n(chay))
@@ -572,8 +579,40 @@ export default function PublicMealPage() {
             otChay: acc.otChay + r.ot_vegetarian,
         }), { present: 0, absent: 0, malan: 0, chay: 0, otMalan: 0, otChay: 0 })
 
+        // Group reported rows by shift
+        const byShift: Record<string, SummaryRow[]> = { "1": [], "2": [], "3": [] }
+        for (const r of sumRows) {
+            const s = r.shift === "HC" ? "1" : r.shift
+            if (byShift[s]) byShift[s].push(r)
+        }
+
+        // Compute missing depts per shift (depts that haven't reported)
+        const reportedDeptsByShift: Record<string, Set<string>> = {
+            "1": new Set(byShift["1"].map(r => r.department_name)),
+            "2": new Set(byShift["2"].map(r => r.department_name)),
+            "3": new Set(byShift["3"].map(r => r.department_name)),
+        }
+        // We expect all non-office, non-maintenance departments to report
+        const expectedDepts = depts.filter(d => !["OFFICE", "MAINT_HCA", "MAINT_SHELL", "BOILER"].includes(d.code))
+        const getMissing = (shift: string) => {
+            const expected = shift === "3"
+                ? expectedDepts.filter(d => d.code !== "CLEAN")
+                : expectedDepts
+            return expected.filter(d => {
+                const name = d.name_en
+                return !reportedDeptsByShift[shift]?.has(name) &&
+                    // For HPEEL, check if any subgroup name is in the set
+                    !([...reportedDeptsByShift[shift]].some(rn => rn.toLowerCase().includes(d.code.toLowerCase().replace('HPEEL', 'manual').replace('_', ' '))))
+            })
+        }
+
+        const sumDateDisplay = sumLoaded ? (() => {
+            const d = new Date(sumDate + "T00:00:00")
+            return `${VN_DAYS[d.getDay()]}, ${format(d, "dd/MM/yyyy")}`
+        })() : "Chọn ngày để xem"
+
         return (
-            <PageShell header={{ icon: "📊", title: "Tổng hợp báo cơm", sub: sumLoaded ? format(new Date(sumDate + "T00:00:00"), "dd/MM/yyyy") : "Chọn ngày để xem" }}>
+            <PageShell header={{ icon: "📊", title: "Tổng hợp báo cơm", sub: sumDateDisplay }}>
                 <div className="mode-tabs">
                     <button className="mode-tab" onClick={() => setPageMode("report")}>🍽️ Báo cơm</button>
                     <button className="mode-tab" onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
@@ -596,68 +635,82 @@ export default function PublicMealPage() {
                     <div className="sum-empty">📭 Chưa có dữ liệu báo cơm cho ngày này.</div>
                 )}
 
-                {sumLoaded && sumRows.length > 0 && (
+                {sumLoaded && (
                     <>
                         {/* KPI cards */}
-                        <div className="kpi-row">
-                            <div className="kpi-card orange">
-                                <div className="kpi-val">{totalRow.present}</div>
-                                <div className="kpi-label">👥 Tổng HD</div>
+                        {sumRows.length > 0 && (
+                            <div className="kpi-row">
+                                <div className="kpi-card orange">
+                                    <div className="kpi-val">{totalRow.present}</div>
+                                    <div className="kpi-label">👥 Tổng HD</div>
+                                </div>
+                                <div className="kpi-card blue">
+                                    <div className="kpi-val">{totalRow.malan + totalRow.chay}</div>
+                                    <div className="kpi-label">🍽️ Tổng suất</div>
+                                </div>
+                                <div className="kpi-card green">
+                                    <div className="kpi-val">{totalRow.otMalan + totalRow.otChay}</div>
+                                    <div className="kpi-label">⏰ Tổng OT</div>
+                                </div>
                             </div>
-                            <div className="kpi-card blue">
-                                <div className="kpi-val">{totalRow.malan + totalRow.chay}</div>
-                                <div className="kpi-label">🍽️ Mặn+Chay</div>
-                            </div>
-                            <div className="kpi-card green">
-                                <div className="kpi-val">{totalRow.otMalan + totalRow.otChay}</div>
-                                <div className="kpi-label">⏰ Tổng OT</div>
-                            </div>
-                        </div>
+                        )}
 
-                        {/* Table */}
-                        <div className="sum-table-wrap">
-                            <table className="sum-table">
-                                <thead>
-                                    <tr>
-                                        <th>Bộ phận</th>
-                                        <th>Ca</th>
-                                        <th>Chính thức</th>
-                                        <th>Thời vụ</th>
-                                        <th>🍖</th>
-                                        <th>🥬</th>
-                                        <th>OT🍖</th>
-                                        <th>OT🥬</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {sumRows.map((r, i) => {
-                                        const malan = Math.max(0, r.official_present + r.seasonal_present - r.vegetarian)
-                                        return (
-                                            <tr key={i}>
-                                                <td className="td-dept">{r.department_name}</td>
-                                                <td className="td-ca">{r.shift === "HC" ? "HC" : `Ca ${r.shift}`}</td>
-                                                <td>{r.official_present}</td>
-                                                <td>{r.seasonal_present}</td>
-                                                <td className="td-malan">{malan}</td>
-                                                <td className="td-chay">{r.vegetarian}</td>
-                                                <td className="td-ot">{r.ot_count}</td>
-                                                <td className="td-ot">{r.ot_vegetarian}</td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                                <tfoot>
-                                    <tr className="sum-total-row">
-                                        <td colSpan={2}>Tổng</td>
-                                        <td colSpan={2}>{totalRow.present}</td>
-                                        <td className="td-malan">{totalRow.malan}</td>
-                                        <td className="td-chay">{totalRow.chay}</td>
-                                        <td className="td-ot">{totalRow.otMalan}</td>
-                                        <td className="td-ot">{totalRow.otChay}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                        {/* Per-shift breakdown */}
+                        {ALL_SHIFTS.map(shiftNum => {
+                            const rows = byShift[shiftNum]
+                            const missing = getMissing(shiftNum)
+                            if (rows.length === 0 && missing.length === 0) return null
+                            const shiftTotal = rows.reduce((acc, r) => acc + r.official_present + r.seasonal_present, 0)
+                            const shiftMalan = rows.reduce((acc, r) => acc + Math.max(0, r.official_present + r.seasonal_present - r.vegetarian), 0)
+                            const shiftChay = rows.reduce((acc, r) => acc + r.vegetarian, 0)
+                            const shiftOT = rows.reduce((acc, r) => acc + r.ot_count + r.ot_vegetarian, 0)
+                            return (
+                                <div key={shiftNum} style={{ marginBottom: 16 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                        <div style={{ fontWeight: 800, fontSize: 14, color: '#c2410c' }}>Ca {shiftNum}</div>
+                                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>HD: {shiftTotal} · 🍽️ {shiftMalan + shiftChay} · OT: {shiftOT}</div>
+                                    </div>
+                                    {rows.length > 0 && (
+                                        <div className="sum-table-wrap">
+                                            <table className="sum-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Bộ phận</th>
+                                                        <th>🍖</th>
+                                                        <th>🥬</th>
+                                                        <th>OT🍖</th>
+                                                        <th>OT🥬</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {rows.map((r, i) => {
+                                                        const malan = Math.max(0, r.official_present + r.seasonal_present - r.vegetarian)
+                                                        return (
+                                                            <tr key={i}>
+                                                                <td className="td-dept">{r.department_name}</td>
+                                                                <td className="td-malan">{malan}</td>
+                                                                <td className="td-chay">{r.vegetarian}</td>
+                                                                <td className="td-ot">{r.ot_count}</td>
+                                                                <td className="td-ot">{r.ot_vegetarian}</td>
+                                                            </tr>
+                                                        )
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                    {missing.length > 0 && (
+                                        <div style={{ background: '#fef3c7', border: '1.5px solid #f59e0b', borderRadius: 10, padding: '10px 12px', marginTop: rows.length > 0 ? 8 : 0 }}>
+                                            <div style={{ fontSize: 12, fontWeight: 800, color: '#92400e', marginBottom: 4 }}>⚠️ Chưa báo cơm Ca {shiftNum}:</div>
+                                            <div style={{ fontSize: 12, color: '#a16207', lineHeight: 1.7 }}>
+                                                {missing.map(d => d.name_en).join(' · ')}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+
                         <div className="sum-note">📞 Dữ liệu do các bộ phận tự báo. Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi</a>.</div>
                     </>
                 )}
@@ -890,10 +943,16 @@ export default function PublicMealPage() {
                 <div className="bg-white rounded-lg shadow-sm w-[44px] h-[44px] overflow-hidden flex items-center justify-center shrink-0 border border-slate-100">
                     <IntersnackLogo className="w-9 h-9" />
                 </div>
-                <div>
+                <div style={{ flex: 1 }}>
                     <div className="app-title">Báo Cơm Nhà Máy</div>
                     <div className="app-sub">VICC Long An · Intersnack Cashew Vietnam</div>
                 </div>
+                {now && (
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: 15, color: '#c2410c' }}>{VN_DAYS[now.getDay()]}</div>
+                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{format(now, 'dd/MM/yyyy')}</div>
+                    </div>
+                )}
             </div>
 
             <div className="mode-tabs">
@@ -951,8 +1010,10 @@ export default function PublicMealPage() {
                         <div className="section-label">2️⃣ Chọn ca & ngày</div>
                         {isMultiShift ? (
                             <div className="field-sm">
-                                <label>Ngày <span className="req">*</span></label>
-                                <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} required />
+                                <label>Ngày</label>
+                                <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 15, fontWeight: 700, color: '#374151' }}>
+                                    {now ? `${VN_DAYS[now.getDay()]}, ${format(now, 'dd/MM/yyyy')}` : workDate}
+                                </div>
                             </div>
                         ) : (
                             <div className="row2" style={{ marginBottom: 14 }}>
@@ -967,14 +1028,10 @@ export default function PublicMealPage() {
                                     }} arr={shifts} />
                                 </div>
                                 <div className="field-sm">
-                                    <label>Ngày <span className="req">*</span></label>
-                                    <input type="date" value={workDate} onChange={e => {
-                                        setWorkDate(e.target.value)
-                                        if (deptId && shift && e.target.value) {
-                                            setExistingRecord(null); setIsUpdate(false)
-                                            fetchExistingRecord(deptId, shift, e.target.value, hpeelSub)
-                                        }
-                                    }} min={format(new Date(), "yyyy-MM-dd")} max={format(new Date(), "yyyy-MM-dd")} required />
+                                    <label>Ngày</label>
+                                    <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 15, fontWeight: 700, color: '#374151' }}>
+                                        {now ? `${VN_DAYS[now.getDay()]}, ${format(now, 'dd/MM/yyyy')}` : workDate}
+                                    </div>
                                 </div>
                             </div>
                         )}
