@@ -1221,7 +1221,7 @@ export default function DashboardPage() {
                     {/* View Switching Logic */}
                     {!(isTotal || isFgwh) && deptViewModes[id] === 'details' ? (
                         <div className="flex-1 w-full mt-auto bg-slate-50/80 rounded-md border border-slate-100 p-2 grid grid-cols-2 gap-2 content-center items-center">
-                            {["PEEL_MC", "SHELL"].includes(deptCode) && (
+                            {["PEEL", "SHELL"].includes(deptCode) && (
                                 <div>
                                     <p className="text-[9px] text-muted-foreground mb-0.5">{language === 'vi' ? 'Tỷ lệ Bể (%)' : 'Broken (%)'}</p>
                                     <div className="font-bold text-red-600 text-[11px]">{summary.brokenPct.toFixed(1)}%</div>
@@ -1239,13 +1239,13 @@ export default function DashboardPage() {
                                     </div>
                                 </>
                             )}
-                            {["PEEL_MC"].includes(deptCode) && (
+                            {["PEEL"].includes(deptCode) && (
                                 <div>
                                     <p className="text-[9px] text-muted-foreground mb-0.5">{language === 'vi' ? 'Sót lụa (%)' : 'Unpeeled (%)'}</p>
                                     <div className="font-bold text-orange-600 text-[11px]">{summary.unpeelPct.toFixed(1)}%</div>
                                 </div>
                             )}
-                            {["HAND"].includes(deptCode) && (
+                            {["HPEEL"].includes(deptCode) && (
                                 <div>
                                     <p className="text-[9px] text-muted-foreground mb-0.5">Tỷ lệ ISP (%)</p>
                                     <div className="font-bold text-blue-600 text-[11px]">{summary.ispPct.toFixed(1)}%</div>
@@ -1257,7 +1257,7 @@ export default function DashboardPage() {
                                     <div className="font-bold text-amber-700 text-[11px]">{summary.swPct.toFixed(1)}%</div>
                                 </div>
                             )}
-                            {['CS', 'HAND'].includes(deptCode) && (
+                            {['CS', 'HPEEL'].includes(deptCode) && (
                                 <div className="col-span-2 p-1 bg-blue-50/50 border border-blue-100 rounded flex justify-between items-center">
                                     <span className="text-blue-800 font-bold text-[9px]">ISP (Thực tế/KH):</span>
                                     <span className="font-black text-blue-600 text-[11px]">{summary.totalActualIspCS?.toFixed(1) || 0} / {summary.totalPlanIsp?.toFixed(1) || 100} T ({summary.totalPlanIsp > 0 ? ((summary.totalActualIspCS || 0) / summary.totalPlanIsp * 100).toFixed(1) : 0}%)</span>
@@ -1334,7 +1334,7 @@ export default function DashboardPage() {
                                 )
                             })()}
                         </div>
-                    ) : ['CS', 'HAND'].includes(deptCode) && deptViewModes[id] === 'isp' ? (
+                    ) : ['CS', 'HPEEL'].includes(deptCode) && deptViewModes[id] === 'isp' ? (
                         <ChartWrapper className={`w-full rounded-xl border-t h-[160px] md:h-[200px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 8, right: 6, left: 0, bottom: 5 }}>
@@ -1357,7 +1357,7 @@ export default function DashboardPage() {
                                     />
                                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(0)} width={28} />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139, 92, 246, 0.08)' }} />
-                                    {deptCode === 'HAND' ? (
+                                    {deptCode === 'HPEEL' ? (
                                         <>
                                             <Line
                                                 type="monotone"
@@ -1784,9 +1784,9 @@ export default function DashboardPage() {
                                 woodKg: kpiSummary.woodActual,
                                 // RCN = Steam department input (total RCN steamed this month)
                                 rcnTons: dashboardsData['all']?.summary?.totalActual || 0,
-                                // Peeling tons = PEEL_MC actual
+                                // Peeling tons = PEEL actual
                                 peelingTons: (() => {
-                                    const peelId = departments.find(d => d.code === 'PEEL_MC')?.id
+                                    const peelId = departments.find(d => d.code === 'PEEL')?.id
                                     return peelId ? (dashboardsData[peelId]?.summary?.totalActual || 0) : 0
                                 })(),
                                 // Shelling tons = SHELL actual
