@@ -1783,7 +1783,7 @@ export default function DashboardPage() {
                                 shellingKwh: otherElecSummary.shellingKwh,
                                 woodKg: kpiSummary.woodActual,
                                 // RCN = Steam department input (total RCN steamed this month)
-                                rcnTons: dashboardsData['all']?.summary?.totalActual || 0,
+                                rcnTons: dashboardsData['region-RCN']?.summary?.totalActual || 0,
                                 // Peeling tons = PEEL actual
                                 peelingTons: (() => {
                                     const peelId = departments.find(d => d.code === 'PEEL')?.id
