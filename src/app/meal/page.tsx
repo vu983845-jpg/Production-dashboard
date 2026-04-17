@@ -592,12 +592,13 @@ export default function PublicMealPage() {
             "2": new Set(byShift["2"].map(r => r.department_name)),
             "3": new Set(byShift["3"].map(r => r.department_name)),
         }
-        // We expect all non-office, non-maintenance, non-boiler departments to report
-        const expectedDepts = depts.filter(d => !["OFFICE", "MAINT_HCA", "MAINT_SHELL", "BOILER"].includes(d.code))
+        // We expect all non-maintenance, non-boiler departments to report; OFFICE only Ca 1
+        const expectedDepts = depts.filter(d => !["MAINT_HCA", "MAINT_SHELL", "BOILER"].includes(d.code))
         const getMissing = (shift: string) => {
-            const expected = shift === "3"
+            const expected = (shift === "3"
                 ? expectedDepts.filter(d => d.code !== "CLEAN")
                 : expectedDepts
+            ).filter(d => !(d.code === "OFFICE" && shift !== "1"))
             return expected.filter(d => {
                 const reportedSet = reportedDeptsByShift[shift] ?? new Set()
                 // Direct match by name
