@@ -254,17 +254,83 @@ const ShiftFields = ({ data, update, shiftLabel, shiftVal, workDateStr, hideSeas
 }
 
 const FullScreenLoader = ({ text }: { text: string }) => (
-    <div className="full-screen-loader">
-        <div className="loader-card">
-            <div className="loader-logo-spin">
-                <IntersnackLogo className="w-12 h-12" />
+    <div className="pro-loader-wrapper">
+        <style>{`
+            .pro-loader-wrapper {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: #fafafa;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                z-index: 99999;
+                font-family: var(--font-sans), sans-serif;
+            }
+            .pro-spin-container {
+                position: relative;
+                width: 90px; height: 90px;
+                display: flex; align-items: center; justify-content: center;
+                margin-bottom: 24px;
+            }
+            .pro-pulse-ring {
+                position: absolute; width: 100%; height: 100%;
+                border-radius: 28px;
+                background: linear-gradient(135deg, #e30613 0%, #f97316 100%);
+                opacity: 0.15;
+                animation: pulseGlowPro 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            .pro-pulse-ring-2 {
+                position: absolute; width: 100%; height: 100%;
+                border-radius: 28px;
+                border: 2px solid transparent;
+                background: linear-gradient(135deg, #e30613, #f97316) border-box;
+                -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+                -webkit-mask-composite: destination-out;
+                mask-composite: exclude;
+                animation: spinSoft 3s linear infinite;
+            }
+            .pro-logo-box {
+                position: relative; z-index: 2;
+                width: 64px; height: 64px;
+                background: white;
+                border-radius: 18px;
+                box-shadow: 0 8px 24px rgba(227, 6, 19, 0.12);
+                display: flex; align-items: center; justify-content: center;
+                animation: floatLogo 4s ease-in-out infinite;
+            }
+            .pro-text {
+                font-size: 15px; font-weight: 600;
+                color: #64748b;
+                letter-spacing: 0.5px;
+                animation: fadeInOutText 2s ease-in-out infinite;
+            }
+            .pro-progress-bar {
+                position: absolute; bottom: 0; left: 0; width: 100%; height: 4px;
+                background: #f1f5f9;
+            }
+            .pro-progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #e30613, #f97316);
+                width: 30%;
+                border-radius: 0 4px 4px 0;
+                animation: loadingSlide 2s ease-in-out infinite alternate;
+            }
+            @keyframes pulseGlowPro { 0%, 100% { transform: scale(1); opacity: 0.15; } 50% { transform: scale(1.3); opacity: 0; } }
+            @keyframes spinSoft { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+            @keyframes fadeInOutText { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+            @keyframes loadingSlide { 0% { width: 10%; transform: translateX(-10%); } 100% { width: 60%; transform: translateX(180%); } }
+        `}</style>
+
+        <div className="pro-spin-container">
+            <div className="pro-pulse-ring" />
+            <div className="pro-pulse-ring-2" />
+            <div className="pro-logo-box">
+                <IntersnackLogo className="w-10 h-10" />
             </div>
-            <div className="loader-text">{text}</div>
-            <div className="loader-dots">
-                <div className="ldot" />
-                <div className="ldot" style={{ animationDelay: '0.2s' }} />
-                <div className="ldot" style={{ animationDelay: '0.4s' }} />
-            </div>
+        </div>
+
+        <div className="pro-text">{text}</div>
+
+        <div className="pro-progress-bar">
+            <div className="pro-progress-fill" />
         </div>
     </div>
 )
