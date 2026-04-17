@@ -484,10 +484,10 @@ export default function DashboardPage() {
                 }
 
                 // Determine regions mapping
-                // Map RCN: RCN
-                // Map LCA: STEAM, SHELL, BORMA
-                // Map HCA: PEEL_MC, CS, HAND, PACK
-                const mappingLCA = ["STEAM", "SHELL", "BORMA"];
+                // Map RCN: STEAM (RCN dept merged into FGWH; STEAM = raw cashew input)
+                // Map LCA: SHELL, BORMA
+                // Map HCA: PEEL, CS, HPEEL, PACK
+                const mappingLCA = ["SHELL", "BORMA"];
                 const mappingHCA = ["PEEL", "CS", "HPEEL", "PACK"];
 
                 const grouped = dData.reduce((acc: any, curr: any) => {
@@ -497,7 +497,7 @@ export default function DashboardPage() {
 
                     // Group by Regions
                     let regionCode = "OTHER";
-                    if (curr.dept_code === "RCN") regionCode = "RCN";
+                    if (curr.dept_code === "STEAM") regionCode = "RCN";
                     else if (mappingLCA.includes(curr.dept_code)) regionCode = "LCA";
                     else if (mappingHCA.includes(curr.dept_code)) regionCode = "HCA";
 
