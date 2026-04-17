@@ -1072,10 +1072,14 @@ export default function PublicMealPage() {
                         <div className="section-label">2️⃣ Chọn ca & ngày</div>
                         {isMultiShift ? (
                             <div className="field-sm">
-                                <label>Ngày</label>
-                                <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 15, fontWeight: 700, color: '#374151' }}>
-                                    {now ? `${VN_DAYS[now.getDay()]}, ${format(now, 'dd/MM/yyyy')}` : workDate}
-                                </div>
+                                <label>Ngày <span className="req">*</span></label>
+                                <input type="date" value={workDate} onChange={e => {
+                                    setWorkDate(e.target.value);
+                                    if (deptId && e.target.value) {
+                                        setExistingRecord(null); setIsUpdate(false);
+                                        // For multi-shift departments, we're not pre-filling existing records yet in this UI.
+                                    }
+                                }} max={format(new Date(), "yyyy-MM-dd")} required />
                             </div>
                         ) : (
                             <div className="row2" style={{ marginBottom: 14 }}>
@@ -1090,10 +1094,15 @@ export default function PublicMealPage() {
                                     }} arr={shifts} />
                                 </div>
                                 <div className="field-sm">
-                                    <label>Ngày</label>
-                                    <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 15, fontWeight: 700, color: '#374151' }}>
-                                        {now ? `${VN_DAYS[now.getDay()]}, ${format(now, 'dd/MM/yyyy')}` : workDate}
-                                    </div>
+                                    <label>Ngày <span className="req">*</span></label>
+                                    <input type="date" value={workDate} onChange={e => {
+                                        const dt = e.target.value;
+                                        setWorkDate(dt);
+                                        if (deptId && shift && dt) {
+                                            setExistingRecord(null); setIsUpdate(false)
+                                            fetchExistingRecord(deptId, shift, dt, hpeelSub)
+                                        }
+                                    }} max={format(new Date(), "yyyy-MM-dd")} required />
                                 </div>
                             </div>
                         )}
