@@ -219,24 +219,43 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
     return (
         <div className="space-y-4">
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm">
-                <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                        <ClipboardList className="w-4 h-4 text-primary" />
-                        Dán Nhanh Tồn Kho Cối Ngày TỪ EXCEL (Kg)
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
+                <div className="absolute -top-10 -right-10 opacity-[0.03] pointer-events-none transform rotate-12">
+                    <ClipboardList className="w-56 h-56" />
+                </div>
+
+                <div className="flex flex-col gap-3 relative z-10">
+                    <label className="text-base font-black text-slate-800 flex items-center gap-2">
+                        <ClipboardList className="w-5 h-5 text-primary" />
+                        CẬP NHẬT TỒN KHO TỪ EXCEL (TỰ ĐỘNG)
                     </label>
-                    <p className="text-[11px] text-slate-500 mb-1 leading-tight">Copy dòng chứa số kg từ báo cáo Excel và dán vào đây (13 cột theo thứ tự chuẩn). Hệ thống tự đổi qua Tấn và so sánh với tồn đầu để ra lượt nhập/xuất tự động.</p>
-                    <div className="flex items-stretch gap-2">
+
+                    <div className="bg-white border border-amber-200/60 bg-amber-50/40 rounded-lg p-3.5 text-sm text-slate-700 shadow-sm">
+                        <div className="font-bold text-amber-800 mb-2.5 flex items-center gap-1.5">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200/80 text-amber-800 text-[10px]">💡</span>
+                            Hướng dẫn nhập nhanh bằng Excel:
+                        </div>
+                        <ol className="list-decimal list-inside space-y-2 text-xs md:text-sm text-slate-600 font-medium">
+                            <li>Mở file báo cáo tồn kho RCN hàng ngày trên Excel.</li>
+                            <li>Bôi đen và Copy (<kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 font-sans text-xs">Ctrl + C</kbd>) <b>DUY NHẤT 1 DÒNG CHỨA SỐ KHỐI LƯỢNG (Kg)</b> (gồm 13 cột từ <i>Total Stock</i> đến <i>E 16</i>).</li>
+                            <li>Dán (<kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 font-sans text-xs">Ctrl + V</kbd>) vào ô trống bên dưới và bấm <strong className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">Dịch & Khớp Số</strong>.</li>
+                        </ol>
+                        <div className="mt-3 text-[11px] text-slate-500 italic bg-white px-2.5 py-2 rounded-md border border-slate-100 border-l-[3px] border-l-amber-400">
+                            Hệ thống sẽ tự động loại bỏ ký tự chữ, đổi từ <b>Kg ➔ Tấn</b>, và so sánh với tồn đầu để tự động tính Khối Lượng Nhập/Xuất mà bạn không cần phải tự tính tay.
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch gap-2.5 mt-1">
                         <input
-                            title="Paste copied excel row here"
-                            className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 outline-none placeholder:text-slate-400 font-mono"
-                            placeholder="Ví dụ: 207,297.00   44,208.00   18,013.00   -   ..."
+                            title="Dán dòng số liệu Excel vào đây"
+                            className="flex-1 bg-white border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 outline-none placeholder:text-slate-400 font-mono shadow-inner"
+                            placeholder="Dán dữ liệu (ví dụ: 207,297.00   44,208.00   18,013.00   -  ...)"
                             value={pasteData}
                             onChange={e => setPasteData(e.target.value)}
                         />
                         <button
                             onClick={handlePaste}
-                            className="bg-primary hover:bg-emerald-600 text-white px-5 rounded-lg font-bold text-sm transition-colors shadow-sm whitespace-nowrap inline-flex items-center gap-1.5"
+                            className="bg-primary hover:bg-emerald-600 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md whitespace-nowrap inline-flex items-center justify-center gap-1.5"
                         >
                             Dịch & Khớp Số
                         </button>
