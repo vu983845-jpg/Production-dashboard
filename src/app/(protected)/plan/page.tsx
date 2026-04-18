@@ -68,7 +68,7 @@ export default function AdminPlanPage() {
             // Load Departments
             const { data } = await supabase.from("departments").select("id, name_en, code").order("sort_order")
             if (data) {
-                if (currentRole === 'admin') {
+                if (['admin', 'HSE', 'hse', 'hse_admin', 'maint'].includes(currentRole)) {
                     data.push({ id: "energy", name_en: "Điện & Nước (Energy)", code: "ENERGY" })
                     setDepartments(data)
                 } else if (currentAllowedDeptIds && currentAllowedDeptIds.length > 0) {

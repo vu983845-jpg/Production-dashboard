@@ -1360,7 +1360,7 @@ export default function DashboardPage() {
                             })()}
                         </div>
                     ) : ['CS', 'HPEEL'].includes(deptCode) && deptViewModes[id] === 'isp' ? (
-                        <ChartWrapper className={`w-full rounded-xl border-t h-[160px] md:h-[200px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                        <ChartWrapper className={`w-full rounded-xl border-t mt-auto h-[160px] md:h-[200px] bg-gradient-to-b from-slate-50/20 to-transparent`}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 8, right: 6, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -1427,7 +1427,7 @@ export default function DashboardPage() {
                             </ResponsiveContainer>
                         </ChartWrapper>
                     ) : (
-                        <ChartWrapper className={`w-full rounded-xl border-t ${deptCode === 'STEAM' ? 'flex-1 min-h-[220px]' : 'h-[140px] md:h-[160px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
+                        <ChartWrapper className={`w-full rounded-xl border-t mt-auto ${deptCode === 'STEAM' ? 'flex-1 min-h-[220px]' : 'h-[140px] md:h-[160px]'} bg-gradient-to-b from-slate-50/20 to-transparent`}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={displayHistory} margin={{ top: 10, right: 8, left: 0, bottom: 5 }}>
                                     <defs>
