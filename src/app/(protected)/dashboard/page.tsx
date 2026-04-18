@@ -1108,7 +1108,7 @@ export default function DashboardPage() {
         }
 
         // ── RCN Warehouse: show stock-by-size bar chart ──────────────────────────
-        if (id === 'region-RCN') {
+        if (deptCode === 'RCN') {
             return (
                 <Card key={id} className="bg-white/85 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-xl transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full border-l-[4px] border-l-primary">
                     {/* Subtle gradient glow */}
