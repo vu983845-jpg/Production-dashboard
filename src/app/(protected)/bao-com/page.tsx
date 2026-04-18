@@ -693,7 +693,7 @@ function parseZaloText(rawText: string): HeadcountRecord[] {
 // CSV Export
 // ─────────────────────────────────────────────
 function exportCSV(records: HeadcountRecord[]) {
-    const headers = ["Ngày", "Khu vực", "Ca", "CT Hiện diện", "CT Vắng", "TV Hiện diện", "TV Vắng", "OT", "Chay"]
+    const headers = ["Ngày", "Khu vực", "Ca", "Chính thức Hiện diện", "Chính thức Vắng", "Thời vụ Hiện diện", "Thời vụ Vắng", "Tăng ca", "Chay"]
     const rows = records.map((r) => [
         r.date, r.area, r.shift,
         r.officialPresent ?? "", r.officialAbsent ?? "",
@@ -714,7 +714,7 @@ function exportCSV(records: HeadcountRecord[]) {
 }
 
 function exportHistoryCSV(records: SavedRecord[]) {
-    const headers = ["Ngày", "Bộ phận", "Ca", "CT Hiện diện", "CT Vắng", "TV Hiện diện", "TV Vắng", "OT", "Chay", "Ghi chú"]
+    const headers = ["Ngày", "Bộ phận", "Ca", "Chính thức Hiện diện", "Chính thức Vắng", "Thời vụ Hiện diện", "Thời vụ Vắng", "Tăng ca", "Chay", "Ghi chú"]
     const rows = records.map((r) => [
         r.work_date, r.department_name, `Ca ${r.shift}`,
         r.official_present, r.official_absent,
@@ -2239,12 +2239,12 @@ export default function BaoCom() {
                                                 <thead>
                                                     <tr className="bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide text-left">
                                                         <th className="px-3 py-2 font-semibold">Bộ phận</th>
-                                                        <th className="px-3 py-2 font-semibold text-right">CT HĐ</th>
-                                                        <th className="px-3 py-2 font-semibold text-right">TV HĐ</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">Chính thức</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">Thời vụ</th>
                                                         <th className="px-3 py-2 font-semibold text-right">Tổng</th>
                                                         <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
-                                                        <th className="px-3 py-2 font-semibold text-right">OT</th>
-                                                        <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥬 Chay OT</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">Tăng ca</th>
+                                                        <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥬 Chay tăng ca</th>
                                                         <th className="px-3 py-2"></th>
                                                     </tr>
                                                 </thead>
@@ -2624,7 +2624,7 @@ export default function BaoCom() {
                                                                     <tr className={`group border-b border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
                                                                         <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-orange-100 font-semibold text-xs ${isOTEditing ? 'bg-yellow-50 text-orange-700' : 'bg-orange-50 text-orange-700 italic'}`}>
                                                                             <div className="flex items-center gap-1">
-                                                                                <span className="whitespace-nowrap">{dept.name} (OT)</span>
+                                                                                <span className="whitespace-nowrap">{dept.name} (Tăng ca)</span>
                                                                                 {canEdit && (
                                                                                     isOTEditing ? (
                                                                                         <div className="flex gap-1 ml-1 shrink-0">
@@ -2681,7 +2681,7 @@ export default function BaoCom() {
                                                                             </div>
                                                                         </td>
                                                                         <td className={`px-1 py-1 sticky left-[160px] z-10 text-center border-r border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
-                                                                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">OT</span>
+                                                                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">Tăng ca</span>
                                                                         </td>
                                                                         {days.map(d => {
                                                                             const origV = deptOT?.days.get(d) ?? 0
@@ -2743,7 +2743,7 @@ export default function BaoCom() {
                                                     <td className="px-2 py-1.5 text-center font-bold border-l border-blue-200">{ca3Totals.reduce((a, b) => a + b, 0)}</td>
                                                 </tr>
                                                 <tr className="bg-orange-500 text-white text-[11px]">
-                                                    <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">OT</td>
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">Tăng ca</td>
                                                     <td className="px-2 py-1.5 sticky left-[160px] bg-orange-500 z-10 border-r border-orange-300"></td>
                                                     {otDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                     <td className="px-2 py-1.5 text-center font-bold border-l border-orange-300">{otDayTotals.reduce((a, b) => a + b, 0)}</td>
@@ -2957,10 +2957,10 @@ export default function BaoCom() {
                                                             <thead>
                                                                 <tr className="bg-orange-100 text-orange-700 text-left">
                                                                     <th className="px-2 py-1.5 font-semibold">Bộ phận</th>
-                                                                    <th className="px-2 py-1.5 font-semibold text-right">CT HĐ</th>
-                                                                    <th className="px-2 py-1.5 font-semibold text-right">TV HĐ</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">Chính thức</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">Thời vụ</th>
                                                                     <th className="px-2 py-1.5 font-semibold text-right">Chay</th>
-                                                                    <th className="px-2 py-1.5 font-semibold text-right">OT</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">Tăng ca</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y">
@@ -3048,9 +3048,6 @@ export default function BaoCom() {
                                                     Kết quả — {uniqueDates.join(", ")} &nbsp;|&nbsp; {records.length} khu vực
                                                 </span>
                                             </div>
-                                            <span className="text-xs text-muted-foreground">
-                                                CT = Chính thức &nbsp;·&nbsp; TV = Thời vụ
-                                            </span>
                                         </div>
 
                                         <div className="overflow-x-auto">
@@ -3061,11 +3058,11 @@ export default function BaoCom() {
                                                         <th className="px-3 py-2.5 font-semibold">Ngày</th>
                                                         <th className="px-3 py-2.5 font-semibold">Khu vực</th>
                                                         <th className="px-3 py-2.5 font-semibold">Ca</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">CT HĐ</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">CT Vắng</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">TV HĐ</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">TV Vắng</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">OT</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">Chính thức</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">Chính thức vắng</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">Thời vụ</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">Thời vụ vắng</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">Tăng ca</th>
                                                         <th className="px-3 py-2.5 font-semibold text-right">🥦 Chay</th>
                                                         <th className="px-3 py-2.5 font-semibold">DB Link</th>
                                                         <th className="px-3 py-2.5 font-semibold text-center">Nguồn</th>
@@ -3395,7 +3392,7 @@ export default function BaoCom() {
                                                 Lịch sử — {pivotDays.length} ngày · {pivotRows.length} bộ phận/ca
                                             </span>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">Số liệu: CT + TV hiện diện</span>
+                                        <span className="text-xs text-muted-foreground">Số liệu: Chính thức + Thời vụ hiện diện</span>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="text-xs min-w-full">
