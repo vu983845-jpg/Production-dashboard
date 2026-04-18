@@ -1757,31 +1757,39 @@ export default function DashboardPage() {
 
                     <TabsContent value="stations" className="mt-0 pt-2">
                         <FadeInStagger faster>
+                            {/* TOP 2 WIDGETS: RCN Warehouse & Container */}
                             <div className="mb-3 md:mb-4 grid gap-3 md:gap-4 grid-cols-1 lg:grid-cols-2">
-                                {/* Steaming Card - primary card */}
-                                {(() => {
-                                    const steamDept = departments.find(d => d.code === 'STEAM');
-                                    return steamDept ? (
-                                        <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard(steamDept.id, language === 'vi' ? 'Hấp / Steaming' : 'Steaming')}</FadeIn>
-                                    ) : null;
-                                })()}
-
-                                {/* Virtual Container Card */}
-                                <FadeIn className="lg:col-span-1 h-full">{renderMiniDashboard("virtual-container", "Container")}</FadeIn>
+                                <FadeIn className="lg:col-span-1 h-full">
+                                    {renderMiniDashboard(
+                                        departments.find(d => d.code === 'RCN')?.id || 'region-RCN',
+                                        t('region_rcn') || 'RCN WAREHOUSE'
+                                    )}
+                                </FadeIn>
+                                <FadeIn className="lg:col-span-1 h-full">
+                                    {renderMiniDashboard("virtual-container", "Container")}
+                                </FadeIn>
                             </div>
 
-                            {/* DEPARTMENT MINI DASHBOARDS — exclude FGWH, STEAM (top), MAINT_SHELL (removed) */}
+                            {/* MID WIDGETS: Chronological workflow order */}
                             <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                {departments.filter(d =>
-                                    !['FGWH', 'STEAM', 'MAINT_SHELL', 'OFFICE', 'QC', 'CLEAN', 'MAINT_HCA', 'BOILER'].includes(d.code)
-                                ).map(d => (
-                                    <FadeIn key={d.id} className="h-full">
-                                        {renderMiniDashboard(d.id, d.name_en)}
-                                    </FadeIn>
-                                ))}
+                                {['STEAM', 'SHELL', 'BORMA', 'PEEL', 'CS', 'HPEEL', 'PACK'].map((code) => {
+                                    const d = departments.find(d => d.code === code);
+                                    if (!d) return null;
 
-                                {/* FGWH Finished Goods Warehouse Card */}
-                                <FadeIn className="h-full sm:col-span-2 lg:col-span-1 xl:col-span-2 2xl:col-span-1">{renderMiniDashboard("fgwh", "FGWH - Finished Goods", true)}</FadeIn>
+                                    // Dynamic name for steaming based on language mapping
+                                    const displayName = code === 'STEAM' && language === 'vi' ? 'Hấp / Steaming' : d.name_en;
+
+                                    return (
+                                        <FadeIn key={d.id} className="h-full">
+                                            {renderMiniDashboard(d.id, displayName)}
+                                        </FadeIn>
+                                    );
+                                })}
+
+                                {/* BOTTOM WIDGET: FGWH Finished Goods */}
+                                <FadeIn className="h-full sm:col-span-2 lg:col-span-1 xl:col-span-2 2xl:col-span-1">
+                                    {renderMiniDashboard("fgwh", "FGWH - Finished Goods", true)}
+                                </FadeIn>
                             </div>
                         </FadeInStagger>
                     </TabsContent>
