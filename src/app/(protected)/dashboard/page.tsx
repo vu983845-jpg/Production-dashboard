@@ -27,6 +27,7 @@ import { FadeIn, FadeInStagger } from "@/components/magicui/fade-in"
 import { AnimatedNumber } from "@/components/magicui/animated-number"
 import { BadgePulse } from "@/components/magicui/badge-pulse"
 import { OverviewTab } from "@/components/dashboard/OverviewTab"
+import { RCNStockChart } from "@/components/RCNStockChart"
 
 const CustomTooltip = memo(({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -1104,6 +1105,63 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             );
+        }
+
+        // ── RCN Warehouse: show stock-by-size bar chart ──────────────────────────
+        if (id === 'region-RCN') {
+            return (
+                <Card key={id} className="bg-white/85 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-xl transition-all duration-300 relative overflow-hidden flex flex-col justify-start h-full border-l-[4px] border-l-primary">
+                    {/* Subtle gradient glow */}
+                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#e63121]/5 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/5 rounded-full blur-3xl pointer-events-none" />
+
+                    <CardHeader className="p-2 md:p-3 bg-gradient-to-b from-slate-50/80 to-transparent border-b border-slate-200/50 flex-shrink-0 relative z-10">
+                        {/* Row 1: title + MTD% */}
+                        <div className="flex justify-between items-center mb-1.5">
+                            <span className="flex items-center gap-1.5 uppercase font-black tracking-tight text-base md:text-lg text-primary">
+                                {name}
+                                <FileSymlink className="h-4 w-4 text-primary" />
+                            </span>
+                            <span className={`font-black flex items-baseline gap-0.5 ${summary.achivementPct >= 100 ? 'text-emerald-600' : summary.achivementPct >= 80 ? 'text-amber-600' : 'text-red-500'
+                                } text-xl md:text-2xl`}>
+                                {summary.achivementPct.toFixed(0)}%
+                                <span className="font-semibold uppercase text-muted-foreground text-[10px] md:text-xs">MTD</span>
+                            </span>
+                        </div>
+                        {/* Row 2: compact stat bar */}
+                        <div className="grid grid-cols-3 gap-0 divide-x divide-slate-200/60 bg-white/60 rounded-lg border border-slate-100/80">
+                            <div className="flex flex-col items-center py-1.5 px-1">
+                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">{t('stat.mtd_plan')}</span>
+                                <div className="flex items-baseline gap-0.5">
+                                    <span className="font-bold text-slate-800 text-sm md:text-base">{actualNum.toFixed(1)}</span>
+                                    <span className="text-slate-400 text-[9px] md:text-[10px]">/{planNum.toFixed(1)}</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center py-1.5 px-1">
+                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">DAILY TARGET</span>
+                                <div className={`font-bold text-sm md:text-base ${isReached ? 'text-emerald-600' : 'text-primary'}`}>
+                                    {isReached ? '✓ Đạt' : `${dailyNeeded} T`}
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center py-1.5 px-1">
+                                <span className="text-[9px] md:text-[10px] uppercase text-slate-400 tracking-tight leading-none mb-0.5">{t('stat.downtime').toUpperCase()}</span>
+                                <div className="font-bold text-amber-600 text-sm md:text-base">
+                                    {(() => {
+                                        const totalMin = summary.downtime || 0
+                                        const h = Math.floor(totalMin / 60)
+                                        const m = totalMin % 60
+                                        return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent className="flex-1 flex flex-col p-1.5 pt-1 min-h-0 relative z-10">
+                        <RCNStockChart />
+                    </CardContent>
+                </Card>
+            )
         }
 
         return (
