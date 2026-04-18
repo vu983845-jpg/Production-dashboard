@@ -1521,7 +1521,7 @@ export default function BaoCom() {
 
             if (manOt > 0 || chayOt > 0) {
                 const timeMatch = r.note?.match(/Giờ ăn OT:\s*([0-9]{2}:[0-9]{2}|[0-9]{1,2}h(?:[0-9]{2})?)/i)
-                const time = timeMatch ? timeMatch[1] : (OT_HOUR[summaryShift] ?? "Không báo giờ")
+                const time = timeMatch ? timeMatch[1] : "Không báo giờ"
                 if (!otGroups.has(time)) otGroups.set(time, { man: 0, chay: 0 })
                 const group = otGroups.get(time)!
                 group.man += manOt

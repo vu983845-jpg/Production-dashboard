@@ -48,7 +48,14 @@ interface ConfirmRow {
     ot_count: number; vegetarian: number; ot_vegetarian: number; reporter_name: string
 }
 
-interface OTRecord { ot_count: number; ot_vegetarian: number; official_present: number; seasonal_present: number; vegetarian: number; official_absent?: number; seasonal_absent?: number; department_name?: string }
+interface OTRecord { ot_count: number; ot_vegetarian: number; official_present: number; seasonal_present: number; vegetarian: number; official_absent?: number; seasonal_absent?: number; department_name?: string; note?: string }
+
+// Extract OT meal time from note field (e.g. "Báo bởi: Tên | Giờ ăn OT: 14:00")
+const extractOtTimeFromNote = (note?: string | null): string | null => {
+    if (!note) return null
+    const m = note.match(/Giờ ăn OT:\s*([0-9]{2}:[0-9]{2})/i)
+    return m ? m[1] : null
+}
 interface SummaryRow { department_name: string; shift: string; official_present: number; seasonal_present: number; official_absent: number; seasonal_absent: number; ot_count: number; vegetarian: number; ot_vegetarian: number; note?: string }
 type PageMode = "report" | "edit-ot" | "summary"
 type OTStep = "select" | "edit" | "confirm" | "done"
@@ -548,7 +555,10 @@ export default function PublicMealPage() {
 
     const buildRow = (data: ShiftData, shiftVal: string): ConfirmRow => {
         const otMalan = calcMalan(data.otTotal, data.otVeg)
-        const timeNote = (n(data.otTotal) > 0 && data.otTime) ? ` | Giờ ăn OT: ${data.otTime}` : ""
+        const timeNote = (n(data.otTotal) > 0 && data.otTime) ? `Giờ ăn OT: ${data.otTime}` : ""
+        const name = reporterName.trim()
+        // Build reporter_name cleanly: "Tên | Giờ ăn OT: HH:MM" or just one of them
+        const parts = [name, timeNote].filter(Boolean)
         return {
             department_id: deptId, department_name: getEffectiveDeptName(),
             work_date: workDate, shift: shiftVal,
@@ -557,7 +567,7 @@ export default function PublicMealPage() {
             ot_count: otMalan,
             vegetarian: n(data.vegCount),
             ot_vegetarian: n(data.otVeg),
-            reporter_name: (reporterName.trim() + timeNote).trim(),
+            reporter_name: parts.join(" | "),
         }
     }
 
@@ -575,6 +585,8 @@ export default function PublicMealPage() {
                 setIsUpdate(true)
                 // Pre-fill form with existing data
                 const rec = data.record
+                // Restore OT time from saved note, fallback to shift default
+                const savedOtTime = extractOtTimeFromNote(rec.note) ?? OT_DEFAULT_TIME[sh] ?? ""
                 setSingleData({
                     officialPresent: String(rec.official_present ?? 0),
                     seasonalPresent: String(rec.seasonal_present ?? 0),
@@ -583,7 +595,7 @@ export default function PublicMealPage() {
                     vegCount: String(rec.vegetarian ?? 0),
                     otTotal: String((rec.ot_count ?? 0) + (rec.ot_vegetarian ?? 0)),
                     otVeg: String(rec.ot_vegetarian ?? 0),
-                    otTime: OT_DEFAULT_TIME[sh] ?? "",
+                    otTime: savedOtTime,
                     showOT: ((rec.ot_count ?? 0) + (rec.ot_vegetarian ?? 0)) > 0,
                 })
             } else {
@@ -653,7 +665,9 @@ export default function PublicMealPage() {
         const oldTotal = (rec.ot_count ?? 0) + (rec.ot_vegetarian ?? 0)
         setOtNewTotal(String(oldTotal))
         setOtNewVeg(String(rec.ot_vegetarian ?? 0))
-        setOtNewTime(OT_DEFAULT_TIME[otShift] ?? "")
+        // Restore saved OT time from note, fallback to shift default
+        const savedTime = extractOtTimeFromNote(rec.note) ?? OT_DEFAULT_TIME[otShift] ?? ""
+        setOtNewTime(savedTime)
         setOtStep("edit")  // department_name stored in rec.department_name for exact upsert matching
     }
 
@@ -663,6 +677,7 @@ export default function PublicMealPage() {
         // Fallback to UI-generated name only if no existing record was found.
         const deptName = otRecord?.department_name ?? getEffectiveDeptName(otDeptId, otHpeelSub)
         const otMalan = calcMalan(otNewTotal, otNewVeg)
+        // Build reporter_name with OT time only (no pipe prefix)
         const timeNote = otNewTime ? `Giờ ăn OT: ${otNewTime}` : ""
         const payload = {
             department_id: otDeptId, department_name: deptName,
@@ -716,12 +731,12 @@ export default function PublicMealPage() {
             "3": new Set(byShift["3"].map(r => r.department_name)),
         }
         // We expect all non-maintenance, non-boiler departments to report; OFFICE only Ca 1
-        const expectedDepts = depts.filter(d => !["MAINT_HCA", "MAINT_SHELL", "BOILER"].includes(d.code))
+        const expectedDepts = depts.filter(d => !["BOILER", "RCN"].includes(d.code))
         const getMissing = (shift: string) => {
             const expected = (shift === "3"
                 ? expectedDepts.filter(d => d.code !== "CLEAN")
                 : expectedDepts
-            ).filter(d => !(d.code === "OFFICE" && shift !== "1"))
+            ).filter(d => !(["OFFICE", "MAINT_HCA", "MAINT_SHELL"].includes(d.code) && shift !== "1"))
             return expected.filter(d => {
                 const reportedSet = reportedDeptsByShift[shift] ?? new Set()
                 // Direct match by name (case-insensitive)

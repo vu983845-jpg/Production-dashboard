@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
     if (deptId && workDate && shift && deptName) {
         const { data, error } = await supabaseAdmin
             .from("meal_headcount")
-            .select("ot_count, ot_vegetarian, official_present, seasonal_present, vegetarian, official_absent, seasonal_absent, department_name")
+            .select("ot_count, ot_vegetarian, official_present, seasonal_present, vegetarian, official_absent, seasonal_absent, department_name, note")
             .eq("department_id", deptId)
             .eq("work_date", workDate)
             .eq("shift", shift)
