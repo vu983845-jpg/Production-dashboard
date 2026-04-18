@@ -4,8 +4,13 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
+import { ClipboardList } from "lucide-react"
 
-const RCN_SIZES = ['A+', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2'] as const
+export const RCN_SIZES = [
+    'A++ (28>)', 'A+ (26~28)', 'A1 (25~26)', 'A2 (24~25)',
+    'B1 (23~24)', 'B2 (22~23)', 'C1 (21~22)', 'C2 (20~21)',
+    'D1 (19~20)', 'D2 (18~19)', 'E (17~18)', 'E (16)'
+] as const
 type RcnSize = typeof RCN_SIZES[number]
 
 interface RcnRow {
@@ -34,28 +39,28 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
         Object.fromEntries(RCN_SIZES.map(s => [s, emptyRow()])) as Record<RcnSize, RcnRow>
     )
     const [loading, setLoading] = useState(false)
-    const [prevDateRows, setPrevDateRows] = useState<Record<RcnSize, number>>({} as any)
+    const [pasteData, setPasteData] = useState("")
 
-    // Load existing data for selected date + yesterday's closing as opening
     useEffect(() => {
         const load = async () => {
             setLoading(true)
 
-            // Get yesterday's closing to use as today's opening
             const yesterday = new Date(date)
             yesterday.setDate(yesterday.getDate() - 1)
             const yStr = format(yesterday, 'yyyy-MM-dd')
 
+            // Fetch yesterday's closing stock 
             const { data: prevData } = await supabase
-                .from('v_rcn_inventory')
-                .select('size_code, closing_ton')
+                .from('rcn_inventory')
+                .select('size_code, opening_ton, ton_received, ton_dispatched')
                 .eq('work_date', yStr)
 
             const prevClosing: Record<string, number> = {}
-            prevData?.forEach((r: any) => { prevClosing[r.size_code] = Number(r.closing_ton || 0) })
-            setPrevDateRows(prevClosing as any)
+            prevData?.forEach((r: any) => {
+                const closing = Number(r.opening_ton) + Number(r.ton_received) - Number(r.ton_dispatched);
+                prevClosing[r.size_code] = closing;
+            })
 
-            // Get today's existing data
             const { data: todayData } = await supabase
                 .from('rcn_inventory')
                 .select('*')
@@ -67,7 +72,7 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
 
             if (todayData && todayData.length > 0) {
                 todayData.forEach((r: any) => {
-                    if (RCN_SIZES.includes(r.size_code)) {
+                    if (RCN_SIZES.includes(r.size_code as RcnSize)) {
                         const opening = Number(r.opening_ton || 0)
                         const received = Number(r.ton_received || 0)
                         const dispatched = Number(r.ton_dispatched || 0)
@@ -81,7 +86,6 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                     }
                 })
             } else {
-                // Pre-fill opening from yesterday closing
                 RCN_SIZES.forEach(s => {
                     newRows[s].opening_ton = prevClosing[s] || 0
                     newRows[s].closing_ton = prevClosing[s] || 0
@@ -94,11 +98,79 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
         load()
     }, [formattedDate])
 
+    const handlePaste = () => {
+        if (!pasteData.trim()) return;
+
+        const lines = pasteData.split('\n').filter(l => l.trim().length > 0);
+        let dataRow = lines.find(l => /^[\d,.\s\-]+$/.test(l.replace(/\t/g, ' ')));
+        if (!dataRow && lines.length > 0) dataRow = lines[0];
+
+        if (dataRow) {
+            const parts = dataRow.split('\t').map(s => {
+                const clean = s.replace(/,/g, '').trim();
+                if (clean === '-' || clean === '') return 0;
+                return parseFloat(clean) || 0;
+            });
+
+            if (parts.length >= 13) {
+                const updates: Record<string, number> = {};
+                const excelMap: Record<number, string> = {
+                    1: 'A+ (26~28)', 2: 'A1 (25~26)', 3: 'A2 (24~25)',
+                    4: 'B1 (23~24)', 5: 'B2 (22~23)', 6: 'C1 (21~22)',
+                    7: 'C2 (20~21)', 8: 'D1 (19~20)', 9: 'D2 (18~19)',
+                    10: 'E (17~18)', 11: 'A++ (28>)', 12: 'E (16)'
+                };
+
+                Object.keys(excelMap).forEach(k => {
+                    const idx = Number(k)
+                    const sizeName = excelMap[idx];
+                    const closingKg = parts[idx];
+                    const closingTon = Number((closingKg / 1000).toFixed(3));
+                    updates[sizeName] = closingTon;
+                });
+
+                setRows(prev => {
+                    const next = { ...prev };
+                    Object.keys(updates).forEach(size => {
+                        const s = size as RcnSize;
+                        if (next[s]) {
+                            const opening = next[s].opening_ton;
+                            const targetClosing = updates[size];
+
+                            let received = 0;
+                            let dispatched = 0;
+                            if (targetClosing >= opening) {
+                                received = targetClosing - opening;
+                            } else {
+                                dispatched = opening - targetClosing;
+                            }
+
+                            next[s] = {
+                                ...next[s],
+                                ton_received: Number(received.toFixed(3)),
+                                ton_dispatched: Number(dispatched.toFixed(3)),
+                                closing_ton: targetClosing,
+                                note: "Data from Excel"
+                            };
+                        }
+                    });
+                    return next;
+                });
+                toast.success("✅ Đã trích xuất số liệu tồn cuối thành công!");
+                setPasteData("");
+            } else {
+                toast.error(`Dữ liệu không đủ 13 cột! (Tìm thấy ${parts.length} cột)`);
+            }
+        } else {
+            toast.error("Không tìm thấy dữ liệu số hợp lệ!");
+        }
+    }
+
     const updateRow = (size: RcnSize, field: keyof RcnRow, value: number | string) => {
         setRows(prev => {
             const updated = { ...prev[size], [field]: value }
             if (field !== 'note') {
-                updated.closing_ton = updated.opening_ton + updated.ton_received - updated.ton_dispatched
+                updated.closing_ton = Number((updated.opening_ton + updated.ton_received - updated.ton_dispatched).toFixed(3))
             }
             return { ...prev, [size]: updated }
         })
@@ -136,18 +208,6 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
         }
     }
 
-    const sizeColors: Record<RcnSize, string> = {
-        'A+': 'bg-yellow-50 border-yellow-300 text-yellow-800',
-        'A1': 'bg-amber-50 border-amber-300 text-amber-800',
-        'A2': 'bg-orange-50 border-orange-300 text-orange-800',
-        'B1': 'bg-blue-50 border-blue-300 text-blue-800',
-        'B2': 'bg-indigo-50 border-indigo-300 text-indigo-800',
-        'C1': 'bg-green-50 border-green-300 text-green-800',
-        'C2': 'bg-teal-50 border-teal-300 text-teal-800',
-        'D1': 'bg-purple-50 border-purple-300 text-purple-800',
-        'D2': 'bg-pink-50 border-pink-300 text-pink-800',
-    }
-
     if (loading) {
         return (
             <div className="flex items-center justify-center p-16 text-muted-foreground">
@@ -158,7 +218,32 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
 
     return (
         <div className="space-y-4">
-            {/* Header summary */}
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <ClipboardList className="w-4 h-4 text-primary" />
+                        Dán Nhanh Tồn Kho Cối Ngày TỪ EXCEL (Kg)
+                    </label>
+                    <p className="text-[11px] text-slate-500 mb-1 leading-tight">Copy dòng chứa số kg từ báo cáo Excel và dán vào đây (13 cột theo thứ tự chuẩn). Hệ thống tự đổi qua Tấn và so sánh với tồn đầu để ra lượt nhập/xuất tự động.</p>
+                    <div className="flex items-stretch gap-2">
+                        <input
+                            title="Paste copied excel row here"
+                            className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 outline-none placeholder:text-slate-400 font-mono"
+                            placeholder="Ví dụ: 207,297.00   44,208.00   18,013.00   -   ..."
+                            value={pasteData}
+                            onChange={e => setPasteData(e.target.value)}
+                        />
+                        <button
+                            onClick={handlePaste}
+                            className="bg-primary hover:bg-emerald-600 text-white px-5 rounded-lg font-bold text-sm transition-colors shadow-sm whitespace-nowrap inline-flex items-center gap-1.5"
+                        >
+                            Dịch & Khớp Số
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-4 gap-3">
                 {[
                     { label: 'Tồn Đầu', value: totalOpening, color: 'text-slate-600', bg: 'bg-slate-50' },
@@ -166,119 +251,77 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                     { label: 'Tổng Xuất', value: totalDispatched, color: 'text-orange-600', bg: 'bg-orange-50' },
                     { label: 'Tồn Cuối', value: totalClosing, color: 'text-blue-700 font-bold', bg: 'bg-blue-50' },
                 ].map(item => (
-                    <div key={item.label} className={`rounded-xl border p-3 text-center ${item.bg}`}>
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{item.label}</div>
-                        <div className={`text-lg font-bold ${item.color}`}>{item.value.toFixed(2)}</div>
-                        <div className="text-[10px] text-muted-foreground">tấn</div>
+                    <div key={item.label} className={`rounded-xl border p-2 text-center shadow-sm ${item.bg}`}>
+                        <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">{item.label}</div>
+                        <div className={`text-base sm:text-lg font-bold ${item.color}`}>{item.value.toFixed(3)}</div>
+                        <div className="text-[10px] text-muted-foreground">Tấn</div>
                     </div>
                 ))}
             </div>
 
-            {/* Table */}
             <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
-                <div className="bg-slate-800 text-white px-4 py-3 flex items-center gap-2">
-                    <span className="text-lg">📦</span>
-                    <div>
-                        <div className="font-semibold text-sm">Kho RCN — Tồn Kho Theo Size</div>
-                        <div className="text-xs text-slate-300">Ngày {format(date, 'dd/MM/yyyy')}</div>
-                    </div>
-                </div>
-
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-slate-50 border-b text-xs text-slate-500 uppercase tracking-wide">
-                                <th className="text-left px-4 py-2.5 w-20">Size</th>
-                                <th className="text-right px-3 py-2.5">Tồn Đầu (T)</th>
-                                <th className="text-right px-3 py-2.5 text-emerald-600">Nhập Kho (T)</th>
-                                <th className="text-right px-3 py-2.5 text-orange-600">Xuất Hấp (T)</th>
-                                <th className="text-right px-3 py-2.5 text-blue-700 font-bold">Tồn Cuối (T)</th>
-                                <th className="text-left px-3 py-2.5">Ghi chú</th>
+                            <tr className="bg-slate-800 text-slate-300 border-b border-slate-700 text-[10px] tracking-wider uppercase">
+                                <th className="text-left px-3 py-2.5 w-24 border-r border-slate-700 font-semibold">CỠ HẠT</th>
+                                <th className="text-right px-3 py-2.5 w-20">T.Đầu (T)</th>
+                                <th className="text-right px-3 py-2.5 w-20">Nhập (T)</th>
+                                <th className="text-right px-3 py-2.5 w-20">Xuất (T)</th>
+                                <th className="text-right px-3 py-2.5 w-24 text-white font-bold bg-slate-700/50">T.Cuối (T)</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {RCN_SIZES.map(size => {
                                 const row = rows[size]
                                 const closing = row.closing_ton
-                                const isLow = closing < 10 && closing >= 0
                                 const isNegative = closing < 0
                                 return (
                                     <tr key={size} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-4 py-2">
-                                            <span className={`inline-flex items-center justify-center w-10 h-7 rounded-md border text-xs font-bold ${sizeColors[size]}`}>
-                                                {size}
-                                            </span>
+                                        <td className="px-3 py-2 border-r border-slate-100 bg-slate-50/30">
+                                            <span className="font-bold text-xs text-slate-700 whitespace-nowrap">{size}</span>
                                         </td>
-                                        <td className="px-3 py-2 text-right">
-                                            <input
-                                                type="number" min="0" step="0.001"
-                                                value={row.opening_ton || ''}
-                                                onChange={e => updateRow(size, 'opening_ton', Number(e.target.value) || 0)}
-                                                className="w-24 text-right bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-slate-300 outline-none"
-                                                placeholder="0.000"
-                                            />
+                                        <td className="px-3 py-2 text-right text-slate-600">
+                                            {row.opening_ton?.toFixed(3) || '0.000'}
                                         </td>
-                                        <td className="px-3 py-2 text-right">
+                                        <td className="px-2 py-1 text-right">
                                             <input
+                                                title="Input Received"
                                                 type="number" min="0" step="0.001"
                                                 value={row.ton_received || ''}
                                                 onChange={e => updateRow(size, 'ton_received', Number(e.target.value) || 0)}
-                                                className="w-24 text-right bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-emerald-300 outline-none"
-                                                placeholder="0.000"
+                                                className="w-16 text-right bg-transparent border-b border-dashed border-emerald-300 text-emerald-700 px-1 py-1 text-xs focus:bg-emerald-50 outline-none"
                                             />
                                         </td>
-                                        <td className="px-3 py-2 text-right">
+                                        <td className="px-2 py-1 text-right">
                                             <input
+                                                title="Input Dispatched"
                                                 type="number" min="0" step="0.001"
                                                 value={row.ton_dispatched || ''}
                                                 onChange={e => updateRow(size, 'ton_dispatched', Number(e.target.value) || 0)}
-                                                className="w-24 text-right bg-orange-50 border border-orange-200 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-orange-300 outline-none"
-                                                placeholder="0.000"
+                                                className="w-16 text-right bg-transparent border-b border-dashed border-orange-300 text-orange-700 px-1 py-1 text-xs focus:bg-orange-50 outline-none"
                                             />
                                         </td>
-                                        <td className="px-3 py-2 text-right">
-                                            <div className={`inline-flex items-center justify-end gap-1 w-24 font-bold text-sm px-2 py-1 rounded-md ${isNegative ? 'text-red-600 bg-red-50' : isLow ? 'text-amber-600 bg-amber-50' : 'text-blue-700 bg-blue-50'}`}>
-                                                {isNegative && <span title="Xuất vượt tồn!">⚠️</span>}
-                                                {isLow && !isNegative && <span title="Tồn thấp">🟡</span>}
-                                                {closing.toFixed(3)}
-                                            </div>
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            <input
-                                                type="text"
-                                                value={row.note}
-                                                onChange={e => updateRow(size, 'note', e.target.value)}
-                                                className="w-full bg-transparent border border-slate-200 rounded-md px-2 py-1 text-xs focus:ring-1 focus:ring-slate-300 outline-none placeholder:text-slate-300"
-                                                placeholder="ghi chú..."
-                                            />
+                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${isNegative ? 'text-red-600 bg-red-50' : 'text-blue-700 bg-blue-50/30'}`}>
+                                            {closing.toFixed(3)}
                                         </td>
                                     </tr>
                                 )
                             })}
                         </tbody>
                         <tfoot>
-                            <tr className="bg-slate-800 text-white text-sm font-bold">
-                                <td className="px-4 py-2.5">TỔNG</td>
-                                <td className="px-3 py-2.5 text-right">{totalOpening.toFixed(3)}</td>
-                                <td className="px-3 py-2.5 text-right text-emerald-300">{totalReceived.toFixed(3)}</td>
-                                <td className="px-3 py-2.5 text-right text-orange-300">{totalDispatched.toFixed(3)}</td>
-                                <td className="px-3 py-2.5 text-right text-blue-200">{totalClosing.toFixed(3)}</td>
-                                <td className="px-3 py-2.5 text-xs text-slate-400">đơn vị: tấn</td>
+                            <tr className="bg-slate-100 text-slate-800 text-xs font-bold border-t-2 border-slate-200">
+                                <td className="px-3 py-3 border-r border-slate-200">TỔNG</td>
+                                <td className="px-3 py-3 text-right">{totalOpening.toFixed(3)}</td>
+                                <td className="px-3 py-3 text-right text-emerald-700">{totalReceived.toFixed(3)}</td>
+                                <td className="px-3 py-3 text-right text-orange-700">{totalDispatched.toFixed(3)}</td>
+                                <td className="px-3 py-3 text-right text-blue-700 bg-blue-100/50">{totalClosing.toFixed(3)}</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
             </div>
 
-            {/* Note about opening stock */}
-            {Object.values(prevDateRows).every(v => v === 0) && (
-                <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
-                    💡 <strong>Lần đầu nhập:</strong> Điền số tồn đầu ngày vào cột "Tồn Đầu" cho từng size.
-                    Từ ngày mai, hệ thống sẽ tự lấy tồn cuối hôm nay làm tồn đầu.
-                </div>
-            )}
-
-            {/* Save button */}
             <div className="flex justify-end pt-2">
                 <button
                     onClick={handleSave}
@@ -288,7 +331,7 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                     {isSaving ? (
                         <><span className="animate-spin">⏳</span> Đang lưu...</>
                     ) : (
-                        <><span>💾</span> Lưu Tồn Kho RCN</>
+                        <><span>💾</span> CẬP NHẬT TỒN KHO RCN</>
                     )}
                 </button>
             </div>
