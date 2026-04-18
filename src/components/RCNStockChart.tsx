@@ -148,24 +148,24 @@ export function RCNStockChart() {
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <div className="flex flex-col h-full w-full select-none text-[11px]">
+        <div className="flex flex-col h-full w-full select-none">
 
             {/* ── KPI pill row ── */}
-            <div className="grid grid-cols-3 gap-1 px-1.5 pb-1.5 flex-shrink-0">
+            <div className="grid grid-cols-3 gap-2 px-3 pb-3 flex-shrink-0">
                 {[
                     { label: 'TOTAL STOCK', value: fmtTotal, color: '#e63121' },
                     { label: 'TOP SIZE', value: topRow?.ton > 0 ? `${SHORT_LABEL[topRow.size as RcnSize]}: ${topRow.ton.toFixed(1)}T` : '—', color: '#f59e0b' },
                     { label: 'IN STOCK', value: `${sizesInStock}/12`, color: '#10b981' },
                 ].map(k => (
-                    <div key={k.label} className="flex flex-col items-center bg-white/60 rounded-lg border border-slate-100/80 py-1 px-0.5">
-                        <span className="text-[7.5px] font-bold text-slate-400 tracking-widest uppercase leading-none">{k.label}</span>
-                        <span className="font-black text-[10px] mt-0.5 tabular-nums" style={{ color: k.color }}>{k.value}</span>
+                    <div key={k.label} className="flex flex-col items-center justify-center bg-slate-50/80 rounded-xl border border-slate-200/60 py-2 shadow-sm">
+                        <span className="text-[10px] md:text-xs font-bold text-slate-500 tracking-widest uppercase mb-0.5">{k.label}</span>
+                        <span className="font-black text-sm md:text-lg tabular-nums" style={{ color: k.color }}>{k.value}</span>
                     </div>
                 ))}
             </div>
 
             {/* ── Bar chart ── */}
-            <div className="flex flex-col gap-[2px] flex-1 px-1.5 pb-1 overflow-hidden min-h-0">
+            <div className="flex flex-col gap-1 flex-1 px-3 pb-2 overflow-hidden min-h-0">
                 {rows.map((row, idx) => {
                     const isEmpty = row.ton <= 0
                     const pct = (row.ton / maxTon) * 100
@@ -176,11 +176,11 @@ export function RCNStockChart() {
                     return (
                         <div
                             key={row.size}
-                            className="flex items-center gap-1.5 rounded-sm transition-all duration-150 cursor-default"
+                            className="flex items-center gap-2.5 rounded-md transition-all duration-150 cursor-default px-1"
                             style={{
-                                opacity: isEmpty ? 0.3 : 1,
-                                minHeight: 17,
-                                background: isHov ? `${col.from}12` : 'transparent',
+                                opacity: isEmpty ? 0.35 : 1,
+                                minHeight: 26,
+                                background: isHov ? `${col.from}15` : 'transparent',
                             }}
                             onMouseEnter={() => setHovered(row.size as RcnSize)}
                             onMouseLeave={() => setHovered(null)}
@@ -192,13 +192,13 @@ export function RCNStockChart() {
                             {/* Short size label */}
                             <span
                                 className="font-black tracking-tight text-right shrink-0"
-                                style={{ width: 22, color: isEmpty ? '#94a3b8' : col.from, fontSize: 9.5 }}
+                                style={{ width: 28, color: isEmpty ? '#94a3b8' : col.from, fontSize: 13 }}
                             >
                                 {SHORT_LABEL[row.size as RcnSize]}
                             </span>
 
                             {/* Bar track */}
-                            <div className="flex-1 bg-slate-100/70 rounded-full overflow-hidden" style={{ height: 11 }}>
+                            <div className="flex-1 bg-slate-100 rounded-full overflow-hidden" style={{ height: 16 }}>
                                 {!isEmpty && (
                                     <AnimatedBar pct={pct} from={col.from} to={col.to} delay={idx * 45} />
                                 )}
@@ -206,12 +206,12 @@ export function RCNStockChart() {
 
                             {/* Value text */}
                             <span
-                                className="shrink-0 tabular-nums text-right leading-none"
-                                style={{ width: 74, color: isEmpty ? '#cbd5e1' : '#475569', fontSize: 8.5, fontWeight: 600 }}
+                                className="shrink-0 tabular-nums text-right leading-none flex items-center justify-end gap-1.5"
+                                style={{ width: 95, color: isEmpty ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 700 }}
                             >
                                 {isEmpty
-                                    ? '—'
-                                    : `${(row.ton * 1000).toLocaleString('vi-VN')} · ${pctOfTotal.toFixed(0)}%`
+                                    ? <span className="text-slate-300">—</span>
+                                    : <><span>{(row.ton * 1000).toLocaleString('vi-VN')}</span><span className="text-[10px] text-slate-400 font-medium w-[24px]">{pctOfTotal.toFixed(0)}%</span></>
                                 }
                             </span>
                         </div>
@@ -220,12 +220,12 @@ export function RCNStockChart() {
 
                 {/* Date watermark */}
                 {lastDate && (
-                    <div className="flex justify-between items-center pt-0.5 border-t border-slate-100 mt-0.5">
-                        <span className="text-[7.5px] text-slate-400 font-medium">
-                            📅 {format(new Date(lastDate + 'T00:00:00'), 'dd/MM/yyyy')}
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2">
+                        <span className="text-xs text-slate-400 font-medium tracking-wide">
+                            📅 Kì báo cáo: <strong className="text-slate-500">{format(new Date(lastDate + 'T00:00:00'), 'dd/MM/yyyy')}</strong>
                         </span>
-                        <span className="text-[7.5px] text-slate-400">
-                            Tổng: {(totalTon * 1000).toLocaleString('vi-VN')} kg
+                        <span className="text-xs text-slate-500 font-bold tracking-tight">
+                            TỔNG: <span className="text-slate-700">{(totalTon * 1000).toLocaleString('vi-VN')} kg</span>
                         </span>
                     </div>
                 )}
