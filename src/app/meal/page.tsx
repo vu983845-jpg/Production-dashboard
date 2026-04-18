@@ -1315,6 +1315,10 @@ export default function PublicMealPage() {
                                 <li><strong>⚡ Phỏng vấn – nhận việc ngay</strong></li>
                             </ul>
 
+                            <div style={{ marginTop: 16, padding: '10px 12px', background: '#fef2f2', border: '1px dashed #fecaca', borderRadius: 8, color: '#dc2626', fontWeight: 600, textAlign: 'center', fontSize: 13, boxShadow: '0 1px 2px rgba(220, 38, 38, 0.05)' }}>
+                                🎁 Thưởng nóng 500.000 VNĐ nếu giới thiệu thành công ứng viên!
+                            </div>
+
                             <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px dashed #cbd5e1', textAlign: 'center' }}>
                                 <div style={{ fontSize: 13, color: '#64748b', marginBottom: 4 }}>📞 Liên hệ (Zalo)</div>
                                 <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>0906 724 716</div>
