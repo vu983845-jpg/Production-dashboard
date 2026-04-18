@@ -15,13 +15,11 @@ type RcnSize = typeof RCN_SIZES[number]
 
 interface RcnRow {
     opening_ton: number
-    ton_received: number
-    ton_dispatched: number
     closing_ton: number
     note: string
 }
 
-const emptyRow = (): RcnRow => ({ opening_ton: 0, ton_received: 0, ton_dispatched: 0, closing_ton: 0, note: '' })
+const emptyRow = (): RcnRow => ({ opening_ton: 0, closing_ton: 0, note: '' })
 
 interface Props {
     date: Date
@@ -49,7 +47,7 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
             yesterday.setDate(yesterday.getDate() - 1)
             const yStr = format(yesterday, 'yyyy-MM-dd')
 
-            // Fetch yesterday's closing stock 
+            // Lấy Closing chốt số từ ngày hôm qua để làm Opening
             const { data: prevData } = await supabase
                 .from('rcn_inventory')
                 .select('size_code, opening_ton, ton_received, ton_dispatched')
@@ -61,6 +59,7 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                 prevClosing[r.size_code] = closing;
             })
 
+            // Lấy Tồn của Ngày Hiện Tại (đã nhập)
             const { data: todayData } = await supabase
                 .from('rcn_inventory')
                 .select('*')
@@ -78,8 +77,6 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                         const dispatched = Number(r.ton_dispatched || 0)
                         newRows[r.size_code as RcnSize] = {
                             opening_ton: opening,
-                            ton_received: received,
-                            ton_dispatched: dispatched,
                             closing_ton: opening + received - dispatched,
                             note: r.note || ''
                         }
@@ -88,7 +85,7 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
             } else {
                 RCN_SIZES.forEach(s => {
                     newRows[s].opening_ton = prevClosing[s] || 0
-                    newRows[s].closing_ton = prevClosing[s] || 0
+                    newRows[s].closing_ton = prevClosing[s] || 0 // Mặc định nếu chưa nhập thì Tồn kho hôm nay = hôm qua
                 })
             }
 
@@ -101,9 +98,11 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
     const handlePaste = () => {
         if (!pasteData.trim()) return;
 
-        const lines = pasteData.split('\n').filter(l => l.trim().length > 0);
-        let dataRow = lines.find(l => /^[\d,.\s\-]+$/.test(l.replace(/\t/g, ' ')));
-        if (!dataRow && lines.length > 0) dataRow = lines[0];
+        // Tách dòng, lọc rỗng
+        const lines = pasteData.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        // Tìm dòng nào có nhiều dấu tab nhất (chính là dòng chứa data 13 cột)
+        const dataRow = lines.sort((a, b) => b.split('\t').length - a.split('\t').length)[0];
 
         if (dataRow) {
             const parts = dataRow.split('\t').map(s => {
@@ -112,88 +111,89 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                 return parseFloat(clean) || 0;
             });
 
-            if (parts.length >= 13) {
+            // Nếu người ta copy dính luôn cả cột rỗng thì độ dài sẽ >= 13
+            if (parts.length >= 12) {
                 const updates: Record<string, number> = {};
-                const excelMap: Record<number, string> = {
-                    1: 'A+ (26~28)', 2: 'A1 (25~26)', 3: 'A2 (24~25)',
-                    4: 'B1 (23~24)', 5: 'B2 (22~23)', 6: 'C1 (21~22)',
-                    7: 'C2 (20~21)', 8: 'D1 (19~20)', 9: 'D2 (18~19)',
-                    10: 'E (17~18)', 11: 'A++ (28>)', 12: 'E (16)'
-                };
 
-                Object.keys(excelMap).forEach(k => {
-                    const idx = Number(k)
-                    const sizeName = excelMap[idx];
-                    const closingKg = parts[idx];
-                    const closingTon = Number((closingKg / 1000).toFixed(3));
+                // Bản đồ Map giữa Index Cột của Excel ra Type của React
+                // Chú ý: Cột 0 thường là Total Stock. Các cột Size từ 1 đến 12.
+                // Để cực kỳ vững chắc, nếu họ vô tình KHÔNG QUÉT CỘT 0 (chỉ quét đủ 12 cột số)
+                // Thì parts.length == 12. Nếu quét cột Total thì parts.length >= 13.
+                // Ta lấy ngược từ cuối!
+
+                const exactMap = [
+                    'A+ (26~28)', 'A1 (25~26)', 'A2 (24~25)',
+                    'B1 (23~24)', 'B2 (22~23)', 'C1 (21~22)',
+                    'C2 (20~21)', 'D1 (19~20)', 'D2 (18~19)',
+                    'E (17~18)', 'A++ (28>)', 'E (16)'
+                ];
+
+                let valIndexOffset = parts.length > 12 ? 1 : 0; // Nếu có Total, size bắt đầu từ 1. Nếu k có Total, size bắt đầu từ 0.
+
+                exactMap.forEach((sizeName, iterIdx) => {
+                    const actualIdx = iterIdx + valIndexOffset;
+                    const closingKg = parts[actualIdx] || 0;
+                    const closingTon = Number((closingKg / 1000).toFixed(3)); // đổi ra Tấn !
                     updates[sizeName] = closingTon;
                 });
 
+                // Cập nhật State
                 setRows(prev => {
                     const next = { ...prev };
                     Object.keys(updates).forEach(size => {
                         const s = size as RcnSize;
                         if (next[s]) {
-                            const opening = next[s].opening_ton;
-                            const targetClosing = updates[size];
-
-                            let received = 0;
-                            let dispatched = 0;
-                            if (targetClosing >= opening) {
-                                received = targetClosing - opening;
-                            } else {
-                                dispatched = opening - targetClosing;
-                            }
-
-                            next[s] = {
-                                ...next[s],
-                                ton_received: Number(received.toFixed(3)),
-                                ton_dispatched: Number(dispatched.toFixed(3)),
-                                closing_ton: targetClosing,
-                                note: "Data from Excel"
-                            };
+                            next[s].closing_ton = updates[size] || 0;
+                            next[s].note = "Từ Excel";
                         }
                     });
                     return next;
                 });
-                toast.success("✅ Đã trích xuất số liệu tồn cuối thành công!");
+                toast.success("✅ Đã khớp 12 kích cỡ thành công!");
                 setPasteData("");
             } else {
-                toast.error(`Dữ liệu không đủ 13 cột! (Tìm thấy ${parts.length} cột)`);
+                toast.error(`Excel thiếu cột số liệu! (Tìm thấy ${parts.length} cột, cần tối thiểu 12 cột)`);
             }
         } else {
-            toast.error("Không tìm thấy dữ liệu số hợp lệ!");
+            toast.error("Không tìm thấy hàng dữ liệu nào có định dạng Copy từ Excel!");
         }
     }
 
     const updateRow = (size: RcnSize, field: keyof RcnRow, value: number | string) => {
-        setRows(prev => {
-            const updated = { ...prev[size], [field]: value }
-            if (field !== 'note') {
-                updated.closing_ton = Number((updated.opening_ton + updated.ton_received - updated.ton_dispatched).toFixed(3))
-            }
-            return { ...prev, [size]: updated }
-        })
+        setRows(prev => ({
+            ...prev,
+            [size]: { ...prev[size], [field]: value }
+        }))
     }
-
-    const totalReceived = RCN_SIZES.reduce((s, k) => s + (rows[k].ton_received || 0), 0)
-    const totalDispatched = RCN_SIZES.reduce((s, k) => s + (rows[k].ton_dispatched || 0), 0)
-    const totalClosing = RCN_SIZES.reduce((s, k) => s + (rows[k].closing_ton || 0), 0)
-    const totalOpening = RCN_SIZES.reduce((s, k) => s + (rows[k].opening_ton || 0), 0)
 
     const handleSave = async () => {
         setIsSaving(true)
         try {
-            const payload = RCN_SIZES.map(size => ({
-                work_date: formattedDate,
-                size_code: size,
-                opening_ton: rows[size].opening_ton,
-                ton_received: rows[size].ton_received,
-                ton_dispatched: rows[size].ton_dispatched,
-                note: rows[size].note || null,
-                updated_by: userId,
-                updated_at: new Date().toISOString()
-            }))
+            const payload = RCN_SIZES.map(size => {
+                const opening = rows[size].opening_ton;
+                const closing = rows[size].closing_ton;
+                let received = 0;
+                let dispatched = 0;
+
+                // Toán học: Closing = Opening + Received - Dispatched
+                // Mọi chênh lệch âm/dương sẽ được coi là Received / Dispatched
+                if (closing >= opening) {
+                    received = Number((closing - opening).toFixed(3));
+                } else {
+                    dispatched = Number((opening - closing).toFixed(3));
+                }
+
+                return {
+                    work_date: formattedDate,
+                    size_code: size,
+                    opening_ton: opening,
+                    ton_received: received,
+                    ton_dispatched: dispatched,
+                    note: rows[size].note || null,
+                    updated_by: userId,
+                    updated_at: new Date().toISOString()
+                }
+            })
 
             const { error } = await supabase
                 .from('rcn_inventory')
@@ -233,15 +233,15 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                     <div className="bg-white border border-amber-200/60 bg-amber-50/40 rounded-lg p-3.5 text-sm text-slate-700 shadow-sm">
                         <div className="font-bold text-amber-800 mb-2.5 flex items-center gap-1.5">
                             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200/80 text-amber-800 text-[10px]">💡</span>
-                            Hướng dẫn nhập nhanh bằng Excel:
+                            Hướng dẫn nhập nhanh:
                         </div>
                         <ol className="list-decimal list-inside space-y-2 text-xs md:text-sm text-slate-600 font-medium">
-                            <li>Mở file báo cáo tồn kho RCN hàng ngày trên Excel.</li>
-                            <li>Bôi đen và Copy (<kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 font-sans text-xs">Ctrl + C</kbd>) <b>DUY NHẤT 1 DÒNG CHỨA SỐ KHỐI LƯỢNG (Kg)</b> (gồm 13 cột từ <i>Total Stock</i> đến <i>E 16</i>).</li>
+                            <li>Mở file báo cáo tồn kho RCN hàng ngày trên phần mềm Excel.</li>
+                            <li>Bôi đen và Copy (<kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 font-sans text-xs">Ctrl + C</kbd>) <b>DUY NHẤT 1 DÒNG CHỨA SỐ KHỐI LƯỢNG KÝ (Kg)</b> (gồm 13 cột từ <i>Total Stock</i> đến <i>E 16</i>).</li>
                             <li>Dán (<kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 font-sans text-xs">Ctrl + V</kbd>) vào ô trống bên dưới và bấm <strong className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">Dịch & Khớp Số</strong>.</li>
                         </ol>
                         <div className="mt-3 text-[11px] text-slate-500 italic bg-white px-2.5 py-2 rounded-md border border-slate-100 border-l-[3px] border-l-amber-400">
-                            Hệ thống sẽ tự động loại bỏ ký tự chữ, đổi từ <b>Kg ➔ Tấn</b>, và so sánh với tồn đầu để tự động tính Khối Lượng Nhập/Xuất mà bạn không cần phải tự tính tay.
+                            Hệ thống sẽ tự động lược bỏ các ký tự trống, đổi đơn vị từ <b>Kg ➔ Tấn</b>, và thay thế vào cột <b>Tồn Cuối</b> để bạn tiết kiệm thời gian gõ từng số.
                         </div>
                     </div>
 
@@ -255,7 +255,8 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                         />
                         <button
                             onClick={handlePaste}
-                            className="bg-primary hover:bg-emerald-600 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md whitespace-nowrap inline-flex items-center justify-center gap-1.5"
+                            disabled={!pasteData.trim()}
+                            className="bg-primary hover:bg-emerald-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md whitespace-nowrap inline-flex items-center justify-center gap-1.5"
                         >
                             Dịch & Khớp Số
                         </button>
@@ -263,80 +264,45 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                 </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-3">
-                {[
-                    { label: 'Tồn Đầu', value: totalOpening, color: 'text-slate-600', bg: 'bg-slate-50' },
-                    { label: 'Tổng Nhập', value: totalReceived, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                    { label: 'Tổng Xuất', value: totalDispatched, color: 'text-orange-600', bg: 'bg-orange-50' },
-                    { label: 'Tồn Cuối', value: totalClosing, color: 'text-blue-700 font-bold', bg: 'bg-blue-50' },
-                ].map(item => (
-                    <div key={item.label} className={`rounded-xl border p-2 text-center shadow-sm ${item.bg}`}>
-                        <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">{item.label}</div>
-                        <div className={`text-base sm:text-lg font-bold ${item.color}`}>{item.value.toFixed(3)}</div>
-                        <div className="text-[10px] text-muted-foreground">Tấn</div>
-                    </div>
-                ))}
-            </div>
-
+            {/* BẢNG TỒN KHO - TINH GIẢN CHỈ CÒN ĐÚNG CỘT TỒN KHO */}
             <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-slate-800 text-slate-300 border-b border-slate-700 text-[10px] tracking-wider uppercase">
-                                <th className="text-left px-3 py-2.5 w-24 border-r border-slate-700 font-semibold">CỠ HẠT</th>
-                                <th className="text-right px-3 py-2.5 w-20">T.Đầu (T)</th>
-                                <th className="text-right px-3 py-2.5 w-20">Nhập (T)</th>
-                                <th className="text-right px-3 py-2.5 w-20">Xuất (T)</th>
-                                <th className="text-right px-3 py-2.5 w-24 text-white font-bold bg-slate-700/50">T.Cuối (T)</th>
+                                <th className="text-left px-4 py-3 w-32 border-r border-slate-700 font-semibold">CỠ HẠT</th>
+                                <th className="text-right px-4 py-3 w-32 text-slate-400">Tồn Hôm Qua (Tấn)</th>
+                                <th className="text-right px-4 py-3 min-w-[140px] text-white font-bold bg-slate-700/50 border-l border-slate-600">📌 TỒN CUỐI (TẤN)</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {RCN_SIZES.map(size => {
                                 const row = rows[size]
-                                const closing = row.closing_ton
-                                const isNegative = closing < 0
                                 return (
                                     <tr key={size} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-3 py-2 border-r border-slate-100 bg-slate-50/30">
-                                            <span className="font-bold text-xs text-slate-700 whitespace-nowrap">{size}</span>
+                                        <td className="px-4 py-2.5 border-r border-slate-100 bg-slate-50/30">
+                                            <span className="font-bold text-sm text-slate-700 whitespace-nowrap">{size}</span>
                                         </td>
-                                        <td className="px-3 py-2 text-right text-slate-600">
+
+                                        {/* Read only Opening */}
+                                        <td className="px-4 py-2.5 text-right text-slate-400 font-mono text-xs">
                                             {row.opening_ton?.toFixed(3) || '0.000'}
                                         </td>
-                                        <td className="px-2 py-1 text-right">
+
+                                        {/* EDITABLE CLOSING */}
+                                        <td className="px-3 py-2 text-right bg-blue-50/30 border-l border-blue-50">
                                             <input
-                                                title="Input Received"
+                                                title="Tồn Kho Thực Tế (Tấn)"
                                                 type="number" min="0" step="0.001"
-                                                value={row.ton_received || ''}
-                                                onChange={e => updateRow(size, 'ton_received', Number(e.target.value) || 0)}
-                                                className="w-16 text-right bg-transparent border-b border-dashed border-emerald-300 text-emerald-700 px-1 py-1 text-xs focus:bg-emerald-50 outline-none"
+                                                value={row.closing_ton}
+                                                onChange={e => updateRow(size, 'closing_ton', Number(e.target.value) || 0)}
+                                                className="w-full text-right bg-white border border-blue-200 text-blue-700 font-bold rounded-md px-2 py-1.5 text-base focus:ring-2 focus:ring-blue-400 outline-none shadow-sm transition-all"
                                             />
-                                        </td>
-                                        <td className="px-2 py-1 text-right">
-                                            <input
-                                                title="Input Dispatched"
-                                                type="number" min="0" step="0.001"
-                                                value={row.ton_dispatched || ''}
-                                                onChange={e => updateRow(size, 'ton_dispatched', Number(e.target.value) || 0)}
-                                                className="w-16 text-right bg-transparent border-b border-dashed border-orange-300 text-orange-700 px-1 py-1 text-xs focus:bg-orange-50 outline-none"
-                                            />
-                                        </td>
-                                        <td className={`px-3 py-2 text-right font-bold tabular-nums ${isNegative ? 'text-red-600 bg-red-50' : 'text-blue-700 bg-blue-50/30'}`}>
-                                            {closing.toFixed(3)}
                                         </td>
                                     </tr>
                                 )
                             })}
                         </tbody>
-                        <tfoot>
-                            <tr className="bg-slate-100 text-slate-800 text-xs font-bold border-t-2 border-slate-200">
-                                <td className="px-3 py-3 border-r border-slate-200">TỔNG</td>
-                                <td className="px-3 py-3 text-right">{totalOpening.toFixed(3)}</td>
-                                <td className="px-3 py-3 text-right text-emerald-700">{totalReceived.toFixed(3)}</td>
-                                <td className="px-3 py-3 text-right text-orange-700">{totalDispatched.toFixed(3)}</td>
-                                <td className="px-3 py-3 text-right text-blue-700 bg-blue-100/50">{totalClosing.toFixed(3)}</td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -345,12 +311,12 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                 <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-6 py-2.5 text-sm font-semibold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 text-sm font-semibold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {isSaving ? (
                         <><span className="animate-spin">⏳</span> Đang lưu...</>
                     ) : (
-                        <><span>💾</span> CẬP NHẬT TỒN KHO RCN</>
+                        <><span>💾</span> CHỐT SỔ RCN WAREHOUSE</>
                     )}
                 </button>
             </div>
