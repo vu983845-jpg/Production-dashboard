@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TabDashboard } from "./tab-dashboard"
 import { TabAnalysis } from "./tab-analysis"
 import { TabBaseline } from "./tab-baseline"
+import { TabInput } from "./tab-input"
 import { SeuMaster, MonthlyHistorical, BaselineModel, DailyEntry, SeuSummary } from "./types"
 
 interface ISOProps {
@@ -108,11 +109,12 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
 
             {/* Tabs */}
             <Tabs defaultValue="dashboard" className="space-y-4">
-                <TabsList className="grid grid-cols-3 w-full h-9">
-                    <TabsTrigger value="dashboard" className="text-xs">📊 Dashboard</TabsTrigger>
-                    <TabsTrigger value="seu" className="text-xs">📈 Phân Tích</TabsTrigger>
+                <TabsList className="flex flex-wrap gap-1 p-1 h-auto bg-slate-50 border shadow-sm">
+                    <TabsTrigger value="dashboard" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow">📊 Dashboard</TabsTrigger>
+                    <TabsTrigger value="input" className="text-xs data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow">✏️ Nhập liệu (MTD)</TabsTrigger>
+                    <TabsTrigger value="seu" className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow">📈 Phân Tích</TabsTrigger>
                     {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
-                        <TabsTrigger value="baseline" className="text-xs">📐 Baseline Model</TabsTrigger>
+                        <TabsTrigger value="baseline" className="text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow">📐 Baseline</TabsTrigger>
                     )}
                 </TabsList>
 
@@ -123,6 +125,16 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                         </div>
                     ) : (
                         <TabDashboard entries={entries} summaries={summaries} historical={dashboardHistorical} currentMonth={currentMonth} />
+                    )}
+                </TabsContent>
+
+                <TabsContent value="input">
+                    {blLoading ? (
+                        <div className="flex justify-center items-center h-48">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <TabInput seus={seus} currentMonth={currentMonth} onSaved={handleRefresh} />
                     )}
                 </TabsContent>
 
