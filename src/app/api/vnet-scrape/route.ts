@@ -196,10 +196,23 @@ function parseBormaData(tags: Record<string, number | boolean>) {
 }
 
 // ── STEAM tag mapping ──────────────────────────────────────────────────
-// Real tags: Cooker{n}_T1, Cooker{n}_T2, Cooker{n}_Press, Cooker{n}_InputPress
-//   Cooker{n}_Run (or CookerA_Run etc.)
+// Real tags verified from V-NET Data Monitoring UI (boxId: 6417916):
+//
+// COOKER A: Cooker1_Run (M 44.0), Cooker1_T1 (DBxDBD 130048), Cooker1_T2 (DBxDBD 130052),
+//           Cooker1_Press (MD 4), Cooker1_InputPress (MD 8)
+// COOKER B: CookerB_Run (M 44.1), Cooker2_T1 (DBxDBD 130056), Cooker2_T2 (DBxDBD 130060),
+//           Cooker2_Press (MD 12), Cooker2_InputPress (MD 16)
+// COOKER C: CookerC_Run (M 44.2), Cooker3_T1 (DBxDBD 130064), Cooker3_T2 (DBxDBD 130068),
+//           Cooker3_Press (MD 20), Cooker3_InputPress (MD 24)
+// COOKER D1: CookerD1_Run (M 44.3), Cooker4_T1 (DBxDBD 120048), Cooker4_T2 (DBxDBD 120052),
+//            Cooker4_Press (MD 28), Cooker4_InputPress (MD 32)
+// COOKER D2: CookerD2_Run (M 44.4), Cooker5_T1 (DBxDBD 120056), Cooker5_T2 (DBxDBD 120060),
+//            Cooker5_Press (MD 36), Cooker5_InputPress (MD 40)
+// + Default: Clock_1Hz_copy (M 0.5)
+//
+// NOTE: Cooker A uses "Cooker1_Run" (not "CookerA_Run") — inconsistent naming in PLC
 const STEAM_COOKERS = [
-    { id: "A",  n: 1, label: "Cooker A",  runTag: "CookerA_Run" },
+    { id: "A",  n: 1, label: "Cooker A",  runTag: "Cooker1_Run" },
     { id: "B",  n: 2, label: "Cooker B",  runTag: "CookerB_Run" },
     { id: "C",  n: 3, label: "Cooker C",  runTag: "CookerC_Run" },
     { id: "D1", n: 4, label: "Cooker D1", runTag: "CookerD1_Run" },
