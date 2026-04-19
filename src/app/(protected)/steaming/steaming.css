@@ -1,0 +1,539 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   STEAMING MONITOR — "Vanguard Industrial" Design System
+   Inspired by SCADA/HMI dashboards, glassmorphism, dark mode
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Root container ─────────────────────────────────────────────────── */
+.steaming-root {
+  --st-surface: #0b1326;
+  --st-surface-container: #171f33;
+  --st-surface-high: #222a3d;
+  --st-surface-highest: #2d3449;
+  --st-surface-low: #131b2e;
+  --st-on-surface: #dae2fd;
+  --st-primary: #E30613;
+  --st-primary-dim: #ffb4aa;
+  --st-success: #10b981;
+  --st-warning: #f59e0b;
+  --st-danger: #ef4444;
+  --st-muted: #64748b;
+
+  background: var(--st-surface);
+  color: var(--st-on-surface);
+  min-height: 100%;
+  padding: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.steaming-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--st-surface-container), var(--st-surface-low));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.steaming-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.steaming-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-on-surface);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.steaming-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--st-primary);
+}
+
+.steaming-device-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+}
+
+.steaming-online {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--st-success);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+}
+
+.steaming-offline {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--st-danger);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+}
+
+.steaming-last-update {
+  font-size: 0.7rem;
+  color: var(--st-muted);
+  font-weight: 500;
+}
+
+.steaming-header-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.steaming-stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  min-width: 64px;
+}
+
+.steaming-stat-value {
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--st-on-surface);
+}
+
+.steaming-stat-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--st-muted);
+  margin-top: 2px;
+}
+
+/* ── Error banner ───────────────────────────────────────────────────── */
+.steaming-error {
+  margin: 12px 24px 0;
+  padding: 10px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ── Demo banner ────────────────────────────────────────────────────── */
+.steaming-demo-banner {
+  margin: 12px 24px 0;
+  padding: 10px 16px;
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  color: #7dd3fc;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* ── Cards Grid ─────────────────────────────────────────────────────── */
+.steaming-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+@media (max-width: 1024px) {
+  .steaming-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .steaming-grid {
+    grid-template-columns: 1fr;
+    padding: 12px 16px;
+  }
+}
+
+/* ── Cooker Card ────────────────────────────────────────────────────── */
+.steaming-card {
+  position: relative;
+  background: var(--st-surface-container);
+  border-radius: 16px;
+  padding: 20px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.steaming-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.steaming-card-active {
+  border-left: 3px solid var(--cooker-color);
+}
+
+.steaming-card-idle {
+  opacity: 0.65;
+  border-left: 3px solid var(--st-muted);
+}
+
+.steaming-card-idle:hover {
+  opacity: 0.85;
+}
+
+.steaming-card-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  filter: blur(50px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Card Header */
+.steaming-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 16px;
+}
+
+.steaming-card-title {
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+  color: var(--st-on-surface);
+}
+
+.steaming-cooker-icon {
+  opacity: 0.5;
+}
+
+/* Status Badge */
+.steaming-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.steaming-status-running {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--st-success);
+}
+
+.steaming-status-stopped {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--st-muted);
+}
+
+.steaming-status-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--st-warning);
+}
+
+.steaming-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: steaming-pulse 2s ease-in-out infinite;
+}
+
+@keyframes steaming-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 currentColor;
+  }
+
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 8px 2px currentColor;
+  }
+}
+
+.steaming-status-stopped .steaming-status-dot {
+  animation: none;
+  opacity: 0.5;
+}
+
+/* ── Gauges ──────────────────────────────────────────────────────────── */
+.steaming-gauges {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 16px;
+}
+
+.steaming-gauge-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.steaming-gauge-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  text-align: center;
+  line-height: 1;
+}
+
+.steaming-gauge-num {
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--st-on-surface);
+  display: block;
+}
+
+.steaming-gauge-num.steaming-hot {
+  color: #f97316;
+}
+
+.steaming-gauge-num.steaming-warn {
+  color: var(--st-warning);
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+.steaming-gauge-unit {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--st-muted);
+  letter-spacing: 0.05em;
+  display: block;
+  margin-top: 2px;
+}
+
+.steaming-gauge-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--st-muted);
+  margin-top: 4px;
+}
+
+.steaming-gauge-arc {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Pressure bars ──────────────────────────────────────────────────── */
+.steaming-pressures {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.steaming-pressure-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.steaming-pressure-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-muted);
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.steaming-pressure-track {
+  flex: 1;
+  height: 6px;
+  background: var(--st-surface-highest);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.steaming-pressure-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(227, 6, 19, 0.3);
+}
+
+.steaming-pressure-high .steaming-pressure-fill {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+.steaming-pressure-value {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--st-on-surface);
+  min-width: 58px;
+  text-align: right;
+  letter-spacing: -0.01em;
+}
+
+.steaming-pressure-unit {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--st-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Chart Card ─────────────────────────────────────────────────────── */
+.steaming-chart-card {
+  margin: 0 24px 24px;
+  background: var(--st-surface-container);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.steaming-chart-header {
+  padding: 16px 20px 0;
+}
+
+.steaming-chart-title {
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-on-surface);
+  margin: 0;
+}
+
+.steaming-chart-subtitle {
+  font-size: 0.6rem;
+  color: var(--st-muted);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.steaming-chart-wrapper {
+  padding: 8px 12px 16px;
+}
+
+/* ── Loading State ──────────────────────────────────────────────────── */
+.steaming-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+  color: var(--st-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  background: var(--st-surface);
+  border-radius: 16px;
+}
+
+.steaming-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.08);
+  border-top-color: var(--st-primary);
+  border-radius: 50%;
+  animation: steaming-spin 0.8s linear infinite;
+}
+
+@keyframes steaming-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Steam animation on SVG ─────────────────────────────────────────── */
+.steaming-steam {
+  animation: steaming-rise 2s ease-in-out infinite;
+}
+
+@keyframes steaming-rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translateY(-3px);
+    opacity: 0.2;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+}
+
+/* ── Responsive tweaks ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .steaming-header {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .steaming-header-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .steaming-card {
+    padding: 16px;
+  }
+
+  .steaming-chart-card {
+    margin: 0 16px 16px;
+  }
+
+  .steaming-pressure-label {
+    min-width: 80px;
+    font-size: 0.5rem;
+  }
+
+  .steaming-title {
+    font-size: 1rem;
+  }
+}

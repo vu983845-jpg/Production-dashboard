@@ -1,0 +1,564 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   BORMA MONITOR — "Vanguard Industrial" Design System
+   Matches the steaming monitor dark SCADA/HMI aesthetic
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Root ───────────────────────────────────────────────────────────── */
+.borma-root {
+  --bm-surface: #0b1326;
+  --bm-surface-container: #171f33;
+  --bm-surface-high: #222a3d;
+  --bm-surface-highest: #2d3449;
+  --bm-surface-low: #131b2e;
+  --bm-on-surface: #dae2fd;
+  --bm-primary: #E30613;
+  --bm-primary-dim: #ffb4aa;
+  --bm-success: #10b981;
+  --bm-warning: #f59e0b;
+  --bm-danger: #ef4444;
+  --bm-muted: #64748b;
+  --bm-accent: #3b82f6;
+
+  background: var(--bm-surface);
+  color: var(--bm-on-surface);
+  min-height: 100%;
+  padding: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.borma-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--bm-surface-container), var(--bm-surface-low));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.borma-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.borma-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bm-on-surface);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.borma-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--bm-primary);
+}
+
+.borma-device-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+}
+
+.borma-online {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--bm-success);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+}
+
+.borma-offline {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--bm-danger);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+}
+
+.borma-last-update {
+  font-size: 0.7rem;
+  color: var(--bm-muted);
+  font-weight: 500;
+}
+
+.borma-header-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.borma-stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  min-width: 64px;
+}
+
+.borma-stat-value {
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--bm-on-surface);
+}
+
+.borma-stat-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bm-muted);
+  margin-top: 2px;
+}
+
+/* ── View Toggle ────────────────────────────────────────────────────── */
+.borma-view-toggle {
+  display: flex;
+  background: var(--bm-surface-high);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.borma-view-btn {
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--bm-muted);
+  transition: all 0.25s ease;
+}
+
+.borma-view-btn:hover {
+  color: var(--bm-on-surface);
+}
+
+.borma-view-btn-active {
+  background: var(--bm-primary);
+  color: white;
+  box-shadow: 0 2px 12px rgba(227, 6, 19, 0.3);
+}
+
+/* ── Cards Grid ────────────────────────────────────────────────────── */
+.borma-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+@media (max-width: 1200px) {
+  .borma-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .borma-grid { grid-template-columns: 1fr; padding: 12px 16px; }
+}
+
+/* ── Oven Card ──────────────────────────────────────────────────────── */
+.borma-card {
+  position: relative;
+  background: var(--bm-surface-container);
+  border-radius: 16px;
+  padding: 20px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.borma-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.borma-card-on {
+  border-left: 3px solid var(--bm-success);
+}
+
+.borma-card-off {
+  border-left: 3px solid var(--bm-danger);
+  opacity: 0.75;
+}
+
+.borma-card-off:hover {
+  opacity: 0.9;
+}
+
+.borma-card-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  filter: blur(50px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Card Header */
+.borma-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 16px;
+}
+
+.borma-card-title {
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+  color: var(--bm-on-surface);
+}
+
+.borma-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.borma-status-on {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--bm-success);
+}
+
+.borma-status-off {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--bm-danger);
+}
+
+.borma-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: borma-pulse 2s ease-in-out infinite;
+}
+
+@keyframes borma-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.6; box-shadow: 0 0 8px 2px currentColor; }
+}
+
+.borma-status-off .borma-status-dot {
+  animation: none;
+  opacity: 0.5;
+}
+
+/* ── Temperature bars ────────────────────────────────────────────────── */
+.borma-temps {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 100px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.borma-temp-bar-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.borma-temp-value {
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: var(--bm-on-surface);
+  letter-spacing: -0.01em;
+}
+
+.borma-temp-bar-track {
+  width: 100%;
+  max-width: 28px;
+  height: 60px;
+  background: var(--bm-surface-highest);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+
+.borma-temp-bar-fill {
+  width: 100%;
+  border-radius: 4px;
+  transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 2px;
+}
+
+.borma-temp-tag {
+  font-size: 0.45rem;
+  font-weight: 700;
+  color: var(--bm-muted);
+  letter-spacing: 0.02em;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* ── Tag Pills ────────────────────────────────────────────────────── */
+.borma-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+}
+
+.borma-tag-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--bm-surface-high);
+  letter-spacing: 0.02em;
+}
+
+.borma-tag-name {
+  color: var(--bm-muted);
+}
+
+.borma-tag-value {
+  color: var(--bm-on-surface);
+}
+
+.borma-tag-on {
+  color: var(--bm-success);
+}
+
+.borma-tag-off {
+  color: var(--bm-muted);
+  opacity: 0.6;
+}
+
+/* ── Main temp & humidity display ───────────────────────────────────── */
+.borma-main-metrics {
+  display: flex;
+  justify-content: space-around;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 12px;
+}
+
+.borma-metric {
+  text-align: center;
+}
+
+.borma-metric-value {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--bm-on-surface);
+}
+
+.borma-metric-unit {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--bm-muted);
+}
+
+.borma-metric-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bm-muted);
+  margin-top: 2px;
+}
+
+/* ── SCADA View ────────────────────────────────────────────────────── */
+.borma-scada-container {
+  padding: 0 24px 24px;
+}
+
+.borma-scada-frame {
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bm-surface-container);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.borma-scada-frame iframe {
+  width: 100%;
+  height: 700px;
+  border: none;
+  display: block;
+}
+
+.borma-scada-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.borma-scada-title {
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bm-on-surface);
+  margin: 0;
+}
+
+.borma-scada-subtitle {
+  font-size: 0.6rem;
+  color: var(--bm-muted);
+  font-weight: 500;
+}
+
+.borma-scada-fullscreen-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bm-surface-high);
+  color: var(--bm-on-surface);
+  transition: all 0.2s ease;
+  letter-spacing: 0.04em;
+}
+
+.borma-scada-fullscreen-btn:hover {
+  background: var(--bm-primary);
+  color: white;
+  border-color: var(--bm-primary);
+}
+
+/* ── Humidity card ────────────────────────────────────────────────── */
+.borma-humidity-card {
+  margin: 0 24px 24px;
+  padding: 20px;
+  background: var(--bm-surface-container);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.borma-humidity-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bm-muted);
+  margin-bottom: 8px;
+}
+
+.borma-humidity-value {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: var(--bm-accent);
+  letter-spacing: -0.02em;
+}
+
+.borma-humidity-unit {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--bm-muted);
+}
+
+/* ── Loading ────────────────────────────────────────────────────────── */
+.borma-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+  color: var(--bm-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  background: #0b1326;
+  border-radius: 16px;
+}
+
+.borma-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.08);
+  border-top-color: #E30613;
+  border-radius: 50%;
+  animation: borma-spin 0.8s linear infinite;
+}
+
+@keyframes borma-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Demo banner ────────────────────────────────────────────────────── */
+.borma-demo-banner {
+  margin: 12px 24px 0;
+  padding: 10px 16px;
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  color: #7dd3fc;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .borma-header {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .borma-header-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .borma-card { padding: 16px; }
+  .borma-scada-container { padding: 0 16px 16px; }
+  .borma-scada-frame iframe { height: 500px; }
+  .borma-title { font-size: 1rem; }
+}

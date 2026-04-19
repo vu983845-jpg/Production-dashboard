@@ -16,6 +16,8 @@ import {
     ShieldCheck,
     UtensilsCrossed,
     BarChart3,
+    Flame,
+    Thermometer,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -129,6 +131,18 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             href: "/energy",
             icon: Zap,
             roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint", "hr_admin"],
+        },
+        {
+            title: "Steaming",
+            href: "/steaming",
+            icon: Flame,
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
+        },
+        {
+            title: "BORMA Ovens",
+            href: "/borma",
+            icon: Thermometer,
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
         },
         {
             title: "Báo Cơm",
