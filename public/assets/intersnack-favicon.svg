@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Red rounded square background - Intersnack brand -->
+  <rect x="0" y="0" width="100" height="100" rx="20" ry="20" fill="#D0251A"/>
+
+  <!-- Intersnack flower/butterfly icon (white) -->
+  <!-- Top-left petal -->
+  <path d="M50 48 C47 38 38 28 30 30 C24 32 24 40 30 44 C36 48 44 48 50 48Z" fill="white" opacity="0.95"/>
+  <!-- Top-right petal -->
+  <path d="M50 48 C53 38 62 28 70 30 C76 32 76 40 70 44 C64 48 56 48 50 48Z" fill="white" opacity="0.95"/>
+  <!-- Bottom-left petal -->
+  <path d="M50 54 C47 64 36 72 28 68 C22 65 24 57 30 55 C37 53 44 54 50 54Z" fill="white" opacity="0.95"/>
+  <!-- Bottom-right petal -->
+  <path d="M50 54 C53 64 64 72 72 68 C78 65 76 57 70 55 C63 53 56 54 50 54Z" fill="white" opacity="0.95"/>
+  <!-- Center overlap (makes the petals look open/hollow at center) -->
+  <ellipse cx="50" cy="51" rx="6.5" ry="5" fill="#D0251A"/>
+  <!-- Small center dot -->
+  <circle cx="50" cy="51" r="2.5" fill="white"/>
+</svg>

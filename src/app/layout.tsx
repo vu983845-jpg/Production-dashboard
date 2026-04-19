@@ -14,11 +14,11 @@ export const metadata: Metadata = {
   description: 'KPI, Yield, Plan vs Actual Dashboard',
   icons: {
     icon: [
-      { url: '/assets/intersnack-icon.png', type: 'image/png' },
-      { url: '/assets/intersnack-icon.svg', type: 'image/svg+xml' },
+      { url: '/assets/intersnack-favicon.svg', type: 'image/svg+xml' },
+      { url: '/assets/intersnack-custom.jpg', type: 'image/jpeg' },
     ],
-    shortcut: '/assets/intersnack-icon.png',
-    apple: '/assets/intersnack-icon.png',
+    shortcut: '/assets/intersnack-favicon.svg',
+    apple: '/assets/intersnack-custom.jpg',
   },
 }
 
