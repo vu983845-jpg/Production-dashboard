@@ -47,27 +47,28 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
+    // Handle both single object and array payloads
+    const payload = Array.isArray(body) ? body : [body]
+
+    const mappedPayload = payload.map((row: any) => ({
+        work_date: row.work_date,
+        tong: row.tong ?? null,
+        cap_vp: row.cap_vp ?? null,
+        lo_hoi: row.lo_hoi ?? null,
+        lo_hoi_shelling: row.lo_hoi_shelling ?? null,
+        ro_cap_vao: row.ro_cap_vao ?? null,
+        ro_dau_ra: row.ro_dau_ra ?? null,
+        canteen: row.canteen ?? null,
+        nha_xe: row.nha_xe ?? null,
+        cooling: row.cooling ?? null,
+        nuoc_thai: row.nuoc_thai ?? null,
+        notes: row.notes ?? null,
+    }))
+
     const { data, error } = await supabase
         .from("daily_water")
-        .upsert(
-            {
-                work_date: body.work_date,
-                tong: body.tong ?? null,
-                cap_vp: body.cap_vp ?? null,
-                lo_hoi: body.lo_hoi ?? null,
-                lo_hoi_shelling: body.lo_hoi_shelling ?? null,
-                ro_cap_vao: body.ro_cap_vao ?? null,
-                ro_dau_ra: body.ro_dau_ra ?? null,
-                canteen: body.canteen ?? null,
-                nha_xe: body.nha_xe ?? null,
-                cooling: body.cooling ?? null,
-                nuoc_thai: body.nuoc_thai ?? null,
-                notes: body.notes ?? null,
-            },
-            { onConflict: "work_date" }
-        )
+        .upsert(mappedPayload, { onConflict: "work_date" })
         .select()
-        .single()
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })

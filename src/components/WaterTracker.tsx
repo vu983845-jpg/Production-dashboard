@@ -1,28 +1,27 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, addDays, differenceInDays } from "date-fns"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, addDays, differenceInDays, eachDayOfInterval, isAfter } from "date-fns"
 import { vi } from "date-fns/locale"
 import {
     ChevronLeft, ChevronRight, CalendarIcon, Droplets, Save, Loader2,
-    CheckCircle2, AlertCircle, ChevronDown, ChevronUp, History, PenLine
+    CheckCircle2, AlertCircle, PenLine
 } from "lucide-react"
 import {
-    AreaChart, Area, BarChart, Bar, ResponsiveContainer, CartesianGrid,
-    XAxis, YAxis, Tooltip, Legend, LineChart, Line
+    LineChart, Line, ResponsiveContainer, CartesianGrid,
+    XAxis, YAxis, Tooltip, Legend
 } from "recharts"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
-// ─── Water meter definitions ────────────────────────────────────────────────
 const WATER_METERS = [
     { key: "tong", label: "Tổng", shortLabel: "Tổng", color: "#0ea5e9", zone: "Tổng" },
     { key: "cap_vp", label: "Cấp VP", shortLabel: "VP", color: "#38bdf8", zone: "Văn phòng" },
     { key: "lo_hoi", label: "Lò hơi", shortLabel: "Lò hơi", color: "#f97316", zone: "Lò hơi" },
-    { key: "lo_hoi_shelling", label: "Lò hơi cấp qua Shelling (ở dưới)", shortLabel: "LH Shell", color: "#fb923c", zone: "Lò hơi" },
-    { key: "ro_cap_vao", label: "RO cấp vào", shortLabel: "RO vào", color: "#8b5cf6", zone: "RO" },
-    { key: "ro_dau_ra", label: "RO đầu ra", shortLabel: "RO ra", color: "#a78bfa", zone: "RO" },
+    { key: "lo_hoi_shelling", label: "Lò hơi (Shelling)", shortLabel: "LH Shell", color: "#fb923c", zone: "Lò hơi" },
+    { key: "ro_cap_vao", label: "RO vào", shortLabel: "RO vào", color: "#8b5cf6", zone: "RO" },
+    { key: "ro_dau_ra", label: "RO ra", shortLabel: "RO ra", color: "#a78bfa", zone: "RO" },
     { key: "canteen", label: "Canteen", shortLabel: "Canteen", color: "#10b981", zone: "Tiện ích" },
     { key: "nha_xe", label: "Nhà xe", shortLabel: "Nhà xe", color: "#34d399", zone: "Tiện ích" },
     { key: "cooling", label: "Cooling", shortLabel: "Cooling", color: "#06b6d4", zone: "Tiện ích" },
@@ -34,22 +33,11 @@ type MeterKey = typeof WATER_METERS[number]["key"]
 interface WaterRecord {
     id?: string
     work_date: string
-    tong?: number | null
-    cap_vp?: number | null
-    lo_hoi?: number | null
-    lo_hoi_shelling?: number | null
-    ro_cap_vao?: number | null
-    ro_dau_ra?: number | null
-    canteen?: number | null
-    nha_xe?: number | null
-    cooling?: number | null
-    nuoc_thai?: number | null
-    notes?: string | null
+    [key: string]: any
 }
 
-type FormValues = Partial<Record<MeterKey, string>> & { notes?: string }
+type LocalDataMap = Record<string, Partial<Record<MeterKey, string>>>
 
-// ─── Zone grouping for display ───────────────────────────────────────────────
 const ZONES = [
     { name: "Tổng", keys: ["tong"] },
     { name: "Văn phòng", keys: ["cap_vp"] },
@@ -59,7 +47,6 @@ const ZONES = [
     { name: "Nước thải", keys: ["nuoc_thai"] },
 ]
 
-// ─── Tooltip ─────────────────────────────────────────────────────────────────
 const WaterTooltip = ({ active, payload, label }: any) => {
     if (active && payload?.length) {
         return (
@@ -84,31 +71,35 @@ const WaterTooltip = ({ active, payload, label }: any) => {
     return null
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export function WaterTracker({ userRole }: { userRole?: string }) {
     const supabase = createClient()
     const canEdit = userRole === "admin" || userRole === "HSE" || userRole === "maint"
 
     const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()))
-    const [records, setRecords] = useState<WaterRecord[]>([])
+    const [fetchedRecords, setFetchedRecords] = useState<WaterRecord[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [viewMode, setViewMode] = useState<"input" | "history" | "chart">("input")
+    const [viewMode, setViewMode] = useState<"table" | "chart">("table")
 
-    // Input form state
-    const [inputDate, setInputDate] = useState<string>(format(new Date(), "yyyy-MM-dd"))
-    const [formValues, setFormValues] = useState<FormValues>({})
+    // Local state for grid inputs
+    const [localData, setLocalData] = useState<LocalDataMap>({})
+    const [originalData, setOriginalData] = useState<LocalDataMap>({})
     const [isSaving, setIsSaving] = useState(false)
     const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle")
     const [saveMsg, setSaveMsg] = useState("")
 
-    // History expand
-    const [expandedRow, setExpandedRow] = useState<string | null>(null)
+    // Generate days for the current month
+    const daysInMonth = useMemo(() => {
+        const start = startOfMonth(currentMonth)
+        const end = endOfMonth(currentMonth)
+        return eachDayOfInterval({ start, end }).map(d => format(d, "yyyy-MM-dd"))
+    }, [currentMonth])
 
-    // ── Fetch ────────────────────────────────────────────────────────────────
+    const todayStr = format(new Date(), "yyyy-MM-dd")
+
+    // Fetch data including 1 month prior for baseline
     const fetchData = useCallback(async () => {
         setIsLoading(true)
         const startDateStr = format(subMonths(startOfMonth(currentMonth), 1), "yyyy-MM-dd")
-        // Fetch one extra day for delta calculation
         const endPlusOne = format(addDays(endOfMonth(currentMonth), 1), "yyyy-MM-dd")
 
         const { data, error } = await supabase
@@ -118,50 +109,128 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
             .lte("work_date", endPlusOne)
             .order("work_date", { ascending: true })
 
-        if (!error && data) setRecords(data)
+        if (!error && data) {
+            setFetchedRecords(data)
+
+            // Map to local input state
+            const newLocal: LocalDataMap = {}
+            data.forEach(row => {
+                newLocal[row.work_date] = {}
+                WATER_METERS.forEach(m => {
+                    if (row[m.key] != null) {
+                        newLocal[row.work_date][m.key] = String(row[m.key])
+                    }
+                })
+            })
+            setLocalData(newLocal)
+            // Deep copy to track dirtiness
+            setOriginalData(JSON.parse(JSON.stringify(newLocal)))
+        }
         setIsLoading(false)
     }, [currentMonth, supabase])
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    // Pre-fill form when date changes (if record exists)
-    useEffect(() => {
-        const existing = records.find(r => r.work_date === inputDate)
-        if (existing) {
-            const vals: FormValues = { notes: existing.notes ?? "" }
+    // Detect modified rows
+    const modifiedRows = useMemo(() => {
+        const modified: string[] = []
+        Object.keys(localData).forEach(date => {
+            const org = originalData[date] || {}
+            const cur = localData[date] || {}
+            let isChanged = false
             WATER_METERS.forEach(m => {
-                vals[m.key] = existing[m.key] != null ? String(existing[m.key]) : ""
+                const orgVal = org[m.key] || ""
+                const curVal = cur[m.key] || ""
+                if (orgVal !== curVal) isChanged = true
             })
-            setFormValues(vals)
-        } else {
-            setFormValues({})
-        }
-    }, [inputDate, records])
+            if (isChanged) modified.push(date)
+        })
+        return modified
+    }, [localData, originalData])
 
-    // ── Save ─────────────────────────────────────────────────────────────────
-    const handleSave = async () => {
-        if (!canEdit) return
+    const hasChanges = modifiedRows.length > 0
+
+    // Compute Delta for a cell dynamically (even un-saved inputs recalculate immediately)
+    const getDelta = (dateStr: string, meterKey: MeterKey) => {
+        const valStr = localData[dateStr]?.[meterKey]
+        if (!valStr || valStr.trim() === "") return null
+
+        const currentVal = parseFloat(valStr)
+        if (isNaN(currentVal)) return null
+
+        // Find the most recent date before `dateStr` that has a valid number for this meter
+        // Search backwards in `daysInMonth` first, then in `fetchedRecords` if cross-month
+        let prevVal: number | null = null
+
+        // Use a sorted list of all known dates (local modifications + fetched records)
+        const allDates = Array.from(new Set([
+            ...fetchedRecords.map(r => r.work_date),
+            ...Object.keys(localData)
+        ])).sort()
+
+        const dateIndex = allDates.indexOf(dateStr)
+        for (let i = dateIndex - 1; i >= 0; i--) {
+            const prevD = allDates[i]
+            const pvStr = localData[prevD]?.[meterKey] ?? (fetchedRecords.find(r => r.work_date === prevD)?.[meterKey]?.toString() || "")
+            if (pvStr && pvStr.trim() !== "") {
+                const pv = parseFloat(pvStr)
+                if (!isNaN(pv)) {
+                    // Normalize by diffDays
+                    const diffDays = differenceInDays(new Date(dateStr), new Date(prevD)) || 1
+                    prevVal = pv
+                    return Math.max(0, (currentVal - prevVal) / diffDays)
+                }
+            }
+        }
+        return null // No previous record
+    }
+
+    // Chart data based on LIVE values
+    const chartData = useMemo(() => {
+        const result: any[] = []
+        daysInMonth.forEach(dateStr => {
+            const row: any = { fmtDate: format(new Date(dateStr), "dd/MM"), work_date: dateStr }
+            let hasAnyData = false
+            WATER_METERS.forEach(m => {
+                const delta = getDelta(dateStr, m.key)
+                if (delta != null) {
+                    row[m.key] = delta
+                    hasAnyData = true
+                }
+            })
+            if (hasAnyData) result.push(row)
+        })
+        return result
+    }, [daysInMonth, localData, fetchedRecords])
+
+
+    // Save
+    const handleSaveMulti = async () => {
+        if (!canEdit || !hasChanges) return
         setIsSaving(true)
         setSaveStatus("idle")
 
-        const body: any = { work_date: inputDate, notes: formValues.notes ?? "" }
-        WATER_METERS.forEach(m => {
-            const raw = formValues[m.key]
-            body[m.key] = raw !== undefined && raw !== "" ? parseFloat(raw) : null
+        const payload = modifiedRows.map(date => {
+            const body: any = { work_date: date }
+            WATER_METERS.forEach(m => {
+                const raw = localData[date]?.[m.key]
+                body[m.key] = raw && raw.trim() !== "" ? parseFloat(raw) : null
+            })
+            return body
         })
 
         try {
             const res = await fetch("/api/water", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
+                body: JSON.stringify(payload),
             })
             if (!res.ok) {
                 const err = await res.json()
                 throw new Error(err.error || "Save failed")
             }
             setSaveStatus("success")
-            setSaveMsg("Đã lưu thành công!")
+            setSaveMsg(`Đã lưu ${modifiedRows.length} ngày!`)
             await fetchData()
         } catch (e: any) {
             setSaveStatus("error")
@@ -172,283 +241,166 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
         }
     }
 
-    // ── Compute consumption deltas for chart ──────────────────────────────────
-    const startDateStr = format(startOfMonth(currentMonth), "yyyy-MM-dd")
-    const endDateStr = format(endOfMonth(currentMonth), "yyyy-MM-dd")
-    const chartData = (() => {
-        const result: any[] = []
-        for (let i = 1; i < records.length; i++) {
-            const prev = records[i - 1]
-            const curr = records[i]
-            const diffDays = differenceInDays(new Date(curr.work_date), new Date(prev.work_date)) || 1
-            if (prev.work_date < startDateStr || prev.work_date > endDateStr) continue
-            const row: any = { fmtDate: format(new Date(prev.work_date), "dd/MM"), work_date: prev.work_date }
-            WATER_METERS.forEach(m => {
-                const a = Number(prev[m.key] ?? 0)
-                const b = Number(curr[m.key] ?? 0)
-                row[m.key] = a > 0 && b > 0 ? Math.max(0, (b - a) / diffDays) : null
-            })
-            result.push(row)
-        }
-        return result
-    })()
-
-    // ─── Filter records for history display (within current month) ────────────
-    const historyRecords = records
-        .filter(r => r.work_date >= startDateStr && r.work_date <= endDateStr)
-        .slice()
-        .reverse()
-
-    // ── Month nav ─────────────────────────────────────────────────────────────
-    const goBack = () => setCurrentMonth(prev => subMonths(prev, 1))
-    const goForward = () => setCurrentMonth(prev => addMonths(prev, 1))
-
-    // ─── Quick stats ──────────────────────────────────────────────────────────
-    const latestRecord = [...historyRecords].sort((a, b) => b.work_date.localeCompare(a.work_date))[0]
+    const onChangeCell = (date: string, key: MeterKey, val: string) => {
+        setLocalData(prev => ({
+            ...prev,
+            [date]: { ...(prev[date] || {}), [key]: val }
+        }))
+    }
 
     return (
         <div className="space-y-4">
             {/* ── Tab nav bar ─────────────────────────────────────────── */}
-            <div className="flex gap-2 flex-wrap">
-                {([
-                    { id: "input", label: "📥 Nhập liệu", icon: <PenLine className="h-4 w-4" /> },
-                    { id: "history", label: "📋 Lịch sử", icon: <History className="h-4 w-4" /> },
-                    { id: "chart", label: "📊 Biểu đồ", icon: <Droplets className="h-4 w-4" /> },
-                ] as const).map(tab => (
+            <div className="flex gap-2 flex-wrap items-center justify-between">
+                <div className="flex gap-2">
                     <button
-                        key={tab.id}
-                        onClick={() => setViewMode(tab.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${viewMode === tab.id
-                            ? "bg-sky-500 text-white shadow-md"
-                            : "bg-white/70 text-slate-600 border border-slate-200 hover:bg-sky-50"
-                            }`}
+                        onClick={() => setViewMode("table")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${viewMode === "table" ? "bg-sky-500 text-white shadow-md" : "bg-white/70 text-slate-600 border border-slate-200 hover:bg-sky-50"}`}
                     >
-                        {tab.icon} {tab.label}
+                        <PenLine className="h-4 w-4" /> Bảng Nhập Liệu
                     </button>
-                ))}
-            </div>
+                    <button
+                        onClick={() => setViewMode("chart")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${viewMode === "chart" ? "bg-sky-500 text-white shadow-md" : "bg-white/70 text-slate-600 border border-slate-200 hover:bg-sky-50"}`}
+                    >
+                        <Droplets className="h-4 w-4" /> Biểu đồ Delta
+                    </button>
+                </div>
 
-            {/* ── Month selector (for history + chart) ────────────────── */}
-            {viewMode !== "input" && (
-                <div className="flex items-center gap-1 bg-white/80 border border-slate-200/60 rounded-xl p-1 shadow-sm w-fit">
-                    <Button variant="ghost" size="icon" onClick={goBack} className="h-8 w-8 rounded-lg hover:bg-slate-100">
+                {/* Month Picker */}
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                    <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => subMonths(prev, 1))} className="h-8 w-8 hover:bg-slate-100">
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <div className="flex items-center justify-center min-w-[160px] font-bold text-sm text-slate-800 px-2">
+                    <div className="flex items-center justify-center min-w-[130px] font-bold text-sm text-slate-700">
                         <CalendarIcon className="mr-2 h-4 w-4 text-sky-500" />
-                        {format(currentMonth, "MMMM - yyyy")}
+                        {format(currentMonth, "MM/yyyy")}
                     </div>
-                    <Button variant="ghost" size="icon" onClick={goForward} className="h-8 w-8 rounded-lg hover:bg-slate-100"
-                        disabled={currentMonth >= startOfMonth(new Date())}>
+                    <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => addMonths(prev, 1))} className="h-8 w-8 hover:bg-slate-100" disabled={currentMonth >= startOfMonth(new Date())}>
                         <ChevronRight className="h-4 w-4" />
                     </Button>
+                </div>
+            </div>
+
+            {!canEdit && viewMode === "table" && (
+                <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    Bạn đang ở quyền View. Chỉ Admin / HSE / Maint mới được sửa số liệu.
+                </div>
+            )}
+
+            {/* Save Status Banner */}
+            {saveStatus !== "idle" && (
+                <div className={`flex items-center justify-center gap-2 text-sm font-bold px-4 py-3 rounded-xl shadow-sm ${saveStatus === "success" ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}`}>
+                    {saveStatus === "success" ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+                    {saveMsg}
                 </div>
             )}
 
             {/* ════════════════════════════════════════════════════════════
-                INPUT VIEW
+                TABLE VIEW
             ════════════════════════════════════════════════════════════ */}
-            {viewMode === "input" && (
-                <div className="space-y-4">
-                    {!canEdit && (
-                        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
-                            <AlertCircle className="h-4 w-4 shrink-0" />
-                            Chỉ Admin / HSE mới được nhập liệu.
-                        </div>
-                    )}
-
-                    {/* Date picker card */}
-                    {(() => {
-                        const sortedAllRecords = [...records].sort((a, b) => b.work_date.localeCompare(a.work_date))
-                        const prevRecordForInput = sortedAllRecords.find(r => r.work_date < inputDate)
-
-                        return (
-                            <>
-                                <Card className="bg-white/90 border-sky-100 shadow-sm">
-                                    <CardContent className="pt-4 pb-4">
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                                            <label className="text-sm font-bold text-slate-700 shrink-0">
-                                                <CalendarIcon className="inline h-4 w-4 mr-1 text-sky-500" /> Ngày nhập:
-                                            </label>
-                                            <input
-                                                type="date"
-                                                value={inputDate}
-                                                onChange={e => setInputDate(e.target.value)}
-                                                max={format(new Date(), "yyyy-MM-dd")}
-                                                className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition"
-                                            />
-                                            {records.find(r => r.work_date === inputDate) && (
-                                                <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-semibold">
-                                                    ✓ Đã nhập – đang cập nhật
-                                                </span>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Meter input groups by zone */}
-                                {ZONES.map(zone => (
-                                    <Card key={zone.name} className="bg-white/90 shadow-sm border-slate-100 overflow-hidden">
-                                        <CardHeader className="pb-3 pt-4 px-4 bg-slate-50/80 border-b border-slate-100">
-                                            <CardTitle className="text-sm font-bold text-slate-600 uppercase tracking-wider">
-                                                {zone.name}
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="pt-4 pb-4 px-4">
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {WATER_METERS.filter(m => zone.keys.includes(m.key)).map(meter => (
-                                                    <div key={meter.key} className="flex flex-col gap-1.5 border-b border-slate-50/50 pb-3 last:border-0 last:pb-0">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meter.color }} />
-                                                            <label className="text-sm font-semibold text-slate-700 flex-1 leading-tight">
-                                                                {meter.label}
-                                                            </label>
-                                                            <div className="relative w-36 sm:w-44 shrink-0">
+            {viewMode === "table" && (
+                <Card className="bg-white/90 shadow-lg border-sky-100/50 flex flex-col max-h-[70vh]">
+                    <div className="flex-1 overflow-auto rounded-t-xl relative border-b border-slate-100">
+                        {isLoading ? (
+                            <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>
+                        ) : (
+                            <table className="w-full text-sm border-separate border-spacing-0">
+                                <thead>
+                                    <tr>
+                                        <th className="sticky top-0 left-0 z-30 bg-slate-100 border-b border-r border-slate-200 p-3 text-center w-[100px] shadow-[1px_1px_0_0_#e2e8f0]">
+                                            <span className="font-bold text-slate-700">Ngày</span>
+                                        </th>
+                                        {WATER_METERS.map(m => (
+                                            <th key={m.key} className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 p-2 min-w-[120px] shadow-[0_1px_0_0_#e2e8f0]">
+                                                <div className="flex flex-col items-center">
+                                                    <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
+                                                        {m.shortLabel}
+                                                    </div>
+                                                </div>
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {daysInMonth.map((dateStr) => {
+                                        const isFuture = isAfter(new Date(dateStr), new Date(todayStr))
+                                        const isModified = modifiedRows.includes(dateStr)
+                                        return (
+                                            <tr key={dateStr} className={`group ${isFuture ? "bg-slate-50/50 opacity-60" : "hover:bg-sky-50/40"}`}>
+                                                <td className={`sticky left-0 z-10 border-b border-r border-slate-100 p-0 shadow-[1px_0_0_0_#f1f5f9] align-top ${isModified ? "bg-sky-50" : "bg-white group-hover:bg-sky-50/40"}`}>
+                                                    <div className="flex flex-col items-center justify-center h-full p-2">
+                                                        <span className={`font-bold ${new Date(dateStr).getDay() === 0 ? "text-red-500" : "text-slate-700"}`}>
+                                                            {format(new Date(dateStr), "dd/MM")}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-400 capitalize">
+                                                            {format(new Date(dateStr), "EEE", { locale: vi })}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                {WATER_METERS.map(m => {
+                                                    const delta = getDelta(dateStr, m.key)
+                                                    return (
+                                                        <td key={m.key} className="border-b border-r border-slate-100 p-1.5 align-top">
+                                                            <div className="flex flex-col gap-1">
                                                                 <input
                                                                     type="number"
                                                                     min="0"
                                                                     step="any"
                                                                     inputMode="decimal"
-                                                                    disabled={!canEdit}
-                                                                    value={formValues[meter.key] ?? ""}
-                                                                    onChange={e => setFormValues(prev => ({ ...prev, [meter.key]: e.target.value }))}
-                                                                    className="w-full border border-slate-200 rounded-xl pl-3 pr-8 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-800 text-right bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    disabled={!canEdit || isFuture}
+                                                                    value={localData[dateStr]?.[m.key] ?? ""}
+                                                                    onChange={e => onChangeCell(dateStr, m.key, e.target.value)}
+                                                                    className={`w-full border rounded-lg px-2 py-1.5 text-right font-mono text-sm font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition ${isFuture ? "bg-slate-100 text-slate-400 border-slate-100" :
+                                                                            localData[dateStr]?.[m.key] !== originalData[dateStr]?.[m.key] ? "bg-sky-50 border-sky-300 text-sky-800" :
+                                                                                "bg-white border-slate-200 text-slate-800 focus:border-sky-400"
+                                                                        }`}
+                                                                    placeholder="-"
                                                                 />
-                                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold pointer-events-none">m³</span>
+                                                                <div className="h-4 flex items-center justify-end px-1">
+                                                                    {delta != null && (
+                                                                        <span className="text-[11px] font-mono font-bold text-emerald-600 bg-emerald-50 px-1 rounded">
+                                                                            +{delta.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        {prevRecordForInput && prevRecordForInput[meter.key] != null && (
-                                                            <div className="flex justify-end pr-1">
-                                                                <span className="text-[12px] text-slate-500 font-medium">
-                                                                    Hôm trước ({format(new Date(prevRecordForInput.work_date), "dd/MM")}): <span className="font-mono text-slate-400">{Number(prevRecordForInput[meter.key]).toLocaleString("vi-VN")}</span> m³
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                                                        </td>
+                                                    )
+                                                })}
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
 
-                                {/* Notes */}
-                                {canEdit && (
-                                    <Card className="bg-white/90 shadow-sm border-slate-100">
-                                        <CardContent className="pt-4 pb-4 px-4">
-                                            <label className="text-sm font-bold text-slate-600 block mb-2">Ghi chú (tùy chọn)</label>
-                                            <textarea
-                                                rows={2}
-                                                placeholder="Ví dụ: Ngày bảo trì, mất điện, v.v."
-                                                value={formValues.notes ?? ""}
-                                                onChange={e => setFormValues(prev => ({ ...prev, notes: e.target.value }))}
-                                                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition resize-none"
-                                            />
-                                        </CardContent>
-                                    </Card>
+                    {/* Fixed Action Bar at bottom of table */}
+                    {canEdit && (
+                        <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between z-20">
+                            <div className="text-sm">
+                                {hasChanges ? (
+                                    <span className="font-bold text-amber-600 flex items-center gap-1">
+                                        <AlertCircle className="h-4 w-4" /> Đã sửa {modifiedRows.length} ngày chưa lưu
+                                    </span>
+                                ) : (
+                                    <span className="text-slate-500 font-medium">Bảng đã cập nhật hoàn toàn</span>
                                 )}
-
-                                {/* Save button */}
-                                {canEdit && (
-                                    <div className="sticky bottom-4 z-30">
-                                        <button
-                                            onClick={handleSave}
-                                            disabled={isSaving}
-                                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-base shadow-xl shadow-sky-500/30 hover:from-sky-600 hover:to-blue-700 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                                        >
-                                            {isSaving ? (
-                                                <><Loader2 className="h-5 w-5 animate-spin" /> Đang lưu...</>
-                                            ) : (
-                                                <><Save className="h-5 w-5" /> Lưu chỉ số nước {inputDate}</>
-                                            )}
-                                        </button>
-                                        {saveStatus !== "idle" && (
-                                            <div className={`mt-2 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl ${saveStatus === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"
-                                                }`}>
-                                                {saveStatus === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                                                {saveMsg}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </>
-                        )
-                    })()}
-                </div>
-            )}
-
-            {/* ════════════════════════════════════════════════════════════
-                HISTORY VIEW
-            ════════════════════════════════════════════════════════════ */}
-            {viewMode === "history" && (
-                <div className="space-y-3">
-                    {isLoading ? (
-                        <div className="flex justify-center py-16">
-                            <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
+                            </div>
+                            <Button
+                                onClick={handleSaveMulti}
+                                disabled={!hasChanges || isSaving}
+                                className={`gap-2 font-bold shadow-md transition-all ${hasChanges ? "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700" : "bg-slate-200 text-slate-400"}`}
+                            >
+                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                Lưu Thay Đổi
+                            </Button>
                         </div>
-                    ) : historyRecords.length === 0 ? (
-                        <div className="text-center py-16 text-slate-400 font-medium">
-                            <Droplets className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                            Chưa có dữ liệu tháng này
-                        </div>
-                    ) : (
-                        historyRecords.map(record => {
-                            const isExpanded = expandedRow === record.work_date
-                            return (
-                                <Card key={record.work_date} className="bg-white/90 shadow-sm border-slate-100 overflow-hidden transition-all">
-                                    <button
-                                        className="w-full text-left"
-                                        onClick={() => setExpandedRow(isExpanded ? null : record.work_date)}
-                                    >
-                                        <div className="flex items-center justify-between px-4 py-3.5">
-                                            <div>
-                                                <p className="font-bold text-slate-800 text-sm">
-                                                    {format(new Date(record.work_date), "EEEE, dd/MM/yyyy", { locale: vi })}
-                                                </p>
-                                                <p className="text-xs text-slate-500 mt-0.5">
-                                                    Tổng: <span className="font-bold text-sky-600">{record.tong != null ? Number(record.tong).toLocaleString("vi-VN") : "–"} m³</span>
-                                                    {record.notes && <span className="ml-2 italic">{record.notes}</span>}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {canEdit && (
-                                                    <button
-                                                        onClick={e => {
-                                                            e.stopPropagation()
-                                                            setInputDate(record.work_date)
-                                                            setViewMode("input")
-                                                        }}
-                                                        className="text-xs px-2.5 py-1 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 font-semibold hover:bg-sky-100 transition"
-                                                    >
-                                                        Sửa
-                                                    </button>
-                                                )}
-                                                {isExpanded ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-                                            </div>
-                                        </div>
-                                    </button>
-                                    {isExpanded && (
-                                        <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
-                                            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                                                {WATER_METERS.map(m => (
-                                                    <div key={m.key} className="flex items-center justify-between text-xs">
-                                                        <span className="flex items-center gap-1.5 text-slate-600 font-medium">
-                                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
-                                                            {m.shortLabel}
-                                                        </span>
-                                                        <span className="font-mono font-bold text-slate-800">
-                                                            {record[m.key] != null ? Number(record[m.key]).toLocaleString("vi-VN") : "–"}
-                                                            <span className="text-slate-400 font-normal ml-0.5">m³</span>
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </Card>
-                            )
-                        })
                     )}
-                </div>
+                </Card>
             )}
 
             {/* ════════════════════════════════════════════════════════════
@@ -456,94 +408,37 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
             ════════════════════════════════════════════════════════════ */}
             {viewMode === "chart" && (
                 <div className="space-y-4">
-                    {isLoading ? (
-                        <div className="flex justify-center py-16">
-                            <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
-                        </div>
-                    ) : chartData.length === 0 ? (
-                        <div className="text-center py-16 text-slate-400 font-medium">
-                            <Droplets className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                            Cần ít nhất 2 ngày dữ liệu để hiển thị biểu đồ
-                        </div>
-                    ) : (
-                        <>
-                            {/* Zone charts */}
-                            {ZONES.map(zone => {
-                                const meters = WATER_METERS.filter(m => zone.keys.includes(m.key))
-                                return (
-                                    <Card key={zone.name} className="bg-white/90 shadow-lg border-slate-100 overflow-hidden">
-                                        <CardHeader className="pb-2 pt-4 px-5 bg-slate-50/80 border-b border-slate-100">
-                                            <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: meters[0]?.color || "#64748b" }} />
-                                                Khu vực: {zone.name}
-                                            </CardTitle>
-                                            <CardDescription className="text-xs">Tiêu thụ ngày (m³/ngày) – tính theo chênh lệch chỉ số</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="h-[240px] pt-4 px-2">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                    <XAxis dataKey="fmtDate" tickLine={false} axisLine={false}
-                                                        tick={{ fontSize: 10, fill: "#94a3b8", fontWeight: 600 }} dy={6} />
-                                                    <YAxis tickLine={false} axisLine={false}
-                                                        tick={{ fontSize: 10, fill: "#94a3b8", fontWeight: 600 }}
-                                                        tickFormatter={v => v.toLocaleString("vi-VN")} />
-                                                    <Tooltip content={<WaterTooltip />} />
-                                                    <Legend wrapperStyle={{ paddingTop: 12, fontSize: 11, fontWeight: 600, color: "#475569" }} iconType="circle" />
-                                                    {meters.map(m => (
-                                                        <Line key={m.key} type="monotone" dataKey={m.key}
-                                                            name={m.shortLabel} stroke={m.color} strokeWidth={2.5}
-                                                            dot={{ r: 3, strokeWidth: 0, fill: m.color }}
-                                                            activeDot={{ r: 6, strokeWidth: 0, fill: m.color }}
-                                                            connectNulls={false} />
-                                                    ))}
-                                                </LineChart>
-                                            </ResponsiveContainer>
-                                        </CardContent>
-                                    </Card>
-                                )
-                            })}
-
-                            {/* Summary table */}
-                            <Card className="bg-white/90 shadow-sm border-slate-100">
-                                <CardHeader className="pb-2 pt-4 px-4">
-                                    <CardTitle className="text-sm font-bold text-slate-700">Bảng chỉ số thô (m³)</CardTitle>
-                                    <CardDescription className="text-xs">Chỉ số đồng hồ ghi nhận theo ngày trong tháng</CardDescription>
+                    {ZONES.map(zone => {
+                        const meters = WATER_METERS.filter(m => zone.keys.includes(m.key))
+                        return (
+                            <Card key={zone.name} className="bg-white/90 shadow-lg border-slate-100 overflow-hidden">
+                                <CardHeader className="pb-2 pt-4 px-5 bg-slate-50/80 border-b border-slate-100">
+                                    <CardTitle className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: meters[0]?.color || "#64748b" }} />
+                                        Khu vực: {zone.name}
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">Tiêu thụ ngày (m³/ngày) – tính từ dữ liệu đang nhập</CardDescription>
                                 </CardHeader>
-                                <CardContent className="px-0 pb-4 overflow-x-auto">
-                                    <table className="w-full text-[11px] min-w-[600px]">
-                                        <thead>
-                                            <tr className="border-b border-slate-100 bg-slate-50/80">
-                                                <th className="text-left px-4 py-2.5 font-bold text-slate-500 uppercase tracking-wider sticky left-0 bg-slate-50/80">Ngày</th>
-                                                {WATER_METERS.map(m => (
-                                                    <th key={m.key} className="text-right px-2.5 py-2.5 font-bold text-slate-500 uppercase tracking-wider" title={m.label}>
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: m.color }} />
-                                                            {m.shortLabel}
-                                                        </div>
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {[...historyRecords].reverse().map((r, idx) => (
-                                                <tr key={r.work_date} className={`border-b border-slate-50 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/40"} hover:bg-sky-50/30 transition-colors`}>
-                                                    <td className="px-4 py-2 font-semibold text-slate-700 sticky left-0 bg-inherit whitespace-nowrap">
-                                                        {format(new Date(r.work_date), "dd/MM")}
-                                                    </td>
-                                                    {WATER_METERS.map(m => (
-                                                        <td key={m.key} className="text-right px-2.5 py-2 font-mono text-slate-600">
-                                                            {r[m.key] != null ? Number(r[m.key]).toLocaleString("vi-VN") : <span className="text-slate-300">–</span>}
-                                                        </td>
-                                                    ))}
-                                                </tr>
+                                <CardContent className="h-[240px] pt-4 px-2">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis dataKey="fmtDate" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#94a3b8", fontWeight: 600 }} dy={6} />
+                                            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#94a3b8", fontWeight: 600 }} tickFormatter={v => v.toLocaleString("vi-VN")} />
+                                            <Tooltip content={<WaterTooltip />} />
+                                            <Legend wrapperStyle={{ paddingTop: 12, fontSize: 11, fontWeight: 600, color: "#475569" }} iconType="circle" />
+                                            {meters.map(m => (
+                                                <Line key={m.key} type="monotone" dataKey={m.key} name={m.shortLabel} stroke={m.color} strokeWidth={2.5}
+                                                    dot={{ r: 3, strokeWidth: 0, fill: m.color }}
+                                                    activeDot={{ r: 6, strokeWidth: 0, fill: m.color }}
+                                                    connectNulls={false} />
                                             ))}
-                                        </tbody>
-                                    </table>
+                                        </LineChart>
+                                    </ResponsiveContainer>
                                 </CardContent>
                             </Card>
-                        </>
-                    )}
+                        )
+                    })}
                 </div>
             )}
         </div>
