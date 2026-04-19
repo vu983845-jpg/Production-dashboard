@@ -125,9 +125,7 @@ export default function SteamingMonitor() {
 
     const fetchData = useCallback(async () => {
         try {
-            // Use demo=1 until V-NET credentials are configured in .env.local
-            // Remove ?demo=1 once VNET_USERNAME/VNET_PASSWORD are set correctly
-            const res = await fetch("/api/vnet?demo=1")
+            const res = await fetch("/api/vnet-scrape?device=steam")
             const json = await res.json()
 
             if (!json.ok) {
@@ -136,7 +134,7 @@ export default function SteamingMonitor() {
             }
 
             setIsDemo(!!json.demo)
-            const data: CookerData[] = json.cookers || []
+            const data: CookerData[] = json.data?.cookers || json.cookers || []
             setCookers(data)
             setLastUpdate(new Date(json.timestamp).toLocaleTimeString("vi-VN"))
             setError(json._error || "")
@@ -226,7 +224,12 @@ export default function SteamingMonitor() {
 
             {isDemo && (
                 <div className="steaming-demo-banner">
-                    🔧 DEMO MODE — Hiển thị dữ liệu mô phỏng. Kết nối V-NET thật khi cấu hình đúng VNET_USERNAME/VNET_PASSWORD trong .env.local
+                    ⚠️ DỮ LIỆU MÔ PHỎNG — V-NET API chưa cho phép truy cập trực tiếp. Thiết bị STEAM_LA hiện offline.
+                </div>
+            )}
+            {!isDemo && (
+                <div className="steaming-demo-banner" style={{ background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#10b981' }}>
+                    ✅ DỮ LIỆU THẬT từ V-NET — {cookers.length} nồi đang được giám sát.
                 </div>
             )}
 

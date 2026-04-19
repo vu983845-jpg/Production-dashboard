@@ -165,16 +165,25 @@ export default function BormaMonitor() {
     const [view, setView] = useState<'dashboard' | 'scada'>('dashboard')
     const [data, setData] = useState<{ ovens: OvenData[]; humidity: number } | null>(null)
     const [lastUpdate, setLastUpdate] = useState<string>('')
-    const [isDemo, setIsDemo] = useState(true)
+    const [isDemo, setIsDemo] = useState(false)
     const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-    const fetchData = useCallback(() => {
-        // For now, use demo data since V-NET API requires WebSocket
-        // TODO: Implement real API fetching once WebSocket endpoint is identified
-        const demoData = generateDemoData()
-        setData(demoData)
-        setLastUpdate(new Date().toLocaleTimeString('vi-VN'))
-        setIsDemo(true)
+    const fetchData = useCallback(async () => {
+        try {
+            const res = await fetch('/api/vnet-scrape?device=borma')
+            const json = await res.json()
+            if (json.ok && json.data) {
+                setData(json.data)
+                setIsDemo(!!json.demo)
+                setLastUpdate(new Date(json.timestamp).toLocaleTimeString('vi-VN'))
+            }
+        } catch {
+            // Fallback to local demo on network error
+            const demoData = generateDemoData()
+            setData(demoData)
+            setLastUpdate(new Date().toLocaleTimeString('vi-VN'))
+            setIsDemo(true)
+        }
     }, [])
 
     useEffect(() => {
@@ -248,10 +257,15 @@ export default function BormaMonitor() {
                 </div>
             </div>
 
-            {/* Demo Banner */}
+            {/* Data Source Banner */}
             {isDemo && (
                 <div className="borma-demo-banner">
-                    📡 Demo mode — displaying simulated data. V-NET Cloud SCADA provides live data via the SCADA tab.
+                    ⚠️ DỮ LIỆU MÔ PHỎNG — V-NET API chưa cho phép truy cập trực tiếp. Chuyển sang tab Cloud SCADA để xem data thật.
+                </div>
+            )}
+            {!isDemo && (
+                <div className="borma-demo-banner" style={{ background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#10b981' }}>
+                    ✅ DỮ LIỆU THẬT từ V-NET — {data?.ovens?.length || 0} lò đang được giám sát.
                 </div>
             )}
 
