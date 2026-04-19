@@ -107,7 +107,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
     // ── Fetch ────────────────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
         setIsLoading(true)
-        const startDateStr = format(startOfMonth(currentMonth), "yyyy-MM-dd")
+        const startDateStr = format(subMonths(startOfMonth(currentMonth), 1), "yyyy-MM-dd")
         // Fetch one extra day for delta calculation
         const endPlusOne = format(addDays(endOfMonth(currentMonth), 1), "yyyy-MM-dd")
 
@@ -258,104 +258,121 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                     )}
 
                     {/* Date picker card */}
-                    <Card className="bg-white/90 border-sky-100 shadow-sm">
-                        <CardContent className="pt-4 pb-4">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                                <label className="text-sm font-bold text-slate-700 shrink-0">
-                                    <CalendarIcon className="inline h-4 w-4 mr-1 text-sky-500" /> Ngày nhập:
-                                </label>
-                                <input
-                                    type="date"
-                                    value={inputDate}
-                                    onChange={e => setInputDate(e.target.value)}
-                                    max={format(new Date(), "yyyy-MM-dd")}
-                                    className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition"
-                                />
-                                {records.find(r => r.work_date === inputDate) && (
-                                    <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-semibold">
-                                        ✓ Đã nhập – đang cập nhật
-                                    </span>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                    {(() => {
+                        const sortedAllRecords = [...records].sort((a, b) => b.work_date.localeCompare(a.work_date))
+                        const prevRecordForInput = sortedAllRecords.find(r => r.work_date < inputDate)
 
-                    {/* Meter input groups by zone */}
-                    {ZONES.map(zone => (
-                        <Card key={zone.name} className="bg-white/90 shadow-sm border-slate-100 overflow-hidden">
-                            <CardHeader className="pb-3 pt-4 px-4 bg-slate-50/80 border-b border-slate-100">
-                                <CardTitle className="text-sm font-bold text-slate-600 uppercase tracking-wider">
-                                    {zone.name}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-4 pb-4 px-4">
-                                <div className="grid grid-cols-1 gap-3">
-                                    {WATER_METERS.filter(m => zone.keys.includes(m.key)).map(meter => (
-                                        <div key={meter.key} className="flex items-center gap-3">
-                                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: meter.color }} />
-                                            <label className="text-sm font-semibold text-slate-700 flex-1 leading-tight">
-                                                {meter.label}
+                        return (
+                            <>
+                                <Card className="bg-white/90 border-sky-100 shadow-sm">
+                                    <CardContent className="pt-4 pb-4">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                            <label className="text-sm font-bold text-slate-700 shrink-0">
+                                                <CalendarIcon className="inline h-4 w-4 mr-1 text-sky-500" /> Ngày nhập:
                                             </label>
-                                            <div className="relative w-36 sm:w-44">
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="any"
-                                                    inputMode="decimal"
-                                                    placeholder="m³"
-                                                    disabled={!canEdit}
-                                                    value={formValues[meter.key] ?? ""}
-                                                    onChange={e => setFormValues(prev => ({ ...prev, [meter.key]: e.target.value }))}
-                                                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono font-bold text-slate-800 text-right bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                                />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-semibold pointer-events-none">m³</span>
-                                            </div>
+                                            <input
+                                                type="date"
+                                                value={inputDate}
+                                                onChange={e => setInputDate(e.target.value)}
+                                                max={format(new Date(), "yyyy-MM-dd")}
+                                                className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition"
+                                            />
+                                            {records.find(r => r.work_date === inputDate) && (
+                                                <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-semibold">
+                                                    ✓ Đã nhập – đang cập nhật
+                                                </span>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                    </CardContent>
+                                </Card>
 
-                    {/* Notes */}
-                    {canEdit && (
-                        <Card className="bg-white/90 shadow-sm border-slate-100">
-                            <CardContent className="pt-4 pb-4 px-4">
-                                <label className="text-sm font-bold text-slate-600 block mb-2">Ghi chú (tùy chọn)</label>
-                                <textarea
-                                    rows={2}
-                                    placeholder="Ví dụ: Ngày bảo trì, mất điện, v.v."
-                                    value={formValues.notes ?? ""}
-                                    onChange={e => setFormValues(prev => ({ ...prev, notes: e.target.value }))}
-                                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition resize-none"
-                                />
-                            </CardContent>
-                        </Card>
-                    )}
+                                {/* Meter input groups by zone */}
+                                {ZONES.map(zone => (
+                                    <Card key={zone.name} className="bg-white/90 shadow-sm border-slate-100 overflow-hidden">
+                                        <CardHeader className="pb-3 pt-4 px-4 bg-slate-50/80 border-b border-slate-100">
+                                            <CardTitle className="text-sm font-bold text-slate-600 uppercase tracking-wider">
+                                                {zone.name}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="pt-4 pb-4 px-4">
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {WATER_METERS.filter(m => zone.keys.includes(m.key)).map(meter => (
+                                                    <div key={meter.key} className="flex flex-col gap-1.5 border-b border-slate-50/50 pb-3 last:border-0 last:pb-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meter.color }} />
+                                                            <label className="text-sm font-semibold text-slate-700 flex-1 leading-tight">
+                                                                {meter.label}
+                                                            </label>
+                                                            <div className="relative w-36 sm:w-44 shrink-0">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="any"
+                                                                    inputMode="decimal"
+                                                                    disabled={!canEdit}
+                                                                    value={formValues[meter.key] ?? ""}
+                                                                    onChange={e => setFormValues(prev => ({ ...prev, [meter.key]: e.target.value }))}
+                                                                    className="w-full border border-slate-200 rounded-xl pl-3 pr-8 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-800 text-right bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                />
+                                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold pointer-events-none">m³</span>
+                                                            </div>
+                                                        </div>
+                                                        {prevRecordForInput && prevRecordForInput[meter.key] != null && (
+                                                            <div className="flex justify-end pr-1">
+                                                                <span className="text-[12px] text-slate-500 font-medium">
+                                                                    Hôm trước ({format(new Date(prevRecordForInput.work_date), "dd/MM")}): <span className="font-mono text-slate-400">{Number(prevRecordForInput[meter.key]).toLocaleString("vi-VN")}</span> m³
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
 
-                    {/* Save button */}
-                    {canEdit && (
-                        <div className="sticky bottom-4 z-30">
-                            <button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-base shadow-xl shadow-sky-500/30 hover:from-sky-600 hover:to-blue-700 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                                {isSaving ? (
-                                    <><Loader2 className="h-5 w-5 animate-spin" /> Đang lưu...</>
-                                ) : (
-                                    <><Save className="h-5 w-5" /> Lưu chỉ số nước {inputDate}</>
+                                {/* Notes */}
+                                {canEdit && (
+                                    <Card className="bg-white/90 shadow-sm border-slate-100">
+                                        <CardContent className="pt-4 pb-4 px-4">
+                                            <label className="text-sm font-bold text-slate-600 block mb-2">Ghi chú (tùy chọn)</label>
+                                            <textarea
+                                                rows={2}
+                                                placeholder="Ví dụ: Ngày bảo trì, mất điện, v.v."
+                                                value={formValues.notes ?? ""}
+                                                onChange={e => setFormValues(prev => ({ ...prev, notes: e.target.value }))}
+                                                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition resize-none"
+                                            />
+                                        </CardContent>
+                                    </Card>
                                 )}
-                            </button>
-                            {saveStatus !== "idle" && (
-                                <div className={`mt-2 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl ${saveStatus === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"
-                                    }`}>
-                                    {saveStatus === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                                    {saveMsg}
-                                </div>
-                            )}
-                        </div>
-                    )}
+
+                                {/* Save button */}
+                                {canEdit && (
+                                    <div className="sticky bottom-4 z-30">
+                                        <button
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-base shadow-xl shadow-sky-500/30 hover:from-sky-600 hover:to-blue-700 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        >
+                                            {isSaving ? (
+                                                <><Loader2 className="h-5 w-5 animate-spin" /> Đang lưu...</>
+                                            ) : (
+                                                <><Save className="h-5 w-5" /> Lưu chỉ số nước {inputDate}</>
+                                            )}
+                                        </button>
+                                        {saveStatus !== "idle" && (
+                                            <div className={`mt-2 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl ${saveStatus === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"
+                                                }`}>
+                                                {saveStatus === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                                                {saveMsg}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )
+                    })()}
                 </div>
             )}
 
