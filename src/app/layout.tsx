@@ -13,8 +13,12 @@ export const metadata: Metadata = {
   title: 'Dashboard VICC LA',
   description: 'KPI, Yield, Plan vs Actual Dashboard',
   icons: {
-    icon: '/assets/intersnack-icon.svg',
-    apple: '/assets/intersnack-icon.svg',
+    icon: [
+      { url: '/assets/intersnack-icon.png', type: 'image/png' },
+      { url: '/assets/intersnack-icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/assets/intersnack-icon.png',
+    apple: '/assets/intersnack-icon.png',
   },
 }
 
