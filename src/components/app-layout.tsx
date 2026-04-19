@@ -92,7 +92,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: t("nav.dashboard"),
             href: "/dashboard",
             icon: LayoutDashboard,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin", "maint"],
         },
         {
             title: t("nav.input"),
@@ -110,13 +110,13 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             title: "Production Report",
             href: "/report",
             icon: FileText,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin", "maint"],
         },
         {
             title: "Analytics",
             href: "/analytics",
             icon: BarChart3,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin"],
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin", "maint"],
         },
         {
             title: t("nav.users"),
