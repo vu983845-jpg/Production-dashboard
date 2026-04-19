@@ -20,11 +20,14 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
         redirect("/login")
     }
 
-    const { data: profile, error } = await supabase
+    // ── Fetch profile & dept in parallel ──────────────────────────────────
+    const profilePromise = supabase
         .from("profiles")
         .select("role, full_name, department_id")
         .eq("id", session.user.id)
         .single()
+
+    const [{ data: profile, error }] = await Promise.all([profilePromise])
 
     if (!profile) {
         return (
@@ -45,7 +48,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
         )
     }
 
-    // Fetch dept details if user has a department
+    // Fetch dept details in parallel with profile (if user has a department)
     let deptCode = ""
     let deptName = ""
     if (profile?.department_id) {
