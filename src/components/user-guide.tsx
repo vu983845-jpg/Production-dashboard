@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import { BookOpen } from "lucide-react"
 
-const SECTIONS = ["Tổng quan", "Báo Cơm", "Sản xuất", "Changelog"] as const
+const SECTIONS = ["Tổng quan", "Báo Cơm", "Sản xuất", "Năng lượng", "Changelog"] as const
 type Section = typeof SECTIONS[number]
 
 export function UserGuide() {
@@ -36,11 +36,10 @@ export function UserGuide() {
                         <button
                             key={s}
                             onClick={() => setTab(s)}
-                            className={`px-3 py-1.5 rounded-t text-xs font-semibold transition-colors ${
-                                tab === s
+                            className={`px-3 py-1.5 rounded-t text-xs font-semibold transition-colors ${tab === s
                                     ? "bg-primary text-primary-foreground"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                            }`}
+                                }`}
                         >
                             {s}
                         </button>
@@ -100,7 +99,7 @@ export function UserGuide() {
                             <section className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                                 <h3 className="font-bold text-base mb-3 text-blue-900 flex items-center gap-2">
                                     <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-black">1</span>
-                                    Tab "Báo Cơm" — Paste &amp; Phân tích Zalo
+                                    Tab &quot;Báo Cơm&quot; — Paste &amp; Phân tích Zalo
                                 </h3>
                                 <ol className="list-decimal pl-5 space-y-2 text-blue-800 text-[13px]">
                                     <li>Mở Zalo Web / App → Copy toàn bộ các tin nhắn báo cơm trong nhóm.</li>
@@ -248,10 +247,147 @@ export function UserGuide() {
                         </>
                     )}
 
+                    {/* ── TAB: NĂNG LƯỢNG ── */}
+                    {tab === "Năng lượng" && (
+                        <>
+                            {/* Tổng quan Năng lượng */}
+                            <section className="bg-sky-50 p-4 rounded-xl border border-sky-100">
+                                <h3 className="font-bold text-base mb-2 text-sky-800 flex items-center gap-2">⚡ Trang Năng Lượng (Energy)</h3>
+                                <ul className="list-disc pl-5 space-y-2 text-sky-700 text-[13px]">
+                                    <li><strong>Điện (EVN):</strong> Biểu đồ tiêu thụ theo ngày, phân tích Peak/Off-Peak/Normal theo giờ EVN. Dữ liệu tự đồng bộ từ đồng hồ điện.</li>
+                                    <li><strong>Củi (Boiler):</strong> Theo dõi lượng củi tiêu thụ so sánh với sản lượng RCN để tính EnPI.</li>
+                                    <li><strong>Nước (Water):</strong> Module nhập & theo dõi đồng hồ nước — xem chi tiết bên dưới.</li>
+                                </ul>
+                            </section>
+
+                            {/* Nhập Nước */}
+                            <section className="bg-teal-50 p-4 rounded-xl border border-teal-100">
+                                <h3 className="font-bold text-base mb-3 text-teal-900 flex items-center gap-2">
+                                    💧 Nhập Đồng Hồ Nước (Water Tracker)
+                                </h3>
+                                <div className="space-y-3 text-[13px] text-teal-800">
+                                    <div className="bg-white rounded-lg border border-teal-200 p-3">
+                                        <p className="font-semibold mb-1">📊 Giao diện dạng bảng (Excel-like)</p>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li>Bảng hiển thị <strong>toàn bộ ngày trong tháng</strong> — mỗi cột là 1 đồng hồ nước.</li>
+                                            <li>Nhập chỉ số đồng hồ → hệ thống <strong>tự tính Delta (tiêu thụ)</strong> = chỉ số hôm nay − chỉ số hôm qua.</li>
+                                            <li>Delta hiển thị trực tiếp bên dưới ô nhập, giúp kiểm tra ngay nếu nhập sai.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-white rounded-lg border border-teal-200 p-3">
+                                        <p className="font-semibold mb-1">✍️ Cách nhập</p>
+                                        <ol className="list-decimal pl-5 space-y-1">
+                                            <li>Vào trang <strong>Năng Lượng</strong> → chọn tab <strong>💧 Nước</strong>.</li>
+                                            <li>Chọn tháng cần nhập (mũi tên trái/phải).</li>
+                                            <li>Click vào ô bất kỳ → nhập chỉ số đồng hồ (m³).</li>
+                                            <li>Nhập xong nhiều ngày → bấm <kbd className="bg-white px-1.5 py-0.5 rounded border text-[11px] shadow-sm font-mono">💾 Lưu thay đổi</kbd> ở thanh dưới cùng.</li>
+                                        </ol>
+                                    </div>
+                                    <div className="bg-white rounded-lg border border-teal-200 p-3">
+                                        <p className="font-semibold mb-1">📈 Biểu đồ</p>
+                                        <p>Chuyển sang <strong>Chart view</strong> để xem biểu đồ tiêu thụ nước theo ngày, so sánh giữa các đồng hồ.</p>
+                                    </div>
+                                </div>
+                                <div className="mt-3 bg-teal-100 rounded-lg border border-teal-300 p-3 text-[12px] text-teal-900">
+                                    <p className="font-semibold">💡 Mẹo nhập nhanh</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                        <li>Có thể nhập <strong>nhiều ngày cùng lúc</strong> trong 1 phiên — hệ thống chỉ gửi dữ liệu đã thay đổi.</li>
+                                        <li>Ô đã sửa sẽ <strong>đổi màu vàng</strong> để dễ nhận biết.</li>
+                                        <li>Delta âm hoặc bất thường sẽ hiển thị <strong>màu đỏ</strong> cảnh báo.</li>
+                                    </ul>
+                                </div>
+                            </section>
+
+                            {/* ISO 50001 */}
+                            <section className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                <h3 className="font-bold text-base mb-3 text-indigo-900 flex items-center gap-2">
+                                    🛡️ ISO 50001 — Hệ thống Quản lý Năng lượng
+                                </h3>
+                                <div className="space-y-3 text-[13px] text-indigo-800">
+                                    <div className="bg-white rounded-lg border border-indigo-200 p-3">
+                                        <p className="font-semibold mb-1">📊 Tab Dashboard</p>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li>Bảng tổng hợp <strong>MTD (Month-to-Date)</strong> cho tất cả SEU: Điện toàn NM, Điện riêng Shelling, Củi Boiler, Nước.</li>
+                                            <li>So sánh <strong>Thực tế vs Đường cơ sở (Baseline)</strong> — hiện % Tiết kiệm / Vượt chuẩn.</li>
+                                            <li><strong>KPI Cards:</strong> Điện MTD, Củi MTD, Nước MTD + EnPI (chỉ số cường độ năng lượng).</li>
+                                            <li>Biểu đồ hàng ngày: thanh xanh = tiết kiệm, thanh đỏ = vượt chuẩn.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-white rounded-lg border border-indigo-200 p-3">
+                                        <p className="font-semibold mb-1">✏️ Tab Nhập liệu (MTD)</p>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li>Bảng lưới nhập dữ liệu hàng ngày cho từng SEU: <strong>Tiêu thụ</strong> (kWh/kg/m³) + <strong>Sản lượng</strong> (kg RCN).</li>
+                                            <li>Ô xanh 🟢 = đã có data, ô đỏ 🔴 = còn trống. Click vào ô để nhập/sửa.</li>
+                                            <li>Nhập xong → Dashboard tự cập nhật MTD, tính Baseline, EnPI tức thì.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-white rounded-lg border border-indigo-200 p-3">
+                                        <p className="font-semibold mb-1">📈 Tab Phân Tích</p>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li>Biểu đồ xu hướng <strong>10 tháng gần nhất</strong> cho tất cả SEU (EVN · Củi · Nước).</li>
+                                            <li>Chuyển đổi giữa chế độ <strong>Actual</strong> (giá trị thực) và <strong>EnPI</strong> (cường độ năng lượng trên kg sản lượng).</li>
+                                            <li>Scatter plot hồi quy tuyến tính cho từng SEU.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-white rounded-lg border border-indigo-200 p-3">
+                                        <p className="font-semibold mb-1">📐 Tab Baseline (Quản trị)</p>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li>Chỉ dành cho <strong>HSE / Admin</strong>.</li>
+                                            <li>Nhập/Import dữ liệu lịch sử tháng → tính hồi quy tuyến tính → lưu Baseline Model.</li>
+                                            <li>Baseline đã kích hoạt sẽ <strong>tự áp dụng cho tất cả các tháng</strong> — không cần set lại từng tháng.</li>
+                                            <li><strong>Đồng bộ từ Data Input:</strong> Bấm nút &quot;Đồng bộ&quot; để tổng hợp dữ liệu ngày → lưu vào bảng lịch sử tháng.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div className="mt-3 bg-indigo-100 rounded-lg border border-indigo-300 p-3 text-[12px] text-indigo-900">
+                                    <p className="font-semibold">🔑 Lưu ý quan trọng</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                        <li><strong>Baseline tự động áp dụng vĩnh viễn</strong> cho tất cả các tháng sau khi kích hoạt. Không cần cài lại.</li>
+                                        <li>MTD chỉ hiển thị khi có data ở tab <strong>Nhập liệu</strong> — cần nhập cả Tiêu thụ + Sản lượng.</li>
+                                        <li>Tháng đã qua sẽ dùng dữ liệu từ <strong>Baseline Model (đã chốt)</strong>, tháng hiện tại dùng dữ liệu từ <strong>Data Input (hàng ngày)</strong>.</li>
+                                    </ul>
+                                </div>
+                            </section>
+
+                            {/* RCN Warehouse */}
+                            <section className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                <h3 className="font-bold text-base mb-2 text-amber-800 flex items-center gap-2">📦 RCN Warehouse</h3>
+                                <ul className="list-disc pl-5 space-y-2 text-amber-700 text-[13px]">
+                                    <li>Module theo dõi tồn kho RCN theo kích cỡ (A+, A1, A2, B1, B2, C1, C2, D1, D2).</li>
+                                    <li>Nhập Closing Balance hằng ngày — hỗ trợ <strong>Paste từ Excel</strong> cho nhanh.</li>
+                                    <li>Biểu đồ tồn kho theo thời gian, phân bổ theo size.</li>
+                                </ul>
+                            </section>
+                        </>
+                    )}
+
                     {/* ── TAB: CHANGELOG ── */}
                     {tab === "Changelog" && (
                         <section className="space-y-4">
                             {[
+                                {
+                                    version: "v1.5.0",
+                                    date: "19/04/2026",
+                                    color: "emerald",
+                                    items: [
+                                        "💧 Water Tracker: Giao diện dạng Excel-like — nhập nhiều ngày + nhiều đồng hồ cùng lúc, tự tính Delta (tiêu thụ) ngay lập tức.",
+                                        "💧 Water API: Hỗ trợ bulk upsert — lưu cả tháng trong 1 request duy nhất.",
+                                        "🛡️ ISO 50001: Mở lại tab 'Nhập liệu (MTD)' để nhập dữ liệu hằng ngày cho các SEU.",
+                                        "🛡️ Baseline: Tự động áp dụng vĩnh viễn sau khi kích hoạt — không cần set lại từng tháng.",
+                                        "📖 Hướng dẫn sử dụng: Thêm tab Năng lượng, cập nhật toàn bộ nội dung.",
+                                    ]
+                                },
+                                {
+                                    version: "v1.4.0",
+                                    date: "17/04/2026",
+                                    color: "sky",
+                                    items: [
+                                        "📦 RCN Warehouse: Module tồn kho RCN mới — nhập Closing Balance hằng ngày, hỗ trợ Paste từ Excel.",
+                                        "🍽 Báo Cơm: Khóa nhập liệu 2 ngày (ngày hôm qua trở đi), chặn sửa dữ liệu cũ.",
+                                        "🍽 OT Meal Time: Lưu & hiển thị chính xác giờ ăn OT trong Zalo notification.",
+                                        "🔧 Peeling MC + Hand Peeling: Chuẩn hóa mã bộ phận (PEEL/HPEEL) trên toàn hệ thống.",
+                                    ]
+                                },
                                 {
                                     version: "v1.3.0",
                                     date: "30/03/2026",
@@ -299,7 +435,7 @@ export function UserGuide() {
                     )}
 
                     <div className="pt-2 text-xs text-muted-foreground text-center border-t">
-                        VICC LA Factory Dashboard <strong className="font-mono text-primary">v1.3.0</strong> · Phát triển & hỗ trợ: Vũ Huỳnh 🧡
+                        VICC LA Factory Dashboard <strong className="font-mono text-primary">v1.5.0</strong> · Phát triển & hỗ trợ: Vũ Huỳnh 🧡
                     </div>
                 </div>
             </DialogContent>
