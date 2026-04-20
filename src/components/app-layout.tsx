@@ -155,17 +155,16 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
     return (
         <>
             <div className="flex min-h-screen w-full flex-col bg-muted/40">
-                <header className="sticky top-0 z-30 flex h-16 items-center gap-4 bg-[#E30613] text-white px-4 md:px-6 shadow-md">
-                    <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+                <header className="sticky top-0 z-30 flex h-16 items-center gap-4 bg-[#E30613] text-white px-4 md:px-6 shadow-md overflow-hidden">
+                    <nav className="hidden md:flex flex-row items-center gap-5 text-sm min-w-0 flex-1 overflow-x-auto scrollbar-none">
                         <Link
                             href="/dashboard"
-                            className="flex items-center gap-2 text-lg font-semibold md:text-base shrink-0 md:mr-2 text-white"
+                            className="flex items-center gap-2 text-base font-semibold shrink-0 mr-2 text-white"
                         >
                             <div className="bg-white rounded-lg shadow-sm w-9 h-9 overflow-hidden flex items-center justify-center">
                                 <IntersnackLogo className="w-full h-full" />
                             </div>
-                            <span className="hidden lg:inline text-white font-bold tracking-tight whitespace-nowrap">VICC LA</span>
-                            <span className="lg:hidden text-white font-bold whitespace-nowrap">VICC LA</span>
+                            <span className="text-white font-bold tracking-tight whitespace-nowrap">VICC LA</span>
                         </Link>
                         {navItems
                             .filter((item) => item.roles.includes(role))
@@ -217,21 +216,32 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                         </Link>
                     </div>
 
-                    <div className="flex flex-1 items-center justify-end gap-2 md:gap-4 lg:gap-6 shrink-0">
-                        <Button variant="ghost" size="sm" asChild className="gap-1.5 px-2 sm:px-3 text-white hover:bg-white/10 hover:text-white">
+                    <div className="flex items-center justify-end gap-2 shrink-0 ml-auto">
+                        <Button variant="ghost" size="sm" asChild className="gap-1.5 px-2 text-white hover:bg-white/10 hover:text-white">
                             <Link href="/downtime">
                                 <AlertTriangle className="h-4 w-4" />
-                                <span className="hidden sm:inline">Downtime</span>
-                                <span className="sm:hidden text-xs font-semibold">DT</span>
+                                <span className="hidden lg:inline">Downtime</span>
                             </Link>
                         </Button>
                         <div className="text-white hover:bg-white/10 rounded-md">
                             <LanguageToggle />
                         </div>
 
+                        {/* Logout button always visible */}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSignOut}
+                            className="gap-1.5 px-2 text-white hover:bg-white/10 hover:text-white shrink-0"
+                            title={t("logout")}
+                        >
+                            <LogOut className="h-4 w-4" />
+                            <span className="hidden lg:inline">{t("logout")}</span>
+                        </Button>
+
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/10 hover:text-white border border-white/20">
+                                <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/10 hover:text-white border border-white/20 shrink-0">
                                     <Users className="h-5 w-5" />
                                     <span className="sr-only">Toggle user menu</span>
                                 </Button>
