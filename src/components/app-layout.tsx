@@ -18,6 +18,8 @@ import {
     BarChart3,
     Flame,
     Thermometer,
+    ChevronDown,
+    MonitorCheck,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -89,7 +91,11 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
     }
     // ──────────────────────────────────────────────────────────────────────
 
-    const navItems = [
+    type NavItem = { title: string; href: string; icon: React.ElementType; roles: string[]; children?: never }
+    type NavGroup = { title: string; icon: React.ElementType; roles: string[]; href?: never; children: { title: string; href: string; icon: React.ElementType }[] }
+    type NavEntry = NavItem | NavGroup
+
+    const navItems: NavEntry[] = [
         {
             title: t("nav.dashboard"),
             href: "/dashboard",
@@ -109,7 +115,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             roles: ["admin", "dept_user", "hse_admin", "HSE", "hse"],
         },
         {
-            title: "Production Report",
+            title: "Report",
             href: "/report",
             icon: FileText,
             roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin", "maint"],
@@ -127,28 +133,25 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             roles: ["admin"],
         },
         {
-            title: "Energy Hub",
+            title: "Energy",
             href: "/energy",
             icon: Zap,
             roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint", "hr_admin"],
         },
         {
-            title: "Steaming",
-            href: "/steaming",
-            icon: Flame,
+            title: "Giám sát",
+            icon: MonitorCheck,
             roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
-        },
-        {
-            title: "BORMA Ovens",
-            href: "/borma",
-            icon: Thermometer,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
+            children: [
+                { title: "Steaming", href: "/steaming", icon: Flame },
+                { title: "BORMA Ovens", href: "/borma", icon: Thermometer },
+            ],
         },
         {
             title: "Báo Cơm",
             href: "/bao-com",
             icon: UtensilsCrossed,
-            roles: ["admin", "dept_user", "viewer", "hr", "HSE", "hse", "hse_admin", "hr_admin"],
+            roles: ["hr", "hr_admin", "HSE", "hse", "hse_admin"],
         },
     ]
 
@@ -170,13 +173,37 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                             .filter((item) => item.roles.includes(role))
                             .map((item) => {
                                 const Icon = item.icon
-                                const isActive = pathname.startsWith(item.href)
+                                if ('children' in item && item.children) {
+                                    const isActive = item.children.some(c => pathname.startsWith(c.href))
+                                    return (
+                                        <DropdownMenu key={item.title}>
+                                            <DropdownMenuTrigger className={`flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors hover:text-white outline-none ${isActive ? "text-white font-bold" : "text-white/70"}`}>
+                                                <Icon className="h-4 w-4" />
+                                                {item.title}
+                                                <ChevronDown className="h-3 w-3 opacity-70" />
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start" className="w-44">
+                                                {item.children.map(child => {
+                                                    const CIcon = child.icon
+                                                    return (
+                                                        <DropdownMenuItem key={child.href} asChild>
+                                                            <Link href={child.href} className="flex items-center gap-2 cursor-pointer">
+                                                                <CIcon className="h-4 w-4" />
+                                                                {child.title}
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                    )
+                                                })}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )
+                                }
+                                const isActive = pathname.startsWith(item.href!)
                                 return (
                                     <Link
                                         key={item.href}
-                                        href={item.href}
-                                        className={`transition-colors hover:text-white flex items-center gap-2 whitespace-nowrap shrink-0 ${isActive ? "text-white font-bold" : "text-white/70"
-                                            }`}
+                                        href={item.href!}
+                                        className={`transition-colors hover:text-white flex items-center gap-2 whitespace-nowrap shrink-0 ${isActive ? "text-white font-bold" : "text-white/70"}`}
                                     >
                                         <Icon className="h-4 w-4" />
                                         {item.title}
@@ -198,14 +225,26 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                                 <DropdownMenuSeparator />
                                 {navItems
                                     .filter((item) => item.roles.includes(role))
-                                    .map((item) => (
-                                        <DropdownMenuItem key={item.href} asChild>
-                                            <Link href={item.href} className="w-full cursor-pointer">
-                                                <item.icon className="mr-2 h-4 w-4" />
-                                                {item.title}
-                                            </Link>
-                                        </DropdownMenuItem>
-                                    ))}
+                                    .flatMap((item) => {
+                                        if ('children' in item && item.children) {
+                                            return item.children.map(child => (
+                                                <DropdownMenuItem key={child.href} asChild>
+                                                    <Link href={child.href} className="w-full cursor-pointer">
+                                                        <child.icon className="mr-2 h-4 w-4" />
+                                                        {child.title}
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                            ))
+                                        }
+                                        return [
+                                            <DropdownMenuItem key={item.href} asChild>
+                                                <Link href={item.href!} className="w-full cursor-pointer">
+                                                    <item.icon className="mr-2 h-4 w-4" />
+                                                    {item.title}
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        ]
+                                    })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Link href="/dashboard" className="flex items-center gap-2 shrink-0 text-white transition-opacity hover:opacity-90">
