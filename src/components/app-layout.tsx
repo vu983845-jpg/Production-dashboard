@@ -138,15 +138,16 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
             icon: Zap,
             roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint", "hr_admin"],
         },
-        {
-            title: "Giám sát",
-            icon: MonitorCheck,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
-            children: [
-                { title: "Steaming", href: "/steaming", icon: Flame },
-                { title: "BORMA Ovens", href: "/borma", icon: Thermometer },
-            ],
-        },
+        // TODO: Unhide when V-NET API connection is working
+        // {
+        //     title: "Giám sát",
+        //     icon: MonitorCheck,
+        //     roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
+        //     children: [
+        //         { title: "Steaming", href: "/steaming", icon: Flame },
+        //         { title: "BORMA Ovens", href: "/borma", icon: Thermometer },
+        //     ],
+        // },
         {
             title: "Báo Cơm",
             href: "/bao-com",
