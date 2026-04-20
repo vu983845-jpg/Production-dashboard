@@ -1,29 +1,29 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   STEAMING MONITOR — "Vanguard Industrial" Design System
-   Inspired by SCADA/HMI dashboards, glassmorphism, dark mode
+   STEAMING MONITOR — "Corporate Enterprise" Design System
+   Brand: Intersnack Vietnam (Light theme, #E30613 red)
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── Root container ─────────────────────────────────────────────────── */
 .steaming-root {
-  --st-surface: #0b1326;
-  --st-surface-container: #171f33;
-  --st-surface-high: #222a3d;
-  --st-surface-highest: #2d3449;
-  --st-surface-low: #131b2e;
-  --st-on-surface: #dae2fd;
+  --st-surface: #f1f5f9;
+  --st-surface-container: #ffffff;
+  --st-surface-high: #f8fafc;
+  --st-surface-low: #e2e8f0;
+  --st-on-surface: #0f172a;
   --st-primary: #E30613;
-  --st-primary-dim: #ffb4aa;
-  --st-success: #10b981;
-  --st-warning: #f59e0b;
-  --st-danger: #ef4444;
+  --st-primary-dim: #fca5a5;
+  --st-success: #059669;
+  --st-warning: #d97706;
+  --st-danger: #dc2626;
   --st-muted: #64748b;
+  --st-border: #e2e8f0;
 
   background: var(--st-surface);
   color: var(--st-on-surface);
   min-height: 100%;
   padding: 0;
   font-family: 'Inter', system-ui, sans-serif;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -35,8 +35,8 @@
   flex-wrap: wrap;
   gap: 16px;
   padding: 20px 24px;
-  background: linear-gradient(135deg, var(--st-surface-container), var(--st-surface-low));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--st-surface-container);
+  border-bottom: 1px solid var(--st-border);
 }
 
 .steaming-header-left {
@@ -105,9 +105,9 @@
   flex-direction: column;
   align-items: center;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  backdrop-filter: blur(8px);
+  background: var(--st-surface-high);
+  border-radius: 8px;
+  border: 1px solid var(--st-border);
   min-width: 64px;
 }
 
@@ -131,10 +131,10 @@
 .steaming-error {
   margin: 12px 24px 0;
   padding: 10px 16px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
-  border-radius: 10px;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -143,10 +143,10 @@
 .steaming-demo-banner {
   margin: 12px 24px 0;
   padding: 10px 16px;
-  background: rgba(14, 165, 233, 0.1);
-  border: 1px solid rgba(14, 165, 233, 0.2);
-  color: #7dd3fc;
-  border-radius: 10px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #b45309;
+  border-radius: 8px;
   font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
@@ -157,8 +157,8 @@
 .steaming-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  padding: 20px 24px;
+  gap: 20px;
+  padding: 24px;
 }
 
 @media (max-width: 1024px) {
@@ -170,7 +170,8 @@
 @media (max-width: 640px) {
   .steaming-grid {
     grid-template-columns: 1fr;
-    padding: 12px 16px;
+    padding: 16px;
+    gap: 16px;
   }
 }
 
@@ -178,17 +179,18 @@
 .steaming-card {
   position: relative;
   background: var(--st-surface-container);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 24px;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--st-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 .steaming-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  border-color: rgba(227, 6, 19, 0.2);
 }
 
 .steaming-card-active {
@@ -424,8 +426,9 @@
 .steaming-chart-card {
   margin: 0 24px 24px;
   background: var(--st-surface-container);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  border: 1px solid var(--st-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 

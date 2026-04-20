@@ -143,18 +143,34 @@ export default function SteamingMonitor() {
             const anyActive = data.some(c => c.t1 > 30 || c.t2 > 30)
             setDeviceOnline(anyActive || data.some(c => c.running))
 
-            // Build history point
-            const point: HistoryPoint = {
-                time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+            // Parse DB history
+            if (json.history && Array.isArray(json.history)) {
+                const dbHistory: HistoryPoint[] = json.history.map((h: any) => {
+                    const t = new Date(h.timestamp);
+                    const pt: HistoryPoint = { 
+                        time: t.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) 
+                    };
+                    const cData: CookerData[] = h.data?.cookers || [];
+                    cData.forEach(c => {
+                        pt[`${c.id}_T1`] = c.t1;
+                        pt[`${c.id}_T2`] = c.t2;
+                    });
+                    return pt;
+                });
+                setHistory(dbHistory.slice(-MAX_HISTORY));
+            } else {
+                // Fallback to local
+                const point: HistoryPoint = {
+                    time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+                }
+                data.forEach(c => {
+                    point[`${c.id}_T1`] = c.t1
+                    point[`${c.id}_T2`] = c.t2
+                })
+                const newHistory = [...historyRef.current, point].slice(-MAX_HISTORY)
+                historyRef.current = newHistory
+                setHistory(newHistory)
             }
-            data.forEach(c => {
-                point[`${c.id}_T1`] = c.t1
-                point[`${c.id}_T2`] = c.t2
-            })
-
-            const newHistory = [...historyRef.current, point].slice(-MAX_HISTORY)
-            historyRef.current = newHistory
-            setHistory(newHistory)
         } catch (err: any) {
             setError(err.message)
         } finally {
