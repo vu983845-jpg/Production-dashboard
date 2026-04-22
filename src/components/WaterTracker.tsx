@@ -78,7 +78,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
     const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()))
     const [fetchedRecords, setFetchedRecords] = useState<WaterRecord[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [viewMode, setViewMode] = useState<"table" | "chart">("table")
+    const [viewMode, setViewMode] = useState<"table" | "chart">(canEdit ? "table" : "chart")
 
     // Local state for grid inputs
     const [localData, setLocalData] = useState<LocalDataMap>({})
@@ -253,12 +253,14 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
             {/* ── Tab nav bar ─────────────────────────────────────────── */}
             <div className="flex gap-2 flex-wrap items-center justify-between">
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => setViewMode("table")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${viewMode === "table" ? "bg-sky-500 text-white shadow-md" : "bg-white/70 text-slate-600 border border-slate-200 hover:bg-sky-50"}`}
-                    >
-                        <PenLine className="h-4 w-4" /> Bảng Nhập Liệu
-                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={() => setViewMode("table")}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${viewMode === "table" ? "bg-sky-500 text-white shadow-md" : "bg-white/70 text-slate-600 border border-slate-200 hover:bg-sky-50"}`}
+                        >
+                            <PenLine className="h-4 w-4" /> Bảng Nhập Liệu
+                        </button>
+                    )}
                     <button
                         onClick={() => setViewMode("chart")}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${viewMode === "chart" ? "bg-sky-500 text-white shadow-md" : "bg-white/70 text-slate-600 border border-slate-200 hover:bg-sky-50"}`}
@@ -354,8 +356,8 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                                                     value={localData[dateStr]?.[m.key] ?? ""}
                                                                     onChange={e => onChangeCell(dateStr, m.key, e.target.value)}
                                                                     className={`w-full border rounded-lg px-2 py-1.5 text-right font-mono text-sm font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition ${isFuture ? "bg-slate-100 text-slate-400 border-slate-100" :
-                                                                            localData[dateStr]?.[m.key] !== originalData[dateStr]?.[m.key] ? "bg-sky-50 border-sky-300 text-sky-800" :
-                                                                                "bg-white border-slate-200 text-slate-800 focus:border-sky-400"
+                                                                        localData[dateStr]?.[m.key] !== originalData[dateStr]?.[m.key] ? "bg-sky-50 border-sky-300 text-sky-800" :
+                                                                            "bg-white border-slate-200 text-slate-800 focus:border-sky-400"
                                                                         }`}
                                                                     placeholder="-"
                                                                 />

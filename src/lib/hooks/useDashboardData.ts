@@ -119,6 +119,7 @@ async function fetchDashboardRaw(selectedMonth: Date) {
         { data: deptRows },
         { data: othersRaw },
         { data: peelLineData },
+        { data: waterData },
         shellDeptResult,
     ] = await Promise.all([
         supabase
@@ -171,6 +172,13 @@ async function fetchDashboardRaw(selectedMonth: Date) {
             .select('line_code, actual_ton, broken_pct, unpeel_pct')
             .gte('work_date', startFilter)
             .lte('work_date', endFilter),
+        // Nước cấp tổng từ bảng daily_water
+        supabase
+            .from('daily_water')
+            .select('work_date, tong')
+            .gte('work_date', startFilter)
+            .lte('work_date', endFilter)
+            .order('work_date'),
         shellDeptPromise,
     ])
 
@@ -191,7 +199,7 @@ async function fetchDashboardRaw(selectedMonth: Date) {
     return {
         dtEvents, eData, totalData, dData, compData,
         shellLineData, deptRows, othersRaw, peelLineData,
-        shellKpiRaw,
+        shellKpiRaw, waterData,
         startFilter, endFilter, prevMonthDateStr, nextDayStr,
     }
 }
@@ -226,7 +234,7 @@ function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): Das
     const {
         dtEvents, eData, totalData, dData, compData,
         shellLineData, deptRows, othersRaw, peelLineData,
-        shellKpiRaw, startFilter, endFilter, prevMonthDateStr,
+        shellKpiRaw, waterData, startFilter, endFilter, prevMonthDateStr,
     } = raw
 
     // ── Downtime aggregation ─────────────────────────────────────────────────
@@ -254,7 +262,8 @@ function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): Das
             const water = Number(r.water_m3 || 0)
             const wood = Number(r.wood_kg || 0)
             elecActual += elec; elecTarget += Number(r.electricity_target_kwh || 0)
-            waterActual += water; waterTarget += Number(r.water_target_m3 || 0)
+            waterTarget += Number(r.water_target_m3 || 0)
+            waterActual += water  // fallback; will be overridden by daily_water below
             woodActual += wood; woodTarget += Number(r.wood_target_kg || 0)
             const scope1 = (wood * 0.028) + (water * 0.6 * 0.201)
             const scope2 = elec * 0.6592
@@ -272,6 +281,12 @@ function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): Das
             WoodTarget: Number(r.wood_target_kg || 0),
             Emission: Number((dailyEmissionsByDate[r.work_date] || 0).toFixed(2))
         }))
+    }
+
+    // Override waterActual with daily_water.tong (nước cấp tổng thực tế)
+    if (waterData && waterData.length > 0) {
+        const dailyWaterSum = waterData.reduce((sum: number, r: any) => sum + Number(r.tong || 0), 0)
+        if (dailyWaterSum > 0) waterActual = dailyWaterSum
     }
 
     // ── Total dashboard ("all" key) ──────────────────────────────────────────

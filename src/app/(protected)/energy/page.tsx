@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { format, startOfMonth, endOfMonth, subMonths, addMonths, subDays, addDays, differenceInDays } from "date-fns"
 import { vi } from "date-fns/locale"
 import { CalendarIcon, ChevronLeft, ChevronRight, Zap, Loader2, Droplets } from "lucide-react"
@@ -40,6 +41,10 @@ export default function EnergyDashboardPage() {
 
     const [userRole, setUserRole] = useState("viewer")
     const [userEmail, setUserEmail] = useState("")
+
+    // Read ?tab= from URL to auto-switch tabs (e.g. from dashboard Water card link)
+    const searchParams = useSearchParams()
+    const defaultTab = searchParams?.get('tab') || 'energy_dashboard'
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
@@ -404,7 +409,7 @@ export default function EnergyDashboardPage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="energy_dashboard" className="space-y-4">
+            <Tabs defaultValue={defaultTab} className="space-y-4">
                 <TabsList className="bg-white/60 backdrop-blur-md border border-slate-200/60 shadow-sm rounded-xl p-1 w-full justify-start h-auto flex flex-wrap gap-1">
                     <TabsTrigger value="energy_dashboard" className="data-[state=active]:bg-[#e63121] data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-4 py-2 font-semibold transition-all">
                         <Zap className="h-4 w-4 mr-2" /> Energy Dashboard

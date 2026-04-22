@@ -1,6 +1,7 @@
 "use client"
 
 import { format } from "date-fns"
+import Link from "next/link"
 import { TrendingUp, TrendingDown, Zap, Droplets, Package, Factory, Leaf } from "lucide-react"
 import {
     Bar, CartesianGrid, Cell, ComposedChart, Line,
@@ -130,9 +131,8 @@ function SeuCard({
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">
                     {icon} {label}
                 </span>
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                    isMet ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                }`}>
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${isMet ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                    }`}>
                     {isMet ? '✓ MET' : '✗ MISS'}
                 </span>
             </div>
@@ -253,8 +253,10 @@ export function OverviewTab({
                     sub={`/ ${kpiSummary.contTarget.toFixed(0)} Cont`} pct={contPct} icon={Package} color="#7c3aed" />
                 <KpiCard label="Electricity" value={(kpiSummary.elecActual / 1000).toFixed(1)} unit="MWh"
                     sub={`/ ${(kpiSummary.elecTarget / 1000).toFixed(1)} MWh`} pct={elecPct} icon={Zap} color="#eab308" inverse />
-                <KpiCard label="Water" value={kpiSummary.waterActual.toFixed(0)} unit="m³"
-                    sub={`/ ${kpiSummary.waterTarget.toFixed(0)} m³`} pct={waterPct} icon={Droplets} color="#3b82f6" inverse />
+                <Link href="/energy?tab=water" title="Xem chi tiết Thế giới Nước" className="block hover:scale-[1.02] transition-transform duration-150">
+                    <KpiCard label="Water" value={kpiSummary.waterActual.toFixed(0)} unit="m³"
+                        sub={`/ ${kpiSummary.waterTarget.toFixed(0)} m³`} pct={waterPct} icon={Droplets} color="#3b82f6" inverse />
+                </Link>
                 <KpiCard label="CO₂e Emission" value={kpiSummary.totalEmission.toFixed(1)} unit="T CO₂e"
                     sub={`/ ${kpiSummary.totalEmissionTarget} T`} pct={co2Pct} icon={Leaf} color="#10b981" inverse />
             </div>
@@ -511,11 +513,10 @@ export function OverviewTab({
                     <div className="flex items-center gap-2">
                         <span className="w-1 h-4 bg-[#E30613] rounded-full inline-block" />
                         <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">ISO 50001 — SEU Intensity MTD</span>
-                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold border ${
-                            seuCards.filter(s => s.miss).length === 0
+                        <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold border ${seuCards.filter(s => s.miss).length === 0
                                 ? 'bg-emerald-900/40 text-emerald-400 border-emerald-700/40'
                                 : 'bg-red-900/40 text-red-400 border-red-700/40'
-                        }`}>
+                            }`}>
                             {seuCards.filter(s => s.miss).length === 0 ? 'ALL MET ✓' : `${seuCards.filter(s => s.miss).length} MISS`}
                         </span>
                     </div>
