@@ -172,11 +172,11 @@ async function fetchDashboardRaw(selectedMonth: Date) {
             .select('line_code, actual_ton, broken_pct, unpeel_pct')
             .gte('work_date', startFilter)
             .lte('work_date', endFilter),
-        // Nước cấp tổng từ bảng daily_water
+        // Nước cấp tổng từ bảng daily_water — fetch từ tháng trước để có baseline
         supabase
             .from('daily_water')
             .select('work_date, tong')
-            .gte('work_date', startFilter)
+            .gte('work_date', prevMonthDateStr)
             .lte('work_date', endFilter)
             .order('work_date'),
         shellDeptPromise,
@@ -284,9 +284,20 @@ function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): Das
     }
 
     // Override waterActual with daily_water.tong (nước cấp tổng thực tế)
-    if (waterData && waterData.length > 0) {
-        const dailyWaterSum = waterData.reduce((sum: number, r: any) => sum + Number(r.tong || 0), 0)
-        if (dailyWaterSum > 0) waterActual = dailyWaterSum
+    // tong là số đọc đồng hồ tích luỹ → cần tính delta giữa các ngày liên tiếp
+    if (waterData && waterData.length > 1) {
+        const sorted = [...waterData].sort((a: any, b: any) => a.work_date < b.work_date ? -1 : 1)
+        let totalDelta = 0
+        for (let i = 1; i < sorted.length; i++) {
+            const curr = Number(sorted[i].tong || 0)
+            const prev = Number(sorted[i - 1].tong || 0)
+            // Chỉ tính nếu cả hai có giá trị và ngày hiện tại nằm trong tháng được chọn
+            if (curr > 0 && prev > 0 && sorted[i].work_date >= startFilter) {
+                const delta = curr - prev
+                if (delta > 0) totalDelta += delta
+            }
+        }
+        if (totalDelta > 0) waterActual = totalDelta
     }
 
     // ── Total dashboard ("all" key) ──────────────────────────────────────────
