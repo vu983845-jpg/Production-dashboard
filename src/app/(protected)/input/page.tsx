@@ -3053,7 +3053,7 @@ export default function InputPage() {
 
                     {role !== 'maint' && <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>}
 
-                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="energy">Điện & Nước</TabsTrigger>}
+                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="energy">Điện EVN & Củi</TabsTrigger>}
 
                     {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
 
