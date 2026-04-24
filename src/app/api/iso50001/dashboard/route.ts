@@ -47,21 +47,21 @@ export async function GET(request: Request) {
 
         // Fetch historical data
         const { data: monthlyHist, error: mHistErr } = await supabase
-                .from('iso50001_monthly_historical')
-                .select('*, seu:iso50001_seu_master(name, energy_type, unit)')
-                .gte('month_year', histStart)
-                .order('month_year', { ascending: false });
+            .from('iso50001_monthly_historical')
+            .select('*, seu:iso50001_seu_master(name, energy_type, unit)')
+            .gte('month_year', histStart)
+            .order('month_year', { ascending: false });
 
         if (mHistErr) throw mHistErr;
-        
+
         let dailyHist: any[] = [];
-        
+
         if (isCurrentMonth) {
             // Auto-aggregate dailyHist from real DB directly
             const prevDateObj = new Date(startDate);
             prevDateObj.setDate(prevDateObj.getDate() - 1);
             const prevDate = prevDateObj.toISOString().slice(0, 10);
-            
+
             const [{ data: eData }, { data: kData }, { data: cData }, { data: wData }, { data: oData }] = await Promise.all([
                 supabase.from('daily_energy').select('work_date, electricity_kwh, wood_kg, rcn_hap_duoc_kg').gte('work_date', startDate).lte('work_date', endDate),
                 supabase.from('daily_kpi').select('work_date, department_id, good_output_ton, actual_output').in('department_id', ['22a1f57a-6267-4442-9aba-d465cf7810f9', '4156ac1a-96e0-4966-a3ee-8ec7884d6349', '4dafa191-cb40-4ff4-9156-4a3f93d338f8']).gte('work_date', startDate).lte('work_date', endDate),
@@ -71,42 +71,44 @@ export async function GET(request: Request) {
             ]);
 
             const allDates = [...new Set([
-                ...(eData||[]).map(r => r.work_date),
-                ...(kData||[]).map(r => r.work_date)
+                ...(eData || []).map(r => r.work_date),
+                ...(kData || []).map(r => r.work_date)
             ])].sort();
 
-            const kpiMap = {};
-            (kData||[]).forEach(d => {
-                if(!kpiMap[d.work_date]) kpiMap[d.work_date] = {};
+            const kpiMap: Record<string, any> = {};
+            (kData || []).forEach(d => {
+                if (!kpiMap[d.work_date]) kpiMap[d.work_date] = {};
                 kpiMap[d.work_date][d.department_id] = d;
             });
-            const eMap = {};
-            (eData||[]).forEach(d => { eMap[d.work_date] = d; });
-            
-            const compMap = {};
-            (cData||[]).forEach((d, i) => {
-                if(i > 0 && d.work_date >= startDate) {
-                    const prev = cData[i-1];
-                    const m1 = Math.max(0, ((d.meter1||0) - (prev.meter1||0)) * 1000);
-                    const m2 = Math.max(0, ((d.meter2||0) - (prev.meter2||0)) * 1000);
-                    const m3 = Math.max(0, ((d.meter3||0) - (prev.meter3||0)) * 1000);
+            const eMap: Record<string, any> = {};
+            (eData || []).forEach(d => { eMap[d.work_date] = d; });
+
+            const compMap: Record<string, number> = {};
+            const cDataArr = cData || [];
+            cDataArr.forEach((d, i) => {
+                if (i > 0 && d.work_date >= startDate) {
+                    const prev = cDataArr[i - 1];
+                    const m1 = Math.max(0, ((d.meter1 || 0) - (prev.meter1 || 0)) * 1000);
+                    const m2 = Math.max(0, ((d.meter2 || 0) - (prev.meter2 || 0)) * 1000);
+                    const m3 = Math.max(0, ((d.meter3 || 0) - (prev.meter3 || 0)) * 1000);
                     compMap[d.work_date] = m1 + m2 + m3;
                 }
             });
 
-            const waterMap = {};
-            (wData||[]).forEach((d, i) => {
-                if(i > 0 && d.work_date >= startDate) {
-                    const prev = wData[i-1];
-                    waterMap[d.work_date] = Math.max(0, (d.tong||0) - (prev.tong||0));
+            const waterMap: Record<string, number> = {};
+            const wDataArr = wData || [];
+            wDataArr.forEach((d, i) => {
+                if (i > 0 && d.work_date >= startDate) {
+                    const prev = wDataArr[i - 1];
+                    waterMap[d.work_date] = Math.max(0, (d.tong || 0) - (prev.tong || 0));
                 }
             });
-            
+
             // SEU 4 uses Shelling (Khu vực Cắt/Chẻ) -> where is Shelling Electricity?
             // "Shelling" is a separate meter or part of 'otherElecData'?
             // In energy/page.tsx, shelling is calculated differently. Let's provide a basic approximation or 0 for now since we're using "Toàn nhà máy điện" which covers everything.
             // Wait, Shelling electricity kwh was stored in some place but I can hardcode it as 0 here if it's missing. Actually user only cares about the 5 SEUs! Shelling is SEU 4!
-            
+
             const ST_ELEC = 1;
             const ST_WOOD = 2;
             const ST_PEEL = 3;
@@ -114,13 +116,13 @@ export async function GET(request: Request) {
             const ST_WATR = 5;
 
             // Pre-calculate Shelling Kwh from others if we have it? Wait, let's leave actual_energy=0 for shelling if we don't know yet, but we will populate it below.
-            
-            for(const date of allDates) {
+
+            for (const date of allDates) {
                 const ed = eMap[date] || {};
                 const kpiPACK = (kpiMap[date] || {})['22a1f57a-6267-4442-9aba-d465cf7810f9'] || {};
                 const kpiSHELL = (kpiMap[date] || {})['4156ac1a-96e0-4966-a3ee-8ec7884d6349'] || {};
                 const kpiPEEL = (kpiMap[date] || {})['4dafa191-cb40-4ff4-9156-4a3f93d338f8'] || {};
-                
+
                 // SEU 1: Toàn nhà máy điện / Packing
                 dailyHist.push({
                     seu_id: ST_ELEC, entry_date: date, actual_energy: ed.electricity_kwh || 0,
@@ -153,10 +155,10 @@ export async function GET(request: Request) {
                     rcn_hap_duoc_kg: ed.rcn_hap_duoc_kg || 0, ck_obtained_mt: 0
                 });
             }
-            
+
             // Map the SEU meta
             dailyHist.forEach(d => {
-                d.seu = allSeus.find(s => s.seu_id === d.seu_id);
+                d.seu = (allSeus || []).find(s => s.seu_id === d.seu_id);
             });
         }
 
@@ -242,7 +244,7 @@ export async function GET(request: Request) {
                 if (!summaryBySeu[e.seu_id]) continue
                 const s = summaryBySeu[e.seu_id]
                 s.total_actual += Number(e.actual_energy) || 0
-                s.total_rcn    += Number(e.rcn_hap_duoc_kg) || 0
+                s.total_rcn += Number(e.rcn_hap_duoc_kg) || 0
                 if (e.ck_obtained_mt != null) s.total_ck = (s.total_ck || 0) + Number(e.ck_obtained_mt)
                 s.days++
             }
