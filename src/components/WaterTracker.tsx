@@ -73,7 +73,7 @@ const WaterTooltip = ({ active, payload, label }: any) => {
 
 export function WaterTracker({ userRole }: { userRole?: string }) {
     const supabase = createClient()
-    const canEdit = userRole === "admin" || userRole === "HSE" || userRole === "maint"
+    const canEdit = userRole === "admin" || userRole === "HSE" || userRole === "maint" || userRole === "hse_admin"
 
     const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()))
     const [fetchedRecords, setFetchedRecords] = useState<WaterRecord[]>([])
