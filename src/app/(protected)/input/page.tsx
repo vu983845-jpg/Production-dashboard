@@ -3,6 +3,7 @@
 
 
 import { useState, useEffect, useRef } from "react"
+import { useSearchParams } from "next/navigation"
 
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
 
@@ -236,6 +237,7 @@ import { Label } from "@/components/ui/label"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import RCNInventoryForm from "@/components/RCNInventoryForm"
+import { WaterTracker } from "@/components/WaterTracker"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -331,7 +333,10 @@ export default function InputPage() {
         pendingDate: null,
     })
 
+    const searchParams = useSearchParams()
+
     const [role, setRole] = useState("")
+    const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'production')
 
     const [userId, setUserId] = useState("")
 
@@ -3039,7 +3044,10 @@ export default function InputPage() {
 
 
 
-            <Tabs defaultValue={role === 'maint' ? 'other-elec' : 'production'} className="space-y-4">
+            <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="space-y-4">
 
                 <TabsList>
 
@@ -3052,6 +3060,8 @@ export default function InputPage() {
                     {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
 
                     {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="other-elec">⚡ Điện Khác</TabsTrigger>}
+
+                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="water">💧 Nước</TabsTrigger>}
 
                 </TabsList>
 
@@ -6436,7 +6446,11 @@ export default function InputPage() {
 
                 </TabsContent>}
 
-
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && (
+                    <TabsContent value="water" className="space-y-4">
+                        <WaterTracker userRole={role ?? undefined} />
+                    </TabsContent>
+                )}
 
             </Tabs>
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, Fragment } from "react"
+import { useRouter } from "next/navigation"
 import { MealAiChat } from "@/components/bao-com/MealAiChat"
 import {
     ClipboardPaste,
@@ -836,6 +837,8 @@ export default function BaoCom() {
     const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
     const [deptList, setDeptList] = useState<{ id: string; code: string; name_en: string }[]>([])
     const [userRole, setUserRole] = useState("")
+    const [roleLoaded, setRoleLoaded] = useState(false)
+    const router = useRouter()
 
     // History state
     const [historyRecords, setHistoryRecords] = useState<SavedRecord[]>([])
@@ -869,14 +872,29 @@ export default function BaoCom() {
             }
             const { data: depts } = await supabase.from("departments").select("id, code, name_en").order("sort_order")
             if (depts) setDeptList(depts)
+            setRoleLoaded(true)
         }
         init()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const RAW_ALLOWED_ROLES = ["hr", "hr_admin", "hse", "hse_admin", "admin", "plant_manager"]
+    const RAW_ALLOWED_ROLES = ["hr", "hr_admin", "hse", "hse_admin", "admin", "plant_manager", "HSE"]
     const normalizedRole = userRole ? userRole.toLowerCase().replace(/[\s-]/g, '_') : ''
-    const canEdit = RAW_ALLOWED_ROLES.includes(normalizedRole)
+    const canEdit = RAW_ALLOWED_ROLES.map(r => r.toLowerCase().replace(/[\s-]/g, '_')).includes(normalizedRole)
     const canSave = canEdit
+
+    // Access guard — show after role is loaded
+    if (roleLoaded && !canEdit) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-8">
+                <UtensilsCrossed className="h-16 w-16 text-muted-foreground/40" />
+                <h1 className="text-2xl font-bold text-muted-foreground">Không có quyền truy cập</h1>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                    Chức năng Báo Cơm chỉ dành cho HR, HSE và Admin.
+                </p>
+                <Button variant="outline" onClick={() => router.push('/dashboard')}>← Về Dashboard</Button>
+            </div>
+        )
+    }
 
     // ─── Build summary text for kitchen ───
     const buildSummaryText = (): string => {

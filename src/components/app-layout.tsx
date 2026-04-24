@@ -92,7 +92,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
     // ──────────────────────────────────────────────────────────────────────
 
     type NavItem = { title: string; href: string; icon: React.ElementType; roles: string[]; children?: never }
-    type NavGroup = { title: string; icon: React.ElementType; roles: string[]; href?: never; children: { title: string; href: string; icon: React.ElementType }[] }
+    type NavGroup = { title: string; icon: React.ElementType; roles: string[]; href?: never; children: { title: string; href: string; icon: React.ElementType; roles?: string[] }[] }
     type NavEntry = NavItem | NavGroup
 
     const navItems: NavEntry[] = [
@@ -128,7 +128,8 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                 {
                     title: "Báo Cơm",
                     href: "/bao-com",
-                    icon: UtensilsCrossed
+                    icon: UtensilsCrossed,
+                    roles: ["admin", "hr_admin", "HSE", "hse_admin"],
                 },
             ],
         },
@@ -219,7 +220,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                                                 <ChevronDown className="h-3 w-3 opacity-70" />
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="start" className="w-44">
-                                                {item.children.map(child => {
+                                                {item.children.filter(c => !c.roles || c.roles.includes(role)).map(child => {
                                                     const CIcon = child.icon
                                                     return (
                                                         <DropdownMenuItem key={child.href} asChild>
@@ -263,7 +264,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                                     .filter((item) => item.roles.includes(role))
                                     .flatMap((item) => {
                                         if ('children' in item && item.children) {
-                                            return item.children.map(child => (
+                                            return item.children.filter(c => !c.roles || c.roles.includes(role)).map(child => (
                                                 <DropdownMenuItem key={child.href} asChild>
                                                     <Link href={child.href} className="w-full cursor-pointer">
                                                         <child.icon className="mr-2 h-4 w-4" />
