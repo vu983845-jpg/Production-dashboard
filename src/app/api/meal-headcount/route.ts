@@ -9,7 +9,12 @@ const adminClient = createClient(
     { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-const ALLOWED_ROLES = ['admin', 'hr', 'hr_admin', 'HSE', 'hse', 'hse_admin', 'plant_manager']
+const RAW_ALLOWED_ROLES = ['admin', 'hr', 'hr_admin', 'hse', 'hse_admin', 'plant_manager']
+const isRoleAllowed = (role: string | undefined | null) => {
+    if (!role) return false
+    const normalized = role.toLowerCase().replace(/[\s-]/g, '_')
+    return RAW_ALLOWED_ROLES.includes(normalized)
+}
 
 export async function PATCH(req: NextRequest) {
     try {
@@ -26,7 +31,7 @@ export async function PATCH(req: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        if (!profile || !ALLOWED_ROLES.includes(profile.role)) {
+        if (!profile || !isRoleAllowed(profile.role)) {
             return NextResponse.json(
                 { error: `Không có quyền. Role hiện tại: ${profile?.role ?? 'unknown'}` },
                 { status: 403 }
@@ -83,7 +88,7 @@ export async function DELETE(req: NextRequest) {
         if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
         const { data: profile } = await adminClient.from('profiles').select('role').eq('id', user.id).single()
-        if (!profile || !ALLOWED_ROLES.includes(profile.role)) {
+        if (!profile || !isRoleAllowed(profile.role)) {
             return NextResponse.json({ error: `Không có quyền. Role hiện tại: ${profile?.role ?? 'unknown'}` }, { status: 403 })
         }
 
@@ -107,7 +112,7 @@ export async function POST(req: NextRequest) {
         if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
         const { data: profile } = await adminClient.from('profiles').select('role').eq('id', user.id).single()
-        if (!profile || !ALLOWED_ROLES.includes(profile.role)) {
+        if (!profile || !isRoleAllowed(profile.role)) {
             return NextResponse.json({ error: `Không có quyền. Role hiện tại: ${profile?.role ?? 'unknown'}` }, { status: 403 })
         }
 

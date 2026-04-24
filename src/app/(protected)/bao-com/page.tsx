@@ -873,7 +873,9 @@ export default function BaoCom() {
         init()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const canEdit = ["hr", "hr_admin", "HSE", "hse", "hse_admin", "admin", "plant_manager"].includes(userRole)
+    const RAW_ALLOWED_ROLES = ["hr", "hr_admin", "hse", "hse_admin", "admin", "plant_manager"]
+    const normalizedRole = userRole ? userRole.toLowerCase().replace(/[\s-]/g, '_') : ''
+    const canEdit = RAW_ALLOWED_ROLES.includes(normalizedRole)
     const canSave = canEdit
 
     // ─── Build summary text for kitchen ───

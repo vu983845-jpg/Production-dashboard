@@ -96,63 +96,98 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
     type NavEntry = NavItem | NavGroup
 
     const navItems: NavEntry[] = [
+        // 🏠 HOME - Dashboard always first
         {
             title: t("nav.dashboard"),
             href: "/dashboard",
             icon: LayoutDashboard,
             roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin", "maint"],
         },
+
+        // 📊 GROUP 1: PRODUCTION (Sản Xuất)
         {
-            title: t("nav.input"),
-            href: "/input",
+            title: "PRODUCTION",
             icon: ClipboardEdit,
-            roles: ["dept_user", "HSE", "hse_admin"],
-        },
-        {
-            title: t("nav.plan"),
-            href: "/plan",
-            icon: FileSpreadsheet,
             roles: ["admin", "dept_user", "hse_admin", "HSE", "hse"],
+            children: [
+                {
+                    title: t("nav.input"),
+                    href: "/input",
+                    icon: ClipboardEdit
+                },
+                {
+                    title: t("nav.plan"),
+                    href: "/plan",
+                    icon: FileSpreadsheet
+                },
+                {
+                    title: "Downtime Tracking",
+                    href: "/downtime",
+                    icon: AlertTriangle
+                },
+                {
+                    title: "Báo Cơm",
+                    href: "/bao-com",
+                    icon: UtensilsCrossed
+                },
+            ],
         },
+
+        // 📈 GROUP 2: MONITORING (Giám Sát)
         {
-            title: "Report",
-            href: "/report",
+            title: "MONITORING",
+            icon: MonitorCheck,
+            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint", "hr_admin"],
+            children: [
+                {
+                    title: "Energy Tracking",
+                    href: "/energy",
+                    icon: Zap
+                },
+                {
+                    title: "Analytics",
+                    href: "/analytics",
+                    icon: BarChart3
+                },
+                // TODO: Unhide when V-NET API connection is working
+                {
+                    title: "Steaming",
+                    href: "/steaming",
+                    icon: Flame
+                },
+                {
+                    title: "BORMA Ovens",
+                    href: "/borma",
+                    icon: Thermometer
+                },
+            ],
+        },
+
+        // 📋 GROUP 3: REPORTING (Báo Cáo)
+        {
+            title: "REPORTING",
             icon: FileText,
             roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin", "maint"],
+            children: [
+                {
+                    title: "Reports",
+                    href: "/report",
+                    icon: FileText
+                },
+                {
+                    title: "ISO 50001",
+                    href: "/iso50001",
+                    icon: ShieldCheck
+                },
+            ],
         },
-        {
-            title: "Analytics",
-            href: "/analytics",
-            icon: BarChart3,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "hr_admin", "maint"],
-        },
+
+        // 👤 ADMIN (Quản trị)
         {
             title: t("nav.users"),
             href: "/admin/users",
             icon: Users,
             roles: ["admin"],
-        },
-        {
-            title: "Energy",
-            href: "/energy",
-            icon: Zap,
-            roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint", "hr_admin"],
-        },
-        // TODO: Unhide when V-NET API connection is working
-        // {
-        //     title: "Giám sát",
-        //     icon: MonitorCheck,
-        //     roles: ["admin", "dept_user", "viewer", "hse_admin", "HSE", "hse", "plant_manager", "maint"],
-        //     children: [
-        //         { title: "Steaming", href: "/steaming", icon: Flame },
-        //         { title: "BORMA Ovens", href: "/borma", icon: Thermometer },
-        //     ],
-        // },
-        {
-            title: "Báo Cơm",
-            href: "/bao-com",
-            icon: UtensilsCrossed,
-            roles: ["hr", "hr_admin", "HSE", "hse", "hse_admin"],
         },
     ]
 
