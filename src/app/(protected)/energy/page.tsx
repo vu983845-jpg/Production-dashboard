@@ -118,7 +118,9 @@ export default function EnergyDashboardPage() {
 
                         Object.keys(curr).forEach(k => {
                             if (k !== 'work_date' && k !== 'id' && k !== 'created_at' && k !== 'updated_at' && typeof curr[k] === 'number') {
-                                if (curr[k] !== null && prev[k] !== null && curr[k] !== undefined && prev[k] !== undefined) {
+                                if (k === 'cooling_fan' || k === 'boiler') {
+                                    mapped[k] = prev[k] || 0; // These columns are already deltas (kWh) per day
+                                } else if (curr[k] !== null && prev[k] !== null && curr[k] !== undefined && prev[k] !== undefined) {
                                     mapped[k] = Math.max(0, (curr[k] - prev[k]) / diffDays) * multiplier
                                 } else {
                                     mapped[k] = 0
@@ -677,6 +679,7 @@ export default function EnergyDashboardPage() {
                                         work_date: date,
                                         compressor: compMap[date] || 0,
                                         shelling: shellMap[date] || 0,
+                                        cooling_fan: Math.round(oth.cooling_fan || 0),
                                         boiler: Math.round(oth.boiler || 0),
                                         office: Math.round(oth.office || 0),
                                         canteen: Math.round(oth.canteen || 0),
@@ -689,6 +692,7 @@ export default function EnergyDashboardPage() {
                                 const SEGMENTS = [
                                     { key: 'compressor', name: 'Air Compressor', color: '#8B5CF6' },
                                     { key: 'shelling', name: 'Shelling', color: '#F97316' },
+                                    { key: 'cooling_fan', name: 'Cooling Fan', color: '#38BDF8' },
                                     { key: 'boiler', name: 'Boiler', color: '#EAB308' },
                                     { key: 'db_ac_hca', name: 'DB AC HCA', color: '#3B82F6' },
                                     { key: 'eco2', name: 'ECO2', color: '#10B981' },

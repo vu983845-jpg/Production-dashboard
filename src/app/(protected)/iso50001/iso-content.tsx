@@ -111,7 +111,7 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
             <Tabs defaultValue="dashboard" className="space-y-4">
                 <TabsList className="flex flex-wrap gap-1 p-1 h-auto bg-slate-50 border shadow-sm">
                     <TabsTrigger value="dashboard" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow">📊 Dashboard</TabsTrigger>
-                    <TabsTrigger value="input" className="text-xs data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow">✏️ Nhập liệu (MTD)</TabsTrigger>
+
                     <TabsTrigger value="seu" className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow">📈 Phân Tích</TabsTrigger>
                     {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
                         <TabsTrigger value="baseline" className="text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow">📐 Baseline</TabsTrigger>
@@ -128,15 +128,15 @@ export function ISO50001Content({ userRole, userEmail }: ISOProps) {
                     )}
                 </TabsContent>
 
-                <TabsContent value="input">
-                    {blLoading ? (
-                        <div className="flex justify-center items-center h-48">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        </div>
-                    ) : (
-                        <TabInput seus={seus} currentMonth={currentMonth} onSaved={handleRefresh} />
-                    )}
-                </TabsContent>
+
+
+
+
+
+
+
+
+
 
                 <TabsContent value="seu">
                     {blLoading ? (

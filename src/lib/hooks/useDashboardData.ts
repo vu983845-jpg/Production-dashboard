@@ -288,16 +288,31 @@ function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): Das
     if (waterData && waterData.length > 1) {
         const sorted = [...waterData].sort((a: any, b: any) => a.work_date < b.work_date ? -1 : 1)
         let totalDelta = 0
+        const waterDeltaByDate: Record<string, number> = {}
         for (let i = 1; i < sorted.length; i++) {
             const curr = Number(sorted[i].tong || 0)
             const prev = Number(sorted[i - 1].tong || 0)
-            // Chỉ tính nếu cả hai có giá trị và ngày hiện tại nằm trong tháng được chọn
-            if (curr > 0 && prev > 0 && sorted[i].work_date >= startFilter) {
+            // Chỉ tính nếu cả hai có giá trị
+            if (curr > 0 && prev > 0) {
                 const delta = curr - prev
-                if (delta > 0) totalDelta += delta
+                if (delta > 0) {
+                    waterDeltaByDate[sorted[i].work_date] = delta
+                    if (sorted[i].work_date >= startFilter) {
+                        totalDelta += delta
+                    }
+                }
             }
         }
         if (totalDelta > 0) waterActual = totalDelta
+
+        // Cập nhật lại WaterActual từng ngày trong energyHistory
+        if (eData) {
+            eData.forEach((r, idx) => {
+                if (waterDeltaByDate[r.work_date] !== undefined && energyHistory[idx]) {
+                    energyHistory[idx].WaterActual = waterDeltaByDate[r.work_date];
+                }
+            })
+        }
     }
 
     // ── Total dashboard ("all" key) ──────────────────────────────────────────
