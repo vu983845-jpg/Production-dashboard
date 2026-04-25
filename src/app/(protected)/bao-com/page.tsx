@@ -42,15 +42,36 @@ const CA1_ONLY_DEPTS = new Set(["FGWH", "OFFICE"])
 // ─────────────────────────────────────────────
 // Billing cycle helper: chọn tháng M/YYYY → chu kỳ 26/(M-1) → 25/M
 // ─────────────────────────────────────────────
+function ymd(year: number, month: number, day: number): string {
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+}
+
+function enumerateDateStrings(from: string, to: string): string[] {
+    // Date-only values in Supabase are YYYY-MM-DD strings. Build the sequence in UTC
+    // and format from UTC parts so local timezone/DST can never drop the final 25th.
+    const [fromY, fromM, fromD] = from.split("-").map(Number)
+    const [toY, toM, toD] = to.split("-").map(Number)
+    const cur = new Date(Date.UTC(fromY, fromM - 1, fromD))
+    const end = Date.UTC(toY, toM - 1, toD)
+    const days: string[] = []
+
+    while (cur.getTime() <= end) {
+        days.push(ymd(cur.getUTCFullYear(), cur.getUTCMonth() + 1, cur.getUTCDate()))
+        cur.setUTCDate(cur.getUTCDate() + 1)
+    }
+
+    return days
+}
+
 function getBillingCycle(monthStr: string): { from: string; to: string; label: string } {
     // monthStr = "YYYY-MM"
     const [year, month] = monthStr.split("-").map(Number)
     // Start: ngày 26 tháng trước
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
-    const from = `${prevYear}-${String(prevMonth).padStart(2, "0")}-26`
+    const from = ymd(prevYear, prevMonth, 26)
     // End: ngày 25 tháng hiện tại
-    const to = `${year}-${String(month).padStart(2, "0")}-25`
+    const to = ymd(year, month, 25)
     // Human label: "26/MM-1/YYYY → 25/MM/YYYY"
     const label = `26/${String(prevMonth).padStart(2, "0")}/${prevYear} → 25/${String(month).padStart(2, "0")}/${year}`
     return { from, to, label }
@@ -1057,21 +1078,9 @@ export default function BaoCom() {
 
     // Build pivot: group by department_name ("Section" in Excel)
     const buildMonthlyPivot = (rows: MealStatRow[]) => {
-        // 1. All days in billing cycle (including Sundays with no data)
+        // 1. All days in billing cycle (including Sundays / dates with no data)
         const { from, to } = getBillingCycle(statsMonth)
-        const allDays: string[] = []
-        const cur = new Date(from + "T00:00:00")
-        const end = new Date(to + "T00:00:00")
-        while (cur <= end) {
-            // Use local date components to avoid UTC offset shifting the date (e.g. UTC+7 would turn
-            // "2026-04-25T00:00:00" local into "2026-04-24" via toISOString which returns UTC)
-            const y = cur.getFullYear()
-            const m = String(cur.getMonth() + 1).padStart(2, '0')
-            const d = String(cur.getDate()).padStart(2, '0')
-            allDays.push(`${y}-${m}-${d}`)
-            cur.setDate(cur.getDate() + 1)
-        }
-        const days = allDays
+        const days = enumerateDateStrings(from, to)
 
         // Helper: normalize HPEEL non-canonical section names → canonical SECTION_ORDER name
         const normalizeHpeelSectionName = (name: string, shift: string): string => {
