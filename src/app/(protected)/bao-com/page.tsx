@@ -1063,7 +1063,12 @@ export default function BaoCom() {
         const cur = new Date(from + "T00:00:00")
         const end = new Date(to + "T00:00:00")
         while (cur <= end) {
-            allDays.push(cur.toISOString().slice(0, 10))
+            // Use local date components to avoid UTC offset shifting the date (e.g. UTC+7 would turn
+            // "2026-04-25T00:00:00" local into "2026-04-24" via toISOString which returns UTC)
+            const y = cur.getFullYear()
+            const m = String(cur.getMonth() + 1).padStart(2, '0')
+            const d = String(cur.getDate()).padStart(2, '0')
+            allDays.push(`${y}-${m}-${d}`)
             cur.setDate(cur.getDate() + 1)
         }
         const days = allDays
