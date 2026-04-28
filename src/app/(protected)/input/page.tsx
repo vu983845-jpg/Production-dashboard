@@ -1120,7 +1120,7 @@ export default function InputPage() {
 
         if (monthlyEnergyData.length === 0) return
 
-        if (role !== 'admin' && role !== 'HSE' && role !== 'hse_admin') return
+        if (role !== 'admin' && role !== 'HSE' && role !== 'hse_admin' && role !== 'maint') return
 
 
 
@@ -5446,7 +5446,7 @@ export default function InputPage() {
 
 
 
-                {(role === 'admin' || role === 'HSE' || role === 'hse_admin') && (
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && (
 
                     <TabsContent value="energy" className="space-y-4">
 
@@ -5954,7 +5954,7 @@ export default function InputPage() {
 
 
 
-                {(role === 'admin' || role === 'HSE' || role === 'hse_admin') && (
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && (
 
                     <TabsContent value="compressor" className="space-y-4">
 

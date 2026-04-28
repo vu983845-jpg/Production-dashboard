@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id)
         .single()
 
-    if (!profile || !["admin", "HSE", "maint"].includes(profile.role)) {
-        return NextResponse.json({ error: "Forbidden – admin, HSE or maint role required" }, { status: 403 })
+    if (!profile || !["admin", "HSE", "hse_admin", "maint"].includes(profile.role)) {
+        return NextResponse.json({ error: "Forbidden – admin, HSE, hse_admin or maint role required" }, { status: 403 })
     }
 
     const body = await request.json()
