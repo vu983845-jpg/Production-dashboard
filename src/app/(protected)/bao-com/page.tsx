@@ -1372,21 +1372,6 @@ export default function BaoCom() {
 
             if (totalOT > 0) {
                 msg += `OT: ${totalOT}\n`
-                const sortedTimes = Array.from(otGroups.keys()).sort((a, b) => {
-                    if (a === "Không báo giờ") return 1
-                    if (b === "Không báo giờ") return -1
-                    return a.localeCompare(b)
-                })
-
-                for (const time of sortedTimes) {
-                    const g = otGroups.get(time)!
-                    const groupTotal = g.man + g.chay
-                    if (g.chay > 0) {
-                        msg += `  - Lúc ${time}: ${groupTotal} phần (${g.man} mặn, ${g.chay} chay)\n`
-                    } else {
-                        msg += `  - Lúc ${time}: ${groupTotal} phần\n`
-                    }
-                }
             }
 
             msg += `Tổng: ${grand}`
