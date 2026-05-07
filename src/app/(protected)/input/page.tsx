@@ -2435,7 +2435,7 @@ export default function InputPage() {
 
                 const brk = sData.broken_pct || 0;
 
-                const runHrs = (aTon > 0) ? Math.max(0, 7 - dMin / 60) : 0;
+                const runHrs = (aTon > 0 || dMin > 0) ? Math.max(0, 7 - dMin / 60) : 0;
 
 
 
@@ -6102,7 +6102,7 @@ export default function InputPage() {
 
 
 
-                {(role === 'admin' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
 
                     <TabsContent value="shelling-energy" className="space-y-4">
 

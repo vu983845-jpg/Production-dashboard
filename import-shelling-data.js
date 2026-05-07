@@ -347,8 +347,12 @@ async function run() {
         for (const item of payloadMap[workDate]) {
             const dMin = ddsDownMap[item.line_code] ? ddsDownMap[item.line_code][item.shift_name] : 0;
             item.downtime_min = dMin;
-            // logic: const runHrs = (aTon > 0) ? Math.max(0, 7 - dMin / 60) : 0;
-            item.run_hours = (item.actual_ton > 0) ? Math.max(0, 7 - (dMin / 60)) : 0;
+            // Tính run_hours: luôn tính dựa trên downtime nếu có, bất kể sản lượng
+            // Nếu có downtime (dMin > 0), run_hours = 7 - dMin/60
+            // Nếu không có downtime và có sản lượng, run_hours = 7
+            // Nếu không có cả hai, run_hours = 0
+            const hasDowntime = dMin > 0;
+            item.run_hours = hasDowntime ? Math.max(0, 7 - (dMin / 60)) : (item.actual_ton > 0 ? 7 : 0);
         }
 
         console.log(`Upserting ${payloadMap[workDate].length} records for ${workDate}...`);
