@@ -3478,7 +3478,18 @@ export default function BaoCom() {
                                                                                 const ids = historyRecords
                                                                                     .filter(r => (r.department_id ?? r.department_name) + '|' + r.shift === key)
                                                                                     .map(r => r.id)
-                                                                                await supabase.from('meal_headcount').delete().in('id', ids)
+                                                                                const errors: string[] = []
+                                                                                for (const id of ids) {
+                                                                                    const res = await fetch(`/api/meal-headcount?id=${id}`, { method: 'DELETE' })
+                                                                                    if (!res.ok) {
+                                                                                        const json = await res.json().catch(() => ({}))
+                                                                                        errors.push(json.error || res.statusText)
+                                                                                    }
+                                                                                }
+                                                                                if (errors.length > 0) {
+                                                                                    alert("Lá»—i xÃ³a: " + errors.join("; "))
+                                                                                    return
+                                                                                }
                                                                                 setHistoryRecords(prev => prev.filter(r => !ids.includes(r.id)))
                                                                             }}
                                                                             className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1.5 py-0.5 text-xs transition-colors"

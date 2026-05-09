@@ -64,8 +64,8 @@ const VN_DAYS = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Th
 
 // Departments that report per-shift (Ca 1, 2, 3)
 const ALL_SHIFTS = ["1", "2", "3"]
-// Departments where only Ca 1+2 are expected for meal report
-const CLEAN_SHIFTS = ["1", "2"]
+// Cleaning can occasionally work Ca 3, so expose all shifts for its meal report.
+const CLEAN_SHIFTS = ["1", "2", "3"]
 
 // ── helpers ──
 const n = (s: string) => { const v = parseInt(s); return isNaN(v) || v < 0 ? 0 : v }
@@ -542,7 +542,7 @@ export default function PublicMealPage() {
     const isOtHpeel = otSelectedDept?.code === "HPEEL" || otSelectedDept?.code === "HAND"
     const isOtOffice = otSelectedDept?.code === "OFFICE"
     const otShifts = (isOtOffice || isOtHpeel) ? SHIFTS_WITH_HC : SHIFTS_NORMAL
-    const activeMultiShifts = selectedDept?.code === "CLEAN" ? ["1", "2"] : MULTI_SHIFTS
+    const activeMultiShifts = selectedDept?.code === "CLEAN" ? CLEAN_SHIFTS : MULTI_SHIFTS
 
     const isStep1Complete = !!deptId && (!isHpeel || !!hpeelSub);
     const isStep2Complete = isStep1Complete && (isMultiShift ? !!workDate : (!!shift && !!workDate));
@@ -734,10 +734,8 @@ export default function PublicMealPage() {
         // We expect all non-maintenance, non-boiler departments to report; OFFICE only Ca 1
         const expectedDepts = depts.filter(d => !["BOILER", "RCN"].includes(d.code))
         const getMissing = (shift: string) => {
-            const expected = (shift === "3"
-                ? expectedDepts.filter(d => d.code !== "CLEAN")
-                : expectedDepts
-            ).filter(d => !(["OFFICE", "MAINT_HCA", "MAINT_SHELL"].includes(d.code) && shift !== "1"))
+            const expected = expectedDepts
+                .filter(d => !(["OFFICE", "MAINT_HCA", "MAINT_SHELL"].includes(d.code) && shift !== "1"))
             return expected.filter(d => {
                 const reportedSet = reportedDeptsByShift[shift] ?? new Set()
                 // Direct match by name (case-insensitive)
