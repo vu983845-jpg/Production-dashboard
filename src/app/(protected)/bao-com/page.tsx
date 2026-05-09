@@ -2540,7 +2540,36 @@ export default function BaoCom() {
                                                                                                                     freshSr.sectionName.toLowerCase().startsWith(r.department_name.toLowerCase().split(' ')[0]))
                                                                                                             )
                                                                                                         }
-                                                                                                        if (!rec) continue  // No record to update, skip
+                                                                                                        if (!rec) {
+                                                                                                            const deptIdForInsert = [...freshSr.departmentIds][0] ?? deptList.find(d => d.code === freshSr.deptCode)?.id
+                                                                                                            if (!deptIdForInsert) continue
+
+                                                                                                            const res = await fetch('/api/meal-headcount', {
+                                                                                                                method: 'POST',
+                                                                                                                headers: { 'Content-Type': 'application/json' },
+                                                                                                                body: JSON.stringify({
+                                                                                                                    work_date: date,
+                                                                                                                    department_id: deptIdForInsert,
+                                                                                                                    department_name: freshSr.sectionName,
+                                                                                                                    shift: freshSr.shift,
+                                                                                                                    official_present: isTV ? 0 : newVal,
+                                                                                                                    seasonal_present: isTV ? newVal : 0,
+                                                                                                                    official_absent: 0,
+                                                                                                                    seasonal_absent: 0,
+                                                                                                                    vegetarian: 0,
+                                                                                                                    ot_count: 0,
+                                                                                                                    ot_vegetarian: 0,
+                                                                                                                    note: 'Tạo từ bảng tháng báo cơm',
+                                                                                                                })
+                                                                                                            })
+                                                                                                            if (res.ok) {
+                                                                                                                savedCount++
+                                                                                                            } else {
+                                                                                                                const j = await res.json()
+                                                                                                                alert('Lá»—i táº¡o má»›i: ' + (j.error || res.statusText))
+                                                                                                            }
+                                                                                                            continue
+                                                                                                        }
                                                                                                         const diff = newVal - orig
                                                                                                         // Apply diff to official first; if official goes negative, carry remainder into seasonal
                                                                                                         const oldOfficial = rec.official_present ?? 0
@@ -2569,6 +2598,8 @@ export default function BaoCom() {
                                                                                                     }
                                                                                                     if (savedCount === 0) {
                                                                                                         alert('Không có thay đổi nào được lưu — vui lòng đổi số trước khi bấm 💾')
+                                                                                                    } else {
+                                                                                                        await fetchMonthStats()
                                                                                                     }
                                                                                                     setRowSaving(false)
                                                                                                     setEditingRowKey(null)
