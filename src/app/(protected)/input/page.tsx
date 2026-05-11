@@ -347,6 +347,8 @@ export default function InputPage() {
     const [isSaving, setIsSaving] = useState(false)
 
     const [allowedDeptIds, setAllowedDeptIds] = useState<Set<string>>(new Set())
+    const [userProfile, setUserProfile] = useState<any>(null)
+    const [hasMonthlyPlan, setHasMonthlyPlan] = useState<boolean>(true)
 
     const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean, title: string, description: string, onConfirm: () => void }>({
 
@@ -695,39 +697,23 @@ export default function InputPage() {
             const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
             if (profile) {
-
+                setUserProfile(profile)
                 setRole(profile.role)
-
                 const ids = new Set<string>()
-
                 if (profile.department_id) {
-
                     ids.add(profile.department_id)
-
                     setSelectedDept(profile.department_id)
-
                 }
-
                 if (profile.secondary_department_id) {
-
                     ids.add(profile.secondary_department_id)
-
                 }
-
                 // Support new allowed_dept_ids array (takes union with above)
-
                 if (profile.allowed_dept_ids && profile.allowed_dept_ids.length > 0) {
-
                     profile.allowed_dept_ids.forEach((id: string) => ids.add(id))
-
                     // Set first allowed dept as default if no primary set
-
                     if (!profile.department_id) setSelectedDept(profile.allowed_dept_ids[0])
-
                 }
-
                 setAllowedDeptIds(ids)
-
             }
 
 
@@ -1692,42 +1678,75 @@ export default function InputPage() {
 
 
 
+    // Check for monthly plan
+    useEffect(() => {
+        async function checkMonthlyPlan() {
+            if (!selectedDept || !date) return
+
+            const start = format(startOfMonth(date), "yyyy-MM-dd")
+            const end = format(endOfMonth(date), "yyyy-MM-dd")
+
+            const { count, error } = await supabase
+                .from('daily_plan')
+                .select('*', { count: 'exact', head: true })
+                .eq('department_id', selectedDept)
+                .gte('work_date', start)
+                .lte('work_date', end)
+
+            if (!error) {
+                setHasMonthlyPlan((count || 0) > 0)
+            }
+        }
+        checkMonthlyPlan()
+    }, [selectedDept, date])
+
+
+
     // Save Actual
 
     async function onSubmitActual(values: z.infer<typeof actualSchema>) {
-
         if (!selectedDept) {
-
             toast.error("Vui lòng chọn bộ phận")
-
             return
-
         }
 
-
+        // Logic check for > 100 tons (excluding RCN)
+        const deptCode = departments.find(d => d.id === selectedDept)?.code
+        if (deptCode !== 'RCN' && values.actual_ton > 100) {
+            setConfirmDialog({
+                isOpen: true,
+                title: "Cảnh báo Sản lượng",
+                description: `Bạn đang nhập ${values.actual_ton} tấn. Đây là một con số rất lớn (trên 100 tấn). Bạn có chắc chắn mình không nhầm lẫn giữa 'kg' và 'tấn' không?`,
+                onConfirm: () => {
+                    // Re-show admin confirmation if needed, otherwise execute
+                    if (role === 'admin' || role === 'hse_admin') {
+                        setTimeout(() => {
+                            setConfirmDialog({
+                                isOpen: true,
+                                title: "Xác nhận lưu Sản lượng",
+                                description: "Bạn đang lưu bằng quyền Admin. Dữ liệu sẽ đè lên báo cáo hiện tại của ngày này. Bạn có chắc chắn muốn lưu?",
+                                onConfirm: () => executeSaveActual(values)
+                            })
+                        }, 300)
+                    } else {
+                        executeSaveActual(values)
+                    }
+                }
+            })
+            return
+        }
 
         // Show confirmation if admin
-
         if (role === 'admin' || role === 'hse_admin') {
-
             setConfirmDialog({
-
                 isOpen: true,
-
                 title: "Xác nhận lưu Sản lượng",
-
                 description: "Bạn đang lưu bằng quyền Admin. Dữ liệu sẽ đè lên báo cáo hiện tại của ngày này. Bạn có chắc chắn muốn lưu?",
-
                 onConfirm: () => executeSaveActual(values)
-
             })
-
         } else {
-
             executeSaveActual(values)
-
         }
-
     }
 
 
@@ -3104,11 +3123,24 @@ export default function InputPage() {
                                     ))}
 
                                 </SelectContent>
-
                             </Select>
-
                         </div>
 
+                        {/* Monthly Plan Warning Banner */}
+                        {selectedDept && !hasMonthlyPlan && userProfile?.department_id === selectedDept && (
+                            <div className="lg:col-span-4 bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-center gap-4 animate-pulse">
+                                <div className="bg-red-500 text-white rounded-full p-2">
+                                    <CalendarIcon className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h4 className="text-red-800 font-bold text-sm">CHƯA CÓ KẾ HOẠCH SẢN XUẤT THÁNG!</h4>
+                                    <p className="text-red-600 text-xs mt-0.5">Bộ phận {departments.find(d => d.id === selectedDept)?.name_en} chưa nhập kế hoạch sản xuất cho tháng {format(date, "MM/yyyy")}. Vui lòng nhập kế hoạch để hệ thống tính toán hiệu suất (KPI) chính xác.</p>
+                                </div>
+                                <Button size="sm" variant="destructive" className="ml-auto" asChild>
+                                    <Link href="/plan">Nhập Kế Hoạch Ngay</Link>
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
 
