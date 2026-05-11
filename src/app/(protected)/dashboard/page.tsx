@@ -27,6 +27,7 @@ import { FadeIn, FadeInStagger } from "@/components/magicui/fade-in"
 import { AnimatedNumber } from "@/components/magicui/animated-number"
 import { BadgePulse } from "@/components/magicui/badge-pulse"
 import { OverviewTab } from "@/components/dashboard/OverviewTab"
+import { ShellingReportTab } from "@/components/dashboard/ShellingReportTab"
 import { RCNStockChart } from "@/components/RCNStockChart"
 import { useDashboardData } from "@/lib/hooks/useDashboardData"
 
@@ -226,6 +227,7 @@ export default function DashboardPage() {
     const deptData = qData?.deptData ?? []
     const shellingLineMonthData = qData?.shellingLineMonthData ?? {}
     const peelingLineMonthData = qData?.peelingLineMonthData ?? {}
+    const shellingReport = qData?.shellingReport
 
     // dailyRecords — filter from cached data by selectedDept
     const dailyRecords = useMemo(() => {
@@ -954,6 +956,7 @@ export default function DashboardPage() {
                                 <TabsTrigger value="stations">{t('tab_stations')}</TabsTrigger>
                                 <TabsTrigger value="regions">{t('tab_regions')}</TabsTrigger>
                                 <TabsTrigger value="overview">⚡ Overview</TabsTrigger>
+                                <TabsTrigger value="shelling-report">Shelling Report</TabsTrigger>
                             </TabsList>
                             <div className="flex space-x-2">
                                 {/* Month selector */}
@@ -1013,7 +1016,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    {selectedDept === 'all' && selectedTab !== 'overview' && (
+                    {selectedDept === 'all' && selectedTab !== 'overview' && selectedTab !== 'shelling-report' && (
                         <FadeInStagger faster>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 mt-2">
                                 <FadeIn>
@@ -1257,6 +1260,10 @@ export default function DashboardPage() {
                                 woodTarget: 0.08,       // kg wood / kg RCN
                             }}
                         />
+                    </TabsContent>
+
+                    <TabsContent value="shelling-report" className="mt-0 pt-2">
+                        {shellingReport && <ShellingReportTab data={shellingReport} />}
                     </TabsContent>
                 </Tabs>
 

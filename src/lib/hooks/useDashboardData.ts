@@ -124,7 +124,7 @@ async function fetchDashboardRaw(selectedMonth: Date) {
     ] = await Promise.all([
         supabase
             .from('downtime_events')
-            .select('department_id, work_date, duration_mins, start_time, end_time, is_ongoing')
+            .select('department_id, work_date, duration_mins, start_time, end_time, is_ongoing, root_cause, machine_area')
             .eq('exclude_downtime', false)
             .gte('work_date', startFilter)
             .lte('work_date', endFilter),
@@ -154,7 +154,7 @@ async function fetchDashboardRaw(selectedMonth: Date) {
             .order('work_date'),
         supabase
             .from('shelling_line_daily')
-            .select('line_code, actual_ton, run_hours, broken_pct')
+            .select('work_date, line_code, actual_ton, run_hours, broken_pct, downtime_min, shift_name, manpower, shift_leader, size')
             .gte('work_date', startFilter)
             .lte('work_date', endFilter),
         supabase
@@ -227,9 +227,245 @@ export interface DashboardComputedData {
     dailyRecords: any[]
     shellingLineMonthData: Record<string, { actual_ton: number; run_hours: number }>
     peelingLineMonthData: Record<string, { actual_ton: number }>
+    shellingReport: ShellingReportData
+}
+
+export interface ShellingReportData {
+    period: { start: string; end: string; label: string }
+    coverage: {
+        planRows: number
+        actualRows: number
+        lineRows: number
+        downtimeEvents: number
+        activeDays: number
+    }
+    totals: {
+        plan: number
+        actual: number
+        achievementPct: number
+        hours: number
+        downtimeMin: number
+        productivityTph: number
+        manpower: number
+        tonPerMan: number
+        brokenPct: number
+    }
+    weekly: ShellingReportBucket[]
+    lines: ShellingReportBucket[]
+    shifts: ShellingReportBucket[]
+    sizes: ShellingReportBucket[]
+    rootCauses: { name: string; events: number; minutes: number; share: number }[]
+    machineDowntime: { name: string; events: number; minutes: number }[]
+    daily: {
+        date: string
+        name: string
+        actual: number
+        plan: number
+        achievementPct: number
+        tph: number
+        brokenPct: number
+        downtimeMin: number
+    }[]
+    alerts: {
+        date: string
+        line: string
+        shift: string
+        size: string
+        leader: string
+        ton: number
+        brokenPct: number
+    }[]
+    insights: string[]
+}
+
+export interface ShellingReportBucket {
+    name: string
+    actual: number
+    plan: number
+    share: number
+    hours: number
+    tph: number
+    downtimeMin: number
+    manpower: number
+    tonPerMan: number
+    brokenPct: number
+    achievementPct: number
 }
 
 // ── Data processor: takes raw API responses => computed state ─────────────────
+const toNum = (value: unknown) => Number(value || 0)
+const round = (value: number, digits = 1) => Number(value.toFixed(digits))
+
+function buildShellingReport(
+    selectedMonthStart: string,
+    selectedMonthEnd: string,
+    shellDeptId: string | undefined,
+    dailyRows: any[] | null | undefined,
+    lineRows: any[] | null | undefined,
+    downtimeRows: any[] | null | undefined,
+): ShellingReportData {
+    const shellDaily = (dailyRows || []).filter((row: any) => row.dept_code === "SHELL" || row.department_id === shellDeptId)
+    const shellLines = lineRows || []
+    const shellDowntime = (downtimeRows || []).filter((row: any) => !shellDeptId || row.department_id === shellDeptId)
+    const totalActual = shellDaily.reduce((sum: number, row: any) => sum + toNum(row.actual_ton), 0)
+    const totalPlan = shellDaily.reduce((sum: number, row: any) => sum + toNum(row.plan_ton), 0)
+    const totalLineActual = shellLines.reduce((sum: number, row: any) => sum + toNum(row.actual_ton), 0)
+    const totalHours = shellLines.reduce((sum: number, row: any) => sum + toNum(row.run_hours), 0)
+    const totalManpower = shellLines.reduce((sum: number, row: any) => sum + toNum(row.manpower), 0)
+    const totalDowntime = shellDowntime.reduce((sum: number, row: any) => sum + toNum(row.duration_mins), 0)
+    const totalBrokenWeight = shellLines.reduce((sum: number, row: any) => sum + toNum(row.actual_ton) * toNum(row.broken_pct), 0)
+    const totalBrokenTon = shellLines.reduce((sum: number, row: any) => sum + (toNum(row.actual_ton) > 0 ? toNum(row.actual_ton) : 0), 0)
+    const dailyByDate = new Map(shellDaily.map((row: any) => [row.work_date, row]))
+
+    const makeBucket = (name: string, rows: any[], planRows: any[] = []): ShellingReportBucket => {
+        const actual = rows.reduce((sum, row) => sum + toNum(row.actual_ton), 0)
+        const plan = planRows.reduce((sum, row) => sum + toNum(row.plan_ton), 0)
+        const hours = rows.reduce((sum, row) => sum + toNum(row.run_hours), 0)
+        const downtimeMin = rows.reduce((sum, row) => sum + toNum(row.downtime_min), 0)
+        const manpower = rows.reduce((sum, row) => sum + toNum(row.manpower), 0)
+        const brokenWeight = rows.reduce((sum, row) => sum + toNum(row.actual_ton) * toNum(row.broken_pct), 0)
+        const brokenTon = rows.reduce((sum, row) => sum + (toNum(row.actual_ton) > 0 ? toNum(row.actual_ton) : 0), 0)
+        return {
+            name,
+            actual: round(actual, 3),
+            plan: round(plan, 3),
+            share: totalLineActual > 0 ? round((actual / totalLineActual) * 100, 1) : 0,
+            hours: round(hours, 2),
+            tph: hours > 0 ? round(actual / hours, 3) : 0,
+            downtimeMin: round(downtimeMin, 0),
+            manpower: round(manpower, 1),
+            tonPerMan: manpower > 0 ? round(actual / manpower, 3) : 0,
+            brokenPct: brokenTon > 0 ? round(brokenWeight / brokenTon, 2) : 0,
+            achievementPct: plan > 0 ? round((actual / plan) * 100, 1) : 0,
+        }
+    }
+
+    const groupLineRows = (keyFn: (row: any) => string) => {
+        const map = new Map<string, any[]>()
+        shellLines.forEach((row: any) => {
+            const key = keyFn(row) || "N/A"
+            map.set(key, [...(map.get(key) || []), row])
+        })
+        return map
+    }
+
+    const lines = Array.from(groupLineRows((row) => row.line_code).entries()).map(([name, rows]) => makeBucket(name, rows)).sort((a, b) => a.name.localeCompare(b.name))
+    const shifts = Array.from(groupLineRows((row) => row.shift_name).entries()).map(([name, rows]) => makeBucket(name, rows)).sort((a, b) => a.name.localeCompare(b.name))
+    const sizes = Array.from(groupLineRows((row) => row.size).entries()).map(([name, rows]) => makeBucket(name, rows)).sort((a, b) => b.actual - a.actual)
+    const weekMap = new Map<string, { lines: any[]; plans: any[] }>()
+
+    shellLines.forEach((row: any) => {
+        const week = Math.min(5, Math.floor((Number(String(row.work_date).slice(-2)) - 1) / 7) + 1)
+        const key = `Week ${week}`
+        const current = weekMap.get(key) || { lines: [], plans: [] }
+        current.lines.push(row)
+        weekMap.set(key, current)
+    })
+    shellDaily.forEach((row: any) => {
+        const week = Math.min(5, Math.floor((Number(String(row.work_date).slice(-2)) - 1) / 7) + 1)
+        const key = `Week ${week}`
+        const current = weekMap.get(key) || { lines: [], plans: [] }
+        current.plans.push(row)
+        weekMap.set(key, current)
+    })
+
+    const weekly = Array.from(weekMap.entries()).map(([name, rows]) => makeBucket(name, rows.lines, rows.plans)).sort((a, b) => a.name.localeCompare(b.name))
+    const groupDowntime = (keyFn: (row: any) => string) => {
+        const total = shellDowntime.reduce((sum: number, row: any) => sum + toNum(row.duration_mins), 0)
+        const map = new Map<string, { events: number; minutes: number }>()
+        shellDowntime.forEach((row: any) => {
+            const key = keyFn(row) || "N/A"
+            const current = map.get(key) || { events: 0, minutes: 0 }
+            map.set(key, { events: current.events + 1, minutes: current.minutes + toNum(row.duration_mins) })
+        })
+        return Array.from(map.entries()).map(([name, row]) => ({
+            name,
+            events: row.events,
+            minutes: round(row.minutes, 0),
+            share: total > 0 ? round((row.minutes / total) * 100, 1) : 0,
+        })).sort((a, b) => b.minutes - a.minutes)
+    }
+    const dates = Array.from(new Set([...shellDaily.map((row: any) => row.work_date), ...shellLines.map((row: any) => row.work_date)])).sort()
+    const daily = dates.map((date) => {
+        const lineRowsForDate = shellLines.filter((row: any) => row.work_date === date)
+        const planActual = dailyByDate.get(date) as any
+        const actual = toNum(planActual?.actual_ton)
+        const plan = toNum(planActual?.plan_ton)
+        const hours = lineRowsForDate.reduce((sum: number, row: any) => sum + toNum(row.run_hours), 0)
+        const lineActual = lineRowsForDate.reduce((sum: number, row: any) => sum + toNum(row.actual_ton), 0)
+        const brokenWeight = lineRowsForDate.reduce((sum: number, row: any) => sum + toNum(row.actual_ton) * toNum(row.broken_pct), 0)
+        const brokenTon = lineRowsForDate.reduce((sum: number, row: any) => sum + (toNum(row.actual_ton) > 0 ? toNum(row.actual_ton) : 0), 0)
+        const downtimeMin = shellDowntime.filter((row: any) => row.work_date === date).reduce((sum: number, row: any) => sum + toNum(row.duration_mins), 0)
+        return {
+            date,
+            name: format(new Date(date), "dd/MM"),
+            actual: round(actual || lineActual, 1),
+            plan: round(plan, 1),
+            achievementPct: plan > 0 ? round(((actual || lineActual) / plan) * 100, 1) : 0,
+            tph: hours > 0 ? round(lineActual / hours, 2) : 0,
+            brokenPct: brokenTon > 0 ? round(brokenWeight / brokenTon, 2) : 0,
+            downtimeMin: round(downtimeMin, 0),
+        }
+    })
+
+    const rootCauses = groupDowntime((row) => row.root_cause)
+    const machineDowntime = groupDowntime((row) => row.machine_area).map(({ name, events, minutes }) => ({ name, events, minutes }))
+    const alerts = shellLines.filter((row: any) => toNum(row.actual_ton) > 0 && toNum(row.broken_pct) > 5.5)
+        .sort((a: any, b: any) => toNum(b.broken_pct) - toNum(a.broken_pct))
+        .slice(0, 10)
+        .map((row: any) => ({
+            date: row.work_date,
+            line: row.line_code || "N/A",
+            shift: row.shift_name || "N/A",
+            size: row.size || "N/A",
+            leader: row.shift_leader || "N/A",
+            ton: round(toNum(row.actual_ton), 2),
+            brokenPct: round(toNum(row.broken_pct), 2),
+        }))
+    const bestLine = [...lines].sort((a, b) => b.tph - a.tph)[0]
+    const worstBrokenLine = [...lines].sort((a, b) => b.brokenPct - a.brokenPct)[0]
+    const topCause = rootCauses[0]
+    const weakestWeek = [...weekly].filter((row) => row.plan > 0).sort((a, b) => a.achievementPct - b.achievementPct)[0]
+    const insights = [
+        totalPlan > 0 ? `Actual đạt ${round(((totalActual || totalLineActual) / totalPlan) * 100, 1)}% kế hoạch trong kỳ.` : "Kỳ này chưa có kế hoạch Shelling.",
+        bestLine ? `Line ${bestLine.name} đang dẫn đầu năng suất với ${bestLine.tph} T/h.` : "Chưa có dữ liệu line.",
+        worstBrokenLine ? `Line ${worstBrokenLine.name} có broken cao nhất ở mức ${worstBrokenLine.brokenPct}%.` : "Chưa có dữ liệu broken.",
+        topCause ? `${topCause.name} là nguyên nhân downtime lớn nhất, chiếm ${topCause.share}% tổng downtime.` : "Chưa có dữ liệu downtime.",
+        weakestWeek ? `${weakestWeek.name} là tuần yếu nhất theo achievement: ${weakestWeek.achievementPct}%.` : "Chưa đủ dữ liệu tuần để so sánh.",
+    ]
+
+    return {
+        period: { start: selectedMonthStart, end: selectedMonthEnd, label: `${format(new Date(selectedMonthStart), "dd/MM")} - ${format(new Date(selectedMonthEnd), "dd/MM/yyyy")}` },
+        coverage: {
+            planRows: shellDaily.length,
+            actualRows: shellDaily.filter((row: any) => toNum(row.actual_ton) > 0).length,
+            lineRows: shellLines.length,
+            downtimeEvents: shellDowntime.length,
+            activeDays: new Set(shellLines.filter((row: any) => toNum(row.actual_ton) > 0).map((row: any) => row.work_date)).size,
+        },
+        totals: {
+            plan: round(totalPlan, 3),
+            actual: round(totalActual || totalLineActual, 3),
+            achievementPct: totalPlan > 0 ? round(((totalActual || totalLineActual) / totalPlan) * 100, 1) : 0,
+            hours: round(totalHours, 2),
+            downtimeMin: round(totalDowntime, 0),
+            productivityTph: totalHours > 0 ? round(totalLineActual / totalHours, 3) : 0,
+            manpower: round(totalManpower, 1),
+            tonPerMan: totalManpower > 0 ? round(totalLineActual / totalManpower, 3) : 0,
+            brokenPct: totalBrokenTon > 0 ? round(totalBrokenWeight / totalBrokenTon, 2) : 0,
+        },
+        weekly,
+        lines,
+        shifts,
+        sizes,
+        rootCauses,
+        machineDowntime,
+        daily,
+        alerts,
+        insights,
+    }
+}
+
 function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): DashboardComputedData {
     const {
         dtEvents, eData, totalData, dData, compData,
@@ -591,6 +827,7 @@ function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): Das
     const mtdM1 = compChartPoints.reduce((s, d) => s + (d.MNK1 || 0), 0)
     const mtdM2 = compChartPoints.reduce((s, d) => s + (d.MNK2 || 0), 0)
     const mtdM3 = compChartPoints.reduce((s, d) => s + (d.MNK3 || 0), 0)
+    const shellingReport = buildShellingReport(startFilter, endFilter, shellDeptObj?.id, dData, shellLineData, dtEvents)
 
     return {
         dashboardsData: dashboards,
@@ -606,6 +843,7 @@ function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): Das
         dailyRecords,
         shellingLineMonthData,
         peelingLineMonthData,
+        shellingReport,
     }
 }
 
