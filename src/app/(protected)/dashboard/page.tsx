@@ -1,6 +1,7 @@
 ﻿"use client"
 import { DashboardLoader } from "@/components/dashboard-loader"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react"
 import { format, startOfMonth, isSunday, endOfMonth, addDays } from "date-fns"
@@ -192,6 +193,8 @@ const buildSummary = (records: any[], isTotal: boolean) => {
 
 export default function DashboardPage() {
     const supabase = createClient()
+    const router = useRouter()
+    const searchParams = useSearchParams()
     const { t, language } = useLanguage()
     const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
     const [selectedDept, setSelectedDept] = useState("all")
@@ -274,6 +277,18 @@ export default function DashboardPage() {
 
     // Reset table page when dept/month changes
     useEffect(() => { setTablePage(0) }, [selectedDept, selectedMonth])
+
+    useEffect(() => {
+        const tab = searchParams.get("tab")
+        if (tab && ["stations", "regions", "overview", "shelling-report"].includes(tab)) {
+            setSelectedTab(tab)
+        }
+    }, [searchParams])
+
+    const handleTabChange = useCallback((value: string) => {
+        setSelectedTab(value)
+        router.replace(value === "stations" ? "/dashboard" : `/dashboard?tab=${value}`, { scroll: false })
+    }, [router])
 
     // ── Placeholder gap for removed block (kept for line number alignment) ───
     // (All data fetching is now in useDashboardData hook)
@@ -946,7 +961,7 @@ export default function DashboardPage() {
                 {/* Ambient Background Gradient for Glassmorphism to pop out */}
                 <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-emerald-50 pointer-events-none -z-10"></div>
 
-                <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+                <Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 pb-2 md:pb-4 mb-2 md:mb-4 backdrop-blur-sm sticky top-0 z-40 bg-white/40 border-b border-white/60 rounded-b-2xl px-2">
                         <div>
                             <h2 className="text-xl md:text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 drop-shadow-sm">{t('command_center')}</h2>
