@@ -124,6 +124,36 @@ export function ShellingReportTab({ data }: ShellingReportTabProps) {
         ...row,
         fill: ["#ef4444", "#f59e0b", "#0ea5e9", "#6366f1", "#64748b"][index] || "#94a3b8",
     }))
+    const weakestLine = [...data.lines].sort((a, b) => a.tph - b.tph)[0]
+    const highestBrokenLine = [...data.lines].sort((a, b) => b.brokenPct - a.brokenPct)[0]
+    const topDowntimeCause = data.rootCauses[0]
+    const topDowntimeMachine = data.machineDowntime[0]
+    const comments = [
+        {
+            title: "Nhận xét sản lượng",
+            body: data.totals.achievementPct >= 100
+                ? `Kỳ này Shelling đạt kế hoạch, nhưng vẫn cần kiểm tra tính ổn định theo tuần để tránh phụ thuộc vào vài ngày chạy vượt.`
+                : `Sản lượng chưa đạt kế hoạch; ưu tiên xem lại các ngày/tuần có achievement thấp trong biểu đồ weekly cadence.`,
+        },
+        {
+            title: "Nhận xét chất lượng",
+            body: highestBrokenLine
+                ? `Broken đang tập trung mạnh ở line ${highestBrokenLine.name} (${fmt(highestBrokenLine.brokenPct, 2)}%). Cần kiểm tra size chạy chính, dao cắt, setup máy và điều kiện nguyên liệu trong các ca bị cảnh báo.`
+                : "Chưa đủ dữ liệu broken để đưa ra nhận xét chất lượng.",
+        },
+        {
+            title: "Nhận xét downtime",
+            body: topDowntimeCause
+                ? `${topDowntimeCause.name} là nguyên nhân downtime lớn nhất (${fmt(topDowntimeCause.share, 1)}%). Khu vực chịu ảnh hưởng nhiều nhất là ${topDowntimeMachine?.name ?? "N/A"}, cần review theo ca để tách lỗi cấp liệu, chờ ẩm và lỗi thiết bị.`
+                : "Chưa có downtime event trong kỳ báo cáo.",
+        },
+        {
+            title: "Hành động đề xuất",
+            body: weakestLine
+                ? `Theo dõi riêng line ${weakestLine.name} vì năng suất thấp nhất (${fmt(weakestLine.tph, 2)} T/h). Nếu line này cải thiện, output tổng sẽ tăng mà không cần mở rộng thêm nhân sự.`
+                : "Chưa đủ dữ liệu line để đề xuất hành động cụ thể.",
+        },
+    ]
 
     return (
         <div className="space-y-4 pb-8">
@@ -318,6 +348,24 @@ export function ShellingReportTab({ data }: ShellingReportTabProps) {
                         <p className="text-sm font-bold leading-snug text-slate-800">{insight}</p>
                     </div>
                 ))}
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white/85 p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Comments</p>
+                        <h4 className="text-lg font-black text-slate-900">Nhận xét định kỳ của báo cáo</h4>
+                    </div>
+                    <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">Auto generated</Badge>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {comments.map((comment) => (
+                        <div key={comment.title} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+                            <p className="mb-2 text-sm font-black text-slate-900">{comment.title}</p>
+                            <p className="text-sm font-medium leading-relaxed text-slate-600">{comment.body}</p>
+                        </div>
+                    ))}
+                </div>
             </section>
         </div>
     )
