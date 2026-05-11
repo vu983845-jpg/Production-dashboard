@@ -9,7 +9,7 @@ import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays 
 
 import { vi } from "date-fns/locale"
 
-import { CalendarIcon, Save, Edit2, Trash2, Plus } from "lucide-react"
+import { CalendarIcon, Save, Edit2, Trash2, Plus, HelpCircle } from "lucide-react"
 
 import { toast } from "sonner"
 
@@ -3294,6 +3294,25 @@ export default function InputPage() {
 
 
                                                                     <>
+
+                                                                        <TableRow>
+                                                                            <TableCell colSpan={2} className="p-0">
+                                                                                <details className="group bg-blue-50/50 border-b border-blue-100">
+                                                                                    <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer text-sm font-semibold text-blue-800 hover:bg-blue-100/50 transition-colors outline-none">
+                                                                                        <HelpCircle className="w-4 h-4" />
+                                                                                        Hướng dẫn nhập liệu bộ phận Chẻ (Tự động hóa)
+                                                                                    </summary>
+                                                                                    <div className="px-4 pb-4 pt-2 text-xs text-slate-700 space-y-2 leading-relaxed border-t border-blue-100/50 bg-white">
+                                                                                        <p><strong>1. Sản lượng (Tấn):</strong> Chỉ cần gõ số. Hệ thống <span className="text-blue-600 font-medium">tự động cộng dồn</span> tổng các Ca & Chuyền lên bảng chính. Gõ số &gt; 0, mục Nhân sự sẽ tự động nhảy.</p>
+                                                                                        <p><strong>2. Kích cỡ (Size):</strong> Chọn size tương ứng (A+, A1, v.v.).</p>
+                                                                                        <p><strong>3. Thời gian chạy máy:</strong> <span className="text-green-600 font-medium">Máy tự tính</span> (bằng 7 tiếng trừ đi số phút Dừng máy). Bị khóa, không cần nhập tay.</p>
+                                                                                        <p><strong>4. Thời gian dừng máy:</strong> <span className="text-red-600 font-medium">Tự động lấy dữ liệu</span> từ Hệ thống Báo Cáo Sự Cố qua. Không cần nhập tay.</p>
+                                                                                        <p><strong>5. Nhân sự tham gia:</strong> <span className="text-amber-600 font-medium">Tự động điền định mức</span> (Chuyền A/B/C/D1 = 2 người; D2 = 3 người). <strong>Chỉ tự sửa số</strong> khi hôm đó thực tế đi làm thiếu hoặc dư người (ô bị sửa sẽ chuyển sang màu cam để dễ nhìn).</p>
+                                                                                        <p><strong>6. Tỷ lệ Bể:</strong> Tự gõ phần trăm test hàng bể.</p>
+                                                                                    </div>
+                                                                                </details>
+                                                                            </TableCell>
+                                                                        </TableRow>
 
 
                                                                         <TableRow>
