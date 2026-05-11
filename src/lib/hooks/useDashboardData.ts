@@ -103,6 +103,7 @@ async function fetchDashboardRaw(selectedMonth: Date) {
     const supabase = createClient()
     const startFilter = format(startOfMonth(selectedMonth), "yyyy-MM-dd")
     const endFilter = format(endOfMonth(selectedMonth), "yyyy-MM-dd")
+    const prevStartFilter = format(startOfMonth(subDays(startOfMonth(selectedMonth), 1)), "yyyy-MM-dd")
     const prevMonthDateStr = format(subDays(startOfMonth(selectedMonth), 1), "yyyy-MM-dd")
     const nextDayStr = format(addDays(endOfMonth(selectedMonth), 1), "yyyy-MM-dd")
 
@@ -120,6 +121,9 @@ async function fetchDashboardRaw(selectedMonth: Date) {
         { data: othersRaw },
         { data: peelLineData },
         { data: waterData },
+        { data: prevDtEvents },
+        { data: prevDData },
+        { data: prevShellLineData },
         shellDeptResult,
     ] = await Promise.all([
         supabase
@@ -179,6 +183,23 @@ async function fetchDashboardRaw(selectedMonth: Date) {
             .gte('work_date', prevMonthDateStr)
             .lte('work_date', endFilter)
             .order('work_date'),
+        supabase
+            .from('downtime_events')
+            .select('department_id, work_date, duration_mins, start_time, end_time, is_ongoing, root_cause, machine_area')
+            .eq('exclude_downtime', false)
+            .gte('work_date', prevStartFilter)
+            .lte('work_date', prevMonthDateStr),
+        supabase
+            .from("v_dashboard_daily")
+            .select("*")
+            .gte("work_date", prevStartFilter)
+            .lte("work_date", prevMonthDateStr)
+            .order("work_date"),
+        supabase
+            .from('shelling_line_daily')
+            .select('work_date, line_code, actual_ton, run_hours, broken_pct, downtime_min, shift_name, manpower, shift_leader, size')
+            .gte('work_date', prevStartFilter)
+            .lte('work_date', prevMonthDateStr),
         shellDeptPromise,
     ])
 
@@ -199,8 +220,8 @@ async function fetchDashboardRaw(selectedMonth: Date) {
     return {
         dtEvents, eData, totalData, dData, compData,
         shellLineData, deptRows, othersRaw, peelLineData,
-        shellKpiRaw, waterData,
-        startFilter, endFilter, prevMonthDateStr, nextDayStr,
+        shellKpiRaw, waterData, prevDtEvents, prevDData, prevShellLineData,
+        startFilter, endFilter, prevStartFilter, prevMonthDateStr, nextDayStr,
     }
 }
 
@@ -275,7 +296,22 @@ export interface ShellingReportData {
         ton: number
         brokenPct: number
     }[]
+    comparison?: ShellingMonthComparison
     insights: string[]
+}
+
+export interface ShellingMonthComparison {
+    previousLabel: string
+    actualDelta: number
+    actualDeltaPct: number
+    achievementDelta: number
+    productivityDelta: number
+    brokenDelta: number
+    downtimeDelta: number
+    downtimeDeltaPct: number
+    summary: string
+    positives: string[]
+    negatives: string[]
 }
 
 export interface ShellingReportBucket {
@@ -466,11 +502,57 @@ function buildShellingReport(
     }
 }
 
+function compareShellingMonths(current: ShellingReportData, previous: ShellingReportData): ShellingMonthComparison | undefined {
+    if (previous.coverage.lineRows === 0 && previous.totals.actual === 0 && previous.totals.plan === 0) return undefined
+
+    const actualDelta = round(current.totals.actual - previous.totals.actual, 1)
+    const actualDeltaPct = previous.totals.actual > 0 ? round((actualDelta / previous.totals.actual) * 100, 1) : 0
+    const achievementDelta = round(current.totals.achievementPct - previous.totals.achievementPct, 1)
+    const productivityDelta = round(current.totals.productivityTph - previous.totals.productivityTph, 2)
+    const brokenDelta = round(current.totals.brokenPct - previous.totals.brokenPct, 2)
+    const downtimeDelta = round(current.totals.downtimeMin - previous.totals.downtimeMin, 0)
+    const downtimeDeltaPct = previous.totals.downtimeMin > 0 ? round((downtimeDelta / previous.totals.downtimeMin) * 100, 1) : 0
+    const positives = [
+        actualDelta > 0 ? `Sản lượng tăng ${fmtSigned(actualDelta)} T (${fmtSigned(actualDeltaPct)}%).` : "",
+        achievementDelta > 0 ? `Achievement tăng ${fmtSigned(achievementDelta)} điểm %.` : "",
+        productivityDelta > 0 ? `Năng suất tăng ${fmtSigned(productivityDelta)} T/h.` : "",
+        brokenDelta < 0 ? `Broken giảm ${Math.abs(brokenDelta).toFixed(2)} điểm %. ` : "",
+        downtimeDelta < 0 ? `Downtime giảm ${Math.abs(downtimeDelta).toLocaleString("vi-VN")} phút (${fmtSigned(downtimeDeltaPct)}%).` : "",
+    ].filter(Boolean)
+    const negatives = [
+        actualDelta < 0 ? `Sản lượng giảm ${Math.abs(actualDelta).toLocaleString("vi-VN")} T (${fmtSigned(actualDeltaPct)}%).` : "",
+        achievementDelta < 0 ? `Achievement giảm ${Math.abs(achievementDelta).toFixed(1)} điểm %.` : "",
+        productivityDelta < 0 ? `Năng suất giảm ${Math.abs(productivityDelta).toFixed(2)} T/h.` : "",
+        brokenDelta > 0 ? `Broken tăng ${brokenDelta.toFixed(2)} điểm %. ` : "",
+        downtimeDelta > 0 ? `Downtime tăng ${downtimeDelta.toLocaleString("vi-VN")} phút (${fmtSigned(downtimeDeltaPct)}%).` : "",
+    ].filter(Boolean)
+    const score = (actualDelta >= 0 ? 1 : -1) + (achievementDelta >= 0 ? 1 : -1) + (productivityDelta >= 0 ? 1 : -1) + (brokenDelta <= 0 ? 1 : -1) + (downtimeDelta <= 0 ? 1 : -1)
+
+    return {
+        previousLabel: previous.period.label,
+        actualDelta,
+        actualDeltaPct,
+        achievementDelta,
+        productivityDelta,
+        brokenDelta,
+        downtimeDelta,
+        downtimeDeltaPct,
+        summary: score >= 2 ? "Tháng này tốt hơn tháng trước trên đa số chỉ số chính." : score <= -2 ? "Tháng này tệ hơn tháng trước trên đa số chỉ số chính." : "Tháng này mixed so với tháng trước: có chỉ số cải thiện nhưng vẫn còn điểm xấu.",
+        positives,
+        negatives,
+    }
+}
+
+function fmtSigned(value: number) {
+    return `${value > 0 ? "+" : ""}${value.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}`
+}
+
 function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): DashboardComputedData {
     const {
         dtEvents, eData, totalData, dData, compData,
         shellLineData, deptRows, othersRaw, peelLineData,
-        shellKpiRaw, waterData, startFilter, endFilter, prevMonthDateStr,
+        shellKpiRaw, waterData, prevDtEvents, prevDData, prevShellLineData,
+        startFilter, endFilter, prevStartFilter, prevMonthDateStr,
     } = raw
 
     // ── Downtime aggregation ─────────────────────────────────────────────────
@@ -828,6 +910,8 @@ function processRawData(raw: Awaited<ReturnType<typeof fetchDashboardRaw>>): Das
     const mtdM2 = compChartPoints.reduce((s, d) => s + (d.MNK2 || 0), 0)
     const mtdM3 = compChartPoints.reduce((s, d) => s + (d.MNK3 || 0), 0)
     const shellingReport = buildShellingReport(startFilter, endFilter, shellDeptObj?.id, dData, shellLineData, dtEvents)
+    const previousShellingReport = buildShellingReport(prevStartFilter, prevMonthDateStr, shellDeptObj?.id, prevDData, prevShellLineData, prevDtEvents)
+    shellingReport.comparison = compareShellingMonths(shellingReport, previousShellingReport)
 
     return {
         dashboardsData: dashboards,

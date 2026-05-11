@@ -128,7 +128,12 @@ export function ShellingReportTab({ data }: ShellingReportTabProps) {
     const highestBrokenLine = [...data.lines].sort((a, b) => b.brokenPct - a.brokenPct)[0]
     const topDowntimeCause = data.rootCauses[0]
     const topDowntimeMachine = data.machineDowntime[0]
+    const comparison = data.comparison
     const comments = [
+        ...(comparison ? [{
+            title: "So với tháng trước",
+            body: `${comparison.summary} Tốt hơn: ${comparison.positives.length ? comparison.positives.join(" ") : "chưa có chỉ số chính cải thiện rõ."} Tệ hơn: ${comparison.negatives.length ? comparison.negatives.join(" ") : "không có chỉ số chính xấu đi rõ."}`,
+        }] : []),
         {
             title: "Nhận xét sản lượng",
             body: data.totals.achievementPct >= 100
@@ -193,6 +198,36 @@ export function ShellingReportTab({ data }: ShellingReportTabProps) {
                 <ReportStat label="Downtime" value={hours(data.totals.downtimeMin)} sub={`${fmt(data.totals.downtimeMin, 0)} minutes`} icon={Clock} tone="amber" />
                 <ReportStat label="Manpower" value={`${fmt(data.totals.tonPerMan, 2)} T`} sub={`${fmt(data.totals.manpower, 0)} man-shifts`} icon={Users} tone="slate" />
             </section>
+
+            {comparison && (
+                <section className="rounded-xl border border-white/70 bg-white/85 p-4 shadow-sm">
+                    <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Month over month</p>
+                            <h4 className="text-lg font-black text-slate-900">So với tháng trước</h4>
+                        </div>
+                        <Badge variant="outline" className="w-fit border-slate-200 bg-slate-50 text-slate-600">
+                            Previous: {comparison.previousLabel}
+                        </Badge>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-5">
+                        {[
+                            { label: "Actual", value: `${comparison.actualDelta > 0 ? "+" : ""}${fmt(comparison.actualDelta, 1)} T`, good: comparison.actualDelta >= 0 },
+                            { label: "Achievement", value: `${comparison.achievementDelta > 0 ? "+" : ""}${fmt(comparison.achievementDelta, 1)} pts`, good: comparison.achievementDelta >= 0 },
+                            { label: "Productivity", value: `${comparison.productivityDelta > 0 ? "+" : ""}${fmt(comparison.productivityDelta, 2)} T/h`, good: comparison.productivityDelta >= 0 },
+                            { label: "Broken", value: `${comparison.brokenDelta > 0 ? "+" : ""}${fmt(comparison.brokenDelta, 2)} pts`, good: comparison.brokenDelta <= 0 },
+                            { label: "Downtime", value: `${comparison.downtimeDelta > 0 ? "+" : ""}${fmt(comparison.downtimeDelta, 0)} min`, good: comparison.downtimeDelta <= 0 },
+                        ].map((metric) => (
+                            <div key={metric.label} className={`rounded-lg border p-3 ${metric.good ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+                                <p className={`text-[10px] font-black uppercase tracking-widest ${metric.good ? "text-emerald-600" : "text-red-600"}`}>{metric.label}</p>
+                                <p className={`mt-2 text-xl font-black ${metric.good ? "text-emerald-700" : "text-red-700"}`}>{metric.value}</p>
+                                <p className="mt-1 text-[10px] font-bold text-slate-500">{metric.good ? "Tốt hơn" : "Tệ hơn"}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">{comparison.summary}</p>
+                </section>
+            )}
 
             <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
                 <Card className="rounded-xl border-white/70 bg-white/85 py-0 shadow-sm">
