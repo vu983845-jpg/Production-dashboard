@@ -971,7 +971,7 @@ export default function DashboardPage() {
                                 <TabsTrigger value="stations">{t('tab_stations')}</TabsTrigger>
                                 <TabsTrigger value="regions">{t('tab_regions')}</TabsTrigger>
                                 <TabsTrigger value="overview">⚡ Overview</TabsTrigger>
-                                <TabsTrigger value="shelling-report">Shelling Report</TabsTrigger>
+                                <TabsTrigger value="shelling-report">Monthly Report</TabsTrigger>
                             </TabsList>
                             <div className="flex space-x-2">
                                 {/* Month selector */}
