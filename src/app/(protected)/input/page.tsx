@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
+import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays, getDay } from "date-fns"
 
 import { vi } from "date-fns/locale"
 
@@ -74,6 +74,32 @@ export type ShellingMonthlyEnergyRecord = {
 
     electricity_target_kwh: number;
 
+}
+
+const isSundayDate = (workDate: string) => getDay(parseISO(workDate)) === 0;
+
+const syncShellingSundayMeters = (data: ShellingMonthlyEnergyRecord[]) => {
+    for (let i = 0; i < data.length; i++) {
+        if (!isSundayDate(data[i].work_date)) continue;
+
+        const nextDay = data[i + 1];
+        if (nextDay?.electricity_meter_reading !== undefined) {
+            data[i].electricity_meter_reading = nextDay.electricity_meter_reading;
+        }
+    }
+}
+
+const recalcShellingEnergyData = (data: ShellingMonthlyEnergyRecord[]) => {
+    syncShellingSundayMeters(data);
+
+    for (let i = 0; i < data.length; i++) {
+        const meterToday = data[i].electricity_meter_reading;
+        const meterTomorrow = data[i + 1]?.electricity_meter_reading;
+
+        data[i].electricity_kwh = meterToday != null && meterTomorrow != null
+            ? Math.max(0, meterTomorrow - meterToday)
+            : 0;
+    }
 }
 
 
@@ -1651,21 +1677,7 @@ export default function InputPage() {
 
 
 
-            // Calculate kWh
-
-            for (let i = 0; i < compiledData.length - 1; i++) {
-
-                const meterToday = compiledData[i].electricity_meter_reading;
-
-                const meterTomorrow = compiledData[i + 1].electricity_meter_reading;
-
-                if (meterToday != null && meterTomorrow != null) {
-
-                    compiledData[i].electricity_kwh = Math.max(0, meterTomorrow - meterToday);
-
-                }
-
-            }
+            recalcShellingEnergyData(compiledData);
 
 
 
@@ -2677,7 +2689,11 @@ export default function InputPage() {
 
 
 
-        const payloadToSave = shellingMonthlyEnergyData
+        const syncedShellingMonthlyEnergyData = shellingMonthlyEnergyData.map(record => ({ ...record }));
+
+        recalcShellingEnergyData(syncedShellingMonthlyEnergyData);
+
+        const payloadToSave = syncedShellingMonthlyEnergyData
 
             .filter(record => record.electricity_meter_reading !== undefined)
 
@@ -6206,29 +6222,19 @@ export default function InputPage() {
 
                                                 const handleMeterChange = (val: number | undefined) => {
 
-                                                    const newData = [...shellingMonthlyEnergyData];
+                                                    const newData = shellingMonthlyEnergyData.map(record => ({ ...record }));
 
                                                     newData[index].electricity_meter_reading = val;
 
-                                                    for (let i = 0; i < newData.length; i++) {
-
-                                                        const meterToday = newData[i].electricity_meter_reading;
-
-                                                        const meterYesterday = i === 0 ? prevMonthLastMeter?.elec : newData[i - 1]?.electricity_meter_reading;
-
-                                                        if (meterToday != null && meterYesterday != null) {
-
-                                                            newData[i].electricity_kwh = Math.max(0, meterToday - meterYesterday);
-
-                                                        }
-
-                                                    }
+                                                    recalcShellingEnergyData(newData);
 
                                                     setShellingMonthlyEnergyData(newData);
 
                                                 };
 
 
+
+                                                const isSunday = isSundayDate(row.work_date);
 
                                                 return (
 
@@ -6238,17 +6244,21 @@ export default function InputPage() {
 
                                                         <TableCell className="border-r p-1 relative bg-transparent">
 
-                                                            <input type="number" step="1" className="w-full text-right p-2 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent font-semibold shadow-inner"
+                                                            <input type="number" step="1" disabled={isSunday} title={isSunday ? "Chủ nhật không nhập, tự lấy chỉ số của Thứ 2" : undefined} className={cn("w-full text-right p-2 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent font-semibold shadow-inner", isSunday && "cursor-not-allowed bg-gray-100 text-gray-500")}
 
                                                                 value={row.electricity_meter_reading !== undefined ? row.electricity_meter_reading : ''}
 
                                                                 onChange={(e) => {
+
+                                                                    if (isSunday) return;
 
                                                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
 
                                                                     handleMeterChange(val);
 
                                                                 }} />
+
+                                                            {isSunday && <div className="text-[10px] text-gray-500 text-center absolute top-0 left-0 right-0 opacity-80">Tự lấy chỉ số Thứ 2</div>}
 
                                                             {prevRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Trừ từ trước: {prevRowElec}</div>}
 
