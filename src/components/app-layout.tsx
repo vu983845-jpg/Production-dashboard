@@ -47,6 +47,9 @@ interface AppLayoutProps {
     deptName: string
 }
 
+const TEMPORARY_DASHBOARD_CLOSED = true
+const TEMPORARY_ALLOWED_PATHS = new Set(["/dashboard", "/input", "/energy", "/bao-com"])
+
 export function AppLayout({ children, role, fullName, departmentId, deptCode, deptName }: AppLayoutProps) {
     const pathname = usePathname()
     const router = useRouter()
@@ -192,6 +195,23 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
         },
     ]
 
+    const visibleNavItems = TEMPORARY_DASHBOARD_CLOSED
+        ? navItems
+            .map((item) => {
+                if ('children' in item && item.children) {
+                    return {
+                        ...item,
+                        children: item.children.filter((child) => TEMPORARY_ALLOWED_PATHS.has(child.href)),
+                    }
+                }
+                return item
+            })
+            .filter((item) => {
+                if ('children' in item && item.children) return item.children.length > 0
+                return TEMPORARY_ALLOWED_PATHS.has(item.href)
+            })
+        : navItems
+
     return (
         <>
             <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -206,7 +226,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                             </div>
                             <span className="text-white font-bold tracking-tight whitespace-nowrap">Operations</span>
                         </Link>
-                        {navItems
+                        {visibleNavItems
                             .filter((item) => item.roles.includes(role))
                             .map((item) => {
                                 const Icon = item.icon
@@ -260,7 +280,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                             <DropdownMenuContent align="start" className="w-[200px]">
                                 <DropdownMenuLabel>Menu</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                {navItems
+                                {visibleNavItems
                                     .filter((item) => item.roles.includes(role))
                                     .flatMap((item) => {
                                         if ('children' in item && item.children) {
@@ -293,12 +313,14 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                     </div>
 
                     <div className="flex items-center justify-end gap-2 shrink-0 ml-auto">
-                        <Button variant="ghost" size="sm" asChild className="gap-1.5 px-2 text-white hover:bg-white/10 hover:text-white">
-                            <Link href="/downtime">
-                                <AlertTriangle className="h-4 w-4" />
-                                <span className="hidden lg:inline">Downtime</span>
-                            </Link>
-                        </Button>
+                        {!TEMPORARY_DASHBOARD_CLOSED && (
+                            <Button variant="ghost" size="sm" asChild className="gap-1.5 px-2 text-white hover:bg-white/10 hover:text-white">
+                                <Link href="/downtime">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <span className="hidden lg:inline">Downtime</span>
+                                </Link>
+                            </Button>
+                        )}
                         <div className="text-white hover:bg-white/10 rounded-md">
                             <LanguageToggle />
                         </div>
@@ -341,6 +363,29 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                     </div>
                 </header>
                 <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+                    {TEMPORARY_DASHBOARD_CLOSED && (
+                        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-4 shadow-sm">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div className="flex items-start gap-3">
+                                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                                    <div>
+                                        <p className="text-sm font-black uppercase tracking-wide text-amber-900">Dashboard tạm đóng</p>
+                                        <p className="mt-1 text-sm font-medium text-amber-800">
+                                            Bảng thiết kế dashboard đang treo tạm thời. Mọi người vẫn vào xem data cũ được; hiện chỉ giữ nhập điện nước và báo cơm.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 md:justify-end">
+                                    <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700">
+                                        <Link href="/input">Nhập điện nước</Link>
+                                    </Button>
+                                    <Button asChild size="sm" variant="outline" className="border-amber-300 bg-white text-amber-800 hover:bg-amber-100">
+                                        <Link href="/bao-com">Báo cơm</Link>
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {/* Open downtime warning banner */}
                     {!dtBannerDismissed && openDowntimes.length > 0 && (
                         <div className="rounded-xl border-2 border-orange-300 bg-orange-50 px-4 py-3 flex items-start gap-3 shadow-sm">
