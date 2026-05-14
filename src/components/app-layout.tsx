@@ -371,7 +371,7 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                                     <div>
                                         <p className="text-sm font-black uppercase tracking-wide text-amber-900">Dashboard tạm đóng</p>
                                         <p className="mt-1 text-sm font-medium text-amber-800">
-                                            Bảng thiết kế dashboard đang treo tạm thời. Mọi người vẫn vào xem data cũ được; hiện chỉ giữ nhập điện nước và báo cơm.
+                                            Bảng thiết kế dashboard đang treo tạm thời. Mọi người vẫn vào xem data cũ được.
                                         </p>
                                     </div>
                                 </div>
