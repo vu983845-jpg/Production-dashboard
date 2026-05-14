@@ -10,15 +10,14 @@ import { NuqsAdapter } from "nuqs/adapters/next/app"
 const inter = Inter({ subsets: ['latin', 'vietnamese'] })
 
 export const metadata: Metadata = {
-  title: 'Dashboard VICC LA',
-  description: 'KPI, Yield, Plan vs Actual Dashboard',
+  title: 'Operations Portal',
+  description: 'Operational metrics and reporting portal',
   icons: {
     icon: [
-      { url: '/assets/intersnack-favicon.svg', type: 'image/svg+xml' },
-      { url: '/assets/intersnack-custom.jpg', type: 'image/jpeg' },
+      { url: '/globe.svg', type: 'image/svg+xml' },
     ],
-    shortcut: '/assets/intersnack-favicon.svg',
-    apple: '/assets/intersnack-custom.jpg',
+    shortcut: '/globe.svg',
+    apple: '/globe.svg',
   },
 }
 

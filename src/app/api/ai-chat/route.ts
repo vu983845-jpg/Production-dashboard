@@ -100,7 +100,7 @@ function buildSystemPrompt(ctx: {
     const deptCtx = DEPT_CONTEXT[ctx.deptCode] || DEPT_CONTEXT["admin"]
     const isAdmin = ctx.role === "admin"
 
-    return `Bạn là trợ lý nhà máy VICC LA thông minh, thân thiện và chuyên nghiệp. Bạn nói tiếng Việt.
+    return `Bạn là trợ lý nhà máy Operations thông minh, thân thiện và chuyên nghiệp. Bạn nói tiếng Việt.
 Người dùng hiện tại: ${ctx.fullName} | Bộ phận: ${ctx.deptName} (${ctx.deptCode}) | Vai trò: ${ctx.role}
 Ngày hôm nay: ${ctx.today}
 Department ID (dùng khi ghi DB): ${ctx.deptId}

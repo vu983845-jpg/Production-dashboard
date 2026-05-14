@@ -106,21 +106,17 @@ export function DashboardLoader({
                         boxShadow: "0 8px 32px rgba(192,57,43,0.2)",
                     }}
                 >
-                    <img
-                        src="/assets/intersnack-custom.jpg"
-                        alt="Intersnack"
-                        style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                    />
+                    <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "linear-gradient(135deg,#0ea5e9,#14b8a6,#10b981)", color: "white", fontSize: 44, fontWeight: 900 }}>OP</div>
                 </div>
             </div>
 
             {/* Brand text */}
             <div className="text-center mb-5">
                 <p className="text-2xl font-black tracking-wide" style={{ color: "#5a3825", letterSpacing: "0.04em" }}>
-                    Intersnack
+                    Operations
                 </p>
                 <p className="text-xs text-slate-400 mt-1 font-medium tracking-widest uppercase">
-                    {isRefresh ? "Đang cập nhật..." : "Factory Dashboard"}
+                    {isRefresh ? "Đang cập nhật..." : "Metrics Portal"}
                 </p>
             </div>
 

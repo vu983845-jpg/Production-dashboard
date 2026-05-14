@@ -68,7 +68,7 @@ const T = {
 }
 const t = (key: keyof typeof T, lang: Lang) => T[key][lang]
 
-// ─── Intersnack Brand Colors ──────────────────────────────────────────
+// ─── Brand Colors ──────────────────────────────────────────
 const BRAND = {
     red:      '#E63121',
     darkRed:  '#8E1E19',
@@ -77,7 +77,7 @@ const BRAND = {
     bg:       '#FDF8F8',
 }
 
-// ─── SEU Config — Intersnack palette ─────────────────────────────────
+// ─── SEU Config — neutral palette ─────────────────────────────────
 const SEU_CFG: Record<number, {
     label: (lang: Lang) => string
     short: string; unit: string
@@ -990,7 +990,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                 style={{ background: BRAND.darkRed, borderTop: '1px solid #4A1C1C', flexShrink: 0 }}>
                 <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.5)' }}>
                     <span style={{ fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>{t('footer_co', lang)}</span>
-                    &nbsp;· Intersnack DDS ·&nbsp;{format(new Date(), 'dd/MM/yyyy')}
+                    &nbsp;· Operations DDS ·&nbsp;{format(new Date(), 'dd/MM/yyyy')}
                 </span>
                 <div className="flex items-center gap-4">
                     {ALL_SEU_IDS.map(id => {

@@ -56,7 +56,7 @@
   --card-foreground: oklch(0.22 0.015 55);
   --popover: oklch(0.995 0.003 75);
   --popover-foreground: oklch(0.22 0.015 55);
-  --primary: #E30613; /* Intersnack Corporate Red */
+  --primary: #0EA5E9; /* Primary blue */
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.955 0.012 72);  /* Warm light sand */
   --secondary-foreground: oklch(0.3 0.02 55);
@@ -68,15 +68,15 @@
   --border: oklch(0.9 0.012 72);       /* Warm border */
   --input: oklch(0.9 0.012 72);
   --ring: oklch(0.65 0.1 55);
-  /* Chart colors — Intersnack inspired */
-  --chart-1: #E30613;                  /* Intersnack Red */
+  /* Chart colors */
+  --chart-1: #0EA5E9;                  /* Primary blue */
   --chart-2: #F97316;                  /* Wood / Biomass Orange */
   --chart-3: #3B82F6;                  /* Water Blue */
   --chart-4: #EAB308;                  /* Electricity Yellow */
   --chart-5: #8B5CF6;                  /* Compressor Purple */
   --sidebar: oklch(0.978 0.006 75);
   --sidebar-foreground: oklch(0.22 0.015 55);
-  --sidebar-primary: #E30613;
+  --sidebar-primary: #0EA5E9;
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.955 0.012 72);
   --sidebar-accent-foreground: oklch(0.3 0.02 55);
@@ -91,7 +91,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #E30613; /* Intersnack Red */
+  --primary: #0EA5E9; /* Primary blue */
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);

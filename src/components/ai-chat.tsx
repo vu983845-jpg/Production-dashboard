@@ -162,7 +162,7 @@ export function AIChatWidget({ userContext }: AIChatWidgetProps) {
                         <Bot className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-white font-bold text-sm leading-none">Trợ Lý VICC LA</p>
+                        <p className="text-white font-bold text-sm leading-none">Trợ Lý Operations</p>
                         <p className="text-white/60 text-[10px] mt-0.5 truncate">{DEPT_LABELS[userContext.deptCode] || userContext.deptName}</p>
                     </div>
                     <div className="flex items-center gap-1">

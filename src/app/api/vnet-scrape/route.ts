@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // Windows machine every 5 minutes via Task Scheduler.
 //
 // Devices:
-//   BORMA:  row id="borma"  (Intersnack_LA, boxId: 10009531)
+//   BORMA:  row id="borma"  (device, boxId: 10009531)
 //   STEAM:  row id="steam"  (STEAM_LA, boxId: 6417916)
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://iekjajbmbkqrbalnjwit.supabase.co").trim();

@@ -213,10 +213,10 @@ export async function POST(req: NextRequest) {
                 const isTooOld = work_date < yesterdayStr;
 
                 if (isTooOld) {
-                    return NextResponse.json({ error: "Ngày này đã bị khóa (chỉ chỉnh sửa trong vòng 1 ngày). Liên hệ Ms Chi nếu cần điều chỉnh." }, { status: 400 })
+                    return NextResponse.json({ error: "Ngày này đã bị khóa (chỉ chỉnh sửa trong vòng 1 ngày). Vui lòng liên hệ quản trị viên nếu cần điều chỉnh." }, { status: 400 })
                 }
                 if (!isShift3Exception && !isYesterdayOtOnly) {
-                    return NextResponse.json({ error: "Không thể chỉnh sửa báo cơm ngày đã qua. Liên hệ Ms Chi để điều chỉnh." }, { status: 400 })
+                    return NextResponse.json({ error: "Không thể chỉnh sửa báo cơm ngày đã qua. Vui lòng liên hệ quản trị viên để điều chỉnh." }, { status: 400 })
                 }
             }
         }

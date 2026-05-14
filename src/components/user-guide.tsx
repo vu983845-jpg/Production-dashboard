@@ -27,7 +27,7 @@ export function UserGuide() {
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-black text-primary">VICC LA Dashboard Handbook 📖</DialogTitle>
+                    <DialogTitle className="text-2xl font-black text-primary">Operations Portal Handbook 📖</DialogTitle>
                 </DialogHeader>
 
                 {/* Tab bar */}
@@ -82,7 +82,7 @@ export function UserGuide() {
                                 <h3 className="font-bold text-base mb-2 text-red-800 flex items-center gap-2">🛠 Support</h3>
                                 <ul className="list-disc pl-5 space-y-2 text-red-700">
                                     <li><strong>Downtime:</strong> Auto-sync từ DDS Meeting App hằng ngày. Đơn vị: Giờ.</li>
-                                    <li><strong>Lỗi / Phân quyền:</strong> Liên hệ <strong className="bg-red-200 px-1 rounded">Vũ Huỳnh (V.H)</strong>.</li>
+                                    <li><strong>Lỗi / Phân quyền:</strong> Liên hệ <strong className="bg-red-200 px-1 rounded">quản trị viên</strong>.</li>
                                 </ul>
                             </section>
                         </>
@@ -415,7 +415,7 @@ export function UserGuide() {
                                     date: "22/03/2026",
                                     color: "rose",
                                     items: [
-                                        "Nâng cấp theme sang Đỏ Intersnack (Alizarin Crimson) + glassmorphism.",
+                                        "Cập nhật giao diện mới với màu sắc trung tính và hiệu ứng glassmorphism.",
                                         "Logic KPI tự động đổi màu Xanh/Đỏ theo target.",
                                         "Custom Tooltip hiệu ứng glassmorphism cho 15+ phòng ban.",
                                     ]
@@ -435,7 +435,7 @@ export function UserGuide() {
                     )}
 
                     <div className="pt-2 text-xs text-muted-foreground text-center border-t">
-                        VICC LA Factory Dashboard <strong className="font-mono text-primary">v1.5.0</strong> · Phát triển & hỗ trợ: Vũ Huỳnh 🧡
+                        Operations Portal <strong className="font-mono text-primary">v1.5.0</strong>
                     </div>
                 </div>
             </DialogContent>

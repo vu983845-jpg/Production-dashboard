@@ -32,7 +32,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
-import { IntersnackLogo } from "@/components/intersnack-logo"
+import { NeutralLogo } from "@/components/neutral-logo"
 import { LanguageToggle } from "@/components/language-toggle"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { UserGuide } from "@/components/user-guide"
@@ -195,16 +195,16 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
     return (
         <>
             <div className="flex min-h-screen w-full flex-col bg-muted/40">
-                <header className="sticky top-0 z-30 flex h-16 items-center gap-4 bg-[#E30613] text-white px-4 md:px-6 shadow-md overflow-hidden">
+                <header className="sticky top-0 z-30 flex h-16 items-center gap-4 bg-[#0EA5E9] text-white px-4 md:px-6 shadow-md overflow-hidden">
                     <nav className="hidden md:flex flex-row items-center gap-5 text-sm min-w-0 flex-1 overflow-x-auto scrollbar-none">
                         <Link
                             href="/dashboard"
                             className="flex items-center gap-2 text-base font-semibold shrink-0 mr-2 text-white"
                         >
                             <div className="bg-white rounded-lg shadow-sm w-9 h-9 overflow-hidden flex items-center justify-center">
-                                <IntersnackLogo className="w-full h-full" />
+                                <NeutralLogo className="w-full h-full" />
                             </div>
-                            <span className="text-white font-bold tracking-tight whitespace-nowrap">VICC LA</span>
+                            <span className="text-white font-bold tracking-tight whitespace-nowrap">Operations</span>
                         </Link>
                         {navItems
                             .filter((item) => item.roles.includes(role))
@@ -286,9 +286,9 @@ export function AppLayout({ children, role, fullName, departmentId, deptCode, de
                         </DropdownMenu>
                         <Link href="/dashboard" className="flex items-center gap-2 shrink-0 text-white transition-opacity hover:opacity-90">
                             <div className="bg-white rounded-[6px] shadow-sm w-7 h-7 overflow-hidden flex items-center justify-center">
-                                <IntersnackLogo className="w-full h-full" />
+                                <NeutralLogo className="w-full h-full" />
                             </div>
-                            <span className="text-white font-bold tracking-tight" style={{ fontSize: '0.95rem' }}>VICC LA</span>
+                            <span className="text-white font-bold tracking-tight" style={{ fontSize: '0.95rem' }}>Operations</span>
                         </Link>
                     </div>
 

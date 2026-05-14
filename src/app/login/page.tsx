@@ -6,17 +6,17 @@ import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { IntersnackLogo } from "@/components/intersnack-logo";
+import { NeutralLogo } from "@/components/neutral-logo";
 import { ArrowLeft, Leaf, Rocket, Users, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
 
 
 const CORE_VALUES = [
-    { img: "/cv-thinking.svg", bg: "#6B8C2A", title: "Thinking Responsibly",     desc: "Đặt trách nhiệm lên hàng đầu trong mọi quyết định" },
-    { img: "/cv-acting.svg",   bg: "#C8102E", title: "Acting Entrepreneurially", desc: "Tinh thần khởi nghiệp — sáng tạo và chủ động" },
-    { img: "/cv-growing.svg",  bg: "#D4A017", title: "Growing Together",          desc: "Cùng nhau phát triển, tin tưởng và minh bạch" },
-    { img: "/cv-acting.svg",   bg: "#7C3AED", title: "Excellence & Passion",      desc: "Xuất sắc trong công việc với niềm đam mê" },
+    { img: "/cv-thinking.svg", bg: "#6B8C2A", title: "Plan Clearly",     desc: "Đặt trách nhiệm lên hàng đầu trong mọi quyết định" },
+    { img: "/cv-acting.svg",   bg: "#C8102E", title: "Act Quickly", desc: "Tinh thần khởi nghiệp — sáng tạo và chủ động" },
+    { img: "/cv-growing.svg",  bg: "#D4A017", title: "Work Together",          desc: "Cùng nhau phát triển, tin tưởng và minh bạch" },
+    { img: "/cv-acting.svg",   bg: "#7C3AED", title: "Improve Daily",      desc: "Xuất sắc trong công việc với niềm đam mê" },
 ];
 
 function getAuthErrorMessage(message: string): string {
@@ -151,7 +151,7 @@ export default function LoginPage() {
                     max-width: 600px;
                 }
                 .login-headline-label {
-                    color:#E30613; font-size:12px; font-weight:700;
+                    color:#0EA5E9; font-size:12px; font-weight:700;
                     letter-spacing: 0.2em; text-transform:uppercase; margin-bottom:16px;
                     display: inline-block;
                     position: relative;
@@ -164,7 +164,7 @@ export default function LoginPage() {
                     transform: translateY(-50%);
                     width: 40px;
                     height: 2px;
-                    background: #E30613;
+                    background: #0EA5E9;
                     margin-left: 12px;
                     border-radius: 2px;
                     box-shadow: 0 0 8px rgba(227, 6, 19, 0.4);
@@ -213,7 +213,7 @@ export default function LoginPage() {
                     width:48px; height:48px; flex-shrink:0;
                     display:flex; align-items:center; justify-content:center;
                     background:#f6f3f2; border-radius:50%;
-                    color: #E30613;
+                    color: #0EA5E9;
                     font-size: 20px;
                 }
                 .cv-title { color:#1A1A1A; font-weight:700; font-size:14px; margin-bottom: 4px; letter-spacing: -0.01em; }
@@ -247,7 +247,7 @@ export default function LoginPage() {
                     font-weight:600; transition:all .2s;
                     letter-spacing: 0.05em; text-transform: uppercase;
                 }
-                .login-back:hover { color:#E30613; }
+                .login-back:hover { color:#0EA5E9; }
 
                 .login-form-wrap { width:100%; max-width: 360px; }
 
@@ -274,7 +274,7 @@ export default function LoginPage() {
                     color: #1A1A1A;
                 }
                 .field input::placeholder { color: #a09d9c; }
-                .field input:focus { border-bottom-color: #E30613; border-width: 2px; }
+                .field input:focus { border-bottom-color: #0EA5E9; border-width: 2px; }
 
 
 
@@ -288,7 +288,7 @@ export default function LoginPage() {
                     margin-top: 16px;
                 }
                 .btn-login.active { 
-                    background: #E30613;
+                    background: #0EA5E9;
                     color:#fff; 
                     box-shadow: 0 4px 12px rgba(227, 6, 19, 0.2);
                 }
@@ -300,7 +300,7 @@ export default function LoginPage() {
                 .btn-login.inactive { background:#eae7e7; color:#a09d9c; cursor:not-allowed; }
 
                 .login-help { text-align:center; font-size:14px; color:#5e3f3b; margin-top: 32px; }
-                .login-help span { color:#E30613; font-weight:700; cursor:pointer; text-decoration: none; border-bottom: 1px solid #E30613; padding-bottom: 2px; }
+                .login-help span { color:#0EA5E9; font-weight:700; cursor:pointer; text-decoration: none; border-bottom: 1px solid #0EA5E9; padding-bottom: 2px; }
 
                 @keyframes fadeUp {
                     from { opacity:0; transform:translateY(40px); }
@@ -341,25 +341,25 @@ export default function LoginPage() {
             <div className="login-root">
                 <div className="login-bg">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/assets/digital-cashew-bg.png" alt="Intersnack Premium Cashew Facility" />
+                    <img src="/assets/digital-cashew-bg.png" alt="Operations workspace" />
                 </div>
 
                 {/* ── LEFT ── */}
                 <div className="login-left">
                     <div className="login-brand">
                         <div className="login-brand-logo">
-                            <IntersnackLogo className="w-full h-full" />
+                            <NeutralLogo className="w-full h-full" />
                         </div>
                         <div>
-                            <div className="login-brand-name">Intersnack</div>
-                            <div className="login-brand-sub">VICC LA · Production Dashboard</div>
+                            <div className="login-brand-name">Operations Portal</div>
+                            <div className="login-brand-sub">Metrics & Reporting</div>
                         </div>
                     </div>
 
                     <div className="login-headline">
-                        <div className="login-headline-label">Manufacturing Intelligence</div>
+                        <div className="login-headline-label">Operational Intelligence</div>
                         <h1>
-                            Digitizing the future <em>of premium cashews.</em>
+                            Simple, focused metrics <em>for daily operations.</em>
                         </h1>
                     </div>
 
@@ -367,29 +367,29 @@ export default function LoginPage() {
                         <div className="cv-card">
                             <div className="cv-icon"><Leaf size={24} /></div>
                             <div>
-                                <div className="cv-title">Thinking Responsibly</div>
-                                <div className="cv-desc">Putting responsibility first in all decisions</div>
+                                <div className="cv-title">Plan Clearly</div>
+                                <div className="cv-desc">Make daily work visible and consistent</div>
                             </div>
                         </div>
                         <div className="cv-card">
                             <div className="cv-icon"><Rocket size={24} /></div>
                             <div>
-                                <div className="cv-title">Acting Entrepreneurially</div>
-                                <div className="cv-desc">Innovative and proactive spirit</div>
+                                <div className="cv-title">Act Quickly</div>
+                                <div className="cv-desc">Capture issues early and respond faster</div>
                             </div>
                         </div>
                         <div className="cv-card">
                             <div className="cv-icon"><Users size={24} /></div>
                             <div>
-                                <div className="cv-title">Growing Together</div>
-                                <div className="cv-desc">Developing together with trust</div>
+                                <div className="cv-title">Work Together</div>
+                                <div className="cv-desc">Keep teams aligned with shared numbers</div>
                             </div>
                         </div>
                         <div className="cv-card">
                             <div className="cv-icon"><TrendingUp size={24} /></div>
                             <div>
-                                <div className="cv-title">Excellence & Passion</div>
-                                <div className="cv-desc">Outstanding work driven by passion</div>
+                                <div className="cv-title">Improve Daily</div>
+                                <div className="cv-desc">Track progress and reduce manual follow-up</div>
                             </div>
                         </div>
                     </div>
@@ -435,15 +435,7 @@ export default function LoginPage() {
                             >
                                 {loading ? "Đang xử lý..." : "Vào trang quản trị"}
                             </button>
-                        </form>
-
-                        <div className="login-help">
-                            Chưa có tài khoản?{" "}
-                            <span onClick={() => alert("Để yêu cầu cấp tài khoản, vui lòng liên hệ Zalo: 0945646999")}>
-                                Liên hệ hỗ trợ
-                            </span>
-                        </div>
-                    </div>
+                        </form></div>
                 </div>
             </div>
         </>

@@ -12,8 +12,8 @@ import crypto from "crypto";
 //   Real-time: POST /m1/device/getRealTimeData (MODULE_ID_REAL = 1)
 
 const VNET_API = process.env.VNET_API_BASE || "https://asean.v-iec.com/api";
-const USERNAME = process.env.VNET_USERNAME || "Intersnack_Vu";
-const PASSWORD = process.env.VNET_PASSWORD || "Longan11";
+const USERNAME = process.env.VNET_USERNAME || "";
+const PASSWORD = process.env.VNET_PASSWORD || "";
 const STEAM_BOX_ID = 10009531; // STEAM_LA device
 
 // Session cache (per cold-start; ~4 min TTL)

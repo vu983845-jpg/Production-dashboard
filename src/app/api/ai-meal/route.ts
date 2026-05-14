@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         const today = format(vnDateObj, "yyyy-MM-dd")
         const todayDisplay = format(vnDateObj, "dd/MM/yyyy")
 
-        const systemPrompt = `Bạn là trợ lý nhập liệu báo cơm nhà máy VICC LA.
+        const systemPrompt = `Bạn là trợ lý nhập liệu báo cơm nhà máy Operations.
 Hôm nay là ${todayDisplay} (${today}).
 
 NHIỆM VỤ: Parse câu hỏi của user thành danh sách headcount và trả về JSON.

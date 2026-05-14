@@ -285,7 +285,7 @@ export default function BormaMonitor() {
                         <div className="borma-scada-header">
                             <div>
                                 <h2 className="borma-scada-title">
-                                    Cloud SCADA — BORMA Long An
+                                    Cloud SCADA — BORMA Site
                                 </h2>
                                 <span className="borma-scada-subtitle">
                                     Live V-NET2.0 Dashboard • Project ID: 10001417

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
-import { IntersnackLogo } from "@/components/intersnack-logo"
+import { NeutralLogo } from "@/components/neutral-logo"
 
 interface Dept { id: string; code: string; name_en: string }
 
@@ -354,7 +354,7 @@ const FullScreenLoader = ({ text }: { text: string }) => (
             <div className="pro-pulse-ring" />
             <div className="pro-pulse-ring-2" />
             <div className="pro-logo-box">
-                <IntersnackLogo className="w-10 h-10" />
+                <NeutralLogo className="w-10 h-10" />
             </div>
         </div>
 
@@ -864,7 +864,7 @@ export default function PublicMealPage() {
                             )
                         })}
 
-                        <div className="sum-note">📞 Dữ liệu do các bộ phận tự báo. Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi</a>.</div>
+                        <div className="sum-note">📞 Dữ liệu do các bộ phận tự báo. Sai sót liên hệ quản trị viên.</div>
                     </>
                 )}
             </PageShell>
@@ -877,11 +877,11 @@ export default function PublicMealPage() {
             <PageShell>
                 <div className="success-page">
                     <div className="bg-white rounded-xl shadow-sm w-16 h-16 overflow-hidden flex items-center justify-center border border-slate-100 mb-4">
-                        <IntersnackLogo className="w-12 h-12" />
+                        <NeutralLogo className="w-12 h-12" />
                     </div>
                     <div className="success-icon">✅</div>
                     <div className="success-title">OT đã được cập nhật!</div>
-                    <p className="success-sub">Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi</a> nhé!</p>
+                    <p className="success-sub">Sai sót liên hệ quản trị viên nhé!</p>
                     <div className="success-card">
                         <div><span>Bộ phận</span><strong>{getEffectiveDeptName(otDeptId, otHpeelSub)}</strong></div>
                         <div><span>Ngày</span><strong>{format(new Date(otDate + "T00:00:00"), "dd/MM/yyyy")}</strong></div>
@@ -912,7 +912,7 @@ export default function PublicMealPage() {
                     </div>
                 </div>
                 {otNewTime && <div className="info-row">🕐 Giờ ăn OT: <strong>{otNewTime}</strong></div>}
-                <div className="contact-note">📞 Có sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi</a> nhé!</div>
+                <div className="contact-note">📞 Có sai sót liên hệ quản trị viên nhé!</div>
                 {otError && <div className="err-box">⚠️ {otError}</div>}
                 <button className="primary-btn" onClick={handleOtSubmit} disabled={otSubmitting}>
                     {otSubmitting ? "⏳ Đang lưu..." : "✅ Xác nhận cập nhật OT"}
@@ -1065,7 +1065,7 @@ export default function PublicMealPage() {
                 </div>
             ))}
             {error && <div className="err-box">⚠️ {error}</div>}
-            <div className="contact-note">📞 Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi (+84393984738)</a> để điều chỉnh nhé!</div>
+            <div className="contact-note">📞 Sai sót liên hệ quản trị viên để điều chỉnh nhé!</div>
             <button className="primary-btn" onClick={handleSubmit} disabled={submitting} style={isUpdate ? { background: "#dc2626" } : {}}>
                 {submitting ? "⏳ Đang gửi..." : isUpdate ? "⚠️ Xác nhận THAY ĐỔI" : "✅ Xác nhận & Gửi báo cơm"}
             </button>
@@ -1077,11 +1077,11 @@ export default function PublicMealPage() {
         <PageShell>
             <div className="success-page">
                 <div className="bg-white rounded-xl shadow-sm w-16 h-16 overflow-hidden flex items-center justify-center border border-slate-100 mb-4">
-                    <IntersnackLogo className="w-12 h-12" />
+                    <NeutralLogo className="w-12 h-12" />
                 </div>
                 <div className="success-icon">✅</div>
                 <div className="success-title">Đã báo cơm thành công!</div>
-                <p className="success-sub">Cảm ơn bạn đã báo cơm! 🙏<br /><small>Sai sót liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi (+84393984738)</a> nhé!</small></p>
+                <p className="success-sub">Cảm ơn bạn đã báo cơm! 🙏<br /><small>Sai sót liên hệ quản trị viên nhé!</small></p>
                 <div className="success-card">
                     <div><span>Bộ phận</span><strong>{getEffectiveDeptName()}</strong></div>
                     <div><span>Ngày</span><strong>{format(new Date(workDate + "T00:00:00"), "dd/MM/yyyy")}</strong></div>
@@ -1107,11 +1107,11 @@ export default function PublicMealPage() {
 
             <div className="app-header">
                 <div className="bg-white rounded-lg shadow-sm w-[44px] h-[44px] overflow-hidden flex items-center justify-center shrink-0 border border-slate-100">
-                    <IntersnackLogo className="w-9 h-9" />
+                    <NeutralLogo className="w-9 h-9" />
                 </div>
                 <div style={{ flex: 1 }}>
                     <div className="app-title">Báo Cơm Nhà Máy</div>
-                    <div className="app-sub">VICC Long An · Intersnack Cashew Vietnam</div>
+                    <div className="app-sub">Operations Portal</div>
                 </div>
                 {now && (
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -1338,7 +1338,7 @@ export default function PublicMealPage() {
                     </ul>
                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #99f6e4", display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 16 }}>📞</span>
-                        <span>Sai sót/Trễ giờ, liên hệ <a href="https://zalo.me/84393984738" target="_blank" style={{ color: "#0284c7", fontWeight: "bold", textDecoration: "underline" }} rel="noreferrer">Zalo Ms. Chi (+84393984738)</a></span>
+                        <span>Sai sót/Trễ giờ, liên hệ quản trị viên</span>
                     </div>
                 </div>
             )}

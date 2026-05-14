@@ -3176,7 +3176,7 @@ export default function InputPage() {
 
                             <p className="font-semibold text-lg">🔒 Chế độ Xem</p>
 
-                            <p className="text-sm text-center">{role === 'hr_admin' ? 'Tài khoản HR không có quyền nhập liệu sản xuất. Vui lòng sử dụng tab Báo Cơm.' : 'Tài khoản này chỉ có quyền xem Dashboard. Liên hệ Admin để được cấp quyền nhập liệu.'}</p>
+                            <p className="text-sm text-center">{role === 'hr_admin' ? 'Tài khoản HR không có quyền nhập liệu sản xuất. Vui lòng sử dụng tab Báo Cơm.' : 'Tài khoản này chỉ có quyền xem Dashboard. Vui lòng liên hệ quản trị viên để được cấp quyền nhập liệu.'}</p>
 
                         </div>
 
