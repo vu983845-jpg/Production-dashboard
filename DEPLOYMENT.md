@@ -1,26 +1,40 @@
-# QUY TRÌNH DEPLOY LÊN VERCEL DỰ ÁN V-NET DASHBOARD
+﻿# Quy trình deploy Production Dashboard
 
-**QUAN TRỌNG:** Tên miền chính thức của web (`www.intersnack.online`) được Vercel tự động liên kết bằng Auto-Deployment thông qua kho chứa (repository) trên **GitHub** (`Production-dashboard`).
+## Project production đúng
 
-Do đó, để đẩy tính năng/sửa lỗi mới lên môi trường thật, **TUYỆT ĐỐI KHÔNG dùng lệnh deploy cục bộ** (`npx vercel --prod`), vì lệnh này chỉ đẩy mã nguồn lên dự án Vercel trung gian (hiện đang ăn vào tên miền bị sai chính tả `intersnack.onlin`).
+- Domain thật: https://la.icc.info.vn
+- Vercel project: `production-dashboard`
+- Vercel account/team trên dashboard: `hyunhphuongvu-6144s-projects`
+- GitHub repo: `git@github.com:vu983845-jpg/Production-dashboard.git`
+- Branch deploy: `main`
+- Cách deploy đúng: commit và push lên `main`; Vercel tự động build/deploy lên `la.icc.info.vn`.
 
-### CÁC BƯỚC DEPLOY ĐÚNG:
-Để cập nhật được tên miền đúng `www.intersnack.online`, chỉ cần commit và đẩy thẳng code lên nhánh `main` của GitHub.
+## Không deploy nhầm project cũ
+
+Không dùng link/project local cũ `factory-dashboard` / `factory-dashboard-tau.vercel.app` cho production.
+File `.vercel` local đã được xóa vì nó trỏ sang sai Vercel project, dễ làm deploy nhầm URL.
+
+Nếu cần dùng Vercel CLI tại máy này, phải link lại đúng project trước:
 
 ```bash
-# B1. Chuyển vào thư mục chứa code website
-cd c:\Users\Cashew\.gemini\Dassboard\factory-dashboard
+vercel link
+# Chọn account/team: hyunhphuongvu-6144s-projects
+# Chọn project: production-dashboard
+```
 
-# B2. Lưu các thay đổi
-git add .
-git commit -m "Mô tả tính năng hoặc lỗi vừa sửa..."
+Chỉ chạy deploy CLI sau khi xác nhận project đang link là `production-dashboard`.
 
-# B3. Đẩy lên nhánh main của GitHub
+## Các bước deploy khuyến nghị
+
+```bash
+git status
+git add <files>
+git commit -m "Mô tả thay đổi"
 git push origin main
 ```
 
-Sau khi chạy xong lệnh `git push`, Vercel sẽ "bắt" được thông báo từ GitHub và tự động chạy quy trình rải code lên server. Quá trình này mất khoảng 1-2 phút cho đến khi `www.intersnack.online` nhận bản mới nhất!
+Sau khi push, vào Vercel project `production-dashboard` để xem deployment mới. Khi trạng thái `Ready`, domain `https://la.icc.info.vn` sẽ nhận bản mới.
 
-### NOTE THÊM VỀ VẤN ĐỀ CACHE & LỖI "DỮ LIỆU MÔ PHỎNG":
-Ghi nhớ nếu sử dụng hàm `fetch()` trong Next.js App Router:
-Vercel Edge rất hay lưu bộ nhớ tạm (aggressive caching). Nếu dữ liệu SCADA bị kẹt lại báo **Offline** hay **Dữ liệu mô phỏng**, phải check ngay trong file chức năng `src/app/api/vnet-scrape/route.ts` xem đã cấu hình `cache: "no-store"` chưa! (Tuyệt đối không dùng `next: { revalidate: xxx }` nếu đó là dữ liệu Real-time).
+## Note cache / dữ liệu realtime
+
+Nếu dữ liệu SCADA/V-NET bị kẹt, báo offline hoặc dữ liệu mô phỏng, kiểm tra `src/app/api/vnet-scrape/route.ts` và các API realtime liên quan có dùng `cache: "no-store"` chưa. Tránh dùng `next: { revalidate: ... }` cho dữ liệu realtime.
