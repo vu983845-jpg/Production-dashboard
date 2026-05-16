@@ -115,6 +115,7 @@ export default function ReportPage() {
     const [downtimeEvents, setDowntimeEvents] = useState<any[]>([])
     // Peeling line daily records for quality deep-dive
     const [peelingLines, setPeelingLines] = useState<PeelingLineRecord[]>([])
+    const [userDeptCode, setUserDeptCode] = useState("")
 
 
     // Báo cơm dept code (meal_headcount.department_id lookup) may differ from report code
@@ -146,6 +147,32 @@ export default function ReportPage() {
                 }
             })
     }, [])
+
+    useEffect(() => {
+        async function loadUserDept() {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("department_id")
+                .eq("id", user.id)
+                .single()
+            if (!profile?.department_id) return
+            const { data: dept } = await supabase
+                .from("departments")
+                .select("code")
+                .eq("id", profile.department_id)
+                .single()
+            setUserDeptCode(dept?.code || "")
+        }
+        loadUserDept()
+    }, [])
+
+    useEffect(() => {
+        if (userDeptCode === "SHELL" && departments.some(d => d.code === "SHELL")) {
+            setSelectedDept("SHELL")
+        }
+    }, [departments, userDeptCode])
 
 
     const dept = departments.find(d => d.code === selectedDept)

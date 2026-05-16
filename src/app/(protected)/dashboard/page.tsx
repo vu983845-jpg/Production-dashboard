@@ -285,6 +285,15 @@ export default function DashboardPage() {
         }
     }, [searchParams])
 
+    useEffect(() => {
+        if (userProfile?.deptCode !== 'SHELL' || selectedDept !== 'all') return
+        const shellDept = departments.find(d => d.code === 'SHELL')
+        if (shellDept) {
+            setSelectedDept(shellDept.id)
+            setSelectedTab('stations')
+        }
+    }, [departments, selectedDept, userProfile?.deptCode])
+
     const handleTabChange = useCallback((value: string) => {
         setSelectedTab(value)
         router.replace(value === "stations" ? "/dashboard" : `/dashboard?tab=${value}`, { scroll: false })

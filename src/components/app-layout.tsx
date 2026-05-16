@@ -48,7 +48,7 @@ interface AppLayoutProps {
 }
 
 const TEMPORARY_DASHBOARD_CLOSED = true
-const TEMPORARY_ALLOWED_PATHS = new Set(["/dashboard", "/input", "/energy", "/bao-com"])
+const TEMPORARY_ALLOWED_PATHS = new Set(["/dashboard", "/input", "/energy", "/bao-com", "/report", "/downtime"])
 
 export function AppLayout({ children, role, fullName, departmentId, deptCode, deptName }: AppLayoutProps) {
     const pathname = usePathname()
