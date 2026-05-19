@@ -240,14 +240,40 @@ export async function POST(req: NextRequest) {
             note: row.reporter_name ? `Báo bởi: ${row.reporter_name}` : "Báo qua link công khai",
         }))
 
-        const { error } = await supabaseAdmin
-            .from("meal_headcount")
-            .upsert(payloads, {
-                onConflict: "work_date,department_name,shift",
-                ignoreDuplicates: false,
-            })
+        const savedPayloads = []
+        for (const payload of payloads) {
+            const { data: existingRows, error: lookupError } = await supabaseAdmin
+                .from("meal_headcount")
+                .select("id")
+                .eq("work_date", payload.work_date)
+                .eq("department_id", payload.department_id)
+                .eq("shift", payload.shift)
+                .limit(1)
 
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+            if (lookupError) return NextResponse.json({ error: lookupError.message }, { status: 500 })
+
+            const existingId = existingRows?.[0]?.id
+            if (existingId) {
+                const { data, error: updateError } = await supabaseAdmin
+                    .from("meal_headcount")
+                    .update(payload)
+                    .eq("id", existingId)
+                    .select()
+                    .single()
+
+                if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+                savedPayloads.push(data)
+            } else {
+                const { data, error: insertError } = await supabaseAdmin
+                    .from("meal_headcount")
+                    .insert(payload)
+                    .select()
+                    .single()
+
+                if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+                savedPayloads.push(data)
+            }
+        }
 
         // Gửi thông báo Teams
         const isChange = oldDataMap.size > 0
@@ -257,7 +283,7 @@ export async function POST(req: NextRequest) {
             await sendTeamsNotification(payloads)
         }
 
-        return NextResponse.json({ success: true, count: payloads.length })
+        return NextResponse.json({ success: true, count: savedPayloads.length })
     } catch (err) {
         return NextResponse.json({ error: String(err) }, { status: 500 })
     }

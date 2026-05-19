@@ -117,14 +117,53 @@ export async function POST(req: NextRequest) {
         }
 
         const payload = await req.json()
+        const rows = Array.isArray(payload) ? payload : [payload]
+        const savedRows = []
 
-        const { error: insertError } = await adminClient
-            .from('meal_headcount')
-            .upsert(payload, { onConflict: "work_date,department_name,shift" })
+        for (const row of rows) {
+            const { work_date, department_id, department_name, shift } = row
+            if (!work_date || !shift || (!department_id && !department_name)) {
+                return NextResponse.json({ error: 'Missing work_date, department, or shift' }, { status: 400 })
+            }
 
-        if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+            let query = adminClient
+                .from('meal_headcount')
+                .select('id')
+                .eq('work_date', work_date)
+                .eq('shift', shift)
+                .limit(1)
 
-        return NextResponse.json({ success: true })
+            query = department_id
+                ? query.eq('department_id', department_id)
+                : query.eq('department_name', department_name)
+
+            const { data: existingRows, error: lookupError } = await query
+            if (lookupError) return NextResponse.json({ error: lookupError.message }, { status: 500 })
+
+            const existingId = existingRows?.[0]?.id
+            if (existingId) {
+                const { data, error: updateError } = await adminClient
+                    .from('meal_headcount')
+                    .update({ ...row, updated_at: row.updated_at ?? new Date().toISOString() })
+                    .eq('id', existingId)
+                    .select()
+                    .single()
+
+                if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+                savedRows.push(data)
+            } else {
+                const { data, error: insertError } = await adminClient
+                    .from('meal_headcount')
+                    .insert(row)
+                    .select()
+                    .single()
+
+                if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+                savedRows.push(data)
+            }
+        }
+
+        return NextResponse.json({ success: true, data: Array.isArray(payload) ? savedRows : savedRows[0] })
     } catch (e: unknown) {
         return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
     }
