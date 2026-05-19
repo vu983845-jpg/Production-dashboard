@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
         const { error } = await supabaseAdmin
             .from("meal_headcount")
             .upsert(payloads, {
-                onConflict: "work_date,department_id,shift",
+                onConflict: "work_date,department_name,shift",
                 ignoreDuplicates: false,
             })
 
