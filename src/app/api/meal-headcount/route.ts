@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
 
         const { error: insertError } = await adminClient
             .from('meal_headcount')
-            .upsert(payload, { onConflict: "work_date,department_name,shift" })
+            .upsert(payload, { onConflict: "work_date,department_id,shift" })
 
         if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 

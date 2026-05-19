@@ -2532,12 +2532,14 @@ export default function BaoCom() {
                                                                                                             rec = (statsData ?? []).find(r => r.id === rowIds[0])
                                                                                                         }
                                                                                                         if (!rec) {
-                                                                                                            // Fallback: search by date + shift + any department_id that contributed to this section
+                                                                                                            // Fallback: search by date + shift + same department only.
+                                                                                                            // Do not fuzzy-match by department_name here: "Shelling S1" would also
+                                                                                                            // match "Maintenance shelling S1" and update the maintenance row.
                                                                                                             rec = (statsData ?? []).find(r =>
                                                                                                                 r.work_date === date && r.shift === freshSr.shift &&
-                                                                                                                ((r.department_id != null && freshSr.departmentIds.has(r.department_id)) ||
-                                                                                                                    r.department_name.toLowerCase().includes(freshSr.sectionName.split(' ')[0].toLowerCase()) ||
-                                                                                                                    freshSr.sectionName.toLowerCase().startsWith(r.department_name.toLowerCase().split(' ')[0]))
+                                                                                                                r.department_id != null &&
+                                                                                                                (freshSr.departmentIds.has(r.department_id) ||
+                                                                                                                    deptList.find(d => d.id === r.department_id)?.code === freshSr.deptCode)
                                                                                                             )
                                                                                                         }
                                                                                                         if (!rec) {
