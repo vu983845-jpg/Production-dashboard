@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useCallback, useEffect, Fragment } from "react"
 import { useRouter } from "next/navigation"
@@ -27,21 +27,21 @@ import { createClient } from "@/lib/supabase/client"
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns"
 import * as XLSX from "xlsx"
 
-// Ca → giờ bắt đầu (cho OT hint)
+// Ca â†’ giá» báº¯t Ä‘áº§u (cho OT hint)
 const SHIFT_HOUR: Record<string, string> = { "1": "6h", "2": "14h", "3": "22h" }
-// OT meal time: Ca 1 OT → ăn 14h · Ca 2 OT → ăn 18h
+// OT meal time: Ca 1 OT â†’ Äƒn 14h Â· Ca 2 OT â†’ Äƒn 18h
 const OT_HOUR: Record<string, string> = { "1": "14h", "2": "18h", "3": "6h" }
 
-// Các bộ phận cần báo cơm theo code trong DB
+// CÃ¡c bá»™ pháº­n cáº§n bÃ¡o cÆ¡m theo code trong DB
 const EXPECTED_DEPTS = [
     "PEEL", "CS", "STEAM", "PACK", "BORMA", "SHELL", "BOILER", "QC", "FGWH", "HPEEL", "MAINT_SHELL", "MAINT_HCA", "OFFICE", "CLEAN"
 ]
-// These depts only work Ca 1 — no need to report Ca 2 / Ca 3
+// These depts only work Ca 1 â€” no need to report Ca 2 / Ca 3
 const CA1_ONLY_DEPTS = new Set(["FGWH", "OFFICE"])
 
-// ─────────────────────────────────────────────
-// Billing cycle helper: chọn tháng M/YYYY → chu kỳ 26/(M-1) → 25/M
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Billing cycle helper: chá»n thÃ¡ng M/YYYY â†’ chu ká»³ 26/(M-1) â†’ 25/M
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ymd(year: number, month: number, day: number): string {
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 }
@@ -66,20 +66,20 @@ function enumerateDateStrings(from: string, to: string): string[] {
 function getBillingCycle(monthStr: string): { from: string; to: string; label: string } {
     // monthStr = "YYYY-MM"
     const [year, month] = monthStr.split("-").map(Number)
-    // Start: ngày 26 tháng trước
+    // Start: ngÃ y 26 thÃ¡ng trÆ°á»›c
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
     const from = ymd(prevYear, prevMonth, 26)
-    // End: ngày 25 tháng hiện tại
+    // End: ngÃ y 25 thÃ¡ng hiá»‡n táº¡i
     const to = ymd(year, month, 25)
-    // Human label: "26/MM-1/YYYY → 25/MM/YYYY"
-    const label = `26/${String(prevMonth).padStart(2, "0")}/${prevYear} → 25/${String(month).padStart(2, "0")}/${year}`
+    // Human label: "26/MM-1/YYYY â†’ 25/MM/YYYY"
+    const label = `26/${String(prevMonth).padStart(2, "0")}/${prevYear} â†’ 25/${String(month).padStart(2, "0")}/${year}`
     return { from, to, label }
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Types
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface HeadcountRecord {
     senderHint: string
     date: string
@@ -125,10 +125,10 @@ interface MealStatRow {
     vegetarian: number | null
 }
 
-// Department mapping: Zalo name hoặc tên Excel → DB department code
-// Tên Excel chính xác từ file "Báo Cơm 2026" được giữ nguyên
+// Department mapping: Zalo name hoáº·c tÃªn Excel â†’ DB department code
+// TÃªn Excel chÃ­nh xÃ¡c tá»« file "BÃ¡o CÆ¡m 2026" Ä‘Æ°á»£c giá»¯ nguyÃªn
 const DEPT_MAP: Record<string, string> = {
-    // ── LOADING / WH (làm việc tại FGWH và RCN) ──
+    // â”€â”€ LOADING / WH (lÃ m viá»‡c táº¡i FGWH vÃ  RCN) â”€â”€
     "loading s1": "FGWH",
     "loading s2": "FGWH",
     "loading s3": "FGWH",
@@ -137,91 +137,91 @@ const DEPT_MAP: Record<string, string> = {
     "wh": "FGWH",
     "fgwh": "FGWH",
     "rcn": "FGWH",
-    // ── STEAMING ──
+    // â”€â”€ STEAMING â”€â”€
     "steaming s1": "STEAM",
     "steaming s2": "STEAM",
     "steaming s3": "STEAM",
     "steaming": "STEAM",
-    // ── SHELLING ──
+    // â”€â”€ SHELLING â”€â”€
     "shelling s1": "SHELL",
-    "shelling thời vụ s1": "SHELL",
+    "shelling thá»i vá»¥ s1": "SHELL",
     "shelling s2": "SHELL",
-    "shelling thời vụ s2": "SHELL",
+    "shelling thá»i vá»¥ s2": "SHELL",
     "shelling s3": "SHELL",
-    "shelling thời vụ s3": "SHELL",
+    "shelling thá»i vá»¥ s3": "SHELL",
     "shelling": "SHELL",
-    // ── MAINTENANCE SHELLING ──
+    // â”€â”€ MAINTENANCE SHELLING â”€â”€
     "maintenance shelling s1": "MAINT_SHELL",
     "maintenance shelling s2": "MAINT_SHELL",
     "maintenance shelling s3": "MAINT_SHELL",
     "maintenance shelling": "MAINT_SHELL",
     "maint shelling": "MAINT_SHELL",
     "maint - shelling": "MAINT_SHELL",
-    "bảo trì shelling": "MAINT_SHELL",
+    "báº£o trÃ¬ shelling": "MAINT_SHELL",
     "bao tri shelling": "MAINT_SHELL",
-    "bảo trì máy cắt": "MAINT_SHELL",
+    "báº£o trÃ¬ mÃ¡y cáº¯t": "MAINT_SHELL",
     "bao tri may cat": "MAINT_SHELL",
-    "bảo trì may cắt": "MAINT_SHELL",
-    "bao tri máy cắt": "MAINT_SHELL",
-    // ── BORMA ──
+    "báº£o trÃ¬ may cáº¯t": "MAINT_SHELL",
+    "bao tri mÃ¡y cáº¯t": "MAINT_SHELL",
+    // â”€â”€ BORMA â”€â”€
     "borma s1": "BORMA",
-    "borma thời vụ s1": "BORMA",
+    "borma thá»i vá»¥ s1": "BORMA",
     "borma s2": "BORMA",
-    "borma thời vụ s2": "BORMA",
+    "borma thá»i vá»¥ s2": "BORMA",
     "borma s3": "BORMA",
-    "borma thời vụ s3": "BORMA",
+    "borma thá»i vá»¥ s3": "BORMA",
     "borma": "BORMA",
-    // ── PEELING MACHINE (Peeling Mc) ──
+    // â”€â”€ PEELING MACHINE (Peeling Mc) â”€â”€
     "peeling s1": "PEEL",
-    "peeling thời vụ s1": "PEEL",
+    "peeling thá»i vá»¥ s1": "PEEL",
     "peeling s2": "PEEL",
-    "peeling thời vụ s2": "PEEL",
+    "peeling thá»i vá»¥ s2": "PEEL",
     "peeling s3": "PEEL",
-    "peeling thời vụ s3": "PEEL",
+    "peeling thá»i vá»¥ s3": "PEEL",
     "peeling": "PEEL",
     "peeling mc": "PEEL",
     "mc peeling": "PEEL",
-    // ── COLOR SORTER (Machine Grading) ──
+    // â”€â”€ COLOR SORTER (Machine Grading) â”€â”€
     "machine grading - shift 1": "CS",
-    "machine grading  - thời vụ 1": "CS",
+    "machine grading  - thá»i vá»¥ 1": "CS",
     "machine grading  - shift 2": "CS",
-    "machine grading  thời vụ - shift 2": "CS",
+    "machine grading  thá»i vá»¥ - shift 2": "CS",
     "machine grading  - shift 3": "CS",
-    "machine grading  thời vụ- shift 3": "CS",
+    "machine grading  thá»i vá»¥- shift 3": "CS",
     "machine grading": "CS",
     "machine grading shift 1": "CS",
     "machine grading shift 2": "CS",
     "machine grading shift 3": "CS",
     "color sorter": "CS",
-    // ── HANDPEELING — all sub-groups merged to HPEEL ──
+    // â”€â”€ HANDPEELING â€” all sub-groups merged to HPEEL â”€â”€
     // Canonical names (new format in DB)
     "hand peeling s1": "HPEEL",
     "hand peeling s2": "HPEEL",
     "hand peeling s3": "HPEEL",
     // Legacy formats still being entered via Zalo/AI
-    "manual grading -shift 1 (ms huệ)": "HPEEL",
-    "manual grading -shift 2 (ms huệ)": "HPEEL",
-    "manual grading -shift 3 (ms huệ)": "HPEEL",
-    "manual grading thời vụ -shift 1 (ms huệ)": "HPEEL",
-    "manual grading thời vụ -shift 2 (ms huệ)": "HPEEL",
-    "manual grading thời vụ -shift 3 (ms huệ)": "HPEEL",
-    "manual grading (ms huệ)": "HPEEL",
+    "manual grading -shift 1 (ms huá»‡)": "HPEEL",
+    "manual grading -shift 2 (ms huá»‡)": "HPEEL",
+    "manual grading -shift 3 (ms huá»‡)": "HPEEL",
+    "manual grading thá»i vá»¥ -shift 1 (ms huá»‡)": "HPEEL",
+    "manual grading thá»i vá»¥ -shift 2 (ms huá»‡)": "HPEEL",
+    "manual grading thá»i vá»¥ -shift 3 (ms huá»‡)": "HPEEL",
+    "manual grading (ms huá»‡)": "HPEEL",
     "manual grading (ms hue)": "HPEEL",
     "manual grading": "HPEEL",
-    "manual peeling s1 - liên": "HPEEL",
+    "manual peeling s1 - liÃªn": "HPEEL",
     "manual peeling s1 - dung": "HPEEL",
-    "manual peeling s2 - liên": "HPEEL",
+    "manual peeling s2 - liÃªn": "HPEEL",
     "manual peeling s2 - dung": "HPEEL",
-    "manual peeling s3 - liên": "HPEEL",
+    "manual peeling s3 - liÃªn": "HPEEL",
     "manual peeling s3 - dung": "HPEEL",
-    "manual peeling s1 thời vụ - liên": "HPEEL",
-    "manual peeling s1 thời vụ - dung": "HPEEL",
-    "manual peeling s2 thời vụ - liên": "HPEEL",
-    "manual peeling s2 thời vụ - dung": "HPEEL",
-    "manual peeling s3 thời vụ - liên": "HPEEL",
-    "manual peeling s3 thời vụ - dung": "HPEEL",
+    "manual peeling s1 thá»i vá»¥ - liÃªn": "HPEEL",
+    "manual peeling s1 thá»i vá»¥ - dung": "HPEEL",
+    "manual peeling s2 thá»i vá»¥ - liÃªn": "HPEEL",
+    "manual peeling s2 thá»i vá»¥ - dung": "HPEEL",
+    "manual peeling s3 thá»i vá»¥ - liÃªn": "HPEEL",
+    "manual peeling s3 thá»i vá»¥ - dung": "HPEEL",
     "manual peeling (dung)": "HPEEL",
-    "manual peeling (liên)": "HPEEL",
+    "manual peeling (liÃªn)": "HPEEL",
     "manual peeling (lien)": "HPEEL",
     "manual peeling": "HPEEL",
     "handpeeling": "HPEEL",
@@ -229,20 +229,20 @@ const DEPT_MAP: Record<string, string> = {
     "grading": "HPEEL",
     "gradin": "HPEEL",
 
-    // ── PACKING ──
+    // â”€â”€ PACKING â”€â”€
     "packing s1": "PACK",
-    "packing thời vụ s1": "PACK",
+    "packing thá»i vá»¥ s1": "PACK",
     "packing s2": "PACK",
-    "packing thời vụ s2": "PACK",
+    "packing thá»i vá»¥ s2": "PACK",
     "packing s3": "PACK",
     "packing": "PACK",
-    // ── BOILER ──
+    // â”€â”€ BOILER â”€â”€
     "boiler worker s1": "BOILER",
     "boiler worker s2": "BOILER",
     "boiler worker s3": "BOILER",
     "boiler worker": "BOILER",
     "boiler": "BOILER",
-    // ── MAINTENANCE HIGHCARE ──
+    // â”€â”€ MAINTENANCE HIGHCARE â”€â”€
     "maintenance s1": "MAINT_HCA",
     "maintenance s2": "MAINT_HCA",
     "maintenance s3": "MAINT_HCA",
@@ -252,29 +252,29 @@ const DEPT_MAP: Record<string, string> = {
     "maintenance highcare": "MAINT_HCA",
     "maint - highcare": "MAINT_HCA",
     "maint-highcare": "MAINT_HCA",
-    "bảo trì highcare": "MAINT_HCA",
+    "báº£o trÃ¬ highcare": "MAINT_HCA",
     "bao tri highcare": "MAINT_HCA",
-    "bảo trì hca": "MAINT_HCA",
+    "báº£o trÃ¬ hca": "MAINT_HCA",
     "bao tri hca": "MAINT_HCA",
     "highcare maint": "MAINT_HCA",
     "highcare maintenance": "MAINT_HCA",
-    // ── QC ──
+    // â”€â”€ QC â”€â”€
     "qc": "QC",
     "qc s2": "QC",
     "qc s3": "QC",
-    // ── TẬ P VỤ (Cleaning) ──
-    "tập vụ": "CLEAN", "tạp vụ": "CLEAN", "tap vu": "CLEAN", "cleaning": "CLEAN",
+    // â”€â”€ Táº¬ P Vá»¤ (Cleaning) â”€â”€
+    "táº­p vá»¥": "CLEAN", "táº¡p vá»¥": "CLEAN", "tap vu": "CLEAN", "cleaning": "CLEAN",
     // Handpeeling + supervisor name aliases (shift resolved at save time)
     "handpeeling (dung)": "HPEEL_DUNG",
-    "handpeeling (liên)": "HPEEL_LIEN", "handpeeling (lien)": "HPEEL_LIEN",
-    // ── OFFICE ──
+    "handpeeling (liÃªn)": "HPEEL_LIEN", "handpeeling (lien)": "HPEEL_LIEN",
+    // â”€â”€ OFFICE â”€â”€
     "office": "OFFICE",
-    "văn phòng": "OFFICE",
+    "vÄƒn phÃ²ng": "OFFICE",
     "van phong": "OFFICE",
     "vp": "OFFICE",
     "office staff": "OFFICE",
     "staff": "OFFICE",
-    // ── Fallback: AI may return the DB code directly (e.g. "STEAM", "PEEL", "HPEEL") ──
+    // â”€â”€ Fallback: AI may return the DB code directly (e.g. "STEAM", "PEEL", "HPEEL") â”€â”€
     // Note: borma/boiler/qc/fgwh already defined above; only add new ones here
     "steam": "STEAM",
     "shell": "SHELL",
@@ -297,9 +297,9 @@ const HPEEL_SUBGROUP_DISPLAY: Record<string, string> = {
 // Virtual sub-group codes mapping to HPEEL department_id
 const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG"])
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Parse helpers
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function extractNumber(raw: string): { total: number | null; vegetarian: number | null; note: string } {
     if (!raw || raw.trim() === "" || raw.trim() === ":") return { total: null, vegetarian: null, note: "" }
@@ -342,24 +342,24 @@ function getField(text: string, labels: string[]): string {
     return ""
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HPEEL supervisor-name → sub-group detector
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// HPEEL supervisor-name â†’ sub-group detector
 // Call ONLY when area is generic HPEEL/handpeeling/manual peeling/grading.
 // Returns a DEPT_MAP key that already maps to the correct HPEEL_* sub-code,
 // or null if no supervisor name found.
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function detectHpeelSubgroup(blockText: string, hint: string): string | null {
     // Combine block + senderHint for fuzzy matching
     const raw = (blockText + ' ' + hint).toLowerCase()
-    // Ms Huệ → Manual Grading (Huệ)
-    if (/ms\.?\s*hu[eệ]|ch[aá]u\s+hu[eệ]|em\s+hu[eệ]|\bhu[eệ]\b/.test(raw)) {
-        return 'manual grading -shift 1 (ms huệ)'   // maps to HPEEL_GRADING
+    // Ms Huá»‡ â†’ Manual Grading (Huá»‡)
+    if (/ms\.?\s*hu[eá»‡]|ch[aÃ¡]u\s+hu[eá»‡]|em\s+hu[eá»‡]|\bhu[eá»‡]\b/.test(raw)) {
+        return 'manual grading -shift 1 (ms huá»‡)'   // maps to HPEEL_GRADING
     }
-    // Liên → HPEEL_LIEN
-    if (/\bli[êẻn]\b/.test(raw)) {
-        return 'manual peeling s1 - liên'            // maps to HPEEL_LIEN
+    // LiÃªn â†’ HPEEL_LIEN
+    if (/\bli[Ãªáº»n]\b/.test(raw)) {
+        return 'manual peeling s1 - liÃªn'            // maps to HPEEL_LIEN
     }
-    // Dung → HPEEL_DUNG
+    // Dung â†’ HPEEL_DUNG
     if (/\bdung\b/.test(raw)) {
         return 'manual peeling s1 - dung'                 // maps to HPEEL_DUNG
     }
@@ -376,100 +376,100 @@ function parseBlock(block: string): HeadcountRecord | null {
     const text = block.trim()
     if (text.length < 10) return null
 
-    const dateRaw = getField(text, ["date", "ngày", "deate", "ngay"])
+    const dateRaw = getField(text, ["date", "ngÃ y", "deate", "ngay"])
     let dateVal = normalizeDate(dateRaw)
     if (!dateVal) {
         const inlineDate = text.match(/\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b/)
         if (inlineDate) dateVal = normalizeDate(inlineDate[0])
     }
 
-    const hasKeyword = /khu\s*v[ựu]c|chính\s*th[ứu]c|ca\s*:/i.test(text)
+    const hasKeyword = /khu\s*v[á»±u]c|chÃ­nh\s*th[á»©u]c|ca\s*:/i.test(text)
     if (!dateVal && !hasKeyword) return null
 
-    let area = getField(text, ["khu vực", "khu vuc", "bộ phận", "bo phan", "bộphận"])
+    let area = getField(text, ["khu vá»±c", "khu vuc", "bá»™ pháº­n", "bo phan", "bá»™pháº­n"])
     area = area.replace(/\s*ca\s*:\s*\w+.*/i, "").trim()
     // Strip trailing parenthetical hints like "(Dung)", "(Linh)", etc.
     area = area.replace(/\s*\([^)]*\)\s*$/, "").trim()
     // Strip trailing comma or punctuation
     area = area.replace(/[,;.]+$/, "").trim()
-    // Fallback: if no "Khu vực:" label found, use the first non-date non-keyword line
-    // e.g. "Machine Grading - ca2" as first line → area="Machine Grading", shift="2"
+    // Fallback: if no "Khu vá»±c:" label found, use the first non-date non-keyword line
+    // e.g. "Machine Grading - ca2" as first line â†’ area="Machine Grading", shift="2"
     if (!area) {
         const firstMeaningfulLine = text.split('\n').find(l => {
             const t = l.trim()
             // Skip: empty, bullet/dash lines, lines with colons (are field labels), dates
             return t.length > 2
-                && !/^[-–•]/.test(t)
+                && !/^[-â€“â€¢]/.test(t)
                 && !t.includes(':')
-                && !/^(date|ngày|ngay|chính|thời|ot|dự|trong đó)/i.test(t)
+                && !/^(date|ngÃ y|ngay|chÃ­nh|thá»i|ot|dá»±|trong Ä‘Ã³)/i.test(t)
                 && !/^\d{1,2}[./]/.test(t)
         })
         if (firstMeaningfulLine) {
             // Strip " - caN" or " caN" suffix to get clean area
-            area = firstMeaningfulLine.trim().replace(/\s*[-–]\s*ca\s*\d+/i, '').trim()
+            area = firstMeaningfulLine.trim().replace(/\s*[-â€“]\s*ca\s*\d+/i, '').trim()
         }
     }
 
     let shift = getField(text, ["ca"])
-    const inlineShift = getField(text, ["khu vực", "khu vuc"]).match(/ca\s*:\s*(\S+)/i)
+    const inlineShift = getField(text, ["khu vá»±c", "khu vuc"]).match(/ca\s*:\s*(\S+)/i)
     if (inlineShift) shift = inlineShift[1]
     shift = shift.replace(/\./g, ", ").trim()
-    // Strip trailing descriptive text like "và HC", "và Highcare" after the shift number
-    shift = shift.replace(/\s+và\s+.*/i, "").trim()
+    // Strip trailing descriptive text like "vÃ  HC", "vÃ  Highcare" after the shift number
+    shift = shift.replace(/\s+vÃ \s+.*/i, "").trim()
     // Keep only leading digits/commas/spaces (shift number part)
     const shiftOnlyMatch = shift.match(/^[\d,\s]+/)
     if (shiftOnlyMatch) shift = shiftOnlyMatch[0].trim()
     // Fallback: extract shift from "Dept - caN" on first line (e.g. "Machine Grading - ca2")
     // Also use this if shift resolved to something non-numeric (getField grabbed wrong line)
     if (!shift || !/^\d/.test(shift)) {
-        const firstLineShift = text.split('\n')[0]?.match(/[-–]\s*ca\s*(\d+)/i)
+        const firstLineShift = text.split('\n')[0]?.match(/[-â€“]\s*ca\s*(\d+)/i)
         if (firstLineShift) shift = firstLineShift[1]
     }
 
 
-    // Fuzzy match: ch[íi]nh th[ứu]c hi[eệ]n di[eệ]n (any diacritic mix)
-    const offPresentFuzzy = text.match(/ch[íi]nh\s+th[ứu]c\s+hi[eệ]n\s+di[eệ]n\s*:?\s*([^\n]*)/i)
+    // Fuzzy match: ch[Ã­i]nh th[á»©u]c hi[eá»‡]n di[eá»‡]n (any diacritic mix)
+    const offPresentFuzzy = text.match(/ch[Ã­i]nh\s+th[á»©u]c\s+hi[eá»‡]n\s+di[eá»‡]n\s*:?\s*([^\n]*)/i)
     let offPresentRaw = offPresentFuzzy ? offPresentFuzzy[1].trim() : getField(text, [
-        "chính thức hiện diện", "chính thuc hiện diện", "chinh thuc hien dien",
+        "chÃ­nh thá»©c hiá»‡n diá»‡n", "chÃ­nh thuc hiá»‡n diá»‡n", "chinh thuc hien dien",
     ])
-    // Fallback: bare "Chính thức N" without hiện diện
+    // Fallback: bare "ChÃ­nh thá»©c N" without hiá»‡n diá»‡n
     if (!offPresentRaw) {
-        const bareMatch = text.match(/ch[íi]nh\s+th[ứu]c\s*:?\s*(\d[^\n]*)/i)
+        const bareMatch = text.match(/ch[Ã­i]nh\s+th[á»©u]c\s*:?\s*(\d[^\n]*)/i)
         if (bareMatch) offPresentRaw = bareMatch[1].trim()
     }
     const { total: officialPresent, vegetarian, note: offNote } = extractNumber(offPresentRaw)
 
-    let offAbsentRaw = getField(text, ["chính thức vắng", "chinh thuc vang"])
-    // Fallback: bare "Vắng N" (without "chính thức" prefix) — only when no other vang label found
+    let offAbsentRaw = getField(text, ["chÃ­nh thá»©c váº¯ng", "chinh thuc vang"])
+    // Fallback: bare "Váº¯ng N" (without "chÃ­nh thá»©c" prefix) â€” only when no other vang label found
     if (!offAbsentRaw) {
-        // Tìm dòng chứa "vắng" không có prefix thời vụ
-        const bareVangMatch = text.match(/(?<!thời\s+vụ\s+)vắng\s*:?\s*(\d[^\n]*)/i)
+        // TÃ¬m dÃ²ng chá»©a "váº¯ng" khÃ´ng cÃ³ prefix thá»i vá»¥
+        const bareVangMatch = text.match(/(?<!thá»i\s+vá»¥\s+)váº¯ng\s*:?\s*(\d[^\n]*)/i)
         if (bareVangMatch) offAbsentRaw = bareVangMatch[1].trim()
     }
     const { total: officialAbsent } = extractNumber(offAbsentRaw)
 
-    const seasPresentRaw = getField(text, ["thời vụ hiện diện", "2thời vụ hiện diện", "thoi vu hien dien"])
+    const seasPresentRaw = getField(text, ["thá»i vá»¥ hiá»‡n diá»‡n", "2thá»i vá»¥ hiá»‡n diá»‡n", "thoi vu hien dien"])
     const { total: seasonalPresent } = extractNumber(seasPresentRaw)
 
-    const seasAbsentRaw = getField(text, ["thời vụ vắng", "thoi vu vang"])
+    const seasAbsentRaw = getField(text, ["thá»i vá»¥ váº¯ng", "thoi vu vang"])
     const { total: seasonalAbsent } = extractNumber(seasAbsentRaw)
 
     // OT: grab only the leading number/token (stop before any next keyword or whitespace-separated text)
     let otRaw = getField(text, ["ot"])
-    // Trim away anything after the first number + optional symbol (e.g. "0 Dự trù ngày ...")
-    const otNumMatch = otRaw.match(/^(\d+[h]?(?:\.\d+)?(?:\s*giờ|\s*h)?)/i)
-    let ot = otNumMatch ? otNumMatch[1].trim() : (otRaw.split(/\s{2,}|(?=d[ựu]\s*tr[ùu])|(?=ca\s*:)/i)[0] || otRaw).trim()
-    // Dự trù (forecast) is intentionally ignored — trailing info after OT is skipped
+    // Trim away anything after the first number + optional symbol (e.g. "0 Dá»± trÃ¹ ngÃ y ...")
+    const otNumMatch = otRaw.match(/^(\d+[h]?(?:\.\d+)?(?:\s*giá»|\s*h)?)/i)
+    let ot = otNumMatch ? otNumMatch[1].trim() : (otRaw.split(/\s{2,}|(?=d[á»±u]\s*tr[Ã¹u])|(?=ca\s*:)/i)[0] || otRaw).trim()
+    // Dá»± trÃ¹ (forecast) is intentionally ignored â€” trailing info after OT is skipped
 
     let vegTotal = vegetarian
     const vegInOT = ot.match(/(\d+)\s*[p]?\s*[(\[]?\s*(\d+)\s*chay/i)
     if (!vegTotal && vegInOT) vegTotal = parseInt(vegInOT[2])
     const otVegMatch = ot.match(/(\d+)\s*chay/i)
     if (!vegTotal && otVegMatch) vegTotal = parseInt(otVegMatch[1])
-    // Fallback: scan line by line for "- Chay: N" or "Chay: N" (from "Trong đó:" block)
+    // Fallback: scan line by line for "- Chay: N" or "Chay: N" (from "Trong Ä‘Ã³:" block)
     if (!vegTotal) {
         for (const ln of text.split('\n')) {
-            const t = ln.trim().replace(/^[-–•]\s*/, '')  // strip leading bullet
+            const t = ln.trim().replace(/^[-â€“â€¢]\s*/, '')  // strip leading bullet
             const m = t.match(/^chay\s*:\s*(\d+)/i)
             if (m) { vegTotal = parseInt(m[1]); break }
         }
@@ -481,7 +481,7 @@ function parseBlock(block: string): HeadcountRecord | null {
     let senderHint = ""
     for (const line of lines) {
         const l = line.trim()
-        if (l && !/khu\s*v[ựu]c|ca\s*:|chính|thời|date|ngày|deate|ot:|dự/i.test(l)) {
+        if (l && !/khu\s*v[á»±u]c|ca\s*:|chÃ­nh|thá»i|date|ngÃ y|deate|ot:|dá»±/i.test(l)) {
             if (!/^\d{1,2}[./]/.test(l) && l.length < 60) {
                 senderHint = l
                 break
@@ -489,7 +489,7 @@ function parseBlock(block: string): HeadcountRecord | null {
         }
     }
 
-    // ── Refine generic HPEEL area using supervisor name (Huệ/Liên/Dung) ────────
+    // â”€â”€ Refine generic HPEEL area using supervisor name (Huá»‡/LiÃªn/Dung) â”€â”€â”€â”€â”€â”€â”€â”€
     const _areaKey = (area || '').toLowerCase().trim()
     const _areaCode = DEPT_MAP[_areaKey]
     if (!_areaCode || _areaCode === 'HPEEL' || HPEEL_GENERIC_AREAS.has(_areaKey)) {
@@ -500,8 +500,8 @@ function parseBlock(block: string): HeadcountRecord | null {
     return {
         senderHint,
         date: dateVal,
-        area: area || "—",
-        shift: shift || "—",
+        area: area || "â€”",
+        shift: shift || "â€”",
         officialPresent,
         officialPresentNote: offNote,
         officialAbsent,
@@ -525,7 +525,7 @@ function cleanZaloExportTriple(raw: string): string {
     let text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 
     // Step 1: Collapse timestamped triples:
-    //   HH:MM] ...copy2... HH:MM: ...copy3... HH:MM  →  HH:MM
+    //   HH:MM] ...copy2... HH:MM: ...copy3... HH:MM  â†’  HH:MM
     // Use lazy match; \1 anchors stops at the correct timestamp occurrence.
     text = text.replace(
         /(\d{1,2}:\d{2})\]([\s\S]+?)\1\s*:[\s\S]+?\1(?=\n|$)/g,
@@ -537,7 +537,7 @@ function cleanZaloExportTriple(raw: string): string {
     text = text.replace(/\]\s*[^\n\[]+(?=\n|$)/g, '')
 
     // Step 3: Remove leading [ from each line that starts a message block
-    text = text.replace(/^\[(?!Hình ảnh|Sticker|Video|File)/gm, '')
+    text = text.replace(/^\[(?!HÃ¬nh áº£nh|Sticker|Video|File)/gm, '')
 
     // Step 4: Remove Zalo emoji/sticker reaction lines
     text = text.replace(/^\/-[a-zA-Z]+\s*$/gm, '')
@@ -546,8 +546,8 @@ function cleanZaloExportTriple(raw: string): string {
     return text
 }
 
-// ─── QC Compact format parser ─────────────────────────────────────────────
-// Handles: "Bộ phận: QC\nCa1: 12 (1 chay) OT: 3\nCa2: 6 (2 chay)\nCa3: 4 OT: 2"
+// â”€â”€â”€ QC Compact format parser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Handles: "Bá»™ pháº­n: QC\nCa1: 12 (1 chay) OT: 3\nCa2: 6 (2 chay)\nCa3: 4 OT: 2"
 function parseQCCompact(block: string): HeadcountRecord[] {
     const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
     const COMPACT_CA = /^[Cc]a\s*([1-3])\s*:\s*(\d+)/
@@ -559,7 +559,7 @@ function parseQCCompact(block: string): HeadcountRecord[] {
         const dm = l.match(/(\d{1,2})[./](\d{1,2})[./](\d{4})/)
         if (dm && !dateVal) dateVal = normalizeDate(dm[0])
         if (/date\s*:/i.test(l) && !dateVal) dateVal = normalizeDate(l.replace(/date\s*:/i, '').trim())
-        const am = l.match(/(?:b[ộo]\s*ph[aậ]n|b[ộo]ph[aậ]n|khu\s*v[ựu]c)\s*:?\s*(.+)/i)
+        const am = l.match(/(?:b[á»™o]\s*ph[aáº­]n|b[á»™o]ph[aáº­]n|khu\s*v[á»±u]c)\s*:?\s*(.+)/i)
         if (am && !area) area = am[1].replace(/[,;.]+$/, '').trim()
     }
 
@@ -599,7 +599,7 @@ function splitIntoBlocks(rawText: string): string[] {
         const trimmed = section.trim()
         if (!trimmed) continue
         const hasDate = /\b\d{1,2}[./]\d{1,2}[./]\d{4}\b/.test(trimmed)
-        const hasArea = /khu\s*v[ựu]c/i.test(trimmed)
+        const hasArea = /khu\s*v[á»±u]c/i.test(trimmed)
         if (hasDate || hasArea) blocks.push(trimmed)
     }
     if (blocks.length === 0) {
@@ -620,13 +620,13 @@ function splitIntoBlocks(rawText: string): string[] {
 }
 
 // Detect/split a single area block that contains multiple "Ca N" sub-sections
-// e.g. "Ca 1\nChính thức 8\nCa 2\nChính thức 1" → 2 sub-blocks each with inherited date+area
+// e.g. "Ca 1\nChÃ­nh thá»©c 8\nCa 2\nChÃ­nh thá»©c 1" â†’ 2 sub-blocks each with inherited date+area
 function splitMultiShiftBlock(block: string): string[] {
     const lines = block.split("\n")
     // Regex to detect a bare "Ca N" line (shift marker, N = 1/2/3)
-    const IS_SHIFT_LINE = /^ca\s+([1-3])(?:\s|$|v[àa])/i
+    const IS_SHIFT_LINE = /^ca\s+([1-3])(?:\s|$|v[Ã a])/i
 
-    // Collect header lines (date, area) — before first bare Ca line
+    // Collect header lines (date, area) â€” before first bare Ca line
     const headerLines: string[] = []
     let firstCaIdx = -1
     for (let i = 0; i < lines.length; i++) {
@@ -701,7 +701,7 @@ function parseZaloText(rawText: string): HeadcountRecord[] {
         const subBlocks = splitMultiShiftBlock(block)
         for (const sub of subBlocks) {
             const record = parseBlock(sub)
-            if (record && (record.date || record.area !== "—")) {
+            if (record && (record.date || record.area !== "â€”")) {
                 // Expand "Ca: 1.2.3" into 3 records, headcount divided equally
                 records.push(...expandMultiShiftRecord(record))
             }
@@ -711,11 +711,11 @@ function parseZaloText(rawText: string): HeadcountRecord[] {
     return deduplicateRecords(records)
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // CSV Export
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function exportCSV(records: HeadcountRecord[]) {
-    const headers = ["Ngày", "Khu vực", "Ca", "Chính thức Hiện diện", "Chính thức Vắng", "Thời vụ Hiện diện", "Thời vụ Vắng", "Tăng ca", "Chay"]
+    const headers = ["NgÃ y", "Khu vá»±c", "Ca", "ChÃ­nh thá»©c Hiá»‡n diá»‡n", "ChÃ­nh thá»©c Váº¯ng", "Thá»i vá»¥ Hiá»‡n diá»‡n", "Thá»i vá»¥ Váº¯ng", "TÄƒng ca", "Chay"]
     const rows = records.map((r) => [
         r.date, r.area, r.shift,
         r.officialPresent ?? "", r.officialAbsent ?? "",
@@ -736,7 +736,7 @@ function exportCSV(records: HeadcountRecord[]) {
 }
 
 function exportHistoryCSV(records: SavedRecord[]) {
-    const headers = ["Ngày", "Bộ phận", "Ca", "Chính thức Hiện diện", "Chính thức Vắng", "Thời vụ Hiện diện", "Thời vụ Vắng", "Tăng ca", "Chay", "Ghi chú"]
+    const headers = ["NgÃ y", "Bá»™ pháº­n", "Ca", "ChÃ­nh thá»©c Hiá»‡n diá»‡n", "ChÃ­nh thá»©c Váº¯ng", "Thá»i vá»¥ Hiá»‡n diá»‡n", "Thá»i vá»¥ Váº¯ng", "TÄƒng ca", "Chay", "Ghi chÃº"]
     const rows = records.map((r) => [
         r.work_date, r.department_name, `Ca ${r.shift}`,
         r.official_present, r.official_absent,
@@ -755,31 +755,31 @@ function exportHistoryCSV(records: SavedRecord[]) {
     URL.revokeObjectURL(url)
 }
 
-// ─────────────────────────────────────────────
-// OT String Parser — handles multiple formats:
-//   "26p (10 chay)"   → mặn=16, chay=10  (X=total, Y=chay, mặn=X-Y)
-//   "13 mặn (2 chay)" → mặn=13, chay=2   (explicit "mặn" → X is already mặn)
-//   "11+8chay"        → mặn=11, chay=8   (explicit split)
-//   "5p mặn"          → mặn=5, chay=0
-//   "6"               → mặn=6, chay=0
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// OT String Parser â€” handles multiple formats:
+//   "26p (10 chay)"   â†’ máº·n=16, chay=10  (X=total, Y=chay, máº·n=X-Y)
+//   "13 máº·n (2 chay)" â†’ máº·n=13, chay=2   (explicit "máº·n" â†’ X is already máº·n)
+//   "11+8chay"        â†’ máº·n=11, chay=8   (explicit split)
+//   "5p máº·n"          â†’ máº·n=5, chay=0
+//   "6"               â†’ máº·n=6, chay=0
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function parseOTString(ot: string): { otCount: number; otVegetarian: number } {
     const s = (ot || '').trim()
-    if (!s || s === '0' || s === '—') return { otCount: 0, otVegetarian: 0 }
+    if (!s || s === '0' || s === 'â€”') return { otCount: 0, otVegetarian: 0 }
 
-    // Pattern 1: "X mặn (Y chay)" OR "X mặn Y chay" — X is already mặn
-    const manChayMatch = s.match(/(\d+)\s*(?:p\s*)?m[ặa]n\s*[\s(,]?\s*(\d+)\s*chay/i)
+    // Pattern 1: "X máº·n (Y chay)" OR "X máº·n Y chay" â€” X is already máº·n
+    const manChayMatch = s.match(/(\d+)\s*(?:p\s*)?m[áº·a]n\s*[\s(,]?\s*(\d+)\s*chay/i)
     if (manChayMatch) {
         return { otCount: parseInt(manChayMatch[1]), otVegetarian: parseInt(manChayMatch[2]) }
     }
 
-    // Pattern 2: "X+Ychay" OR "X + Y chay" — explicit split
+    // Pattern 2: "X+Ychay" OR "X + Y chay" â€” explicit split
     const plusChayMatch = s.match(/(\d+)\s*\+\s*(\d+)\s*chay/i)
     if (plusChayMatch) {
         return { otCount: parseInt(plusChayMatch[1]), otVegetarian: parseInt(plusChayMatch[2]) }
     }
 
-    // Pattern 3: "X p (Y chay)" OR "X (Y chay)" — X is TOTAL, Y is chay
+    // Pattern 3: "X p (Y chay)" OR "X (Y chay)" â€” X is TOTAL, Y is chay
     const totalChayMatch = s.match(/(\d+)\s*(?:p\s*)?\(?\s*(\d+)\s*chay/i)
     if (totalChayMatch) {
         const total = parseInt(totalChayMatch[1])
@@ -787,8 +787,8 @@ function parseOTString(ot: string): { otCount: number; otVegetarian: number } {
         return { otCount: Math.max(0, total - chay), otVegetarian: chay }
     }
 
-    // Pattern 4: "Xp mặn" OR "X mặn" — mặn only, no chay
-    const manOnly = s.match(/(\d+)\s*(?:p\s*)?m[ặa]n/i)
+    // Pattern 4: "Xp máº·n" OR "X máº·n" â€” máº·n only, no chay
+    const manOnly = s.match(/(\d+)\s*(?:p\s*)?m[áº·a]n/i)
     if (manOnly) {
         return { otCount: parseInt(manOnly[1]), otVegetarian: 0 }
     }
@@ -805,9 +805,9 @@ function dateToISO(ddmmyyyy: string): string {
     return ddmmyyyy
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Component
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function BaoCom() {
     const supabase = createClient()
     const [rawText, setRawText] = useState("")
@@ -828,12 +828,12 @@ export default function BaoCom() {
         const shift = r.shift?.replace(/[^1-3]/g, '') || ''
         const s = /^[123]$/.test(shift) ? shift : '1'
 
-        // Handpeeling with supervisor → shift-specific dept in DB
+        // Handpeeling with supervisor â†’ shift-specific dept in DB
         const isDung = /dung/i.test(lower)
-        const isLien = /li[ênế]n/i.test(lower)
-        const isHue = /hu[ệê]/i.test(lower)
+        const isLien = /li[Ãªnáº¿]n/i.test(lower)
+        const isHue = /hu[á»‡Ãª]/i.test(lower)
         if ((isDung || isLien) && (lower.includes('handpeeling') || lower.includes('manual peeling') || lower.includes('peeling'))) {
-            const sup = isDung ? 'Dung' : 'Liên'
+            const sup = isDung ? 'Dung' : 'LiÃªn'
             const dept = deptList.find(d =>
                 d.name_en.toLowerCase().includes(`s${s}`) &&
                 d.name_en.toLowerCase().includes(sup.toLowerCase()) &&
@@ -847,9 +847,9 @@ export default function BaoCom() {
             )
             return dept?.id ?? deptList.find(d => d.code === 'HPEEL')?.id ?? null
         }
-        // Tập vụ → Cleaning dept by name
-        if (/t[ạḥâ]p\s*v[ụu]/i.test(area)) {
-            const dept = deptList.find(d => /clean/i.test(d.name_en) || /t[ạâ]p\s*v[ụu]/i.test(d.name_en))
+        // Táº­p vá»¥ â†’ Cleaning dept by name
+        if (/t[áº¡á¸¥Ã¢]p\s*v[á»¥u]/i.test(area)) {
+            const dept = deptList.find(d => /clean/i.test(d.name_en) || /t[áº¡Ã¢]p\s*v[á»¥u]/i.test(d.name_en))
             if (dept) return dept.id
         }
         return findDeptId(area)
@@ -874,7 +874,7 @@ export default function BaoCom() {
         seasonal_present: number; seasonal_absent: number;
         ot_count: number; vegetarian: number
     }>({ official_present: 0, official_absent: 0, seasonal_present: 0, seasonal_absent: 0, ot_count: 0, vegetarian: 0 })
-    // Refresh key: tăng lên mỗi khi kitchen tab thay đổi data → trigger re-fetch history
+    // Refresh key: tÄƒng lÃªn má»—i khi kitchen tab thay Ä‘á»•i data â†’ trigger re-fetch history
     const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
 
     // Load departments + user role on mount
@@ -903,21 +903,21 @@ export default function BaoCom() {
     const canEdit = RAW_ALLOWED_ROLES.map(r => r.toLowerCase().replace(/[\s-]/g, '_')).includes(normalizedRole)
     const canSave = canEdit
 
-    // Access guard — show after role is loaded
+    // Access guard â€” show after role is loaded
     if (roleLoaded && !canEdit) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-8">
                 <UtensilsCrossed className="h-16 w-16 text-muted-foreground/40" />
-                <h1 className="text-2xl font-bold text-muted-foreground">Không có quyền truy cập</h1>
+                <h1 className="text-2xl font-bold text-muted-foreground">KhÃ´ng cÃ³ quyá»n truy cáº­p</h1>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                    Chức năng Báo Cơm chỉ dành cho HR, HSE và Admin.
+                    Chá»©c nÄƒng BÃ¡o CÆ¡m chá»‰ dÃ nh cho HR, HSE vÃ  Admin.
                 </p>
-                <Button variant="outline" onClick={() => router.push('/dashboard')}>← Về Dashboard</Button>
+                <Button variant="outline" onClick={() => router.push('/dashboard')}>â† Vá» Dashboard</Button>
             </div>
         )
     }
 
-    // ─── Build summary text for kitchen ───
+    // â”€â”€â”€ Build summary text for kitchen â”€â”€â”€
     const buildSummaryText = (): string => {
         // Group by date+shift
         const groups = new Map<string, HeadcountRecord[]>()
@@ -935,20 +935,20 @@ export default function BaoCom() {
             const totalOT = recs.reduce((s, r) => s + (parseInt(r.ot) || 0), 0)
             const man = Math.max(0, totalPresent - totalVeg)
             const otHour = OT_HOUR[shift] ?? ""
-            let block = `Ngày ${date}\nCa ${shift}: tổng cộng ${man} phần mặn (chay: ${totalVeg} phần)`
-            if (totalOT > 0) block += `\n${totalOT} OT (ăn lúc ${otHour})`
+            let block = `NgÃ y ${date}\nCa ${shift}: tá»•ng cá»™ng ${man} pháº§n máº·n (chay: ${totalVeg} pháº§n)`
+            if (totalOT > 0) block += `\n${totalOT} OT (Äƒn lÃºc ${otHour})`
             lines.push(block)
         })
         return lines.join("\n\n")
     }
 
-    // ─── Check if area has a DEPT_MAP rule ───
+    // â”€â”€â”€ Check if area has a DEPT_MAP rule â”€â”€â”€
     const hasDeptRule = (area: string): boolean => {
         const key = area.toLowerCase().trim()
         return Object.prototype.hasOwnProperty.call(DEPT_MAP, key)
     }
 
-    // ─── History edit / delete handlers ───
+    // â”€â”€â”€ History edit / delete handlers â”€â”€â”€
     const handleHistSave = async (id: string) => {
         const res = await fetch('/api/meal-headcount', {
             method: 'PATCH',
@@ -965,11 +965,11 @@ export default function BaoCom() {
         })
         const json = await res.json()
         if (!res.ok) {
-            alert('Lỗi lưu: ' + (json.error || res.statusText))
+            alert('Lá»—i lÆ°u: ' + (json.error || res.statusText))
             return
         }
         setHistoryRecords(prev => prev.map(r => r.id === id ? { ...r, ...histEditFields } : r))
-        // Cập nhật luôn summaryData nếu đang hiển
+        // Cáº­p nháº­t luÃ´n summaryData náº¿u Ä‘ang hiá»ƒn
         setSummaryData(prev => prev ? prev.map(r =>
             r.id === id ? { ...r, ...histEditFields } : r
         ) : prev)
@@ -977,19 +977,19 @@ export default function BaoCom() {
     }
 
     const handleHistDelete = async (id: string) => {
-        if (!confirm("Xóa bản ghi này?")) return
+        if (!confirm("XÃ³a báº£n ghi nÃ y?")) return
         const res = await fetch(`/api/meal-headcount?id=${id}`, { method: 'DELETE' })
         const json = await res.json()
         if (!res.ok) {
-            alert("Lỗi: " + (json.error || res.statusText))
+            alert("Lá»—i: " + (json.error || res.statusText))
             return
         }
         setHistoryRecords(prev => prev.filter(r => r.id !== id))
-        // Cập nhật luôn summaryData nếu đang hiển
+        // Cáº­p nháº­t luÃ´n summaryData náº¿u Ä‘ang hiá»ƒn
         setSummaryData(prev => prev ? prev.filter(r => r.id !== id) : prev)
     }
 
-    // ─── Monthly stats state ───
+    // â”€â”€â”€ Monthly stats state â”€â”€â”€
     const [statsMonth, setStatsMonth] = useState<string>(() => new Date().toISOString().slice(0, 7))
     const [statsData, setStatsData] = useState<MealStatRow[] | null>(null)
     const [statsLoading, setStatsLoading] = useState(false)
@@ -1010,7 +1010,7 @@ export default function BaoCom() {
         setStatsError(null)
         setStatsData(null)
         try {
-            // Chu kỳ tiền cơm: 26 tháng trước → 25 tháng hiện tại
+            // Chu ká»³ tiá»n cÆ¡m: 26 thÃ¡ng trÆ°á»›c â†’ 25 thÃ¡ng hiá»‡n táº¡i
             const { from, to } = getBillingCycle(statsMonth)
             const { data, error } = await supabase
                 .from("meal_headcount")
@@ -1027,14 +1027,14 @@ export default function BaoCom() {
         }
     }
 
-    // Thứ tự bộ phận theo layout Excel
+    // Thá»© tá»± bá»™ pháº­n theo layout Excel
     const DEPT_ORDER = ['FGWH', 'STEAM', 'SHELL', 'MAINT_SHELL', 'BORMA', 'PEEL', 'CS', 'HPEEL', 'PACK', 'BOILER', 'MAINT_HCA', 'CLEAN', 'QC', 'OFFICE']
     const SHIFT_ORDER = ['1', '2', '3', 'HC', 'OT']
     // Alias: these dept codes are merged into another group in the monthly report
-    // HAND (HANDPEELING) contains sub-supervisors Liên/Dung → merge into HPEEL group
+    // HAND (HANDPEELING) contains sub-supervisors LiÃªn/Dung â†’ merge into HPEEL group
     const DEPT_CODE_ALIAS: Record<string, string> = { PEEL_MC: 'PEEL', HAND: 'HPEEL' }
 
-    // Tên hiển thị đẹp như trong Excel
+    // TÃªn hiá»ƒn thá»‹ Ä‘áº¹p nhÆ° trong Excel
     const DEPT_DISPLAY: Record<string, string> = {
         FGWH: 'Loading',
         STEAM: 'Steaming',
@@ -1052,17 +1052,26 @@ export default function BaoCom() {
         OFFICE: 'Office',
     }
 
+    const getMonthlyDbDepartmentName = (sectionName: string, deptCode: string) => {
+        if (deptCode !== 'HPEEL') return sectionName
+        const name = sectionName.toLowerCase()
+        if (name.includes('dung')) return 'Hand Peeling (Dung)'
+        if (name.includes('loan') || name.includes('grading') || name.includes('hu')) return 'Manual Grading (Ms Huệ)'
+        if (name.includes('liên') || name.includes('lien') || name.includes(' - li')) return 'Hand Peeling (Liên)'
+        return sectionName
+    }
+
     // Excel Section row order within each dept group
     const SECTION_ORDER: Record<string, string[]> = {
         FGWH: ['Loading S1', 'Loading S2', 'Loading S3'],
         STEAM: ['Steaming S1', 'Steaming S2', 'Steaming S3'],
-        SHELL: ['Shelling S1', 'Shelling thời vụ S1', 'Shelling S2', 'Shelling thời vụ S2', 'Shelling S3', 'Shelling thời vụ S3'],
+        SHELL: ['Shelling S1', 'Shelling thá»i vá»¥ S1', 'Shelling S2', 'Shelling thá»i vá»¥ S2', 'Shelling S3', 'Shelling thá»i vá»¥ S3'],
         MAINT_SHELL: ['Maintenance shelling S1', 'Maintenance shelling S2', 'Maintenance shelling S3'],
-        BORMA: ['Borma S1', 'Borma thời vụ S1', 'Borma S2', 'Borma thời vụ S2', 'Borma S3', 'Borma thời vụ S3'],
-        PEEL: ['Peeling S1', 'Peeling thời vụ S1', 'Peeling S2', 'Peeling thời vụ S2', 'Peeling S3', 'Peeling thời vụ S3'],
-        CS: ['Machine Grading - shift 1', 'Machine Grading  - thời vụ 1', 'Machine Grading  - shift 2', 'Machine Grading  thời vụ - shift 2', 'Machine Grading  - shift 3', 'Machine Grading  thời vụ- shift 3'],
-        HPEEL: ['Manual Grading -Shift 1 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 1 (Ms Huệ)', 'Manual Grading -Shift 2 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 2 (Ms Huệ)', 'Manual Grading -Shift 3 (Ms Huệ)', 'Manual Grading Thời vụ -Shift 3 (Ms Huệ)', 'Manual peeling S1 - Liên', 'Manual peeling S1 thời vụ - Liên', 'Manual peeling S1 - Dung', 'Manual peeling S1 thời vụ - Dung', 'Manual peeling S1 - Loan', 'Manual peeling S1 thời vụ - Loan', 'Manual peeling S2 - Liên', 'Manual peeling S2 thời vụ - Liên', 'Manual peeling S2 - Dung', 'Manual peeling S2 thời vụ - Dung', 'Manual peeling S2 - Loan', 'Manual peeling S2 thời vụ - Loan', 'Manual peeling S3 - Liên', 'Manual peeling S3 thời vụ - Liên', 'Manual peeling S3 - Dung', 'Manual peeling S3 thời vụ - Dung', 'Manual peeling S3 - Loan', 'Manual peeling S3 thời vụ - Loan', 'Hand Peeling OT'],
-        PACK: ['Packing S1', 'Packing thời vụ S1', 'Packing S2', 'Packing thời vụ S2', 'Packing S3'],
+        BORMA: ['Borma S1', 'Borma thá»i vá»¥ S1', 'Borma S2', 'Borma thá»i vá»¥ S2', 'Borma S3', 'Borma thá»i vá»¥ S3'],
+        PEEL: ['Peeling S1', 'Peeling thá»i vá»¥ S1', 'Peeling S2', 'Peeling thá»i vá»¥ S2', 'Peeling S3', 'Peeling thá»i vá»¥ S3'],
+        CS: ['Machine Grading - shift 1', 'Machine Grading  - thá»i vá»¥ 1', 'Machine Grading  - shift 2', 'Machine Grading  thá»i vá»¥ - shift 2', 'Machine Grading  - shift 3', 'Machine Grading  thá»i vá»¥- shift 3'],
+        HPEEL: ['Manual Grading -Shift 1 (Ms Huá»‡)', 'Manual Grading Thá»i vá»¥ -Shift 1 (Ms Huá»‡)', 'Manual Grading -Shift 2 (Ms Huá»‡)', 'Manual Grading Thá»i vá»¥ -Shift 2 (Ms Huá»‡)', 'Manual Grading -Shift 3 (Ms Huá»‡)', 'Manual Grading Thá»i vá»¥ -Shift 3 (Ms Huá»‡)', 'Manual peeling S1 - LiÃªn', 'Manual peeling S1 thá»i vá»¥ - LiÃªn', 'Manual peeling S1 - Dung', 'Manual peeling S1 thá»i vá»¥ - Dung', 'Manual peeling S1 - Loan', 'Manual peeling S1 thá»i vá»¥ - Loan', 'Manual peeling S2 - LiÃªn', 'Manual peeling S2 thá»i vá»¥ - LiÃªn', 'Manual peeling S2 - Dung', 'Manual peeling S2 thá»i vá»¥ - Dung', 'Manual peeling S2 - Loan', 'Manual peeling S2 thá»i vá»¥ - Loan', 'Manual peeling S3 - LiÃªn', 'Manual peeling S3 thá»i vá»¥ - LiÃªn', 'Manual peeling S3 - Dung', 'Manual peeling S3 thá»i vá»¥ - Dung', 'Manual peeling S3 - Loan', 'Manual peeling S3 thá»i vá»¥ - Loan', 'Hand Peeling OT'],
+        PACK: ['Packing S1', 'Packing thá»i vá»¥ S1', 'Packing S2', 'Packing thá»i vá»¥ S2', 'Packing S3'],
         BOILER: ['Boiler worker S1', 'Boiler worker S2', 'Boiler worker S3'],
         MAINT_HCA: ['Maintenance S1', 'Maintenance S2', 'Maintenance S3'],
         CLEAN: ['Cleaning worker S1', 'Cleaning worker S2', 'Cleaning worker S3'],
@@ -1073,7 +1082,7 @@ export default function BaoCom() {
     type ShiftEntry = { deptKey: string; deptName: string; deptCode: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; otDays: Map<string, number>; dayRowIds: Map<string, string[]> }
     type DeptGroup = { deptKey: string; name: string; code: string; shifts: ShiftEntry[]; sectionRows: SectionRow[] }
     // SectionRow: 1 row per department_name (the Excel "Section" name)
-    // dayRowIds: date → list of statsData row IDs (used for direct save without UUID re-lookup)
+    // dayRowIds: date â†’ list of statsData row IDs (used for direct save without UUID re-lookup)
     type SectionRow = { sectionName: string; deptCode: string; deptKey: string; shift: string; days: Map<string, number>; officialDays: Map<string, number>; seasonalDays: Map<string, number>; dayRowIds: Map<string, string[]>; departmentIds: Set<string> }
 
     // Build pivot: group by department_name ("Section" in Excel)
@@ -1082,38 +1091,38 @@ export default function BaoCom() {
         const { from, to } = getBillingCycle(statsMonth)
         const days = enumerateDateStrings(from, to)
 
-        // Helper: normalize HPEEL non-canonical section names → canonical SECTION_ORDER name
+        // Helper: normalize HPEEL non-canonical section names â†’ canonical SECTION_ORDER name
         const normalizeHpeelSectionName = (name: string, shift: string): string => {
             const n = name.toLowerCase()
             const s = /^[123]$/.test(shift) ? shift : (shift === 'HC' ? '1' : '1')
             const sPrefix = s === 'HC' ? 'HC' : `S${s}`
-            // Ms Huệ / Grading / Loan → Manual Grading -Shift N (Ms Huệ)
-            if (/hu[eệ]/i.test(n) || /grading/i.test(n) || /loan/i.test(n)) {
-                return `Manual Grading -Shift ${s} (Ms Huệ)`
+            // Ms Huá»‡ / Grading / Loan â†’ Manual Grading -Shift N (Ms Huá»‡)
+            if (/hu[eá»‡]/i.test(n) || /grading/i.test(n) || /loan/i.test(n)) {
+                return `Manual Grading -Shift ${s} (Ms Huá»‡)`
             }
-            // Liên → Manual peeling SN - Liên
-            if (/li[êẻen]n/i.test(n)) {
-                return `Manual peeling ${sPrefix} - Liên`
+            // LiÃªn â†’ Manual peeling SN - LiÃªn
+            if (/li[Ãªáº»en]n/i.test(n)) {
+                return `Manual peeling ${sPrefix} - LiÃªn`
             }
-            // Dung → Manual peeling SN - Dung
+            // Dung â†’ Manual peeling SN - Dung
             if (/dung/i.test(n)) {
                 return `Manual peeling ${sPrefix} - Dung`
             }
-            // Generic hand peeling / manual peeling without supervisor → map to Liên (ca1 default)
+            // Generic hand peeling / manual peeling without supervisor â†’ map to LiÃªn (ca1 default)
             if (/hand.?peel|manual.?peel/i.test(n)) {
-                return `Manual peeling ${sPrefix} - Liên`
+                return `Manual peeling ${sPrefix} - LiÃªn`
             }
             return name
         }
 
-        // 2. Map section_name → SectionRow
+        // 2. Map section_name â†’ SectionRow
         const sectionMap = new Map<string, SectionRow>()
         rows.forEach(r => {
             let deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
-            deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC → PEEL
+            deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC â†’ PEEL
             let sectionName = r.department_name   // e.g. "Loading S1", "Shelling S2"
             let shift = r.shift ?? '1'
-            // [NOTE] For pivot purposes, ALL HC (Hành chính) reports are consolidated into Ca 1
+            // [NOTE] For pivot purposes, ALL HC (HÃ nh chÃ­nh) reports are consolidated into Ca 1
             if (shift === 'HC') shift = '1'
             // Normalize: if sectionName is not a known section for this dept (e.g. kitchen tab saves
             // 'Shelling', 'STEAMING', 'FGWH' instead of canonical 'Shelling S2', 'Steaming S1',
@@ -1123,7 +1132,7 @@ export default function BaoCom() {
             if (!isKnownSection && deptCode) {
                 if (deptCode === 'HPEEL') {
                     if (shift === 'OT') {
-                        // OT row for HPEEL — use canonical 'Hand Peeling OT' name
+                        // OT row for HPEEL â€” use canonical 'Hand Peeling OT' name
                         sectionName = 'Hand Peeling OT'
                     } else {
                         // For HPEEL: normalize to canonical section name based on supervisor clues
@@ -1170,7 +1179,7 @@ export default function BaoCom() {
         const shiftMap = new Map<string, ShiftEntry>()
         rows.forEach(r => {
             let deptCode = deptList.find(d => d.id === r.department_id)?.code ?? ''
-            deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC → PEEL
+            deptCode = DEPT_CODE_ALIAS[deptCode] ?? deptCode  // merge PEEL_MC â†’ PEEL
             const deptKey = (DEPT_CODE_ALIAS[deptList.find(d => d.id === r.department_id)?.code ?? ''] ? deptList.find(d => d.code === deptCode)?.id : r.department_id) ?? r.department_id ?? r.department_name
             const deptName = DEPT_DISPLAY[deptCode] ?? r.department_name
             let shift = r.shift ?? '1'
@@ -1249,8 +1258,8 @@ export default function BaoCom() {
         const { days, deptGroups } = buildMonthlyPivot(statsData)
         // Title rows like excel
         const billingLabel = getBillingCycle(statsMonth).label
-        const titleRow = [`TIỀN CƠM CÁN BỘ CÔNG NHÂN VIÊN THÁNG ${statsMonth}`]
-        const periodRow = [`Từ ngày ${billingLabel}`]
+        const titleRow = [`TIá»€N CÆ M CÃN Bá»˜ CÃ”NG NHÃ‚N VIÃŠN THÃNG ${statsMonth}`]
+        const periodRow = [`Tá»« ngÃ y ${billingLabel}`]
         const header = ["Section", ...days.map(d => parseInt(d.slice(8), 10)), "Total"]
         const dataRows: (string | number)[][] = []
         deptGroups.forEach(dept => {
@@ -1278,20 +1287,20 @@ export default function BaoCom() {
             deptGroups.reduce((s, dg) => s + dg.sectionRows.filter(sr => sr.shift === 'HC').reduce((ss, sr) => ss + [...sr.days.values()].reduce((a, b) => a + b, 0), 0), 0)]
         const otRow = ['OT', ...days.map(d => deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh => sh.shift === 'OT')?.days.get(d) ?? 0), 0)),
             deptGroups.reduce((s, dg) => s + (dg.shifts.find(sh => sh.shift === 'OT') ? [...dg.shifts.find(sh => sh.shift === 'OT')!.days.values()].reduce((a, b) => a + b, 0) : 0), 0)]
-        const tvRow = ['Thời vụ', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.seasonalDays.get(d) ?? 0), 0), 0)),
+        const tvRow = ['Thá»i vá»¥', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.seasonalDays.get(d) ?? 0), 0), 0)),
             deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.seasonalDays.values()].reduce((a, b) => a + b, 0), 0), 0)]
-        const ctRow = ['Chính thức', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.officialDays.get(d) ?? 0), 0), 0)),
+        const ctRow = ['ChÃ­nh thá»©c', ...days.map(d => deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + (sr.officialDays.get(d) ?? 0), 0), 0)),
             deptGroups.reduce((s, dg) => s + dg.sectionRows.reduce((ss, sr) => ss + [...sr.officialDays.values()].reduce((a, b) => a + b, 0), 0), 0)]
         const wsData = [titleRow, periodRow, header, ...dataRows, totalRow, ca1Row, ca2Row, ca3Row, hcRow, otRow, tvRow, ctRow]
         const ws = XLSX.utils.aoa_to_sheet(wsData)
         ws["!cols"] = [{ wch: 32 }, ...days.map(() => ({ wch: 5 })), { wch: 8 }]
         const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, `Cơm ${statsMonth}`)
+        XLSX.utils.book_append_sheet(wb, ws, `CÆ¡m ${statsMonth}`)
         XLSX.writeFile(wb, `bao-com-${statsMonth}.xlsx`)
     }
 
-    // ─── DB-based summary state (Chi tiết từng ca) ───
-    const [summaryDate, setSummaryDate] = useState<string>(new Date().toISOString().slice(0, 10))  // default: hôm nay
+    // â”€â”€â”€ DB-based summary state (Chi tiáº¿t tá»«ng ca) â”€â”€â”€
+    const [summaryDate, setSummaryDate] = useState<string>(new Date().toISOString().slice(0, 10))  // default: hÃ´m nay
     const [summaryShift, setSummaryShift] = useState<string>("1")
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryData, setSummaryData] = useState<SavedRecord[] | null>(null)
@@ -1302,8 +1311,8 @@ export default function BaoCom() {
     // Add-row state
     const [addRow, setAddRow] = useState<{ deptId: string; officialPresent: number; seasonalPresent: number; vegetarian: number; otCount: number } | null>(null)
 
-    // ─── Daily summary state (Chốt số gửi nhà ăn) ───
-    // Có thể chọn ngày, default hôm nay
+    // â”€â”€â”€ Daily summary state (Chá»‘t sá»‘ gá»­i nhÃ  Äƒn) â”€â”€â”€
+    // CÃ³ thá»ƒ chá»n ngÃ y, default hÃ´m nay
     const [dailyDate, setDailyDate] = useState<string>(() => {
         const d = new Date()
         return d.toISOString().slice(0, 10)
@@ -1328,7 +1337,7 @@ export default function BaoCom() {
             // Map HC directly to 1 globally for the daily summary computation
             rows.forEach(r => { if (r.shift === 'HC') r.shift = '1' })
 
-            // Tổng theo từng ca
+            // Tá»•ng theo tá»«ng ca
             const ca1 = rows.filter(r => r.shift === '1').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
             const ca2 = rows.filter(r => r.shift === '2').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
             const ca3 = rows.filter(r => r.shift === '3').reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)
@@ -1352,8 +1361,8 @@ export default function BaoCom() {
                 }
 
                 if (man > 0 || chay > 0) {
-                    const timeMatch = r.note?.match(/Giờ ăn OT:\s*([0-9]{2}:[0-9]{2}|[0-9]{1,2}h(?:[0-9]{2})?)/i)
-                    const time = timeMatch ? timeMatch[1] : "Không báo giờ"
+                    const timeMatch = r.note?.match(/Giá» Äƒn OT:\s*([0-9]{2}:[0-9]{2}|[0-9]{1,2}h(?:[0-9]{2})?)/i)
+                    const time = timeMatch ? timeMatch[1] : "KhÃ´ng bÃ¡o giá»"
                     if (!otGroups.has(time)) otGroups.set(time, { man: 0, chay: 0 })
                     const group = otGroups.get(time)!
                     group.man += man
@@ -1365,7 +1374,7 @@ export default function BaoCom() {
             const grand = ca1 + ca2 + ca3 + totalOT
             const dateDisplay = format(parseISO(dailyDate), "d/M/yyyy")
 
-            let msg = `Ngày ${dateDisplay}\n`
+            let msg = `NgÃ y ${dateDisplay}\n`
             if (ca1 > 0) msg += `Ca 1: ${ca1}\n`
             if (ca2 > 0) msg += `Ca 2: ${ca2}\n`
             if (ca3 > 0) msg += `Ca 3: ${ca3}\n`
@@ -1374,9 +1383,9 @@ export default function BaoCom() {
                 msg += `OT: ${totalOT}\n`
             }
 
-            msg += `Tổng: ${grand}`
+            msg += `Tá»•ng: ${grand}`
             if (grand === 0) {
-                setDailyError("⚠️ Không có dữ liệu cho ngày " + dateDisplay + " — hãy kiểm tra lại.")
+                setDailyError("âš ï¸ KhÃ´ng cÃ³ dá»¯ liá»‡u cho ngÃ y " + dateDisplay + " â€” hÃ£y kiá»ƒm tra láº¡i.")
             } else {
                 setDailyMsg(msg)
             }
@@ -1403,8 +1412,8 @@ export default function BaoCom() {
                 .order("department_name")
             if (error) throw error
             // Aggregate: sum up all sub-section records that share the same department_id
-            // (e.g. HPEEL has both "Manual Grading -Shift 1 (Ms Huệ)" AND "Manual peeling S1 - Dung"
-            //  — they must be SUMMED, not deduped)
+            // (e.g. HPEEL has both "Manual Grading -Shift 1 (Ms Huá»‡)" AND "Manual peeling S1 - Dung"
+            //  â€” they must be SUMMED, not deduped)
             const aggMap = new Map<string, SavedRecord>()
                 ; (data ?? []).forEach(r => {
                     const key = r.department_id ?? r.department_name
@@ -1427,24 +1436,24 @@ export default function BaoCom() {
 
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e)
-            setSummaryError(msg || "Lỗi không xác định")
+            setSummaryError(msg || "Lá»—i khÃ´ng xÃ¡c Ä‘á»‹nh")
         } finally {
             setSummaryLoading(false)
         }
     }
 
     const handleDeleteRow = async (id: string) => {
-        if (!confirm("Đồng ý xóa bản ghi này?")) return
+        if (!confirm("Äá»“ng Ã½ xÃ³a báº£n ghi nÃ y?")) return
         const res = await fetch(`/api/meal-headcount?id=${id}`, { method: 'DELETE' })
         const json = await res.json()
         if (!res.ok) {
-            alert("Lỗi xóa: " + (json.error || res.statusText))
+            alert("Lá»—i xÃ³a: " + (json.error || res.statusText))
             return
         }
-        // Xóa luôn trong historyRecords (state local)
+        // XÃ³a luÃ´n trong historyRecords (state local)
         setHistoryRecords(prev => prev.filter(r => r.id !== id))
         setHistoryRefreshKey(k => k + 1)
-        // Re-fetch từ DB để đảm bảo không có bản ghi trùng cũ hiện lại
+        // Re-fetch tá»« DB Ä‘á»ƒ Ä‘áº£m báº£o khÃ´ng cÃ³ báº£n ghi trÃ¹ng cÅ© hiá»‡n láº¡i
         await fetchSummaryFromDB()
     }
 
@@ -1454,8 +1463,8 @@ export default function BaoCom() {
     }
 
     const handleSaveEdit = async (id: string) => {
-        // Gọi server-side API để bypass RLS (service role key)
-        // Server vẫn verify role của user trước khi update
+        // Gá»i server-side API Ä‘á»ƒ bypass RLS (service role key)
+        // Server váº«n verify role cá»§a user trÆ°á»›c khi update
         const res = await fetch('/api/meal-headcount', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -1470,11 +1479,11 @@ export default function BaoCom() {
         })
         const json = await res.json()
         if (!res.ok) {
-            alert('Lỗi lưu: ' + (json.error || res.statusText))
+            alert('Lá»—i lÆ°u: ' + (json.error || res.statusText))
             return
         }
         setEditingRowId(null)
-        // Re-fetch để hiển thị đúng data từ DB
+        // Re-fetch Ä‘á»ƒ hiá»ƒn thá»‹ Ä‘Ãºng data tá»« DB
         await fetchSummaryFromDB()
         setHistoryRefreshKey(k => k + 1)
     }
@@ -1510,10 +1519,10 @@ export default function BaoCom() {
         if (res.ok) {
             setAddRow(null)
             await fetchSummaryFromDB()
-            // Đồng bộ: đánh dấu để re-fetch lịch sử khi chuyển tab
+            // Äá»“ng bá»™: Ä‘Ã¡nh dáº¥u Ä‘á»ƒ re-fetch lá»‹ch sá»­ khi chuyá»ƒn tab
             setHistoryRefreshKey(k => k + 1)
         } else {
-            alert("Lỗi lưu: " + (json.error || res.statusText))
+            alert("Lá»—i lÆ°u: " + (json.error || res.statusText))
         }
     }
 
@@ -1539,8 +1548,8 @@ export default function BaoCom() {
             }
 
             if (manOt > 0 || chayOt > 0) {
-                const timeMatch = r.note?.match(/Giờ ăn OT:\s*([0-9]{2}:[0-9]{2}|[0-9]{1,2}h(?:[0-9]{2})?)/i)
-                const time = timeMatch ? timeMatch[1] : "Không báo giờ"
+                const timeMatch = r.note?.match(/Giá» Äƒn OT:\s*([0-9]{2}:[0-9]{2}|[0-9]{1,2}h(?:[0-9]{2})?)/i)
+                const time = timeMatch ? timeMatch[1] : "KhÃ´ng bÃ¡o giá»"
                 if (!otGroups.has(time)) otGroups.set(time, { man: 0, chay: 0 })
                 const group = otGroups.get(time)!
                 group.man += manOt
@@ -1551,13 +1560,13 @@ export default function BaoCom() {
         const totalOT = Array.from(otGroups.values()).reduce((sum, g) => sum + g.man + g.chay, 0)
         const dateDisplay = format(parseISO(summaryDate), "d/M/yyyy")
 
-        let msg = `Ngày ${dateDisplay}\nCa ${summaryShift} có tổng cộng ${totalPresent} phần, trong đó số phần mặn là ${man}; số phần chay là ${totalVeg}`
+        let msg = `NgÃ y ${dateDisplay}\nCa ${summaryShift} cÃ³ tá»•ng cá»™ng ${totalPresent} pháº§n, trong Ä‘Ã³ sá»‘ pháº§n máº·n lÃ  ${man}; sá»‘ pháº§n chay lÃ  ${totalVeg}`
 
         if (totalOT > 0) {
             msg += `\nOT: ${totalOT}\n`
             const sortedTimes = Array.from(otGroups.keys()).sort((a, b) => {
-                if (a === "Không báo giờ") return 1
-                if (b === "Không báo giờ") return -1
+                if (a === "KhÃ´ng bÃ¡o giá»") return 1
+                if (b === "KhÃ´ng bÃ¡o giá»") return -1
                 return a.localeCompare(b)
             })
 
@@ -1565,9 +1574,9 @@ export default function BaoCom() {
                 const g = otGroups.get(time)!
                 const groupTotal = g.man + g.chay
                 if (g.chay > 0) {
-                    msg += `  - Lúc ${time}: ${groupTotal} phần (${g.man} mặn, ${g.chay} chay)\n`
+                    msg += `  - LÃºc ${time}: ${groupTotal} pháº§n (${g.man} máº·n, ${g.chay} chay)\n`
                 } else {
-                    msg += `  - Lúc ${time}: ${groupTotal} phần\n`
+                    msg += `  - LÃºc ${time}: ${groupTotal} pháº§n\n`
                 }
             }
         }
@@ -1576,7 +1585,7 @@ export default function BaoCom() {
     }
 
     const getDBMissingDepts = (rows: SavedRecord[], shift: string): { code: string; name: string }[] => {
-        // PEEL_MC is an alias for PEEL — treat them as the same dept for missing-check
+        // PEEL_MC is an alias for PEEL â€” treat them as the same dept for missing-check
         const DEPT_MISSING_ALIAS: Record<string, string> = { PEEL_MC: 'PEEL' }
         const reported = new Set(rows.map(r => {
             const code = r.department_id
@@ -1584,7 +1593,7 @@ export default function BaoCom() {
                 : ""
             return DEPT_MISSING_ALIAS[code] ?? code
         }))
-        // For Ca 2 and Ca 3, FGWH and OFFICE don't operate — skip them
+        // For Ca 2 and Ca 3, FGWH and OFFICE don't operate â€” skip them
         const effectiveDepts = shift === '1'
             ? EXPECTED_DEPTS
             : EXPECTED_DEPTS.filter(code => !CA1_ONLY_DEPTS.has(code))
@@ -1596,7 +1605,7 @@ export default function BaoCom() {
             })
     }
 
-    // ─── Parse handlers ───
+    // â”€â”€â”€ Parse handlers â”€â”€â”€
     const [aiParsing, setAiParsing] = useState(false)
     const [aiError, setAiError] = useState<string | null>(null)
     const [aiTruncated, setAiTruncated] = useState(false)
@@ -1604,7 +1613,7 @@ export default function BaoCom() {
     const [expandedSource, setExpandedSource] = useState<Set<number>>(new Set())
     const [confirmingRow, setConfirmingRow] = useState<number | null>(null)
     const [confirmMsg, setConfirmMsg] = useState<Record<number, { type: 'ok' | 'err'; text: string }>>({})
-    // ── Overwrite confirmation modal ──
+    // â”€â”€ Overwrite confirmation modal â”€â”€
     // Used by both single-row confirm and bulk save
     const [overwriteModal, setOverwriteModal] = useState<{
         title: string
@@ -1640,7 +1649,7 @@ export default function BaoCom() {
             const workDate = dateToISO(r.date)
             const shift = r.shift.replace(/[^1-3]/g, '') || '1'
 
-            // ── Check nếu data đã tồn tại ──
+            // â”€â”€ Check náº¿u data Ä‘Ã£ tá»“n táº¡i â”€â”€
             const { data: existing } = await supabase
                 .from('meal_headcount')
                 .select('id, official_present, seasonal_present, vegetarian, ot_count')
@@ -1651,26 +1660,26 @@ export default function BaoCom() {
 
             if (existing) {
                 const existSummary = `CT: ${existing.official_present ?? 0}, TV: ${existing.seasonal_present ?? 0}, Chay: ${existing.vegetarian ?? 0}, OT: ${existing.ot_count ?? 0}`
-                // Hiện modal xác nhận thay vì window.confirm
+                // Hiá»‡n modal xÃ¡c nháº­n thay vÃ¬ window.confirm
                 await new Promise<void>((resolve, reject) => {
                     setOverwriteModal({
-                        title: '⚠️ Dữ liệu đã tồn tại',
+                        title: 'âš ï¸ Dá»¯ liá»‡u Ä‘Ã£ tá»“n táº¡i',
                         lines: [
-                            `📅 Ngày: ${workDate}`,
-                            `🏭 Bộ phận: ${canonicalName}  |  Ca ${shift}`,
-                            `📊 Dữ liệu hiện tại: ${existSummary}`,
+                            `ðŸ“… NgÃ y: ${workDate}`,
+                            `ðŸ­ Bá»™ pháº­n: ${canonicalName}  |  Ca ${shift}`,
+                            `ðŸ“Š Dá»¯ liá»‡u hiá»‡n táº¡i: ${existSummary}`,
                             '',
-                            'Bạn có muốn ghi đè dữ liệu cũ không?',
+                            'Báº¡n cÃ³ muá»‘n ghi Ä‘Ã¨ dá»¯ liá»‡u cÅ© khÃ´ng?',
                         ],
                         onConfirm: () => { setOverwriteModal(null); resolve() },
                         onCancel: () => {
                             setOverwriteModal(null)
-                            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '⏭ Bỏ qua (đã có data)' } }))
+                            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: 'â­ Bá» qua (Ä‘Ã£ cÃ³ data)' } }))
                             setConfirmingRow(null)
                             reject(new Error('cancelled'))
                         },
                     })
-                })  // Nếu reject('cancelled'), catch bên ngoài sẽ bắt và return — không lưu
+                })  // Náº¿u reject('cancelled'), catch bÃªn ngoÃ i sáº½ báº¯t vÃ  return â€” khÃ´ng lÆ°u
             }
 
             const { otCount, otVegetarian } = parseOTString(r.ot)
@@ -1699,14 +1708,14 @@ export default function BaoCom() {
             if (!res.ok) throw new Error(json.error || res.statusText)
 
             setConfirmedRows(prev => new Set([...prev, i]))
-            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: existing ? '✓ Đã ghi đè' : '✓ Đã lưu' } }))
+            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'ok', text: existing ? 'âœ“ ÄÃ£ ghi Ä‘Ã¨' : 'âœ“ ÄÃ£ lÆ°u' } }))
         } catch (e) {
-            // 'cancelled' = user bấm Hủy ở modal — không hiện lỗi (confirmMsg đã được set trong onCancel)
+            // 'cancelled' = user báº¥m Há»§y á»Ÿ modal â€” khÃ´ng hiá»‡n lá»—i (confirmMsg Ä‘Ã£ Ä‘Æ°á»£c set trong onCancel)
             if (e instanceof Error && e.message === 'cancelled') {
                 setConfirmingRow(null)
                 return
             }
-            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: '❌ ' + (e instanceof Error ? e.message : String(e)) } }))
+            setConfirmMsg(prev => ({ ...prev, [i]: { type: 'err', text: 'âŒ ' + (e instanceof Error ? e.message : String(e)) } }))
         } finally {
             setConfirmingRow(null)
         }
@@ -1734,7 +1743,7 @@ export default function BaoCom() {
             const json = await res.json()
             if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`)
 
-            // Map AI response → HeadcountRecord[]
+            // Map AI response â†’ HeadcountRecord[]
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const aiRecords: HeadcountRecord[] = (json.records as any[]).map((r: any) => ({
                 senderHint: r.senderHint ?? '',
@@ -1754,7 +1763,7 @@ export default function BaoCom() {
             setParsed(true)
             setSaveMsg(null)
             setAiTruncated(!!json.truncated)
-            // Nếu AI không parse được → hiện warning thay vì crash
+            // Náº¿u AI khÃ´ng parse Ä‘Æ°á»£c â†’ hiá»‡n warning thay vÃ¬ crash
             if (json.warning) {
                 setAiError(json.warning)
             }
@@ -1777,7 +1786,7 @@ export default function BaoCom() {
 
     const handleCopyTable = () => {
         if (records.length === 0) return
-        const headers = ["Ngày", "Khu vực", "Ca", "CT Hiện diện", "CT Vắng", "TV Hiện diện", "TV Vắng", "OT", "Chay"]
+        const headers = ["NgÃ y", "Khu vá»±c", "Ca", "CT Hiá»‡n diá»‡n", "CT Váº¯ng", "TV Hiá»‡n diá»‡n", "TV Váº¯ng", "OT", "Chay"]
         const rows = records.map((r) =>
             [r.date, r.area, r.shift, r.officialPresent ?? "", r.officialAbsent ?? "", r.seasonalPresent ?? "", r.seasonalAbsent ?? "", r.ot, r.vegetarian ?? ""].join("\t")
         )
@@ -1786,10 +1795,10 @@ export default function BaoCom() {
         setTimeout(() => setCopied(false), 2000)
     }
 
-    // ─── Save to DB ───
+    // â”€â”€â”€ Save to DB â”€â”€â”€
     const findDeptId = (areaName: string): string | null => {
         const lower = areaName.toLowerCase().trim()
-        // 1. Try DEPT_MAP (display/alias text → code)
+        // 1. Try DEPT_MAP (display/alias text â†’ code)
         const code = DEPT_MAP[lower]
         if (code) {
             // HPEEL sub-groups all resolve to HPEEL dept_id
@@ -1804,25 +1813,25 @@ export default function BaoCom() {
         return deptDirect?.id || null
     }
 
-    // ─── Shift-aware canonical department name for DB ───
+    // â”€â”€â”€ Shift-aware canonical department name for DB â”€â”€â”€
     const getCanonicalDeptName = (r: HeadcountRecord, i: number, deptId: string | null): string => {
         const _area = getEffectiveArea(r, i)
         const lower = _area.toLowerCase().trim()
         const shift = r.shift?.replace(/[^1-3]/g, '') || '1'
         const s = /^[123]$/.test(shift) ? shift : '1'
         const isDung = /dung/i.test(lower)
-        const isLien = /li[ênế]n/i.test(lower)
-        const isHue = /hu[ệê]/i.test(lower)
+        const isLien = /li[Ãªnáº¿]n/i.test(lower)
+        const isHue = /hu[á»‡Ãª]/i.test(lower)
         const isLoan = /loan/i.test(lower)
-        // Handpeeling/Manual peeling with supervisor → shift-specific name
+        // Handpeeling/Manual peeling with supervisor â†’ shift-specific name
         if ((isDung || isLien) && (lower.includes('handpeeling') || lower.includes('manual peeling') || lower.includes('peeling'))) {
-            return `Manual peeling S${s} - ${isDung ? 'Dung' : 'Liên'}`
+            return `Manual peeling S${s} - ${isDung ? 'Dung' : 'LiÃªn'}`
         }
         if ((isHue || isLoan) && (lower.includes('grading') || lower.includes('manual') || lower.includes('loan'))) {
-            return `Manual Grading -Shift ${s} (Ms Huệ)`
+            return `Manual Grading -Shift ${s} (Ms Huá»‡)`
         }
-        // Tập vụ
-        if (/t[ạḥâ]p\s*v[ụu]/i.test(_area)) {
+        // Táº­p vá»¥
+        if (/t[áº¡á¸¥Ã¢]p\s*v[á»¥u]/i.test(_area)) {
             return deptId ? (deptList.find(d => d.id === deptId)?.name_en ?? 'Cleaning') : 'Cleaning'
         }
         // HPEEL sub-groups
@@ -1861,7 +1870,7 @@ export default function BaoCom() {
                 }
             })
 
-            // ── Kiểm tra ngày đã có data chưa trước khi lưu ──
+            // â”€â”€ Kiá»ƒm tra ngÃ y Ä‘Ã£ cÃ³ data chÆ°a trÆ°á»›c khi lÆ°u â”€â”€
             const uniqueDatesInPayload = [...new Set(payload.map(p => p.work_date))]
             const { data: existingCheck } = await supabase
                 .from('meal_headcount')
@@ -1869,7 +1878,7 @@ export default function BaoCom() {
                 .in('work_date', uniqueDatesInPayload)
 
             if (existingCheck && existingCheck.length > 0) {
-                // Tìm các bản ghi mới trùng với bản ghi cũ
+                // TÃ¬m cÃ¡c báº£n ghi má»›i trÃ¹ng vá»›i báº£n ghi cÅ©
                 const overlapping = payload.filter(p =>
                     existingCheck.some(e =>
                         e.work_date === p.work_date &&
@@ -1879,36 +1888,36 @@ export default function BaoCom() {
                 )
                 if (overlapping.length > 0) {
                     setSaving(false)
-                    // Nhóm theo ngày để hiển thị rõ ràng
+                    // NhÃ³m theo ngÃ y Ä‘á»ƒ hiá»ƒn thá»‹ rÃµ rÃ ng
                     const byDate = overlapping.reduce<Record<string, string[]>>((acc, p) => {
                         if (!acc[p.work_date]) acc[p.work_date] = []
                         acc[p.work_date].push(`${p.department_name} Ca ${p.shift}`)
                         return acc
                     }, {})
                     const lines = [
-                        `⚠️ Có ${overlapping.length} bản ghi sẽ bị ghi đè:`,
+                        `âš ï¸ CÃ³ ${overlapping.length} báº£n ghi sáº½ bá»‹ ghi Ä‘Ã¨:`,
                         '',
                         ...Object.entries(byDate).flatMap(([date, items]) => [
-                            `📅 ${date}:`,
-                            ...items.slice(0, 5).map(s => `   • ${s}`),
-                            ...(items.length > 5 ? [`   ... và ${items.length - 5} bản ghi khác`] : []),
+                            `ðŸ“… ${date}:`,
+                            ...items.slice(0, 5).map(s => `   â€¢ ${s}`),
+                            ...(items.length > 5 ? [`   ... vÃ  ${items.length - 5} báº£n ghi khÃ¡c`] : []),
                         ]),
                         '',
-                        'Bạn có chắc muốn ghi đè tất cả không?',
+                        'Báº¡n cÃ³ cháº¯c muá»‘n ghi Ä‘Ã¨ táº¥t cáº£ khÃ´ng?',
                     ]
                     await new Promise<void>((resolve, reject) => {
                         setOverwriteModal({
-                            title: '🔒 Xác nhận ghi đè dữ liệu',
+                            title: 'ðŸ”’ XÃ¡c nháº­n ghi Ä‘Ã¨ dá»¯ liá»‡u',
                             lines,
                             onConfirm: () => { setOverwriteModal(null); resolve() },
                             onCancel: () => {
                                 setOverwriteModal(null)
-                                setSaveMsg({ type: 'err', text: '⏭ Đã hủy — không ghi đè dữ liệu cũ.' })
+                                setSaveMsg({ type: 'err', text: 'â­ ÄÃ£ há»§y â€” khÃ´ng ghi Ä‘Ã¨ dá»¯ liá»‡u cÅ©.' })
                                 reject(new Error('cancelled'))
                             },
                         })
                     })
-                    setSaving(true)  // tiếp tục lưu sau khi user xác nhận
+                    setSaving(true)  // tiáº¿p tá»¥c lÆ°u sau khi user xÃ¡c nháº­n
                 }
             }
 
@@ -1920,17 +1929,17 @@ export default function BaoCom() {
             const json = await res.json()
             if (!res.ok) throw new Error(json.error || res.statusText)
 
-            setSaveMsg({ type: "ok", text: `✅ Đã lưu ${payload.length} bản ghi thành công!` })
+            setSaveMsg({ type: "ok", text: `âœ… ÄÃ£ lÆ°u ${payload.length} báº£n ghi thÃ nh cÃ´ng!` })
         } catch (err: unknown) {
             if (err instanceof Error && err.message === 'cancelled') return
-            const message = err instanceof Error ? err.message : "Lỗi không xác định"
-            setSaveMsg({ type: "err", text: `❌ Lỗi: ${message}` })
+            const message = err instanceof Error ? err.message : "Lá»—i khÃ´ng xÃ¡c Ä‘á»‹nh"
+            setSaveMsg({ type: "err", text: `âŒ Lá»—i: ${message}` })
         } finally {
             setSaving(false)
         }
     }
 
-    // ─── History ───
+    // â”€â”€â”€ History â”€â”€â”€
     const fetchHistory = async () => {
         setHistoryLoading(true)
         const { data, error } = await supabase
@@ -1978,7 +1987,7 @@ export default function BaoCom() {
 
     return (
         <>
-            {/* ── Overwrite Confirmation Modal ── */}
+            {/* â”€â”€ Overwrite Confirmation Modal â”€â”€ */}
             {overwriteModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     {/* Backdrop */}
@@ -1999,12 +2008,12 @@ export default function BaoCom() {
                                     <p
                                         key={idx}
                                         className={
-                                            line.startsWith('📅') ? 'text-sm font-semibold text-gray-800' :
-                                                line.startsWith('🏭') || line.startsWith('📊') ? 'text-sm text-gray-700' :
-                                                    line.startsWith('⚠️') || line.startsWith('🔒') ? 'text-sm font-bold text-orange-700' :
-                                                        line.startsWith('   •') ? 'text-xs text-gray-600 pl-2' :
+                                            line.startsWith('ðŸ“…') ? 'text-sm font-semibold text-gray-800' :
+                                                line.startsWith('ðŸ­') || line.startsWith('ðŸ“Š') ? 'text-sm text-gray-700' :
+                                                    line.startsWith('âš ï¸') || line.startsWith('ðŸ”’') ? 'text-sm font-bold text-orange-700' :
+                                                        line.startsWith('   â€¢') ? 'text-xs text-gray-600 pl-2' :
                                                             line.startsWith('   ...') ? 'text-xs text-gray-400 pl-2 italic' :
-                                                                line.includes('chắc') || line.includes('muốn') ? 'text-sm font-semibold text-red-600 mt-1' :
+                                                                line.includes('cháº¯c') || line.includes('muá»‘n') ? 'text-sm font-semibold text-red-600 mt-1' :
                                                                     'text-sm text-gray-700'
                                         }
                                     >
@@ -2015,17 +2024,17 @@ export default function BaoCom() {
                         </div>
                         {/* Footer */}
                         <div className="px-5 py-3 bg-gray-50 border-t flex justify-end gap-3">
-                            <button
+                            <button type="button"
                                 onClick={overwriteModal.onCancel}
                                 className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-300 hover:bg-gray-100 transition-colors"
                             >
-                                ❌ Hủy bỏ
+                                âŒ Há»§y bá»
                             </button>
-                            <button
+                            <button type="button"
                                 onClick={overwriteModal.onConfirm}
                                 className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition-colors shadow-sm"
                             >
-                                ✅ Xác nhận ghi đè
+                                âœ… XÃ¡c nháº­n ghi Ä‘Ã¨
                             </button>
                         </div>
                     </div>
@@ -2039,9 +2048,9 @@ export default function BaoCom() {
                             <UtensilsCrossed className="h-6 w-6 text-orange-600" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Meal Reporting — Headcount Tracker</h1>
+                            <h1 className="text-2xl font-bold tracking-tight">Meal Reporting â€” Headcount Tracker</h1>
                             <p className="text-sm text-muted-foreground">
-                                Paste Zalo messages · Parse · Save to DB · View history
+                                Paste Zalo messages Â· Parse Â· Save to DB Â· View history
                             </p>
                         </div>
                     </div>
@@ -2050,7 +2059,7 @@ export default function BaoCom() {
                 {/* Tab navigation */}
                 <div className="flex border-b">
 
-                    <button
+                    <button type="button"
                         onClick={() => setActiveTab("history")}
                         className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "history"
                             ? "border-blue-500 text-blue-600"
@@ -2060,7 +2069,7 @@ export default function BaoCom() {
                         <History className="h-4 w-4" />
                         Saved Records
                     </button>
-                    <button
+                    <button type="button"
                         onClick={() => setActiveTab("kitchen")}
                         className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "kitchen"
                             ? "border-green-500 text-green-600"
@@ -2068,35 +2077,35 @@ export default function BaoCom() {
                             }`}
                     >
                         <MessageSquare className="h-4 w-4" />
-                        🍳 Kitchen Summary
+                        ðŸ³ Kitchen Summary
                     </button>
-                    <button
+                    <button type="button"
                         onClick={() => setActiveTab("monthly")}
                         className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "monthly"
                             ? "border-purple-500 text-purple-600"
                             : "border-transparent text-muted-foreground hover:text-foreground"
                             }`}
                     >
-                        <span className="text-base leading-none">📅</span>
+                        <span className="text-base leading-none">ðŸ“…</span>
                         Monthly Report
                     </button>
                     {canEdit && (
-                        <button
+                        <button type="button"
                             onClick={() => setActiveTab("ai-chat")}
                             className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "ai-chat"
                                 ? "border-orange-500 text-orange-600"
                                 : "border-transparent text-muted-foreground hover:text-foreground"
                                 }`}
                         >
-                            <span className="text-base leading-none">🤖</span>
-                            AI Nhập Nhanh
+                            <span className="text-base leading-none">ðŸ¤–</span>
+                            AI Nháº­p Nhanh
                         </button>
                     )}
                 </div>
 
-                {/* ═══════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {/* TAB: AI CHAT NHP NHANH                       */}
-                {/* ═══════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {activeTab === "ai-chat" && canEdit && (
                     <MealAiChat
                         deptList={deptList}
@@ -2104,27 +2113,27 @@ export default function BaoCom() {
                     />
                 )}
 
-                {/* ═══════════════════════════════════════════ */}
-                {/* TAB 3: KITCHEN / BÁO CƠM NHÀ ĂN               */}
-                {/* ═══════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+                {/* TAB 3: KITCHEN / BÃO CÆ M NHÃ€ Ä‚N               */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {activeTab === "kitchen" && (
                     <div className="space-y-5">
                         <div className="flex items-center gap-2 font-semibold text-green-700 text-lg">
                             <MessageSquare className="h-5 w-5" />
-                            Tổng hợp báo cơm nhà ăn
+                            Tá»•ng há»£p bÃ¡o cÆ¡m nhÃ  Äƒn
                         </div>
 
-                        {/* ── CHỐT SỐ GỬI NHÀ ĂN (tất cả ca trong ngày hôm qua) ── */}
+                        {/* â”€â”€ CHá»T Sá» Gá»¬I NHÃ€ Ä‚N (táº¥t cáº£ ca trong ngÃ y hÃ´m qua) â”€â”€ */}
                         <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-4 space-y-3">
                             <div className="flex items-center gap-2">
                                 <Bell className="h-5 w-5 text-orange-500" />
-                                <span className="font-bold text-orange-700 text-base">Chốt số gửi nhà ăn</span>
-                                <span className="text-xs text-orange-500">(tổng hợp tất cả ca)</span>
+                                <span className="font-bold text-orange-700 text-base">Chá»‘t sá»‘ gá»­i nhÃ  Äƒn</span>
+                                <span className="text-xs text-orange-500">(tá»•ng há»£p táº¥t cáº£ ca)</span>
                             </div>
                             <div className="flex flex-wrap items-center gap-4">
-                                {/* Date picker cho chốt số — default hôm qua, có thể chọn */}
+                                {/* Date picker cho chá»‘t sá»‘ â€” default hÃ´m qua, cÃ³ thá»ƒ chá»n */}
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-medium text-orange-600">Ngày chốt</label>
+                                    <label className="text-xs font-medium text-orange-600">NgÃ y chá»‘t</label>
                                     <input
                                         type="date"
                                         value={dailyDate}
@@ -2132,13 +2141,13 @@ export default function BaoCom() {
                                         className="border border-orange-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
                                     />
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={fetchDailySummary}
                                     disabled={dailyLoading}
                                     className="flex items-center gap-2 px-5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-all shadow-sm disabled:opacity-50"
                                 >
                                     <Bell className="h-4 w-4" />
-                                    {dailyLoading ? "Đang tổng hợp..." : "Tổng hợp & Chốt số"}
+                                    {dailyLoading ? "Äang tá»•ng há»£p..." : "Tá»•ng há»£p & Chá»‘t sá»‘"}
                                 </button>
                             </div>
                             {dailyError && (
@@ -2146,9 +2155,9 @@ export default function BaoCom() {
                             )}
                             {dailyMsg && (
                                 <div className="bg-white rounded-xl border-2 border-orange-300 shadow-sm p-4">
-                                    <div className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2">📋 Tin nhắn chốt số — copy gửi nhà ăn</div>
+                                    <div className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2">ðŸ“‹ Tin nháº¯n chá»‘t sá»‘ â€” copy gá»­i nhÃ  Äƒn</div>
                                     <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed text-base">{dailyMsg}</pre>
-                                    <button
+                                    <button type="button"
                                         onClick={() => {
                                             navigator.clipboard.writeText(dailyMsg)
                                             setCopiedDaily(true)
@@ -2158,23 +2167,23 @@ export default function BaoCom() {
                                             }`}
                                     >
                                         {copiedDaily ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                        {copiedDaily ? "Đã copy!" : "Copy tin nhắn"}
+                                        {copiedDaily ? "ÄÃ£ copy!" : "Copy tin nháº¯n"}
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        {/* ── Chi tiết theo ca (per-shift) ── */}
+                        {/* â”€â”€ Chi tiáº¿t theo ca (per-shift) â”€â”€ */}
                         <div className="border-t border-dashed border-green-200 pt-4">
                             <div className="flex items-center gap-2 font-semibold text-green-600 text-sm mb-3">
                                 <BarChart3 className="h-4 w-4" />
-                                Chi tiết từng ca (để kiểm tra)
+                                Chi tiáº¿t tá»«ng ca (Ä‘á»ƒ kiá»ƒm tra)
                             </div>
 
                             {/* Date + Shift selectors */}
                             <div className="flex flex-wrap items-end gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
                                 <div className="flex flex-col gap-1">
-                                    <label className="text-xs font-medium text-green-700">Ngày</label>
+                                    <label className="text-xs font-medium text-green-700">NgÃ y</label>
                                     <input
                                         type="date"
                                         value={summaryDate}
@@ -2186,7 +2195,7 @@ export default function BaoCom() {
                                     <label className="text-xs font-medium text-green-700">Ca</label>
                                     <div className="flex gap-1">
                                         {["1", "2", "3"].map(s => (
-                                            <button
+                                            <button type="button"
                                                 key={s}
                                                 onClick={() => setSummaryShift(s)}
                                                 className={`px-4 py-1.5 rounded-lg text-sm font-bold border transition-colors ${summaryShift === s
@@ -2197,13 +2206,13 @@ export default function BaoCom() {
                                         ))}
                                     </div>
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={fetchSummaryFromDB}
                                     disabled={summaryLoading}
                                     className="flex items-center gap-2 px-5 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
                                 >
                                     <BarChart3 className="h-4 w-4" />
-                                    {summaryLoading ? "Đang tải..." : "Tổng hợp"}
+                                    {summaryLoading ? "Äang táº£i..." : "Tá»•ng há»£p"}
                                 </button>
                             </div>
                         </div>
@@ -2215,7 +2224,7 @@ export default function BaoCom() {
                         {summaryData !== null && (() => {
                             if (summaryData.length === 0) return (
                                 <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                                    ⚠️ Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
+                                    âš ï¸ KhÃ´ng cÃ³ dá»¯ liá»‡u cho ngÃ y nÃ y â€” cÃ³ thá»ƒ chÆ°a lÆ°u hoáº·c chÆ°a bÃ¡o Ä‘á»§.
                                 </div>
                             )
                             const msgText = buildDBSummaryText(summaryData)
@@ -2224,9 +2233,9 @@ export default function BaoCom() {
                                 <div className="space-y-4">
                                     {/* Kitchen message box */}
                                     <div className="bg-white rounded-xl border-2 border-green-200 shadow-sm p-4">
-                                        <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">Tin nhắn gửi nhà ăn</div>
+                                        <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">Tin nháº¯n gá»­i nhÃ  Äƒn</div>
                                         <pre className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">{msgText}</pre>
-                                        <button
+                                        <button type="button"
                                             onClick={() => {
                                                 navigator.clipboard.writeText(msgText)
                                                 setCopiedSummary(true)
@@ -2236,16 +2245,16 @@ export default function BaoCom() {
                                                 }`}
                                         >
                                             {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                            {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
+                                            {copiedSummary ? "ÄÃ£ copy!" : "Copy tin nháº¯n"}
                                         </button>
                                     </div>
 
                                     {/* Per-dept breakdown */}
                                     <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                                         <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b">
-                                            <span className="text-sm font-semibold">Chi tiết từng bộ phận</span>
+                                            <span className="text-sm font-semibold">Chi tiáº¿t tá»«ng bá»™ pháº­n</span>
                                             {canEdit && (
-                                                <button
+                                                <button type="button"
                                                     onClick={() => setAddRow({ deptId: "", officialPresent: 0, seasonalPresent: 0, vegetarian: 0, otCount: 0 })}
                                                     className="flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-900 bg-green-50 border border-green-200 px-2 py-1 rounded-lg transition-colors"
                                                 >
@@ -2257,13 +2266,13 @@ export default function BaoCom() {
                                             <table className="w-full text-sm">
                                                 <thead>
                                                     <tr className="bg-muted/40 text-xs text-muted-foreground uppercase tracking-wide text-left">
-                                                        <th className="px-3 py-2 font-semibold">Bộ phận</th>
-                                                        <th className="px-3 py-2 font-semibold text-right">Chính thức</th>
-                                                        <th className="px-3 py-2 font-semibold text-right">Thời vụ</th>
-                                                        <th className="px-3 py-2 font-semibold text-right">Tổng</th>
-                                                        <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥦 Chay</th>
-                                                        <th className="px-3 py-2 font-semibold text-right">Tăng ca</th>
-                                                        <th className="px-3 py-2 font-semibold text-right text-emerald-600">🥬 Chay tăng ca</th>
+                                                        <th className="px-3 py-2 font-semibold">Bá»™ pháº­n</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">ChÃ­nh thá»©c</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">Thá»i vá»¥</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">Tá»•ng</th>
+                                                        <th className="px-3 py-2 font-semibold text-right text-emerald-600">ðŸ¥¦ Chay</th>
+                                                        <th className="px-3 py-2 font-semibold text-right">TÄƒng ca</th>
+                                                        <th className="px-3 py-2 font-semibold text-right text-emerald-600">ðŸ¥¬ Chay tÄƒng ca</th>
                                                         <th className="px-3 py-2"></th>
                                                     </tr>
                                                 </thead>
@@ -2284,8 +2293,8 @@ export default function BaoCom() {
                                                                     <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={editFields.ot_count} onChange={e => setEditFields(f => ({ ...f, ot_count: +e.target.value }))} /></td>
                                                                     <td className="px-1 py-1"><input type="number" min={0} className="w-14 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={editFields.ot_vegetarian} onChange={e => setEditFields(f => ({ ...f, ot_vegetarian: +e.target.value }))} /></td>
                                                                     <td className="px-2 py-1 whitespace-nowrap">
-                                                                        <button onClick={() => handleSaveEdit(r.id)} className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 mr-1">Lưu</button>
-                                                                        <button onClick={() => setEditingRowId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded hover:bg-gray-300">Hủy</button>
+                                                                        <button type="button" onClick={() => handleSaveEdit(r.id)} className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 mr-1">LÆ°u</button>
+                                                                        <button type="button" onClick={() => setEditingRowId(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded hover:bg-gray-300">Há»§y</button>
                                                                     </td>
                                                                 </>) : (<>
                                                                     <td className="px-3 py-2 text-right font-semibold text-green-700">{r.official_present ?? 0}</td>
@@ -2293,12 +2302,12 @@ export default function BaoCom() {
                                                                     <td className="px-3 py-2 text-right font-bold">{Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0)}</td>
                                                                     <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{r.vegetarian ?? 0}</td>
                                                                     <td className="px-3 py-2 text-right font-semibold">{(r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) > 0 ? (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0) : 0}</td>
-                                                                    <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{(r.ot_vegetarian ?? 0) > 0 ? r.ot_vegetarian : <span className="text-gray-300">—</span>}</td>
+                                                                    <td className="px-3 py-2 text-right text-emerald-600 font-semibold">{(r.ot_vegetarian ?? 0) > 0 ? r.ot_vegetarian : <span className="text-gray-300">â€”</span>}</td>
                                                                     <td className="px-2 py-2 whitespace-nowrap">
                                                                         {canEdit && (
                                                                             <>
-                                                                                <button onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">✏️ Edit</button>
-                                                                                <button onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">🗑 Delete</button>
+                                                                                <button type="button" onClick={() => handleStartEdit(r)} className="text-xs text-blue-600 hover:underline mr-2">âœï¸ Edit</button>
+                                                                                <button type="button" onClick={() => handleDeleteRow(r.id)} className="text-xs text-red-500 hover:underline">ðŸ—‘ Delete</button>
                                                                             </>
                                                                         )}
                                                                     </td>
@@ -2316,7 +2325,7 @@ export default function BaoCom() {
                                                                     value={addRow.deptId}
                                                                     onChange={e => setAddRow(r => r ? { ...r, deptId: e.target.value } : r)}
                                                                 >
-                                                                    <option value="">-- Chọn bộ phận --</option>
+                                                                    <option value="">-- Chá»n bá»™ pháº­n --</option>
                                                                     {deptList.map(d => <option key={d.id} value={d.id}>{d.name_en}</option>)}
                                                                 </select>
                                                             </td>
@@ -2326,21 +2335,21 @@ export default function BaoCom() {
                                                             <td className="px-1 py-1"><input type="number" min={0} placeholder="Chay" className="w-16 border rounded px-1 py-0.5 text-sm text-right text-emerald-700" value={addRow.vegetarian || ""} onChange={e => setAddRow(r => r ? { ...r, vegetarian: +e.target.value } : r)} /></td>
                                                             <td className="px-1 py-1"><input type="number" min={0} placeholder="OT" className="w-14 border rounded px-1 py-0.5 text-sm text-right" value={addRow.otCount || ""} onChange={e => setAddRow(r => r ? { ...r, otCount: +e.target.value } : r)} /></td>
                                                             <td className="px-2 py-1 whitespace-nowrap">
-                                                                <button onClick={handleAddRowSave} className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700 mr-1">Lưu</button>
-                                                                <button onClick={() => setAddRow(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Hủy</button>
+                                                                <button type="button" onClick={handleAddRowSave} className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700 mr-1">LÆ°u</button>
+                                                                <button type="button" onClick={() => setAddRow(null)} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Há»§y</button>
                                                             </td>
                                                         </tr>
                                                     )}
                                                 </tbody>
                                                 <tfoot>
                                                     <tr className="bg-muted/60 font-bold border-t-2 text-sm">
-                                                        <td className="px-3 py-2">TỔNG</td>
+                                                        <td className="px-3 py-2">Tá»”NG</td>
                                                         <td className="px-3 py-2 text-right text-green-700">{summaryData.reduce((s, r) => s + (r.official_present ?? 0), 0)}</td>
                                                         <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + (r.seasonal_present ?? 0), 0)}</td>
                                                         <td className="px-3 py-2 text-right">{summaryData.reduce((s, r) => s + Math.max((r.official_present ?? 0) + (r.seasonal_present ?? 0), r.vegetarian ?? 0), 0)}</td>
                                                         <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.vegetarian ?? 0), 0)}</td>
                                                         <td className="px-3 py-2 text-right font-bold">{summaryData.reduce((s, r) => s + (r.ot_count ?? 0) + (r.ot_vegetarian ?? 0), 0)}</td>
-                                                        <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) > 0 ? summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) : <span className="text-gray-300">—</span>}</td>
+                                                        <td className="px-3 py-2 text-right text-emerald-600">{summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) > 0 ? summaryData.reduce((s, r) => s + (r.ot_vegetarian ?? 0), 0) : <span className="text-gray-300">â€”</span>}</td>
                                                         <td />
                                                     </tr>
                                                 </tfoot>
@@ -2353,7 +2362,7 @@ export default function BaoCom() {
                                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
                                             <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
                                                 <Bell className="h-4 w-4" />
-                                                Chưa có dữ liệu từ:
+                                                ChÆ°a cÃ³ dá»¯ liá»‡u tá»«:
                                             </div>
                                             <div className="flex flex-wrap gap-2">
                                                 {missingDepts.map(d => (
@@ -2368,20 +2377,20 @@ export default function BaoCom() {
                     </div>
                 )}
 
-                {/* ═════════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {/* TAB 4: MONTHLY STATS                          */}
-                {/* ═════════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {activeTab === "monthly" && (
                     <div className="space-y-5">
                         <div className="flex items-center gap-2 font-semibold text-purple-700 text-lg">
-                            <span className="text-xl">📅</span>
-                            Thống kê suất cơm theo tháng
+                            <span className="text-xl">ðŸ“…</span>
+                            Thá»‘ng kÃª suáº¥t cÆ¡m theo thÃ¡ng
                         </div>
 
                         {/* Month picker + fetch */}
                         <div className="flex flex-wrap items-end gap-3 bg-purple-50 border border-purple-200 rounded-xl p-4">
                             <div className="flex flex-col gap-1">
-                                <label className="text-xs font-medium text-purple-700">Tháng thanh toán</label>
+                                <label className="text-xs font-medium text-purple-700">ThÃ¡ng thanh toÃ¡n</label>
                                 <input
                                     type="month"
                                     value={statsMonth}
@@ -2391,31 +2400,31 @@ export default function BaoCom() {
                             </div>
                             {/* Billing cycle badge */}
                             <div className="flex flex-col gap-1">
-                                <label className="text-xs font-medium text-purple-700">Chu kỳ</label>
+                                <label className="text-xs font-medium text-purple-700">Chu ká»³</label>
                                 <div className="flex items-center gap-1.5 bg-purple-100 border border-purple-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-purple-800">
                                     <CalendarDays className="h-3.5 w-3.5" />
                                     {getBillingCycle(statsMonth).label}
                                 </div>
                             </div>
-                            <button
+                            <button type="button"
                                 onClick={fetchMonthStats}
                                 disabled={statsLoading}
                                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
                             >
                                 {statsLoading ? (
-                                    <span className="animate-spin text-base">↻</span>
+                                    <span className="animate-spin text-base">â†»</span>
                                 ) : (
-                                    <span>🔍</span>
+                                    <span>ðŸ”</span>
                                 )}
-                                Xem thống kê
+                                Xem thá»‘ng kÃª
                             </button>
                             {statsData && statsData.length > 0 && (
-                                <button
+                                <button type="button"
                                     onClick={exportMonthlyExcel}
                                     className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
                                 >
                                     <FileSpreadsheet className="h-4 w-4" />
-                                    Xuất Excel
+                                    Xuáº¥t Excel
                                 </button>
                             )}
                         </div>
@@ -2425,7 +2434,7 @@ export default function BaoCom() {
                         )}
 
                         {statsData !== null && (() => {
-                            if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">Không có dữ liệu trong tháng này</div>
+                            if (statsData.length === 0) return <div className="text-center text-muted-foreground py-8">KhÃ´ng cÃ³ dá»¯ liá»‡u trong thÃ¡ng nÃ y</div>
                             const { days, deptGroups } = buildMonthlyPivot(statsData)
                             // Total per day (all sections including OT)
                             // Note: filter sr.shift !== 'OT' to avoid double-counting HPEEL OT
@@ -2446,11 +2455,11 @@ export default function BaoCom() {
                                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                                     <div className="px-4 py-2.5 bg-muted/40 border-b text-sm font-semibold flex items-center justify-between">
                                         <div>
-                                            <div className="font-bold text-sm">TIỀN CƠM CÁN BỘ CÔNG NHÂN VIÊN THÁNG {statsMonth}</div>
-                                            <div className="text-xs text-muted-foreground font-normal">Chu kỳ: {getBillingCycle(statsMonth).label}</div>
+                                            <div className="font-bold text-sm">TIá»€N CÆ M CÃN Bá»˜ CÃ”NG NHÃ‚N VIÃŠN THÃNG {statsMonth}</div>
+                                            <div className="text-xs text-muted-foreground font-normal">Chu ká»³: {getBillingCycle(statsMonth).label}</div>
                                         </div>
-                                        <button onClick={exportMonthlyExcel} className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
-                                            <FileSpreadsheet className="h-3.5 w-3.5" /> Xuất Excel
+                                        <button type="button" onClick={exportMonthlyExcel} className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg transition-colors">
+                                            <FileSpreadsheet className="h-3.5 w-3.5" /> Xuáº¥t Excel
                                         </button>
                                     </div>
                                     <div className="overflow-x-auto">
@@ -2458,7 +2467,7 @@ export default function BaoCom() {
                                             <thead>
                                                 <tr className="bg-slate-100 text-slate-700 border-b-2 border-slate-300">
                                                     <th className="px-3 py-2 font-bold text-left sticky left-0 bg-slate-100 z-10 min-w-[160px] border-r border-slate-300">
-                                                        Bộ phận
+                                                        Bá»™ pháº­n
                                                     </th>
                                                     <th className="px-2 py-2 font-bold text-center sticky left-[160px] bg-slate-100 z-10 w-10 border-r border-slate-300">
                                                         Ca
@@ -2487,16 +2496,16 @@ export default function BaoCom() {
                                                             <tr className="bg-slate-200 border-t-2 border-slate-400">
                                                                 <td colSpan={days.length + 3}
                                                                     className="px-3 py-1 sticky left-0 font-bold text-slate-700 text-xs uppercase tracking-wide">
-                                                                    📦 {dept.name}
+                                                                    ðŸ“¦ {dept.name}
                                                                     <span className="ml-2 text-slate-500 font-normal normal-case tracking-normal">
-                                                                        — Tổng: {deptTotal > 0 ? deptTotal : 0} phần
+                                                                        â€” Tá»•ng: {deptTotal > 0 ? deptTotal : 0} pháº§n
                                                                     </span>
                                                                 </td>
                                                             </tr>
-                                                            {/* Section data rows — exclude shift='OT' since OT is shown in the deptOT row below */}
+                                                            {/* Section data rows â€” exclude shift='OT' since OT is shown in the deptOT row below */}
                                                             {dept.sectionRows.filter(sr => sr.shift !== 'OT').map((sr, sIdx) => {
                                                                 const rowTotal = [...sr.days.values()].reduce((a, b) => a + b, 0)
-                                                                const isTV = /thời vụ/i.test(sr.sectionName)
+                                                                const isTV = /thá»i vá»¥/i.test(sr.sectionName)
                                                                 const shiftLabel = sr.shift === 'OT' ? 'OT' : `S${sr.shift}`
                                                                 const shiftColor = sr.shift === '1' ? 'bg-blue-100 text-blue-700' : sr.shift === '2' ? 'bg-emerald-100 text-emerald-700' : sr.shift === '3' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
                                                                 const rowKey = `${sr.sectionName}|${sr.shift}`
@@ -2511,111 +2520,126 @@ export default function BaoCom() {
                                                                                     isRowEditing ? (
                                                                                         <div className="flex gap-1 ml-1 shrink-0">
                                                                                             <button
+                                                                                                type="button"
                                                                                                 disabled={rowSaving}
                                                                                                 onClick={async () => {
                                                                                                     setRowSaving(true)
                                                                                                     // Rebuild pivot fresh from latest statsData to avoid stale closure issue
-                                                                                                    // (sr captured in closure may have outdated dayRowIds after prior saves)
-                                                                                                    const freshPivot = buildMonthlyPivot(statsData ?? [])
-                                                                                                    const freshSr = freshPivot.deptGroups
-                                                                                                        .flatMap(dg => dg.sectionRows)
-                                                                                                        .find(s => s.sectionName === sr.sectionName && s.shift === sr.shift) ?? sr
-                                                                                                    let savedCount = 0
-                                                                                                    for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
-                                                                                                        const newVal = parseInt(draftVal) || 0
-                                                                                                        const orig = freshSr.days.get(date) ?? 0
-                                                                                                        if (newVal === orig) continue
-                                                                                                        // Find the DB record: prefer dayRowIds (direct), fallback to statsData search
-                                                                                                        let rec: MealStatRow | undefined
-                                                                                                        const rowIds = freshSr.dayRowIds.get(date) ?? []
-                                                                                                        if (rowIds.length > 0) {
-                                                                                                            rec = (statsData ?? []).find(r => r.id === rowIds[0])
-                                                                                                        }
-                                                                                                        if (!rec) {
-                                                                                                            // Fallback: search by date + shift + same department only.
-                                                                                                            // Do not fuzzy-match by department_name here: "Shelling S1" would also
-                                                                                                            // match "Maintenance shelling S1" and update the maintenance row.
-                                                                                                            rec = (statsData ?? []).find(r =>
-                                                                                                                r.work_date === date && r.shift === freshSr.shift &&
-                                                                                                                r.department_id != null &&
-                                                                                                                (freshSr.departmentIds.has(r.department_id) ||
-                                                                                                                    deptList.find(d => d.id === r.department_id)?.code === freshSr.deptCode)
-                                                                                                            )
-                                                                                                        }
-                                                                                                        if (!rec) {
-                                                                                                            const deptIdForInsert = [...freshSr.departmentIds][0] ?? deptList.find(d => d.code === freshSr.deptCode)?.id
-                                                                                                            if (!deptIdForInsert) continue
-
-                                                                                                            const res = await fetch('/api/meal-headcount', {
-                                                                                                                method: 'POST',
-                                                                                                                headers: { 'Content-Type': 'application/json' },
-                                                                                                                body: JSON.stringify({
-                                                                                                                    work_date: date,
-                                                                                                                    department_id: deptIdForInsert,
-                                                                                                                    department_name: freshSr.sectionName,
-                                                                                                                    shift: freshSr.shift,
-                                                                                                                    official_present: isTV ? 0 : newVal,
-                                                                                                                    seasonal_present: isTV ? newVal : 0,
-                                                                                                                    official_absent: 0,
-                                                                                                                    seasonal_absent: 0,
-                                                                                                                    vegetarian: 0,
-                                                                                                                    ot_count: 0,
-                                                                                                                    ot_vegetarian: 0,
-                                                                                                                    note: 'Tạo từ bảng tháng báo cơm',
-                                                                                                                })
-                                                                                                            })
-                                                                                                            if (res.ok) {
-                                                                                                                savedCount++
-                                                                                                            } else {
-                                                                                                                const j = await res.json()
-                                                                                                                alert('Lá»—i táº¡o má»›i: ' + (j.error || res.statusText))
-                                                                                                            }
-                                                                                                            continue
-                                                                                                        }
-                                                                                                        const diff = newVal - orig
-                                                                                                        // Apply diff to official first; if official goes negative, carry remainder into seasonal
-                                                                                                        const oldOfficial = rec.official_present ?? 0
-                                                                                                        const oldSeasonal = rec.seasonal_present ?? 0
-                                                                                                        let newOfficial = oldOfficial + diff
-                                                                                                        let newSeasonal = oldSeasonal
-                                                                                                        if (newOfficial < 0) {
-                                                                                                            newSeasonal = Math.max(0, oldSeasonal + newOfficial)
-                                                                                                            newOfficial = 0
-                                                                                                        }
-                                                                                                        // Cap vegetarian to not exceed new total (official + seasonal)
-                                                                                                        const newTotal = newOfficial + newSeasonal
-                                                                                                        const newVegetarian = Math.min(rec.vegetarian ?? 0, newTotal)
-                                                                                                        const res = await fetch('/api/meal-headcount', {
-                                                                                                            method: 'PATCH',
-                                                                                                            headers: { 'Content-Type': 'application/json' },
-                                                                                                            body: JSON.stringify({ id: rec.id, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian, ot_count: rec.ot_count ?? 0, ot_vegetarian: rec.ot_vegetarian ?? 0 })
-                                                                                                        })
-                                                                                                        if (res.ok) {
-                                                                                                            savedCount++
-                                                                                                            setStatsData(prev => prev ? prev.map(r => r.id === rec!.id ? { ...r, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian } : r) : prev)
-                                                                                                        } else {
-                                                                                                            const j = await res.json()
-                                                                                                            alert('Lỗi lưu: ' + (j.error || res.statusText))
-                                                                                                        }
-                                                                                                    }
-                                                                                                    if (savedCount === 0) {
-                                                                                                        alert('Không có thay đổi nào được lưu — vui lòng đổi số trước khi bấm 💾')
-                                                                                                    } else {
-                                                                                                        await fetchMonthStats()
-                                                                                                    }
-                                                                                                    setRowSaving(false)
-                                                                                                    setEditingRowKey(null)
-                                                                                                    setRowEditDrafts({})
+                                                    // (sr captured in closure may have outdated dayRowIds after prior saves)
+                                                    const freshPivot = buildMonthlyPivot(statsData ?? [])
+                                                    const freshSr = freshPivot.deptGroups
+                                                        .flatMap(dg => dg.sectionRows)
+                                                        .find(s => s.sectionName === sr.sectionName && s.shift === sr.shift) ?? sr
+                                                    // Canonical Excel section name (e.g. "Manual Grading -Shift 2 (Ms Huệ)")
+                                                    // buildMonthlyPivot already normalizes HPEEL section names to canonical form,
+                                                    // so freshSr.sectionName is the correct department_name to use for INSERTs.
+                                                    const canonicalSectionName = freshSr.sectionName
+                                                    let savedCount = 0
+                                                    const errors = []
+                                                    for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
+                                                        const newVal = parseInt(draftVal) || 0
+                                                        const orig = freshSr.days.get(date) ?? 0
+                                                        if (newVal === orig) continue
+                                                        // Find DB record. Pivot grouped rows by canonical section + shift,
+                                                        // so dayRowIds[0] is the authoritative target. Trust it (no name re-validation).
+                                                        const rowIds = freshSr.dayRowIds.get(date) ?? []
+                                                        const rec = rowIds.length > 0
+                                                            ? (statsData ?? []).find(r => r.id === rowIds[0])
+                                                            : undefined
+                                                        if (!rec) {
+                                                            // INSERT new row using canonical section name. Guarantees that after
+                                                            // refetch, the new row maps back to THIS section row (no jumping
+                                                            // to Liên / Dung).
+                                                            const deptIdForInsert = [...freshSr.departmentIds][0] ?? deptList.find(d => d.code === freshSr.deptCode)?.id
+                                                            if (!deptIdForInsert) { errors.push(`${date}: thiếu department_id`); continue }
+                                                            const res = await fetch('/api/meal-headcount', {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({
+                                                                    work_date: date,
+                                                                    department_id: deptIdForInsert,
+                                                                    department_name: canonicalSectionName,
+                                                                    shift: freshSr.shift,
+                                                                    official_present: isTV ? 0 : newVal,
+                                                                    seasonal_present: isTV ? newVal : 0,
+                                                                    official_absent: 0,
+                                                                    seasonal_absent: 0,
+                                                                    vegetarian: 0,
+                                                                    ot_count: 0,
+                                                                    ot_vegetarian: 0,
+                                                                    note: 'Tạo từ bảng tháng báo cơm',
+                                                                })
+                                                            })
+                                                            const json = await res.json().catch(() => ({}))
+                                                            if (res.ok) {
+                                                                savedCount++
+                                                                const saved = Array.isArray(json.data) ? json.data[0] : json.data
+                                                                if (saved && saved.id) {
+                                                                    setStatsData(prev => prev ? [...prev.filter(r => r.id !== saved.id), saved] : [saved])
+                                                                }
+                                                            } else errors.push(`${date}: ${json.error || res.statusText}`)
+                                                            continue
+                                                        }
+                                                        // PATCH: apply diff to existing record. Guard with rec.department_name
+                                                        // (the actual stored name) so the server only updates THIS row -- never
+                                                        // a sibling HPEEL row (Liên / Dung) sharing the same department_id.
+                                                        const diff = newVal - orig
+                                                        const oldOfficial = rec.official_present ?? 0
+                                                        const oldSeasonal = rec.seasonal_present ?? 0
+                                                        let newOfficial = oldOfficial + diff
+                                                        let newSeasonal = oldSeasonal
+                                                        if (newOfficial < 0) {
+                                                            newSeasonal = Math.max(0, oldSeasonal + newOfficial)
+                                                            newOfficial = 0
+                                                        }
+                                                        const newTotal = newOfficial + newSeasonal
+                                                        const newVegetarian = Math.min(rec.vegetarian ?? 0, newTotal)
+                                                        const res = await fetch('/api/meal-headcount', {
+                                                            method: 'PATCH',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({
+                                                                id: rec.id,
+                                                                official_present: newOfficial,
+                                                                seasonal_present: newSeasonal,
+                                                                vegetarian: newVegetarian,
+                                                                ot_count: rec.ot_count ?? 0,
+                                                                ot_vegetarian: rec.ot_vegetarian ?? 0,
+                                                                expected_department_name: rec.department_name,
+                                                            })
+                                                        })
+                                                        if (res.ok) {
+                                                            savedCount++
+                                                            // In-place update: keep table mounted, no flicker.
+                                                            setStatsData(prev => prev ? prev.map(r => r.id === rec.id
+                                                                ? { ...r, official_present: newOfficial, seasonal_present: newSeasonal, vegetarian: newVegetarian }
+                                                                : r) : prev)
+                                                        } else {
+                                                            const j = await res.json().catch(() => ({}))
+                                                            errors.push(`${date}: ${j.error || res.statusText}`)
+                                                        }
+                                                    }
+                                                    if (savedCount > 0) {
+                                                        setEditingRowKey(null)
+                                                        setRowEditDrafts({})
+                                                    }
+                                                    if (errors.length > 0) {
+                                                        alert('Lỗi lưu:\n' + errors.join('\n'))
+                                                    } else if (savedCount === 0) {
+                                                        alert('Không có thay đổi nào để lưu — vui lòng đổi số trước khi bấm 💾')
+                                                    }
+                                                    setRowSaving(false)
                                                                                                 }}
                                                                                                 className="px-1.5 py-0.5 bg-green-500 hover:bg-green-600 text-white text-[9px] font-bold rounded disabled:opacity-50 transition-colors"
-                                                                                            >{rowSaving ? '...' : '💾'}</button>
+                                                                                            >{rowSaving ? '...' : 'ðŸ’¾'}</button>
                                                                                             <button
+                                                                                                type="button"
                                                                                                 onClick={() => { setEditingRowKey(null); setRowEditDrafts({}) }}
                                                                                                 className="px-1.5 py-0.5 bg-slate-400 hover:bg-slate-500 text-white text-[9px] font-bold rounded transition-colors"
-                                                                                            >✕</button>
+                                                                                            >âœ•</button>
                                                                                         </div>
                                                                                     ) : (
                                                                                         <button
+                                                                                            type="button"
                                                                                             onClick={() => {
                                                                                                 setEditingRowKey(rowKey)
                                                                                                 const drafts: Record<string, string> = {}
@@ -2623,7 +2647,7 @@ export default function BaoCom() {
                                                                                                 setRowEditDrafts(drafts)
                                                                                             }}
                                                                                             className="shrink-0 px-2 py-0.5 bg-amber-100 hover:bg-amber-400 hover:text-white text-amber-700 text-[10px] font-bold rounded border border-amber-300 transition-colors"
-                                                                                        >✏️ Sửa</button>
+                                                                                        >âœï¸ Sá»­a</button>
                                                                                     )
                                                                                 )}
                                                                             </div>
@@ -2649,13 +2673,13 @@ export default function BaoCom() {
                                                                                             min={0}
                                                                                             value={rowEditDrafts[d] ?? ''}
                                                                                             onChange={e => setRowEditDrafts(prev => ({ ...prev, [d]: e.target.value }))}
-                                                                                            onKeyDown={e => { if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
+                                                                                            onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
                                                                                             className={`w-10 h-6 text-center text-xs rounded outline-none font-semibold ${changed ? 'border-2 border-amber-400 bg-amber-50' : 'border border-slate-200 bg-yellow-50'
                                                                                                 }`}
                                                                                         />
                                                                                     ) : (
                                                                                         <span className="block px-1.5 py-1">
-                                                                                            {origV > 0 ? origV : '—'}
+                                                                                            {origV > 0 ? origV : 'â€”'}
                                                                                         </span>
                                                                                     )}
                                                                                 </td>
@@ -2676,50 +2700,71 @@ export default function BaoCom() {
                                                                     <tr className={`group border-b border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
                                                                         <td className={`px-2 py-1 whitespace-nowrap sticky left-0 z-10 border-r border-orange-100 font-semibold text-xs ${isOTEditing ? 'bg-yellow-50 text-orange-700' : 'bg-orange-50 text-orange-700 italic'}`}>
                                                                             <div className="flex items-center gap-1">
-                                                                                <span className="whitespace-nowrap">{dept.name} (Tăng ca)</span>
+                                                                                <span className="whitespace-nowrap">{dept.name} (TÄƒng ca)</span>
                                                                                 {canEdit && (
                                                                                     isOTEditing ? (
                                                                                         <div className="flex gap-1 ml-1 shrink-0">
                                                                                             <button
+                                                                                                type="button"
                                                                                                 disabled={rowSaving}
                                                                                                 onClick={async () => {
                                                                                                     setRowSaving(true)
+                                                                                                    let savedCount = 0
+                                                                                                    const errors = []
                                                                                                     for (const [date, draftVal] of Object.entries(rowEditDrafts)) {
                                                                                                         const newVal = parseInt(draftVal) || 0
                                                                                                         const orig = deptOT?.days.get(date) ?? 0
                                                                                                         if (newVal === orig) continue
-                                                                                                        // Use dayRowIds from OT ShiftEntry
                                                                                                         const rowIds = deptOT?.dayRowIds.get(date) ?? []
                                                                                                         if (rowIds.length === 0) continue
                                                                                                         const rec = (statsData ?? []).find(r => r.id === rowIds[0])
                                                                                                         if (!rec) continue
-                                                                                                        // newVal is ot_count + ot_vegetarian (combined display); compute actual ot_count to store
+                                                                                                        // newVal is ot_count + ot_vegetarian combined; subtract veg to get ot_count.
                                                                                                         const newOtCount = Math.max(0, newVal - (rec.ot_vegetarian ?? 0))
                                                                                                         const res = await fetch('/api/meal-headcount', {
                                                                                                             method: 'PATCH',
                                                                                                             headers: { 'Content-Type': 'application/json' },
-                                                                                                            body: JSON.stringify({ id: rec.id, official_present: rec.official_present ?? 0, seasonal_present: rec.seasonal_present ?? 0, vegetarian: rec.vegetarian ?? 0, ot_count: newOtCount, ot_vegetarian: rec.ot_vegetarian ?? 0 })
+                                                                                                            body: JSON.stringify({
+                                                                                                                id: rec.id,
+                                                                                                                official_present: rec.official_present ?? 0,
+                                                                                                                seasonal_present: rec.seasonal_present ?? 0,
+                                                                                                                vegetarian: rec.vegetarian ?? 0,
+                                                                                                                ot_count: newOtCount,
+                                                                                                                ot_vegetarian: rec.ot_vegetarian ?? 0,
+                                                                                                                // Guard: server only updates this exact department row, never a sibling
+                                                                                                                // HPEEL row (Liên / Dung) sharing the same department_id.
+                                                                                                                expected_department_name: rec.department_name,
+                                                                                                            }),
                                                                                                         })
                                                                                                         if (res.ok) {
-                                                                                                            setStatsData(prev => prev ? prev.map(r => r.id === rec.id ? { ...r, ot_count: newOtCount } : r) : prev)
+                                                                                                            savedCount++
+                                                                                                            setStatsData(prev => prev ? prev.map(r => r.id === rec.id
+                                                                                                                ? { ...r, ot_count: newOtCount }
+                                                                                                                : r) : prev)
                                                                                                         } else {
-                                                                                                            const j = await res.json()
-                                                                                                            alert('Lỗi lưu OT: ' + (j.error || res.statusText))
+                                                                                                            const j = await res.json().catch(() => ({}))
+                                                                                                            errors.push(`${date}: ${j.error || res.statusText}`)
                                                                                                         }
                                                                                                     }
+                                                                                                    if (savedCount > 0) {
+                                                                                                        setEditingRowKey(null)
+                                                                                                        setRowEditDrafts({})
+                                                                                                    }
+                                                                                                    if (errors.length > 0) {
+                                                                                                        alert('Lỗi lưu OT:\n' + errors.join('\n'))
+                                                                                                    }
                                                                                                     setRowSaving(false)
-                                                                                                    setEditingRowKey(null)
-                                                                                                    setRowEditDrafts({})
                                                                                                 }}
                                                                                                 className="px-1.5 py-0.5 bg-green-500 hover:bg-green-600 text-white text-[9px] font-bold rounded disabled:opacity-50 transition-colors"
-                                                                                            >{rowSaving ? '...' : '💾'}</button>
+                                                                                            >{rowSaving ? '...' : 'ðŸ’¾'}</button>
                                                                                             <button
+                                                                                                type="button"
                                                                                                 onClick={() => { setEditingRowKey(null); setRowEditDrafts({}) }}
                                                                                                 className="px-1.5 py-0.5 bg-slate-400 hover:bg-slate-500 text-white text-[9px] font-bold rounded transition-colors"
-                                                                                            >✕</button>
+                                                                                            >âœ•</button>
                                                                                         </div>
                                                                                     ) : (
-                                                                                        <button
+                                                                                        <button type="button"
                                                                                             onClick={() => {
                                                                                                 setEditingRowKey(otRowKey)
                                                                                                 const drafts: Record<string, string> = {}
@@ -2727,13 +2772,13 @@ export default function BaoCom() {
                                                                                                 setRowEditDrafts(drafts)
                                                                                             }}
                                                                                             className="shrink-0 px-2 py-0.5 bg-orange-100 hover:bg-orange-400 hover:text-white text-orange-700 text-[10px] font-bold rounded border border-orange-300 transition-colors"
-                                                                                        >✏️ Sửa</button>
+                                                                                        >âœï¸ Sá»­a</button>
                                                                                     )
                                                                                 )}
                                                                             </div>
                                                                         </td>
                                                                         <td className={`px-1 py-1 sticky left-[160px] z-10 text-center border-r border-orange-100 ${isOTEditing ? 'bg-yellow-50' : 'bg-orange-50'}`}>
-                                                                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">Tăng ca</span>
+                                                                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">TÄƒng ca</span>
                                                                         </td>
                                                                         {days.map(d => {
                                                                             const origV = deptOT?.days.get(d) ?? 0
@@ -2748,18 +2793,18 @@ export default function BaoCom() {
                                                                                             min={0}
                                                                                             value={rowEditDrafts[d] ?? ''}
                                                                                             onChange={e => setRowEditDrafts(prev => ({ ...prev, [d]: e.target.value }))}
-                                                                                            onKeyDown={e => { if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
+                                                                                            onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); if (e.key === 'Escape') { setEditingRowKey(null); setRowEditDrafts({}) } }}
                                                                                             className={`w-10 h-6 text-center text-xs rounded outline-none font-semibold ${changed ? 'border-2 border-amber-400 bg-amber-50' : 'border border-slate-200 bg-yellow-50'
                                                                                                 }`}
                                                                                         />
                                                                                     ) : (
-                                                                                        <span className="block px-1.5 py-1">{origV > 0 ? origV : '—'}</span>
+                                                                                        <span className="block px-1.5 py-1">{origV > 0 ? origV : 'â€”'}</span>
                                                                                     )}
                                                                                 </td>
                                                                             )
                                                                         })}
                                                                         <td className="px-2 py-1 text-center font-bold text-orange-700 border-l border-orange-100 text-xs">
-                                                                            {deptOTTotal > 0 ? deptOTTotal : '—'}
+                                                                            {deptOTTotal > 0 ? deptOTTotal : 'â€”'}
                                                                         </td>
                                                                     </tr>
                                                                 )
@@ -2771,7 +2816,7 @@ export default function BaoCom() {
                                             {/* Footer rows matching Excel format */}
                                             <tfoot>
                                                 <tr className="bg-slate-700 text-white font-bold border-t-2 border-slate-500">
-                                                    <td className="px-3 py-2 sticky left-0 bg-slate-700 z-10 border-r border-slate-500">TỔNG</td>
+                                                    <td className="px-3 py-2 sticky left-0 bg-slate-700 z-10 border-r border-slate-500">Tá»”NG</td>
                                                     <td className="px-2 py-2 sticky left-[160px] bg-slate-700 z-10 border-r border-slate-500"></td>
                                                     {dayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-2 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                     <td className="px-2 py-2 text-center border-l border-slate-500">{grandTotal}</td>
@@ -2795,19 +2840,19 @@ export default function BaoCom() {
                                                     <td className="px-2 py-1.5 text-center font-bold border-l border-blue-200">{ca3Totals.reduce((a, b) => a + b, 0)}</td>
                                                 </tr>
                                                 <tr className="bg-orange-500 text-white text-[11px]">
-                                                    <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">Tăng ca</td>
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-orange-500 z-10 font-semibold border-r border-orange-300">TÄƒng ca</td>
                                                     <td className="px-2 py-1.5 sticky left-[160px] bg-orange-500 z-10 border-r border-orange-300"></td>
                                                     {otDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-orange-800/40" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                     <td className="px-2 py-1.5 text-center font-bold border-l border-orange-300">{otDayTotals.reduce((a, b) => a + b, 0)}</td>
                                                 </tr>
                                                 <tr className="bg-purple-100 text-purple-800 text-[11px]">
-                                                    <td className="px-3 py-1.5 sticky left-0 bg-purple-100 z-10 font-semibold border-r border-purple-200">Thời vụ</td>
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-purple-100 z-10 font-semibold border-r border-purple-200">Thá»i vá»¥</td>
                                                     <td className="px-2 py-1.5 sticky left-[160px] bg-purple-100 z-10 border-r border-purple-200"></td>
                                                     {tvDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-purple-800/30" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                     <td className="px-2 py-1.5 text-center font-bold border-l border-purple-200">{tvDayTotals.reduce((a, b) => a + b, 0)}</td>
                                                 </tr>
                                                 <tr className="bg-green-100 text-green-800 text-[11px]">
-                                                    <td className="px-3 py-1.5 sticky left-0 bg-green-100 z-10 font-semibold border-r border-green-200">Chính thức</td>
+                                                    <td className="px-3 py-1.5 sticky left-0 bg-green-100 z-10 font-semibold border-r border-green-200">ChÃ­nh thá»©c</td>
                                                     <td className="px-2 py-1.5 sticky left-[160px] bg-green-100 z-10 border-r border-green-200"></td>
                                                     {ctDayTotals.map((v, i) => { const isSun = new Date(days[i] + "T00:00:00").getDay() === 0; return <td key={days[i]} className={`px-1.5 py-1.5 text-center ${isSun ? "bg-green-800/30" : ""}`}>{v > 0 ? v : ''}</td> })}
                                                     <td className="px-2 py-1.5 text-center font-bold border-l border-green-200">{ctDayTotals.reduce((a, b) => a + b, 0)}</td>
@@ -2821,9 +2866,9 @@ export default function BaoCom() {
                     </div>
                 )}
 
-                {/* ═══════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {/* TAB 1: PARSE & SAVE                        */}
-                {/* ═══════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {false && (
                     <>
                         {/* Paste area */}
@@ -2831,20 +2876,20 @@ export default function BaoCom() {
                             <div className="bg-card rounded-xl border shadow-sm p-4 space-y-4">
                                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                                     <ClipboardPaste className="h-4 w-4" />
-                                    Paste nội dung chat Zalo vào đây (copy tất cả các tin nhắn báo cơm của ngày)
+                                    Paste ná»™i dung chat Zalo vÃ o Ä‘Ã¢y (copy táº¥t cáº£ cÃ¡c tin nháº¯n bÃ¡o cÆ¡m cá»§a ngÃ y)
                                 </div>
                                 <textarea
                                     id="zalo-paste-area"
                                     value={rawText}
                                     onChange={(e) => setRawText(e.target.value)}
-                                    placeholder={`Ví dụ:\n28.3.2026\nKhu vực : Boiler\nCa: 1.2.3\nChính thức hiện diện: 3\nChính thức vắng: 0\n2Thời vụ hiện diện:0\nThời vụ vắng :0\nOT:\n\nDate: 28/03/2026\nKhu vực : Peeling mc\nCa: 1\nChính thức hiện diện: 7\n...`}
+                                    placeholder={`VÃ­ dá»¥:\n28.3.2026\nKhu vá»±c : Boiler\nCa: 1.2.3\nChÃ­nh thá»©c hiá»‡n diá»‡n: 3\nChÃ­nh thá»©c váº¯ng: 0\n2Thá»i vá»¥ hiá»‡n diá»‡n:0\nThá»i vá»¥ váº¯ng :0\nOT:\n\nDate: 28/03/2026\nKhu vá»±c : Peeling mc\nCa: 1\nChÃ­nh thá»©c hiá»‡n diá»‡n: 7\n...`}
                                     rows={16}
                                     className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400 resize-y"
                                     style={{ minHeight: "260px" }}
                                 />
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
                                     <p className="text-xs text-muted-foreground">
-                                        💡 Không cần xóa tên người gửi hay timestamp — hệ thống tự bỏ qua.
+                                        ðŸ’¡ KhÃ´ng cáº§n xÃ³a tÃªn ngÆ°á»i gá»­i hay timestamp â€” há»‡ thá»‘ng tá»± bá» qua.
                                     </p>
                                     <div className="flex gap-2">
                                         {/* AI Parse button */}
@@ -2859,7 +2904,7 @@ export default function BaoCom() {
                                             ) : (
                                                 <Sparkles className="h-4 w-4" />
                                             )}
-                                            {aiParsing ? "AI đang xử lý..." : "🤖 AI Phân tích"}
+                                            {aiParsing ? "AI Ä‘ang xá»­ lÃ½..." : "ðŸ¤– AI PhÃ¢n tÃ­ch"}
                                         </Button>
                                         {/* Manual parse button */}
                                         <Button
@@ -2869,20 +2914,20 @@ export default function BaoCom() {
                                             className="gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6"
                                         >
                                             <Sparkles className="h-4 w-4" />
-                                            Phân tích ngay
+                                            PhÃ¢n tÃ­ch ngay
                                         </Button>
                                     </div>
                                 </div>
                                 {aiError && (
                                     <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">
                                         <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                        <span>AI lỗi: {aiError}</span>
+                                        <span>AI lá»—i: {aiError}</span>
                                     </div>
                                 )}
                                 {aiTruncated && (
                                     <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
                                         <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                        <span>⚠️ Text quá dài — AI chỉ đọc được phần đầu (~8000 ký tự). Kết quả có thể thiếu. Hãy paste từng ca riêng để đảm bảo đầy đủ.</span>
+                                        <span>âš ï¸ Text quÃ¡ dÃ i â€” AI chá»‰ Ä‘á»c Ä‘Æ°á»£c pháº§n Ä‘áº§u (~8000 kÃ½ tá»±). Káº¿t quáº£ cÃ³ thá»ƒ thiáº¿u. HÃ£y paste tá»«ng ca riÃªng Ä‘á»ƒ Ä‘áº£m báº£o Ä‘áº§y Ä‘á»§.</span>
                                     </div>
                                 )}
                             </div>
@@ -2896,11 +2941,11 @@ export default function BaoCom() {
                                 <div className="flex flex-wrap gap-2">
                                     <Button variant="outline" size="sm" onClick={handleCopyTable} className="gap-2">
                                         {copied ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                        {copied ? "Đã copy!" : "Copy bảng"}
+                                        {copied ? "ÄÃ£ copy!" : "Copy báº£ng"}
                                     </Button>
                                     <Button size="sm" onClick={() => exportCSV(records)} className="gap-2 bg-green-600 hover:bg-green-700 text-white">
                                         <Download className="h-4 w-4" />
-                                        Xuất Excel (.csv)
+                                        Xuáº¥t Excel (.csv)
                                     </Button>
                                     {canSave && records.length > 0 && (
                                         <Button
@@ -2910,7 +2955,7 @@ export default function BaoCom() {
                                             className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                                         >
                                             <Save className="h-4 w-4" />
-                                            {saving ? "Đang lưu..." : `💾 Lưu ${records.length} bản ghi vào DB`}
+                                            {saving ? "Äang lÆ°u..." : `ðŸ’¾ LÆ°u ${records.length} báº£n ghi vÃ o DB`}
                                         </Button>
                                     )}
                                     <Button
@@ -2919,11 +2964,11 @@ export default function BaoCom() {
                                         className={`gap-2 ${showSummary ? "bg-orange-600 hover:bg-orange-700" : "bg-orange-500 hover:bg-orange-600"} text-white`}
                                     >
                                         <BarChart3 className="h-4 w-4" />
-                                        Tổng hợp báo cơm
+                                        Tá»•ng há»£p bÃ¡o cÆ¡m
                                     </Button>
                                     <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
                                         <RefreshCw className="h-4 w-4" />
-                                        Làm mới
+                                        LÃ m má»›i
                                     </Button>
                                 </div>
 
@@ -2933,13 +2978,13 @@ export default function BaoCom() {
                                     <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-4">
                                         <div className="flex items-center gap-2 font-semibold text-orange-700">
                                             <MessageSquare className="h-4 w-4" />
-                                            Tổng hợp báo cơm nhà ăn
+                                            Tá»•ng há»£p bÃ¡o cÆ¡m nhÃ  Äƒn
                                         </div>
 
                                         {/* Date + Shift selectors */}
                                         <div className="flex flex-wrap items-end gap-3">
                                             <div className="flex flex-col gap-1">
-                                                <label className="text-xs font-medium text-orange-700">Ngày</label>
+                                                <label className="text-xs font-medium text-orange-700">NgÃ y</label>
                                                 <input
                                                     type="date"
                                                     value={summaryDate}
@@ -2951,7 +2996,7 @@ export default function BaoCom() {
                                                 <label className="text-xs font-medium text-orange-700">Ca</label>
                                                 <div className="flex gap-1">
                                                     {["1", "2", "3"].map(s => (
-                                                        <button
+                                                        <button type="button"
                                                             key={s}
                                                             onClick={() => setSummaryShift(s)}
                                                             className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${summaryShift === s
@@ -2962,13 +3007,13 @@ export default function BaoCom() {
                                                     ))}
                                                 </div>
                                             </div>
-                                            <button
+                                            <button type="button"
                                                 onClick={fetchSummaryFromDB}
                                                 disabled={summaryLoading}
                                                 className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors disabled:opacity-50"
                                             >
                                                 <BarChart3 className="h-4 w-4" />
-                                                {summaryLoading ? "Đang tải..." : "Tổng hợp"}
+                                                {summaryLoading ? "Äang táº£i..." : "Tá»•ng há»£p"}
                                             </button>
                                         </div>
 
@@ -2979,7 +3024,7 @@ export default function BaoCom() {
                                         {summaryData !== null && (() => {
                                             if (summaryData!.length === 0) return (
                                                 <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                                    Không có dữ liệu cho ngày này — có thể chưa lưu hoặc chưa báo đủ.
+                                                    KhÃ´ng cÃ³ dá»¯ liá»‡u cho ngÃ y nÃ y â€” cÃ³ thá»ƒ chÆ°a lÆ°u hoáº·c chÆ°a bÃ¡o Ä‘á»§.
                                                 </div>
                                             )
                                             const msgText = buildDBSummaryText(summaryData!)
@@ -2990,7 +3035,7 @@ export default function BaoCom() {
                                                     <div className="bg-white rounded-lg border border-orange-100 p-3 font-mono text-sm whitespace-pre-wrap text-gray-800">
                                                         {msgText}
                                                     </div>
-                                                    <button
+                                                    <button type="button"
                                                         onClick={() => {
                                                             navigator.clipboard.writeText(msgText)
                                                             setCopiedSummary(true)
@@ -3000,7 +3045,7 @@ export default function BaoCom() {
                                                             }`}
                                                     >
                                                         {copiedSummary ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                                        {copiedSummary ? "Đã copy!" : "Copy tin nhắn"}
+                                                        {copiedSummary ? "ÄÃ£ copy!" : "Copy tin nháº¯n"}
                                                     </button>
 
                                                     {/* Per-dept breakdown */}
@@ -3008,11 +3053,11 @@ export default function BaoCom() {
                                                         <table className="w-full text-xs border rounded-lg overflow-hidden">
                                                             <thead>
                                                                 <tr className="bg-orange-100 text-orange-700 text-left">
-                                                                    <th className="px-2 py-1.5 font-semibold">Bộ phận</th>
-                                                                    <th className="px-2 py-1.5 font-semibold text-right">Chính thức</th>
-                                                                    <th className="px-2 py-1.5 font-semibold text-right">Thời vụ</th>
+                                                                    <th className="px-2 py-1.5 font-semibold">Bá»™ pháº­n</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">ChÃ­nh thá»©c</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">Thá»i vá»¥</th>
                                                                     <th className="px-2 py-1.5 font-semibold text-right">Chay</th>
-                                                                    <th className="px-2 py-1.5 font-semibold text-right">Tăng ca</th>
+                                                                    <th className="px-2 py-1.5 font-semibold text-right">TÄƒng ca</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y">
@@ -3038,7 +3083,7 @@ export default function BaoCom() {
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-700">
                                                                 <Bell className="h-4 w-4" />
-                                                                Chưa có dữ liệu từ các bộ phận:
+                                                                ChÆ°a cÃ³ dá»¯ liá»‡u tá»« cÃ¡c bá»™ pháº­n:
                                                             </div>
                                                             <div className="flex flex-wrap gap-1.5">
                                                                 {missingDepts.map(d => (
@@ -3066,11 +3111,11 @@ export default function BaoCom() {
                                 {/* Summary cards */}
                                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                     {[
-                                        { label: "Bộ phận", value: records.length, unit: "KV", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
-                                        { label: "CT Hiện diện", value: summary.totalOfficial, unit: "người", bg: "bg-green-50", text: "text-green-600", border: "border-green-200" },
-                                        { label: "CT Vắng", value: summary.totalAbsent, unit: "người", bg: "bg-red-50", text: "text-red-600", border: "border-red-200" },
-                                        { label: "TV Hiện diện", value: summary.totalSeasonal, unit: "người", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
-                                        { label: "Chay hôm nay", value: summary.totalVeg || "—", unit: summary.totalVeg ? "suất" : "", bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-200" },
+                                        { label: "Bá»™ pháº­n", value: records.length, unit: "KV", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" },
+                                        { label: "CT Hiá»‡n diá»‡n", value: summary.totalOfficial, unit: "ngÆ°á»i", bg: "bg-green-50", text: "text-green-600", border: "border-green-200" },
+                                        { label: "CT Váº¯ng", value: summary.totalAbsent, unit: "ngÆ°á»i", bg: "bg-red-50", text: "text-red-600", border: "border-red-200" },
+                                        { label: "TV Hiá»‡n diá»‡n", value: summary.totalSeasonal, unit: "ngÆ°á»i", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" },
+                                        { label: "Chay hÃ´m nay", value: summary.totalVeg || "â€”", unit: summary.totalVeg ? "suáº¥t" : "", bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-200" },
                                     ].map((s) => (
                                         <div key={s.label} className={`rounded-xl border p-4 shadow-sm ${s.bg} ${s.border}`}>
                                             <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -3083,12 +3128,12 @@ export default function BaoCom() {
                                 {records.length === 0 ? (
                                     <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center space-y-2">
                                         <AlertCircle className="h-8 w-8 text-yellow-500 mx-auto" />
-                                        <p className="font-semibold text-yellow-800">Không tìm thấy dữ liệu hợp lệ</p>
+                                        <p className="font-semibold text-yellow-800">KhÃ´ng tÃ¬m tháº¥y dá»¯ liá»‡u há»£p lá»‡</p>
                                         <p className="text-sm text-yellow-700">
-                                            Hệ thống cần tìm thấy các từ khóa như &quot;Khu vực&quot;, &quot;Chính thức hiện diện&quot;, cùng với ngày tháng.
+                                            Há»‡ thá»‘ng cáº§n tÃ¬m tháº¥y cÃ¡c tá»« khÃ³a nhÆ° &quot;Khu vá»±c&quot;, &quot;ChÃ­nh thá»©c hiá»‡n diá»‡n&quot;, cÃ¹ng vá»›i ngÃ y thÃ¡ng.
                                         </p>
                                         <Button variant="outline" size="sm" onClick={handleReset} className="mt-2 gap-2">
-                                            <RefreshCw className="h-4 w-4" /> Thử lại
+                                            <RefreshCw className="h-4 w-4" /> Thá»­ láº¡i
                                         </Button>
                                     </div>
                                 ) : (
@@ -3097,7 +3142,7 @@ export default function BaoCom() {
                                             <div className="flex items-center gap-2">
                                                 <TableIcon className="h-4 w-4 text-muted-foreground" />
                                                 <span className="font-semibold text-sm">
-                                                    Kết quả — {uniqueDates.join(", ")} &nbsp;|&nbsp; {records.length} khu vực
+                                                    Káº¿t quáº£ â€” {uniqueDates.join(", ")} &nbsp;|&nbsp; {records.length} khu vá»±c
                                                 </span>
                                             </div>
                                         </div>
@@ -3107,17 +3152,17 @@ export default function BaoCom() {
                                                 <thead>
                                                     <tr className="bg-muted/60 text-left text-xs text-muted-foreground uppercase tracking-wide">
                                                         <th className="px-3 py-2.5 font-semibold">#</th>
-                                                        <th className="px-3 py-2.5 font-semibold">Ngày</th>
-                                                        <th className="px-3 py-2.5 font-semibold">Khu vực</th>
+                                                        <th className="px-3 py-2.5 font-semibold">NgÃ y</th>
+                                                        <th className="px-3 py-2.5 font-semibold">Khu vá»±c</th>
                                                         <th className="px-3 py-2.5 font-semibold">Ca</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">Chính thức</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">Chính thức vắng</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">Thời vụ</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">Thời vụ vắng</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">Tăng ca</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-right">🥦 Chay</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">ChÃ­nh thá»©c</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">ChÃ­nh thá»©c váº¯ng</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">Thá»i vá»¥</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">Thá»i vá»¥ váº¯ng</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">TÄƒng ca</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-right">ðŸ¥¦ Chay</th>
                                                         <th className="px-3 py-2.5 font-semibold">DB Link</th>
-                                                        <th className="px-3 py-2.5 font-semibold text-center">Nguồn</th>
+                                                        <th className="px-3 py-2.5 font-semibold text-center">Nguá»“n</th>
                                                         <th className="px-3 py-2.5 font-semibold text-center w-24">Confirm</th>
                                                     </tr>
                                                 </thead>
@@ -3140,7 +3185,7 @@ export default function BaoCom() {
                                                                             Ca {r.shift === 'OT' ? 'OT' : (r.shift?.replace(/[^1-3]/g, '') || '1')}
                                                                         </span>
                                                                     </td>
-                                                                    {/* CT HĐ — editable */}
+                                                                    {/* CT HÄ â€” editable */}
                                                                     <td className="px-3 py-2.5 text-right">
                                                                         {editingCell?.row === i && editingCell?.field === 'officialPresent' ? (
                                                                             <input autoFocus type="number" value={editDraft}
@@ -3149,14 +3194,14 @@ export default function BaoCom() {
                                                                                 onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
                                                                                 className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
                                                                         ) : (
-                                                                            <span className="font-bold text-green-700 cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click để sửa"
+                                                                            <span className="font-bold text-green-700 cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click Ä‘á»ƒ sá»­a"
                                                                                 onClick={() => { setEditingCell({ row: i, field: 'officialPresent' }); setEditDraft(String(r.officialPresent ?? '')) }}>
-                                                                                {r.officialPresent ?? <span className="text-muted-foreground font-normal">—</span>}
+                                                                                {r.officialPresent ?? <span className="text-muted-foreground font-normal">â€”</span>}
                                                                                 {r.officialPresentNote && <span className="text-xs font-normal text-muted-foreground ml-1">{r.officialPresentNote}</span>}
                                                                             </span>
                                                                         )}
                                                                     </td>
-                                                                    {/* CT Vắng — editable */}
+                                                                    {/* CT Váº¯ng â€” editable */}
                                                                     <td className="px-3 py-2.5 text-right">
                                                                         {editingCell?.row === i && editingCell?.field === 'officialAbsent' ? (
                                                                             <input autoFocus type="number" value={editDraft}
@@ -3166,13 +3211,13 @@ export default function BaoCom() {
                                                                                 className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
                                                                         ) : (
                                                                             <span className={`cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 ${r.officialAbsent != null && r.officialAbsent > 0 ? 'font-bold text-red-600' : 'text-muted-foreground'}`}
-                                                                                title="Click để sửa"
+                                                                                title="Click Ä‘á»ƒ sá»­a"
                                                                                 onClick={() => { setEditingCell({ row: i, field: 'officialAbsent' }); setEditDraft(String(r.officialAbsent ?? '')) }}>
-                                                                                {r.officialAbsent ?? '—'}
+                                                                                {r.officialAbsent ?? 'â€”'}
                                                                             </span>
                                                                         )}
                                                                     </td>
-                                                                    {/* TV HĐ — editable */}
+                                                                    {/* TV HÄ â€” editable */}
                                                                     <td className="px-3 py-2.5 text-right">
                                                                         {editingCell?.row === i && editingCell?.field === 'seasonalPresent' ? (
                                                                             <input autoFocus type="number" value={editDraft}
@@ -3181,13 +3226,13 @@ export default function BaoCom() {
                                                                                 onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
                                                                                 className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
                                                                         ) : (
-                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click để sửa"
+                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click Ä‘á»ƒ sá»­a"
                                                                                 onClick={() => { setEditingCell({ row: i, field: 'seasonalPresent' }); setEditDraft(String(r.seasonalPresent ?? '')) }}>
-                                                                                {r.seasonalPresent ?? '—'}
+                                                                                {r.seasonalPresent ?? 'â€”'}
                                                                             </span>
                                                                         )}
                                                                     </td>
-                                                                    {/* TV Vắng — editable */}
+                                                                    {/* TV Váº¯ng â€” editable */}
                                                                     <td className="px-3 py-2.5 text-right">
                                                                         {editingCell?.row === i && editingCell?.field === 'seasonalAbsent' ? (
                                                                             <input autoFocus type="number" value={editDraft}
@@ -3196,13 +3241,13 @@ export default function BaoCom() {
                                                                                 onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
                                                                                 className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
                                                                         ) : (
-                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click để sửa"
+                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 text-muted-foreground" title="Click Ä‘á»ƒ sá»­a"
                                                                                 onClick={() => { setEditingCell({ row: i, field: 'seasonalAbsent' }); setEditDraft(String(r.seasonalAbsent ?? '')) }}>
-                                                                                {r.seasonalAbsent ?? '—'}
+                                                                                {r.seasonalAbsent ?? 'â€”'}
                                                                             </span>
                                                                         )}
                                                                     </td>
-                                                                    {/* OT — editable + shift timing label */}
+                                                                    {/* OT â€” editable + shift timing label */}
                                                                     <td className="px-3 py-2.5 text-right text-xs">
                                                                         {editingCell?.row === i && editingCell?.field === 'ot' ? (
                                                                             <input autoFocus type="text" value={editDraft}
@@ -3211,15 +3256,15 @@ export default function BaoCom() {
                                                                                 onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditingCell(null) }}
                                                                                 className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
                                                                         ) : (
-                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click để sửa"
+                                                                            <span className="cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1" title="Click Ä‘á»ƒ sá»­a"
                                                                                 onClick={() => { setEditingCell({ row: i, field: 'ot' }); setEditDraft(r.ot) }}>
                                                                                 {r.ot && r.ot !== '0' && r.ot !== '' ? (
                                                                                     <>{r.ot}<span className="text-muted-foreground ml-0.5">({OT_HOUR[r.shift] ?? ''})</span></>
-                                                                                ) : <span className="text-muted-foreground">—</span>}
+                                                                                ) : <span className="text-muted-foreground">â€”</span>}
                                                                             </span>
                                                                         )}
                                                                     </td>
-                                                                    {/* Chay — editable */}
+                                                                    {/* Chay â€” editable */}
                                                                     <td className="px-3 py-2.5 text-right">
                                                                         {editingCell?.row === i && editingCell?.field === 'vegetarian' ? (
                                                                             <input autoFocus type="number" value={editDraft}
@@ -3229,9 +3274,9 @@ export default function BaoCom() {
                                                                                 className="w-16 text-right border border-blue-400 rounded px-1 py-0 text-sm bg-blue-50 focus:outline-none" />
                                                                         ) : (
                                                                             <span className={`cursor-pointer hover:ring-1 hover:ring-blue-300 rounded px-1 ${r.vegetarian != null && r.vegetarian > 0 ? 'font-semibold text-emerald-600' : 'text-muted-foreground'}`}
-                                                                                title="Click để sửa"
+                                                                                title="Click Ä‘á»ƒ sá»­a"
                                                                                 onClick={() => { setEditingCell({ row: i, field: 'vegetarian' }); setEditDraft(String(r.vegetarian ?? '')) }}>
-                                                                                {r.vegetarian != null && r.vegetarian > 0 ? r.vegetarian : '—'}
+                                                                                {r.vegetarian != null && r.vegetarian > 0 ? r.vegetarian : 'â€”'}
                                                                             </span>
                                                                         )}
                                                                     </td>
@@ -3243,51 +3288,51 @@ export default function BaoCom() {
                                                                             </span>
                                                                         ) : isUnknown ? (
                                                                             <div className="flex flex-col gap-1 min-w-[150px]">
-                                                                                <span className="text-xs text-amber-600 font-semibold">⚠ Không rõ: &quot;{effArea}&quot;</span>
+                                                                                <span className="text-xs text-amber-600 font-semibold">âš  KhÃ´ng rÃµ: &quot;{effArea}&quot;</span>
                                                                                 <select
                                                                                     className="text-xs border border-amber-300 rounded px-1 py-0.5 bg-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                                                                     value={areaOverrides[i] ?? ""}
                                                                                     onChange={(e) => setAreaOverrides(prev => ({ ...prev, [i]: e.target.value }))}
                                                                                 >
-                                                                                    <option value="">-- Chọn bộ phận --</option>
+                                                                                    <option value="">-- Chá»n bá»™ pháº­n --</option>
                                                                                     {deptList.map(d => (
                                                                                         <option key={d.id} value={d.name_en}>{d.name_en}</option>
                                                                                     ))}
                                                                                 </select>
                                                                             </div>
                                                                         ) : (
-                                                                            <span className="text-xs text-muted-foreground">—</span>
+                                                                            <span className="text-xs text-muted-foreground">â€”</span>
                                                                         )}
                                                                     </td>
                                                                     {/* Source toggle */}
                                                                     <td className="px-2 py-2 text-center">
                                                                         {r.raw ? (
-                                                                            <button
+                                                                            <button type="button"
                                                                                 onClick={() => toggleSource(i)}
-                                                                                title="Xem nguồn"
+                                                                                title="Xem nguá»“n"
                                                                                 className={`text-xs px-1.5 py-0.5 rounded border transition-colors ${expandedSource.has(i)
                                                                                     ? 'bg-slate-200 border-slate-400 text-slate-700'
                                                                                     : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
                                                                                     }`}
                                                                             >
-                                                                                {expandedSource.has(i) ? '▲ Ẩn' : '▼ Xem'}
+                                                                                {expandedSource.has(i) ? 'â–² áº¨n' : 'â–¼ Xem'}
                                                                             </button>
-                                                                        ) : <span className="text-muted-foreground text-xs">—</span>}
+                                                                        ) : <span className="text-muted-foreground text-xs">â€”</span>}
                                                                     </td>
                                                                     {/* Per-row confirm */}
                                                                     <td className="px-2 py-2 text-center">
                                                                         {canSave && (
                                                                             confirmedRows.has(i) ? (
                                                                                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                                                                                    <CheckCircle2 className="h-3 w-3" /> Đã lưu
+                                                                                    <CheckCircle2 className="h-3 w-3" /> ÄÃ£ lÆ°u
                                                                                 </span>
                                                                             ) : (
-                                                                                <button
+                                                                                <button type="button"
                                                                                     onClick={() => handleConfirmOne(i)}
                                                                                     disabled={confirmingRow === i}
                                                                                     className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50"
                                                                                 >
-                                                                                    {confirmingRow === i ? '...' : '✓ Lưu'}
+                                                                                    {confirmingRow === i ? '...' : 'âœ“ LÆ°u'}
                                                                                 </button>
                                                                             )
                                                                         )}
@@ -3302,7 +3347,7 @@ export default function BaoCom() {
                                                                     <tr className="bg-slate-50 border-b border-slate-100">
                                                                         <td colSpan={13} className="px-4 py-2">
                                                                             <div className="flex items-start gap-2">
-                                                                                <span className="text-[10px] font-bold uppercase text-slate-400 mt-0.5 shrink-0">Nguồn:</span>
+                                                                                <span className="text-[10px] font-bold uppercase text-slate-400 mt-0.5 shrink-0">Nguá»“n:</span>
                                                                                 <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono bg-white border border-slate-200 rounded-lg px-3 py-2 flex-1 leading-relaxed">{r.raw}</pre>
                                                                             </div>
                                                                         </td>
@@ -3315,15 +3360,15 @@ export default function BaoCom() {
                                                 <tfoot>
                                                     <tr className="bg-muted/60 font-bold border-t-2 text-sm">
                                                         <td className="px-3 py-2.5" colSpan={4}>
-                                                            TỔNG ({records.length} khu vực)
+                                                            Tá»”NG ({records.length} khu vá»±c)
                                                         </td>
                                                         <td className="px-3 py-2.5 text-right text-green-700">{summary.totalOfficial}</td>
                                                         <td className="px-3 py-2.5 text-right text-red-600">{summary.totalAbsent}</td>
                                                         <td className="px-3 py-2.5 text-right">{summary.totalSeasonal}</td>
-                                                        <td className="px-3 py-2.5 text-right">—</td>
-                                                        <td className="px-3 py-2.5 text-right">—</td>
+                                                        <td className="px-3 py-2.5 text-right">â€”</td>
+                                                        <td className="px-3 py-2.5 text-right">â€”</td>
                                                         <td className="px-3 py-2.5 text-right text-emerald-600">
-                                                            {summary.totalVeg > 0 ? summary.totalVeg : "—"}
+                                                            {summary.totalVeg > 0 ? summary.totalVeg : "â€”"}
                                                         </td>
                                                         <td />
                                                     </tr>
@@ -3336,7 +3381,7 @@ export default function BaoCom() {
                                 {/* Back button */}
                                 <div className="flex justify-start">
                                     <Button variant="ghost" size="sm" onClick={handleReset} className="gap-2 text-muted-foreground">
-                                        <RefreshCw className="h-3 w-3" /> Paste dữ liệu mới
+                                        <RefreshCw className="h-3 w-3" /> Paste dá»¯ liá»‡u má»›i
                                     </Button>
                                 </div>
                             </>
@@ -3344,12 +3389,12 @@ export default function BaoCom() {
                     </>
                 )}
 
-                {/* ═══════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {/* TAB 2: HISTORY                              */}
-                {/* ═══════════════════════════════════════════ */}
+                {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
                 {activeTab === "history" && (() => {
                     // Build pivot from historyRecords
-                    // rows: dept×shift, cols: dates
+                    // rows: deptÃ—shift, cols: dates
                     const pivotDays = [...new Set(historyRecords.map(r => r.work_date))].sort()
                     type PivotKey = string // `${dept_id|dept_name}|${shift}`
                     const pivotMap = new Map<PivotKey, { deptCode: string; deptName: string; shift: string; days: Map<string, { present: number; ot: number; veg: number }> }>()
@@ -3378,13 +3423,13 @@ export default function BaoCom() {
                             <div className="bg-card rounded-xl border shadow-sm p-4">
                                 <div className="flex flex-wrap items-end gap-3">
                                     <div>
-                                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Từ ngày</label>
+                                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Tá»« ngÃ y</label>
                                         <input type="date" value={historyFrom}
                                             onChange={e => setHistoryFrom(e.target.value)}
                                             className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Đến ngày</label>
+                                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Äáº¿n ngÃ y</label>
                                         <input type="date" value={historyTo}
                                             onChange={e => setHistoryTo(e.target.value)}
                                             className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
@@ -3392,15 +3437,15 @@ export default function BaoCom() {
                                     {/* Quick-pick buttons */}
                                     <div className="flex gap-1.5" style={{ paddingBottom: '0px' }}>
                                         {([
-                                            { label: '7 ngày', days: 6 },
-                                            { label: '14 ngày', days: 13 },
-                                            { label: '30 ngày', days: 29 },
+                                            { label: '7 ngÃ y', days: 6 },
+                                            { label: '14 ngÃ y', days: 13 },
+                                            { label: '30 ngÃ y', days: 29 },
                                         ] as { label: string; days: number }[]).map(opt => {
                                             const to = new Date().toISOString().slice(0, 10)
                                             const from = (() => { const d = new Date(); d.setDate(d.getDate() - opt.days); return d.toISOString().slice(0, 10) })()
                                             const active = historyFrom === from && historyTo === to
                                             return (
-                                                <button key={opt.label}
+                                                <button type="button" key={opt.label}
                                                     onClick={() => { setHistoryFrom(from); setHistoryTo(to) }}
                                                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${active ? 'bg-primary text-white border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'
                                                         }`}>
@@ -3411,13 +3456,13 @@ export default function BaoCom() {
                                     </div>
                                     <Button onClick={fetchHistory} disabled={historyLoading} className="gap-2">
                                         <CalendarDays className="h-4 w-4" />
-                                        {historyLoading ? 'Đang tải...' : 'Xem dữ liệu'}
+                                        {historyLoading ? 'Äang táº£i...' : 'Xem dá»¯ liá»‡u'}
                                     </Button>
                                     {historyRecords.length > 0 && (
                                         <Button variant="outline" onClick={() => exportHistoryCSV(historyRecords)}
                                             className="gap-2 text-green-700 border-green-300 hover:bg-green-50">
                                             <FileSpreadsheet className="h-4 w-4" />
-                                            Xuất CSV
+                                            Xuáº¥t CSV
                                         </Button>
                                     )}
                                 </div>
@@ -3427,13 +3472,13 @@ export default function BaoCom() {
                             {historyLoading ? (
                                 <div className="text-center py-12 text-muted-foreground">
                                     <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3" />
-                                    Đang tải dữ liệu...
+                                    Äang táº£i dá»¯ liá»‡u...
                                 </div>
                             ) : historyRecords.length === 0 ? (
                                 <div className="bg-muted/30 rounded-xl border p-8 text-center text-muted-foreground">
                                     <Database className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                                    <p className="font-medium">Chưa có dữ liệu trong khoảng thời gian này</p>
-                                    <p className="text-sm mt-1">Paste dữ liệu Zalo ở tab &quot;Nhập &amp; Phân tích&quot; rồi bấm Lưu vào DB</p>
+                                    <p className="font-medium">ChÆ°a cÃ³ dá»¯ liá»‡u trong khoáº£ng thá»i gian nÃ y</p>
+                                    <p className="text-sm mt-1">Paste dá»¯ liá»‡u Zalo á»Ÿ tab &quot;Nháº­p &amp; PhÃ¢n tÃ­ch&quot; rá»“i báº¥m LÆ°u vÃ o DB</p>
                                 </div>
                             ) : (
                                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
@@ -3441,23 +3486,23 @@ export default function BaoCom() {
                                         <div className="flex items-center gap-2">
                                             <History className="h-4 w-4 text-muted-foreground" />
                                             <span className="font-semibold text-sm">
-                                                Lịch sử — {pivotDays.length} ngày · {pivotRows.length} bộ phận/ca
+                                                Lá»‹ch sá»­ â€” {pivotDays.length} ngÃ y Â· {pivotRows.length} bá»™ pháº­n/ca
                                             </span>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">Số liệu: Chính thức + Thời vụ hiện diện</span>
+                                        <span className="text-xs text-muted-foreground">Sá»‘ liá»‡u: ChÃ­nh thá»©c + Thá»i vá»¥ hiá»‡n diá»‡n</span>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="text-xs min-w-full">
                                             <thead>
                                                 <tr className="bg-muted/60 text-muted-foreground">
-                                                    <th className="px-3 py-2 text-left font-semibold sticky left-0 bg-muted/60 min-w-[120px]">Bộ phận</th>
+                                                    <th className="px-3 py-2 text-left font-semibold sticky left-0 bg-muted/60 min-w-[120px]">Bá»™ pháº­n</th>
                                                     <th className="px-2 py-2 text-center font-semibold sticky left-[120px] bg-muted/60 min-w-[44px]">Ca</th>
                                                     {pivotDays.map(d => (
                                                         <th key={d} className="px-2 py-2 text-center font-semibold min-w-[42px] whitespace-nowrap">
                                                             {parseInt(d.slice(8), 10)}/{parseInt(d.slice(5, 7), 10)}
                                                         </th>
                                                     ))}
-                                                    <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">TỔNG</th>
+                                                    <th className="px-2 py-2 text-center font-bold min-w-[48px] text-primary">Tá»”NG</th>
                                                     {canEdit && <th className="px-2 py-2 text-center font-semibold text-muted-foreground min-w-[72px]">Edit / Delete</th>}
                                                 </tr>
                                             </thead>
@@ -3478,16 +3523,16 @@ export default function BaoCom() {
                                                                     <td key={d} className="px-2 py-2 text-center">
                                                                         {n > 0 ? (
                                                                             <span className="font-bold text-green-700">{n}</span>
-                                                                        ) : <span className="text-muted-foreground/40">—</span>}
+                                                                        ) : <span className="text-muted-foreground/40">â€”</span>}
                                                                     </td>
                                                                 )
                                                             })}
-                                                            <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || '—'}</td>
+                                                            <td className="px-2 py-2 text-center font-bold text-primary border-l">{rowTotal || 'â€”'}</td>
                                                             {canEdit && (
                                                                 <td className="px-2 py-2 text-center">
                                                                     <div className="flex items-center justify-center gap-1">
                                                                         {/* Edit: go to kitchen tab for the latest date of this row */}
-                                                                        <button
+                                                                        <button type="button"
                                                                             onClick={() => {
                                                                                 // Find the most recent date that has data for this row
                                                                                 const latestDay = [...row.days.entries()]
@@ -3500,14 +3545,14 @@ export default function BaoCom() {
                                                                                 setActiveTab('kitchen')
                                                                             }}
                                                                             className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded px-1.5 py-0.5 text-xs transition-colors"
-                                                                            title="Sửa số liệu"
+                                                                            title="Sá»­a sá»‘ liá»‡u"
                                                                         >
-                                                                            ✏️
+                                                                            âœï¸
                                                                         </button>
                                                                         {/* Delete */}
-                                                                        <button
+                                                                        <button type="button"
                                                                             onClick={async () => {
-                                                                                if (!confirm(`Xóa TẤT CẢ bản ghi của "${row.deptName}" Ca ${row.shift} trong khoảng ngày đã chọn?`)) return
+                                                                                if (!confirm(`XÃ³a Táº¤T Cáº¢ báº£n ghi cá»§a "${row.deptName}" Ca ${row.shift} trong khoáº£ng ngÃ y Ä‘Ã£ chá»n?`)) return
                                                                                 const ids = historyRecords
                                                                                     .filter(r => (r.department_id ?? r.department_name) + '|' + r.shift === key)
                                                                                     .map(r => r.id)
@@ -3520,15 +3565,15 @@ export default function BaoCom() {
                                                                                     }
                                                                                 }
                                                                                 if (errors.length > 0) {
-                                                                                    alert("Lá»—i xÃ³a: " + errors.join("; "))
+                                                                                    alert("LÃ¡Â»â€”i xÃƒÂ³a: " + errors.join("; "))
                                                                                     return
                                                                                 }
                                                                                 setHistoryRecords(prev => prev.filter(r => !ids.includes(r.id)))
                                                                             }}
                                                                             className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1.5 py-0.5 text-xs transition-colors"
-                                                                            title="Xóa hàng này"
+                                                                            title="XÃ³a hÃ ng nÃ y"
                                                                         >
-                                                                            🗑
+                                                                            ðŸ—‘
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -3539,12 +3584,12 @@ export default function BaoCom() {
                                             </tbody>
                                             <tfoot>
                                                 <tr className="bg-muted/60 font-bold border-t-2">
-                                                    <td colSpan={2} className="px-3 py-2 sticky left-0 bg-muted/60">TỔNG NGÀY</td>
+                                                    <td colSpan={2} className="px-3 py-2 sticky left-0 bg-muted/60">Tá»”NG NGÃ€Y</td>
                                                     {pivotDays.map(d => {
                                                         const total = historyRecords
                                                             .filter(r => r.work_date === d)
                                                             .reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)
-                                                        return <td key={d} className="px-2 py-2 text-center text-primary">{total || '—'}</td>
+                                                        return <td key={d} className="px-2 py-2 text-center text-primary">{total || 'â€”'}</td>
                                                     })}
                                                     <td className="px-2 py-2 text-center text-primary border-l">
                                                         {historyRecords.reduce((s, r) => s + (r.official_present ?? 0) + (r.seasonal_present ?? 0), 0)}
@@ -3564,3 +3609,6 @@ export default function BaoCom() {
         </>
     )
 }
+
+
+
