@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest) {
         }
 
         const body = await req.json()
-        const { id, official_present, official_absent, seasonal_present, seasonal_absent, vegetarian, ot_count, ot_vegetarian, note } = body
+        const { id, official_present, official_absent, seasonal_present, seasonal_absent, vegetarian, ot_count, ot_vegetarian, note, expected_department_name } = body
 
         if (!id) {
             return NextResponse.json({ error: 'Missing id' }, { status: 400 })
@@ -60,10 +60,16 @@ export async function PATCH(req: NextRequest) {
         if (ot_vegetarian !== undefined) updateData.ot_vegetarian = clamp0(ot_vegetarian)
         if (note !== undefined) updateData.note = note
 
-        const { data, error: updateError } = await adminClient
+        let updateQuery = adminClient
             .from('meal_headcount')
             .update(updateData)
             .eq('id', id)
+
+        if (expected_department_name) {
+            updateQuery = updateQuery.eq('department_name', expected_department_name)
+        }
+
+        const { data, error: updateError } = await updateQuery
             .select()
 
         if (updateError) {
@@ -126,6 +132,9 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'Missing work_date, department, or shift' }, { status: 400 })
             }
 
+            // Always prefer department_name for lookup (unique constraint is work_date+department_name+shift).
+            // This prevents HPEEL sub-groups (Huệ/Liên/Dung) — which share the same department_id —
+            // from accidentally overwriting each other's records.
             let query = adminClient
                 .from('meal_headcount')
                 .select('id')
@@ -133,18 +142,35 @@ export async function POST(req: NextRequest) {
                 .eq('shift', shift)
                 .limit(1)
 
-            query = department_id
-                ? query.eq('department_id', department_id)
-                : query.eq('department_name', department_name)
+            if (department_name) {
+                query = query.eq('department_name', department_name)
+            } else {
+                query = query.eq('department_id', department_id)
+            }
 
             const { data: existingRows, error: lookupError } = await query
             if (lookupError) return NextResponse.json({ error: lookupError.message }, { status: 500 })
 
             const existingId = existingRows?.[0]?.id
             if (existingId) {
+                // Update only numeric/meta fields; never overwrite department_name or department_id
+                // to prevent cross-contamination between HPEEL sub-groups.
+                const updateFields: Record<string, unknown> = {
+                    updated_at: row.updated_at ?? new Date().toISOString(),
+                }
+                if (row.official_present !== undefined) updateFields.official_present = row.official_present
+                if (row.official_absent !== undefined) updateFields.official_absent = row.official_absent
+                if (row.seasonal_present !== undefined) updateFields.seasonal_present = row.seasonal_present
+                if (row.seasonal_absent !== undefined) updateFields.seasonal_absent = row.seasonal_absent
+                if (row.ot_count !== undefined) updateFields.ot_count = row.ot_count
+                if (row.ot_vegetarian !== undefined) updateFields.ot_vegetarian = row.ot_vegetarian
+                if (row.vegetarian !== undefined) updateFields.vegetarian = row.vegetarian
+                if (row.note !== undefined) updateFields.note = row.note
+                if (row.created_by !== undefined) updateFields.created_by = row.created_by
+
                 const { data, error: updateError } = await adminClient
                     .from('meal_headcount')
-                    .update({ ...row, updated_at: row.updated_at ?? new Date().toISOString() })
+                    .update(updateFields)
                     .eq('id', existingId)
                     .select()
                     .single()
