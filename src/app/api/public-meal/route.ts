@@ -136,33 +136,57 @@ export async function GET(req: NextRequest) {
 
         let bestRecord = null
         if (data && data.length > 0) {
-            // Fuzzy match logic:
-            // 1. Try exact match
-            bestRecord = data.find(r => r.department_name.toLowerCase() === deptName.toLowerCase())
-            // 2. Try 'includes' match (e.g. "Dung" in "Manual peeling S1 - Dung")
+            // Step 1: Try exact match first
+            bestRecord = data.find(r => r.department_name.toLowerCase() === deptName.toLowerCase()) ?? null
+
+            // Step 2: Fuzzy match — score each record by keyword overlap
             if (!bestRecord) {
-                // Determine a strong keyword from deptName (e.g. supervisor name or base name)
-                const keyword = deptName.toLowerCase().replace(/ca\s*\d|s\d|thời\s*vụ|-/gi, "").trim()
+                const deptNameLower = deptName.toLowerCase()
+                const keyword = deptNameLower.replace(/ca\s*\d|s\d|thời\s*vụ|-/gi, "").trim()
                 const parts = keyword.split(" ").filter(Boolean)
-                // Sort records by how many parts they match
+
                 let maxMatches = 0
                 for (const r of data) {
                     const dbNameLower = r.department_name.toLowerCase()
                     let matches = 0
                     for (const p of parts) if (dbNameLower.includes(p)) matches++
-                    // Also if we're HPEEL, Supervisor names are critical
-                    if (deptName.toLowerCase().includes("huệ") && dbNameLower.includes("huệ")) matches += 10
-                    if (deptName.toLowerCase().includes("dung") && dbNameLower.includes("dung")) matches += 10
-                    if (deptName.toLowerCase().includes("liên") && dbNameLower.includes("liên")) matches += 10
-                    if (deptName.toLowerCase().includes("loan") && dbNameLower.includes("loan")) matches += 10
+                    // Supervisor names are critical discriminators — heavily boost
+                    if (deptNameLower.includes("huệ") && dbNameLower.includes("huệ")) matches += 10
+                    if (deptNameLower.includes("dung") && dbNameLower.includes("dung")) matches += 10
+                    if (deptNameLower.includes("liên") && dbNameLower.includes("liên")) matches += 10
+                    if (deptNameLower.includes("loan") && dbNameLower.includes("loan")) matches += 10
 
                     if (matches > maxMatches) {
                         maxMatches = matches
                         bestRecord = r
                     }
                 }
-                // If it's the only record for this dept + shift (e.g. QC), just use it blindly
-                if (!bestRecord && data.length === 1) {
+
+                // Step 3: STRICT supervisor guard for HPEEL subgroups.
+                // If the requested dept_name contains a supervisor keyword, the matched record
+                // MUST also contain that same keyword — otherwise it's a different supervisor's
+                // row and we must NOT return it (would cause pre-fill + overwrite bug).
+                const deptNameNorm = deptName.toLowerCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                const supervisors = [
+                    { req: "hue", db: "hue" },   // Huệ / hue (after NFD normalize)
+                    { req: "lien", db: "lien" },  // Liên
+                    { req: "dung", db: "dung" },
+                    { req: "loan", db: "loan" },
+                ]
+                const requestedSupervisor = supervisors.find(s => deptNameNorm.includes(s.req))
+                if (requestedSupervisor && bestRecord) {
+                    const dbNameNorm = bestRecord.department_name.toLowerCase()
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    if (!dbNameNorm.includes(requestedSupervisor.db)) {
+                        // Supervisor mismatch — do NOT leak another supervisor's record
+                        bestRecord = null
+                    }
+                }
+
+                // Step 4: For non-subgroup depts with exactly 1 record, use it directly.
+                const isSubgroupRequest = supervisors.some(s => deptNameNorm.includes(s.req))
+                if (!bestRecord && data.length === 1 && !isSubgroupRequest) {
                     bestRecord = data[0]
                 }
             }
@@ -246,7 +270,7 @@ export async function POST(req: NextRequest) {
                 .from("meal_headcount")
                 .select("id")
                 .eq("work_date", payload.work_date)
-                .eq("department_id", payload.department_id)
+                .eq("department_name", payload.department_name)
                 .eq("shift", payload.shift)
                 .limit(1)
 

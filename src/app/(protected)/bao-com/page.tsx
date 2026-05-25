@@ -267,6 +267,15 @@ const DEPT_MAP: Record<string, string> = {
     // Handpeeling + supervisor name aliases (shift resolved at save time)
     "handpeeling (dung)": "HPEEL_DUNG",
     "handpeeling (liên)": "HPEEL_LIEN", "handpeeling (lien)": "HPEEL_LIEN",
+    "handpeeling (loan)": "HPEEL_LOAN",
+    "hand peeling (loan)": "HPEEL_LOAN",
+    "manual peeling (loan)": "HPEEL_LOAN",
+    "manual peeling s1 - loan": "HPEEL_LOAN",
+    "manual peeling s2 - loan": "HPEEL_LOAN",
+    "manual peeling s3 - loan": "HPEEL_LOAN",
+    "manual peeling s1 thời vụ - loan": "HPEEL_LOAN",
+    "manual peeling s2 thời vụ - loan": "HPEEL_LOAN",
+    "manual peeling s3 thời vụ - loan": "HPEEL_LOAN",
     // ── OFFICE ──
     "office": "OFFICE",
     "văn phòng": "OFFICE",
@@ -293,9 +302,10 @@ const HPEEL_SUBGROUP_DISPLAY: Record<string, string> = {
     HPEEL_GRADING: 'Manual Grading (Ms Hu\u1ec7)',
     HPEEL_LIEN: 'Manual Peeling (Li\u00ean)',
     HPEEL_DUNG: 'Manual Peeling (Dung)',
+    HPEEL_LOAN: 'Hand Peeling (Loan)',
 }
 // Virtual sub-group codes mapping to HPEEL department_id
-const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG"])
+const HPEEL_SUBCODES = new Set(["HPEEL_GRADING", "HPEEL_LIEN", "HPEEL_DUNG", "HPEEL_LOAN"])
 
 // ─────────────────────────────────────────────
 // Parse helpers
@@ -362,6 +372,10 @@ function detectHpeelSubgroup(blockText: string, hint: string): string | null {
     // Dung → HPEEL_DUNG
     if (/\bdung\b/.test(raw)) {
         return 'manual peeling s1 - dung'                 // maps to HPEEL_DUNG
+    }
+    // Loan → HPEEL_LOAN
+    if (/\bloan\b/.test(raw)) {
+        return 'manual peeling s1 - loan'                 // maps to HPEEL_LOAN
     }
     return null
 }
@@ -1087,8 +1101,12 @@ export default function BaoCom() {
             const n = name.toLowerCase()
             const s = /^[123]$/.test(shift) ? shift : (shift === 'HC' ? '1' : '1')
             const sPrefix = s === 'HC' ? 'HC' : `S${s}`
-            // Ms Huệ / Grading / Loan → Manual Grading -Shift N (Ms Huệ)
-            if (/hu[eệ]/i.test(n) || /grading/i.test(n) || /loan/i.test(n)) {
+            // Loan → Manual peeling SN - Loan
+            if (/loan/i.test(n)) {
+                return `Manual peeling ${sPrefix} - Loan`
+            }
+            // Ms Huệ / Grading → Manual Grading -Shift N (Ms Huệ)
+            if (/hu[eệ]/i.test(n) || /grading/i.test(n)) {
                 return `Manual Grading -Shift ${s} (Ms Huệ)`
             }
             // Liên → Manual peeling SN - Liên
@@ -1402,28 +1420,11 @@ export default function BaoCom() {
                 .in("shift", shiftFilter)
                 .order("department_name")
             if (error) throw error
-            // Aggregate: sum up all sub-section records that share the same department_id
-            // (e.g. HPEEL has both "Manual Grading -Shift 1 (Ms Huệ)" AND "Manual peeling S1 - Dung"
-            //  — they must be SUMMED, not deduped)
-            const aggMap = new Map<string, SavedRecord>()
-                ; (data ?? []).forEach(r => {
-                    const key = r.department_id ?? r.department_name
-                    if (!aggMap.has(key)) {
-                        // Clone first record as the base
-                        aggMap.set(key, { ...r })
-                    } else {
-                        // Sum numeric fields into the base record
-                        const base = aggMap.get(key)!
-                        base.official_present = (base.official_present ?? 0) + (r.official_present ?? 0)
-                        base.official_absent = (base.official_absent ?? 0) + (r.official_absent ?? 0)
-                        base.seasonal_present = (base.seasonal_present ?? 0) + (r.seasonal_present ?? 0)
-                        base.seasonal_absent = (base.seasonal_absent ?? 0) + (r.seasonal_absent ?? 0)
-                        base.vegetarian = (base.vegetarian ?? 0) + (r.vegetarian ?? 0)
-                        base.ot_count = (base.ot_count ?? 0) + (r.ot_count ?? 0)
-                        base.ot_vegetarian = (base.ot_vegetarian ?? 0) + (r.ot_vegetarian ?? 0)
-                    }
-                })
-            setSummaryData([...aggMap.values()].sort((a, b) => a.department_name.localeCompare(b.department_name)))
+            // *** FIX: Do NOT aggregate by department_id - HPEEL sub-groups (Hue, Lien, Dung)
+            // share the same department_id but are stored as SEPARATE rows with distinct
+            // department_name values. Merging by department_id causes handleSaveEdit to
+            // update the WRONG record (overwriting one sub-group with another data).
+            setSummaryData((data ?? []).sort((a, b) => a.department_name.localeCompare(b.department_name)))
 
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e)
@@ -1818,7 +1819,10 @@ export default function BaoCom() {
         if ((isDung || isLien) && (lower.includes('handpeeling') || lower.includes('manual peeling') || lower.includes('peeling'))) {
             return `Manual peeling S${s} - ${isDung ? 'Dung' : 'Liên'}`
         }
-        if ((isHue || isLoan) && (lower.includes('grading') || lower.includes('manual') || lower.includes('loan'))) {
+        if (isLoan && (lower.includes('handpeeling') || lower.includes('manual peeling') || lower.includes('peeling') || lower.includes('loan'))) {
+            return `Manual peeling S${s} - Loan`
+        }
+        if (isHue && (lower.includes('grading') || lower.includes('manual') || lower.includes('hue'))) {
             return `Manual Grading -Shift ${s} (Ms Huệ)`
         }
         // Tập vụ
@@ -3015,9 +3019,9 @@ export default function BaoCom() {
                                                                 {summaryData!.map(r => (
                                                                     <tr key={r.id} className="hover:bg-orange-50">
                                                                         <td className="px-2 py-1 font-medium">
-                                                                            {r.department_id
-                                                                                ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
-                                                                                : r.department_name}
+                                                                            {r.department_name || (r.department_id
+                                                                                ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_id)
+                                                                                : 'Unknown')}
                                                                         </td>
                                                                         <td className="px-2 py-1 text-right text-green-700 font-semibold">{r.official_present ?? 0}</td>
                                                                         <td className="px-2 py-1 text-right">{r.seasonal_present ?? 0}</td>

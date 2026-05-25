@@ -12,7 +12,7 @@ const HPEEL_SUBGROUPS = [
     { key: "HPEEL_LIEN", label: "Tổ Liên", dept_name: "Hand Peeling (Liên)" },
     { key: "HPEEL_DUNG", label: "Tổ Dung", dept_name: "Hand Peeling (Dung)" },
     { key: "HPEEL_GRADING", label: "Ms Huệ (Grading)", dept_name: "Manual Grading (Ms Huệ)" },
-    { key: "HPEEL_LOAN", label: "Ms Loan", dept_name: "Manual Grading (Ms Huệ)" },
+    { key: "HPEEL_LOAN", label: "Ms Loan", dept_name: "Hand Peeling (Loan)" },
 ]
 
 const SHIFTS_NORMAL = [{ value: "1", label: "Ca 1" }, { value: "2", label: "Ca 2" }, { value: "3", label: "Ca 3" }]
@@ -429,6 +429,7 @@ export default function PublicMealPage() {
     const [shift, setShift] = useState("")
     const [workDate, setWorkDate] = useState(format(new Date(), "yyyy-MM-dd"))
     const [reporterName, setReporterName] = useState("")
+    const [lockedByUrl, setLockedByUrl] = useState(false)  // true = dept/sub pre-set via URL params
     const [singleData, setSingleData] = useState<ShiftData>(blank())
     const [multiData, setMultiData] = useState<Record<string, ShiftData>>({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
     const [confirmRows, setConfirmRows] = useState<ConfirmRow[]>([])
@@ -472,7 +473,6 @@ export default function PublicMealPage() {
         if (data.error) { setSumError(data.error); return }
         // Normalize department name: Title Case with special handling for known variants
         const normalizeDeptName = (name: string): string => {
-            if (name.includes("Loan")) return "Manual Grading (Ms Huệ)"
             // Title Case: capitalize first letter of each word, lowercase the rest
             return name
                 .toLowerCase()
@@ -526,6 +526,25 @@ export default function PublicMealPage() {
                 const sorted = (d.depts || []).sort((a: Dept, b: Dept) => a.name_en.localeCompare(b.name_en))
                 setDepts(sorted)
                 setLoading(false)
+                // Read URL params for dedicated personal links (pre-select dept+subgroup to prevent wrong subgroup selection)
+                if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search)
+                    const pDept = params.get("dept_id") ?? params.get("dept") ?? ""
+                    const pSub  = params.get("sub") ?? ""
+                    const pShift = params.get("shift") ?? ""
+                    const pName = params.get("name") ?? params.get("reporter") ?? ""
+                    if (pDept || pSub) {
+                        if (pDept) setDeptId(pDept)
+                        if (pSub)  setHpeelSub(pSub)
+                        if (pName) setReporterName(decodeURIComponent(pName))
+                        if (pShift) {
+                            setShift(pShift)
+                            const today = format(new Date(), "yyyy-MM-dd")
+                            if (pDept && today) fetchExistingRecord(pDept, pShift, today, pSub)
+                        }
+                        setLockedByUrl(true)
+                    }
+                }
             })
             .catch(() => setLoading(false))
     }, [])
@@ -1135,36 +1154,57 @@ export default function PublicMealPage() {
 
             <form onSubmit={handlePreview}>
                 <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
-                    <div className="section-label">1️⃣ Chọn bộ phận</div>
-                    <div className="field-sm">
-                        <label>Bộ phận <span className="req">*</span></label>
-                        <select value={deptId} onChange={e => {
-                            const newId = e.target.value
-                            const newDept = depts.find(d => d.id === newId)
-                            setDeptId(newId); setHpeelSub(""); setShift("")
-                            if (newDept?.code === "BOILER") {
-                                setMultiData({
-                                    "1": { ...blank("1"), officialPresent: "1" },
-                                    "2": { ...blank("2"), officialPresent: "1" },
-                                    "3": { ...blank("3"), officialPresent: "1" }
-                                })
-                            } else {
-                                setMultiData({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
-                                setSingleData(blank())
-                            }
-                        }} required>
-                            <option value="">— Chọn bộ phận —</option>
-                            {depts.map((d, idx) => <option key={d.id} value={d.id}>{idx + 1}. {d.name_en}</option>)}
-                        </select>
-                    </div>
-                    {isHpeel && (
+                    <div className="section-label">1{String.fromCharCode(65039)}{String.fromCharCode(8419)} {lockedByUrl ? "Danh t\u00ednh" : "Ch\u1ecdn b\u1ed9 ph\u1eadn"}</div>
+                    {lockedByUrl ? (
+                        /* Locked identity banner — shown when dept+sub pre-set via URL params */
+                        <div style={{ background: "#f0fdf4", border: "2px solid #86efac", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                            <span style={{ fontSize: 28 }}>&#x1F512;</span>
+                            <div>
+                                <div style={{ fontWeight: 800, color: "#15803d", fontSize: 15 }}>{getEffectiveDeptName()}</div>
+                                {hpeelSub && HPEEL_SUBGROUPS.find(s => s.key === hpeelSub) && (
+                                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>T\u1ed5 tr\u01b0\u1edfng: {HPEEL_SUBGROUPS.find(s => s.key === hpeelSub)!.label}</div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="field-sm">
+                            <label>B\u1ed9 ph\u1eadn <span className="req">*</span></label>
+                            <select value={deptId} onChange={e => {
+                                const newId = e.target.value
+                                const newDept = depts.find(d => d.id === newId)
+                                setDeptId(newId); setHpeelSub(""); setShift("")
+                                if (newDept?.code === "BOILER") {
+                                    setMultiData({
+                                        "1": { ...blank("1"), officialPresent: "1" },
+                                        "2": { ...blank("2"), officialPresent: "1" },
+                                        "3": { ...blank("3"), officialPresent: "1" }
+                                    })
+                                } else {
+                                    setMultiData({ "1": blank("1"), "2": blank("2"), "3": blank("3") })
+                                    setSingleData(blank())
+                                }
+                            }} required>
+                                <option value="">&#x2014; Ch\u1ecdn b\u1ed9 ph\u1eadn &#x2014;</option>
+                                {depts.map((d, idx) => <option key={d.id} value={d.id}>{idx + 1}. {d.name_en}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {isHpeel && !(lockedByUrl && !!hpeelSub) && (
                         <div className="field-sm" style={{ marginTop: 12 }}>
-                            <label>Tổ trưởng <span className="req">*</span></label>
+                            <label>T\u1ed5 tr\u01b0\u1edfng <span className="req">*</span></label>
                             <HpeelPicker value={hpeelSub} onChange={v => {
+                                setExistingRecord(null);
+                                setIsUpdate(false);
+                                setSingleData(blank(v === "HPEEL_LOAN" ? "HC" : shift));
                                 setHpeelSub(v);
                                 if (v === "HPEEL_LOAN") {
                                     setShift("HC");
                                     updateSingle("otTime", OT_DEFAULT_TIME["HC"] ?? "");
+                                    if (deptId && workDate) {
+                                        fetchExistingRecord(deptId, "HC", workDate, v);
+                                    }
+                                } else if (deptId && shift && workDate) {
+                                    fetchExistingRecord(deptId, shift, workDate, v);
                                 }
                             }} />
                         </div>
