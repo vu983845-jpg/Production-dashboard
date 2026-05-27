@@ -475,6 +475,11 @@ export default function InputPage() {
 
     const [otherElecData, setOtherElecData] = useState<OtherElecRecord[]>([]);
 
+    const [focusedOtherElecRowDate, setFocusedOtherElecRowDate] = useState<string | null>(null);
+    const [focusedEnergyRowDate, setFocusedEnergyRowDate] = useState<string | null>(null);
+    const [focusedCompressorRowDate, setFocusedCompressorRowDate] = useState<string | null>(null);
+    const [focusedShellingEnergyRowDate, setFocusedShellingEnergyRowDate] = useState<string | null>(null);
+
     const [woodTotalInput, setWoodTotalInput] = useState<string>(""); // State for wood distribution input
 
 
@@ -3204,7 +3209,9 @@ export default function InputPage() {
 
                                             min="0"
 
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            inputMode="decimal"
+
+                                            className="flex h-11 md:h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 md:py-1 text-base md:text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
                                             value={fgwhData.actual_isp_ton}
 
@@ -3226,7 +3233,9 @@ export default function InputPage() {
 
                                             min="0"
 
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            inputMode="decimal"
+
+                                            className="flex h-11 md:h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 md:py-1 text-base md:text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
                                             value={fgwhData.actual_non_isp_ton}
 
@@ -3424,8 +3433,10 @@ export default function InputPage() {
 
                                                                                                                 type="number" step="0.001" min="0"
 
+                                                                                                                inputMode="decimal"
 
-                                                                                                                className={`w-full text-right p-1 rounded border-2 ${lColors[line]} bg-white text-sm focus:outline-none`}
+
+                                                                                                                className={`w-full text-right p-2 md:p-1 rounded border-2 ${lColors[line]} bg-white text-base md:text-sm focus:outline-none`}
 
 
                                                                                                                 value={shellingLineData[line]?.[shift]?.actual_ton || ''}
@@ -3551,7 +3562,7 @@ export default function InputPage() {
                                                                                                         <select
 
 
-                                                                                                            className="w-full text-center p-1 rounded border-2 border-purple-200 bg-white text-sm focus:outline-none focus:border-purple-500"
+                                                                                                            className="w-full text-center p-2 md:p-1 rounded border-2 border-purple-200 bg-white text-base md:text-sm focus:outline-none focus:border-purple-500"
 
 
                                                                                                             value={shellingLineData[line]?.[shift]?.size || ''}
@@ -3650,7 +3661,7 @@ export default function InputPage() {
                                                                                                                 type="number" step="0.1" min="0" max="24" readOnly
 
 
-                                                                                                                className="w-full text-right p-1 rounded border-2 border-green-300 bg-green-50 text-sm focus:outline-none text-green-800 font-semibold cursor-not-allowed"
+                                                                                                                className="w-full text-right p-2 md:p-1 rounded border-2 border-green-300 bg-green-50 text-base md:text-sm focus:outline-none text-green-800 font-semibold cursor-not-allowed"
 
 
                                                                                                                 value={runHrs > 0 ? runHrs.toFixed(1) : ''}
@@ -3726,7 +3737,7 @@ export default function InputPage() {
                                                                                                             type="number" step="1" min="0" readOnly
 
 
-                                                                                                            className="w-full text-right p-1 rounded border-2 border-red-200 bg-red-50 text-sm focus:outline-none text-red-700 font-semibold cursor-not-allowed"
+                                                                                                            className="w-full text-right p-2 md:p-1 rounded border-2 border-red-200 bg-red-50 text-base md:text-sm focus:outline-none text-red-700 font-semibold cursor-not-allowed"
 
 
                                                                                                             value={shellingLineData[line]?.[shift]?.downtime_min || ''}
@@ -3833,8 +3844,10 @@ export default function InputPage() {
 
                                                                                                                 type="number" step="1" min="0"
 
+                                                                                                                inputMode="numeric"
 
-                                                                                                                className={`w-full text-right p-1 rounded border-2 text-sm focus:outline-none ${isOverridden ? 'border-orange-400 bg-orange-50 text-orange-800 font-semibold' : 'border-amber-200 bg-white'}`}
+
+                                                                                                                className={`w-full text-right p-2 md:p-1 rounded border-2 text-base md:text-sm focus:outline-none ${isOverridden ? 'border-orange-400 bg-orange-50 text-orange-800 font-semibold' : 'border-amber-200 bg-white'}`}
 
 
                                                                                                                 value={currentMp || ''}
@@ -3914,8 +3927,10 @@ export default function InputPage() {
 
                                                                                                             type="number" step="0.1" min="0" max="100"
 
+                                                                                                            inputMode="decimal"
 
-                                                                                                            className="w-full text-right p-1 rounded border-2 border-red-200 bg-white text-sm focus:outline-none focus:border-red-500"
+
+                                                                                                            className="w-full text-right p-2 md:p-1 rounded border-2 border-red-200 bg-white text-base md:text-sm focus:outline-none focus:border-red-500"
 
 
                                                                                                             value={shellingLineData[line]?.[shift]?.broken_pct || ''}
@@ -4395,7 +4410,8 @@ export default function InputPage() {
                                                                                             <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
                                                                                             <input
                                                                                                 type="number" step="0.001" min="0"
-                                                                                                className="w-full text-right p-1 rounded border-2 border-blue-200 bg-white text-sm focus:outline-none focus:border-blue-500"
+                                                                                                inputMode="decimal"
+                                                                                                className="w-full text-right p-2 md:p-1 rounded border-2 border-blue-200 bg-white text-base md:text-sm focus:outline-none focus:border-blue-500"
                                                                                                 value={peelingLineData[line]?.[shift]?.actual_ton || ''}
                                                                                                 onChange={e => setPeelingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], actual_ton: Number(e.target.value) || 0 } } }))}
                                                                                             />
@@ -4421,7 +4437,8 @@ export default function InputPage() {
                                                                                             <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
                                                                                             <input
                                                                                                 type="number" step="0.001" min="0"
-                                                                                                className="w-full text-right p-1 rounded border-2 border-purple-200 bg-white text-sm focus:outline-none focus:border-purple-500"
+                                                                                                inputMode="decimal"
+                                                                                                className="w-full text-right p-2 md:p-1 rounded border-2 border-purple-200 bg-white text-base md:text-sm focus:outline-none focus:border-purple-500"
                                                                                                 value={peelingLineData[line]?.[shift]?.pass2_ton || ''}
                                                                                                 onChange={e => setPeelingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], pass2_ton: Number(e.target.value) || 0 } } }))}
                                                                                             />
@@ -4448,7 +4465,8 @@ export default function InputPage() {
                                                                                             <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
                                                                                             <input
                                                                                                 type="number" step="0.1" min="0" max="100"
-                                                                                                className="w-full text-right p-1 rounded border-2 border-red-200 bg-white text-sm focus:outline-none focus:border-red-500"
+                                                                                                inputMode="decimal"
+                                                                                                className="w-full text-right p-2 md:p-1 rounded border-2 border-red-200 bg-white text-base md:text-sm focus:outline-none focus:border-red-500"
                                                                                                 value={peelingLineData[line]?.[shift]?.broken_pct || ''}
                                                                                                 onChange={e => setPeelingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], broken_pct: Number(e.target.value) || 0 } } }))}
                                                                                             />
@@ -4475,7 +4493,8 @@ export default function InputPage() {
                                                                                             <label className="text-[10px] font-bold mb-1 text-gray-500">{line}</label>
                                                                                             <input
                                                                                                 type="number" step="0.1" min="0" max="100"
-                                                                                                className="w-full text-right p-1 rounded border-2 border-orange-200 bg-white text-sm focus:outline-none focus:border-orange-500"
+                                                                                                inputMode="decimal"
+                                                                                                className="w-full text-right p-2 md:p-1 rounded border-2 border-orange-200 bg-white text-base md:text-sm focus:outline-none focus:border-orange-500"
                                                                                                 value={peelingLineData[line]?.[shift]?.unpeel_pct || ''}
                                                                                                 onChange={e => setPeelingLineData(prev => ({ ...prev, [line]: { ...prev[line], [shift]: { ...prev[line][shift], unpeel_pct: Number(e.target.value) || 0 } } }))}
                                                                                             />
@@ -4547,24 +4566,24 @@ export default function InputPage() {
                                                                 <div className="grid grid-cols-2 gap-2">
                                                                     <div className="space-y-1">
                                                                         <label className="text-xs text-muted-foreground uppercase tracking-wide">Số người (MP)</label>
-                                                                        <input type="number" min="0" step="1" value={d.manpower || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], manpower: Number(e.target.value) || 0 } }))} className={`w-full text-right p-2 rounded border font-semibold text-sm outline-none focus:ring-2 bg-white ${isWest ? 'focus:ring-blue-400 border-blue-200' : 'focus:ring-emerald-400 border-emerald-200'}`} />
+                                                                        <input type="number" min="0" step="1" inputMode="numeric" value={d.manpower || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], manpower: Number(e.target.value) || 0 } }))} className={`w-full text-right p-2 rounded border font-semibold text-base md:text-sm outline-none focus:ring-2 bg-white ${isWest ? 'focus:ring-blue-400 border-blue-200' : 'focus:ring-emerald-400 border-emerald-200'}`} />
                                                                     </div>
                                                                     <div className="space-y-1">
                                                                         <label className="text-xs text-muted-foreground uppercase tracking-wide">Tăng ca (OT)</label>
-                                                                        <input type="number" min="0" step="0.5" value={d.ot_hours || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], ot_hours: Number(e.target.value) || 0 } }))} className={`w-full text-right p-2 rounded border font-semibold text-sm outline-none focus:ring-2 bg-white ${isWest ? 'focus:ring-blue-400 border-blue-200' : 'focus:ring-emerald-400 border-emerald-200'}`} />
+                                                                        <input type="number" min="0" step="0.5" inputMode="decimal" value={d.ot_hours || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], ot_hours: Number(e.target.value) || 0 } }))} className={`w-full text-right p-2 rounded border font-semibold text-base md:text-sm outline-none focus:ring-2 bg-white ${isWest ? 'focus:ring-blue-400 border-blue-200' : 'focus:ring-emerald-400 border-emerald-200'}`} />
                                                                     </div>
                                                                     <div className="space-y-1">
                                                                         <label className="text-xs text-muted-foreground uppercase tracking-wide">ISP (Tấn)</label>
-                                                                        <input type="number" min="0" step="0.001" value={d.isp_ton || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], isp_ton: Number(e.target.value) || 0 } }))} className={`w-full text-right p-2 rounded border font-semibold text-sm outline-none focus:ring-2 bg-white ${isWest ? 'focus:ring-blue-400 border-blue-200' : 'focus:ring-emerald-400 border-emerald-200'}`} />
+                                                                        <input type="number" min="0" step="0.001" inputMode="decimal" value={d.isp_ton || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], isp_ton: Number(e.target.value) || 0 } }))} className={`w-full text-right p-2 rounded border font-semibold text-base md:text-sm outline-none focus:ring-2 bg-white ${isWest ? 'focus:ring-blue-400 border-blue-200' : 'focus:ring-emerald-400 border-emerald-200'}`} />
                                                                     </div>
                                                                     <div className="space-y-1">
                                                                         <label className="text-xs text-muted-foreground uppercase tracking-wide">Non-ISP (Tấn)</label>
-                                                                        <input type="number" min="0" step="0.001" value={d.non_isp_ton || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], non_isp_ton: Number(e.target.value) || 0 } }))} className={`w-full text-right p-2 rounded border font-semibold text-sm outline-none focus:ring-2 bg-white ${isWest ? 'focus:ring-blue-400 border-blue-200' : 'focus:ring-emerald-400 border-emerald-200'}`} />
+                                                                        <input type="number" min="0" step="0.001" inputMode="decimal" value={d.non_isp_ton || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], non_isp_ton: Number(e.target.value) || 0 } }))} className={`w-full text-right p-2 rounded border font-semibold text-base md:text-sm outline-none focus:ring-2 bg-white ${isWest ? 'focus:ring-blue-400 border-blue-200' : 'focus:ring-emerald-400 border-emerald-200'}`} />
                                                                     </div>
                                                                 </div>
                                                                 <div className="space-y-1">
                                                                     <label className="text-xs text-muted-foreground uppercase tracking-wide">Ghi chú</label>
-                                                                    <input type="text" value={d.note || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], note: e.target.value } }))} placeholder="Tuỳ chọn..." className="w-full p-2 rounded border border-gray-200 outline-none focus:ring-1 bg-white text-sm" />
+                                                                    <input type="text" value={d.note || ''} onChange={e => setCsShiftData(prev => ({ ...prev, [shift]: { ...prev[shift], note: e.target.value } }))} placeholder="Tuỳ chọn..." className="w-full p-2 rounded border border-gray-200 outline-none focus:ring-1 bg-white text-base md:text-sm" />
                                                                 </div>
                                                                 <div className={`rounded-md p-3 ${isWest ? 'bg-blue-100/60' : 'bg-emerald-100/60'} grid grid-cols-2 gap-2 text-xs`}>
                                                                     <div><p className="text-muted-foreground">Tổng</p><p className={`font-black text-base ${isWest ? 'text-blue-700' : 'text-emerald-700'}`}>{totalTon.toFixed(3)} T</p></div>
@@ -5670,15 +5689,15 @@ export default function InputPage() {
 
 
 
-                                <div className="overflow-x-auto">
+                                <div className="overflow-auto w-full relative max-h-[60vh] md:max-h-[650px] custom-scrollbar border rounded-lg">
 
-                                    <Table>
+                                    <table className="w-full border-collapse text-sm">
 
-                                        <TableHeader className="bg-muted">
+                                        <TableHeader className="sticky top-0 z-20 shadow-sm bg-slate-100">
 
-                                            <TableRow>
+                                            <TableRow className="border-b bg-slate-100">
 
-                                                <TableHead rowSpan={2} className="border-r w-[80px] text-center">Ngày</TableHead>
+                                                <TableHead rowSpan={2} className="border-r w-[80px] text-center sticky left-0 top-0 z-30 bg-slate-100">Ngày</TableHead>
 
                                                 <TableHead colSpan={5} className="border-r text-center text-amber-600 bg-amber-50/50">⚡ Điện năng (kWh)</TableHead>
 
@@ -5688,39 +5707,39 @@ export default function InputPage() {
 
                                             </TableRow>
 
-                                            <TableRow>
+                                            <TableRow className="border-b bg-slate-100">
 
                                                 {/* Dien */}
 
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số Cao</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px] text-xs">C.số Cao</TableHead>
 
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số B.Thường</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px] text-xs">C.số B.Thường</TableHead>
 
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px]">C.số Thấp</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[90px] text-xs">C.số Thấp</TableHead>
 
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[100px]">Tổng tiêu thụ</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[100px] text-xs">Tổng tiêu thụ</TableHead>
 
-                                                <TableHead className="text-center bg-amber-50/50 border-r w-[80px]">Target</TableHead>
+                                                <TableHead className="text-center bg-amber-50/50 border-r w-[80px] text-xs">Target</TableHead>
 
                                                 {/* Nuoc */}
 
-                                                <TableHead className="text-center bg-blue-50/50 border-r w-[120px]">Chỉ số đầu ngày</TableHead>
+                                                <TableHead className="text-center bg-blue-50/50 border-r w-[120px] text-xs">Chỉ số đầu ngày</TableHead>
 
-                                                <TableHead className="text-center bg-blue-50/50 border-r w-[100px]">Tiêu thụ</TableHead>
+                                                <TableHead className="text-center bg-blue-50/50 border-r w-[100px] text-xs">Tiêu thụ</TableHead>
 
-                                                <TableHead className="text-center bg-blue-50/50 border-r w-[80px]">Target</TableHead>
+                                                <TableHead className="text-center bg-blue-50/50 border-r w-[80px] text-xs">Target</TableHead>
 
                                                 {/* Cui */}
 
-                                                <TableHead className="text-center bg-orange-50/50 border-r w-[100px]">Thực tế (kg)</TableHead>
+                                                <TableHead className="text-center bg-orange-50/50 border-r w-[100px] text-xs">Thực tế (kg)</TableHead>
 
-                                                <TableHead className="text-center bg-orange-50/50 w-[80px]">Target</TableHead>
+                                                <TableHead className="text-center bg-orange-50/50 w-[80px] text-xs">Target</TableHead>
 
                                             </TableRow>
 
                                         </TableHeader>
 
-                                        <TableBody>
+                                        <TableBody className="bg-white">
 
                                             {monthlyEnergyData.map((row, index) => {
 
@@ -5784,101 +5803,150 @@ export default function InputPage() {
 
                                                 return (
 
-                                                    <TableRow key={row.work_date}>
+                                                    <TableRow 
+                                                        key={row.work_date} 
+                                                        className={cn(
+                                                            "hover:bg-emerald-50/20 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date && "bg-emerald-50/30"
+                                                        )}
+                                                    >
 
-                                                        <TableCell className="border-r font-medium text-center">{format(parseISO(row.work_date), "dd/MM")}</TableCell>
+                                                        <TableCell className={cn(
+                                                            "font-medium border-r py-3 px-2 text-center text-xs sticky left-0 z-10 backdrop-blur-md transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date
+                                                                ? "bg-emerald-100 text-emerald-900 font-bold"
+                                                                : "bg-slate-50/90 text-slate-700"
+                                                        )}>
+                                                            {format(parseISO(row.work_date), "dd/MM")}
+                                                        </TableCell>
 
 
 
                                                         {/* Dien */}
 
-                                                        <TableCell className="border-r p-1 bg-amber-50/10">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/50" : "bg-amber-50/10"
+                                                        )}>
 
-                                                            <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm font-semibold"
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-amber-800 font-bold uppercase tracking-wider select-none mb-0.5">Cao điểm</span>
+                                                                <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-base md:text-sm font-semibold"
 
-                                                                value={row.meter_peak !== undefined ? row.meter_peak : ''}
+                                                                    value={row.meter_peak !== undefined ? row.meter_peak : ''}
 
-                                                                onChange={(e) => {
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
 
-                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                    onChange={(e) => {
 
-                                                                    const newData = [...monthlyEnergyData];
+                                                                        const val = e.target.value === '' ? undefined : Number(e.target.value);
 
-                                                                    newData[index].meter_peak = val;
+                                                                        const newData = [...monthlyEnergyData];
 
-                                                                    setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
+                                                                        newData[index].meter_peak = val;
 
-                                                                }} />
+                                                                        setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
 
-
-
-                                                        </TableCell>
-
-                                                        <TableCell className="border-r p-1 bg-amber-50/10">
-
-                                                            <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm font-semibold"
-
-                                                                value={row.meter_normal !== undefined ? row.meter_normal : ''}
-
-                                                                onChange={(e) => {
-
-                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
-
-                                                                    const newData = [...monthlyEnergyData];
-
-                                                                    newData[index].meter_normal = val;
-
-                                                                    setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
-
-                                                                }} />
-
-
+                                                                    }} />
+                                                            </div>
 
                                                         </TableCell>
 
-                                                        <TableCell className="border-r p-1 bg-amber-50/10">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/50" : "bg-amber-50/10"
+                                                        )}>
 
-                                                            <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm font-semibold"
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-amber-800 font-bold uppercase tracking-wider select-none mb-0.5">B.Thường</span>
+                                                                <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-base md:text-sm font-semibold"
 
-                                                                value={row.meter_offpeak !== undefined ? row.meter_offpeak : ''}
+                                                                    value={row.meter_normal !== undefined ? row.meter_normal : ''}
 
-                                                                onChange={(e) => {
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
 
-                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                    onChange={(e) => {
 
-                                                                    const newData = [...monthlyEnergyData];
+                                                                        const val = e.target.value === '' ? undefined : Number(e.target.value);
 
-                                                                    newData[index].meter_offpeak = val;
+                                                                        const newData = [...monthlyEnergyData];
 
-                                                                    setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
+                                                                        newData[index].meter_normal = val;
 
-                                                                }} />
+                                                                        setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
 
-
+                                                                    }} />
+                                                            </div>
 
                                                         </TableCell>
 
-                                                        <TableCell className="border-r p-1 text-right font-semibold text-amber-800 bg-amber-50/40 text-sm">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/50" : "bg-amber-50/10"
+                                                        )}>
 
-                                                            {row.electricity_kwh != null ? row.electricity_kwh.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '-'}
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-amber-800 font-bold uppercase tracking-wider select-none mb-0.5">Thấp điểm</span>
+                                                                <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-base md:text-sm font-semibold"
+
+                                                                    value={row.meter_offpeak !== undefined ? row.meter_offpeak : ''}
+
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
+
+                                                                    onChange={(e) => {
+
+                                                                        const val = e.target.value === '' ? undefined : Number(e.target.value);
+
+                                                                        const newData = [...monthlyEnergyData];
+
+                                                                        newData[index].meter_offpeak = val;
+
+                                                                        setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
+
+                                                                    }} />
+                                                            </div>
 
                                                         </TableCell>
 
-                                                        <TableCell className="border-r p-1 bg-amber-50/30">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 text-right font-semibold text-amber-800 text-base md:text-sm transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/40" : "bg-amber-50/40"
+                                                        )}>
 
-                                                            <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-sm"
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="block md:hidden text-[9px] text-amber-800 font-bold uppercase tracking-wider select-none mb-0.5">Tổng KWh</span>
+                                                                <span>{row.electricity_kwh != null ? row.electricity_kwh.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '-'}</span>
+                                                            </div>
 
-                                                                value={row.electricity_target_kwh || ''}
+                                                        </TableCell>
 
-                                                                onChange={(e) => {
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/30" : "bg-amber-50/30"
+                                                        )}>
 
-                                                                    const newData = [...monthlyEnergyData];
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-amber-800 font-bold uppercase tracking-wider select-none mb-0.5">Target Điện</span>
+                                                                <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent text-base md:text-sm"
 
-                                                                    newData[index].electricity_target_kwh = Number(e.target.value);
+                                                                    value={row.electricity_target_kwh || ''}
 
-                                                                    setMonthlyEnergyData(newData);
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
 
-                                                                }} />
+                                                                    onChange={(e) => {
+
+                                                                        const newData = [...monthlyEnergyData];
+
+                                                                        newData[index].electricity_target_kwh = Number(e.target.value);
+
+                                                                        setMonthlyEnergyData(newData);
+
+                                                                    }} />
+                                                            </div>
 
                                                         </TableCell>
 
@@ -5886,63 +5954,88 @@ export default function InputPage() {
 
                                                         {/* Nuoc */}
 
-                                                        <TableCell className="border-r p-1 relative">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/50" : "bg-white"
+                                                        )}>
 
-                                                            <input type="number" step="1" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-blue-400 bg-transparent text-sm"
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-blue-800 font-bold uppercase tracking-wider select-none mb-0.5">C.số nước</span>
+                                                                <input type="number" step="1" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-blue-400 bg-transparent text-base md:text-sm"
 
-                                                                value={row.water_meter_reading !== undefined ? row.water_meter_reading : ''}
+                                                                    value={row.water_meter_reading !== undefined ? row.water_meter_reading : ''}
 
-                                                                onChange={(e) => {
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
 
-                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                    onChange={(e) => {
 
-                                                                    const newData = [...monthlyEnergyData];
+                                                                        const val = e.target.value === '' ? undefined : Number(e.target.value);
 
-                                                                    newData[index].water_meter_reading = val;
+                                                                        const newData = [...monthlyEnergyData];
 
-                                                                    setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
+                                                                        newData[index].water_meter_reading = val;
 
-                                                                }} />
+                                                                        setMonthlyEnergyData(recalcEnergyData(newData, prevMonthLastMeter));
 
-                                                            {/* Removed misleading tooltip because water is calculated from the next day */}
-
-                                                        </TableCell>
-
-                                                        <TableCell className="border-r p-1">
-
-                                                            <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-sm", isWaterCalculated ? "bg-blue-50" : "bg-transparent focus:ring-1 focus:ring-blue-400")}
-
-                                                                readOnly={isWaterCalculated}
-
-                                                                value={row.water_m3 || ''}
-
-                                                                onChange={(e) => {
-
-                                                                    const newData = [...monthlyEnergyData];
-
-                                                                    newData[index].water_m3 = Number(e.target.value);
-
-                                                                    setMonthlyEnergyData(newData);
-
-                                                                }} />
+                                                                    }} />
+                                                            </div>
 
                                                         </TableCell>
 
-                                                        <TableCell className="border-r p-1 bg-blue-50/30">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/50" : "bg-white"
+                                                        )}>
 
-                                                            <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-blue-400 bg-transparent text-sm"
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-blue-800 font-bold uppercase tracking-wider select-none mb-0.5">Tiêu thụ</span>
+                                                                <input type="number" step="0.01" className={cn("w-full text-right p-1 rounded font-semibold outline-none text-base md:text-sm", isWaterCalculated ? "bg-blue-50" : "bg-transparent focus:ring-1 focus:ring-blue-400")}
 
-                                                                value={row.water_target_m3 || ''}
+                                                                    readOnly={isWaterCalculated}
 
-                                                                onChange={(e) => {
+                                                                    value={row.water_m3 || ''}
 
-                                                                    const newData = [...monthlyEnergyData];
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
 
-                                                                    newData[index].water_target_m3 = Number(e.target.value);
+                                                                    onChange={(e) => {
 
-                                                                    setMonthlyEnergyData(newData);
+                                                                        const newData = [...monthlyEnergyData];
 
-                                                                }} />
+                                                                        newData[index].water_m3 = Number(e.target.value);
+
+                                                                        setMonthlyEnergyData(newData);
+
+                                                                    }} />
+                                                            </div>
+
+                                                        </TableCell>
+
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/30" : "bg-blue-50/30"
+                                                        )}>
+
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-blue-800 font-bold uppercase tracking-wider select-none mb-0.5">Target nước</span>
+                                                                <input type="number" step="0.01" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-blue-400 bg-transparent text-base md:text-sm"
+
+                                                                    value={row.water_target_m3 || ''}
+
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
+
+                                                                    onChange={(e) => {
+
+                                                                        const newData = [...monthlyEnergyData];
+
+                                                                        newData[index].water_target_m3 = Number(e.target.value);
+
+                                                                        setMonthlyEnergyData(newData);
+
+                                                                    }} />
+                                                            </div>
 
                                                         </TableCell>
 
@@ -5950,39 +6043,57 @@ export default function InputPage() {
 
                                                         {/* Cui */}
 
-                                                        <TableCell className="border-r p-1">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/50" : "bg-white"
+                                                        )}>
 
-                                                            <input type="number" step="1" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-orange-400 bg-transparent text-sm font-semibold"
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-orange-800 font-bold uppercase tracking-wider select-none mb-0.5">Củi kg</span>
+                                                                <input type="number" step="1" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-orange-400 bg-transparent text-base md:text-sm font-semibold"
 
-                                                                value={row.wood_kg || ''}
+                                                                    value={row.wood_kg || ''}
 
-                                                                onChange={(e) => {
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
 
-                                                                    const newData = [...monthlyEnergyData];
+                                                                    onChange={(e) => {
 
-                                                                    newData[index].wood_kg = Number(e.target.value);
+                                                                        const newData = [...monthlyEnergyData];
 
-                                                                    setMonthlyEnergyData(newData);
+                                                                        newData[index].wood_kg = Number(e.target.value);
 
-                                                                }} />
+                                                                        setMonthlyEnergyData(newData);
+
+                                                                    }} />
+                                                            </div>
 
                                                         </TableCell>
 
-                                                        <TableCell className="p-1 bg-orange-50/30">
+                                                        <TableCell className={cn(
+                                                            "p-1 transition-colors duration-150",
+                                                            focusedEnergyRowDate === row.work_date ? "bg-emerald-50/30" : "bg-orange-50/30"
+                                                        )}>
 
-                                                            <input type="number" step="1" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-orange-400 bg-transparent text-sm"
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-orange-800 font-bold uppercase tracking-wider select-none mb-0.5">Target củi</span>
+                                                                <input type="number" step="1" className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-orange-400 bg-transparent text-base md:text-sm"
 
-                                                                value={row.wood_target_kg || ''}
+                                                                    value={row.wood_target_kg || ''}
 
-                                                                onChange={(e) => {
+                                                                    onFocus={() => setFocusedEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedEnergyRowDate(null)}
 
-                                                                    const newData = [...monthlyEnergyData];
+                                                                    onChange={(e) => {
 
-                                                                    newData[index].wood_target_kg = Number(e.target.value);
+                                                                        const newData = [...monthlyEnergyData];
 
-                                                                    setMonthlyEnergyData(newData);
+                                                                        newData[index].wood_target_kg = Number(e.target.value);
 
-                                                                }} />
+                                                                        setMonthlyEnergyData(newData);
+
+                                                                    }} />
+                                                            </div>
 
                                                         </TableCell>
 
@@ -5994,7 +6105,7 @@ export default function InputPage() {
 
                                         </TableBody>
 
-                                    </Table>
+                                    </table>
 
                                 </div>
 
@@ -6044,15 +6155,15 @@ export default function InputPage() {
 
                                 </div>
 
-                                <div className="overflow-x-auto">
+                                <div className="overflow-auto w-full relative max-h-[60vh] md:max-h-[650px] custom-scrollbar border rounded-lg">
 
-                                    <Table>
+                                    <table className="w-full border-collapse text-sm">
 
-                                        <TableHeader className="bg-muted">
+                                        <TableHeader className="sticky top-0 z-20 shadow-sm bg-slate-100">
 
-                                            <TableRow>
+                                            <TableRow className="border-b bg-slate-100">
 
-                                                <TableHead rowSpan={2} className="border-r w-[60px] text-center">Ngày</TableHead>
+                                                <TableHead rowSpan={2} className="border-r w-[60px] text-center sticky left-0 top-0 z-30 bg-slate-100">Ngày</TableHead>
 
                                                 <TableHead colSpan={3} className="border-r text-center text-purple-700 bg-purple-50/60">Đồng hồ (Chỉ số MWh)</TableHead>
 
@@ -6062,27 +6173,27 @@ export default function InputPage() {
 
                                             </TableRow>
 
-                                            <TableRow>
+                                            <TableRow className="border-b bg-slate-100">
 
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 1</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">ĐH 1</TableHead>
 
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 2</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">ĐH 2</TableHead>
 
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px]">ĐH 3</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">ĐH 3</TableHead>
 
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 1</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">ĐH 1</TableHead>
 
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 2</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">ĐH 2</TableHead>
 
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px]">ĐH 3</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">ĐH 3</TableHead>
 
-                                                <TableHead className="text-center bg-rose-50/40 w-[90px] font-bold">Tổng</TableHead>
+                                                <TableHead className="text-center bg-rose-50/40 w-[90px] font-bold text-xs">Tổng</TableHead>
 
                                             </TableRow>
 
                                         </TableHeader>
 
-                                        <TableBody>
+                                        <TableBody className="bg-white">
 
                                             {compressorData.map((row, index) => {
 
@@ -6118,35 +6229,89 @@ export default function InputPage() {
 
                                                 return (
 
-                                                    <TableRow key={row.work_date} className="hover:bg-purple-50/10">
+                                                    <TableRow 
+                                                        key={row.work_date} 
+                                                        className={cn(
+                                                            "hover:bg-purple-50/20 transition-colors duration-150",
+                                                            focusedCompressorRowDate === row.work_date && "bg-purple-50/30"
+                                                        )}
+                                                    >
 
-                                                        <TableCell className="border-r font-medium text-center text-xs">{format(parseISO(row.work_date), "dd/MM")}</TableCell>
+                                                        <TableCell className={cn(
+                                                            "font-medium border-r py-3 px-2 text-center text-xs sticky left-0 z-10 backdrop-blur-md transition-colors duration-150",
+                                                            focusedCompressorRowDate === row.work_date
+                                                                ? "bg-purple-100 text-purple-900 font-bold"
+                                                                : "bg-slate-50/90 text-slate-700"
+                                                        )}>
+                                                            {format(parseISO(row.work_date), "dd/MM")}
+                                                        </TableCell>
 
-                                                        {(['meter1', 'meter2', 'meter3'] as const).map(m => (
+                                                        {(['meter1', 'meter2', 'meter3'] as const).map((m, idx) => (
 
-                                                            <TableCell key={m} className="border-r p-1">
+                                                            <TableCell key={m} className={cn(
+                                                                "border-r p-1 transition-colors duration-150",
+                                                                focusedCompressorRowDate === row.work_date ? "bg-purple-50/50" : "bg-white"
+                                                            )}>
 
-                                                                <input type="number" step="0.01"
+                                                                <div className="flex flex-col gap-0.5 items-center">
+                                                                    <span className="block md:hidden text-[9px] text-purple-800 font-bold uppercase tracking-wider select-none mb-0.5">{`ĐH ${idx + 1}`}</span>
+                                                                    <input type="number" step="0.01"
 
-                                                                    className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-purple-400 bg-transparent text-sm font-semibold"
+                                                                        className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-purple-400 bg-transparent text-base md:text-sm font-semibold"
 
-                                                                    value={row[m] !== undefined ? row[m] : ''}
+                                                                        value={row[m] !== undefined ? row[m] : ''}
 
-                                                                    onChange={e => handleMeterChange(m, e.target.value === '' ? undefined : Number(e.target.value))}
+                                                                        onFocus={() => setFocusedCompressorRowDate(row.work_date)}
+                                                                        onBlur={() => setFocusedCompressorRowDate(null)}
 
-                                                                />
+                                                                        onChange={e => handleMeterChange(m, e.target.value === '' ? undefined : Number(e.target.value))}
+
+                                                                    />
+                                                                </div>
 
                                                             </TableCell>
 
                                                         ))}
 
-                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh1 > 0 ? row.kwh1.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</TableCell>
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 text-right font-bold text-indigo-700 transition-colors duration-150 text-base md:text-sm",
+                                                            focusedCompressorRowDate === row.work_date ? "bg-indigo-50/30" : "bg-indigo-50/20"
+                                                        )}>
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="block md:hidden text-[9px] text-indigo-800 font-bold uppercase tracking-wider select-none mb-0.5">TT ĐH 1</span>
+                                                                <span>{row.kwh1 > 0 ? row.kwh1.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</span>
+                                                            </div>
+                                                        </TableCell>
 
-                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh2 > 0 ? row.kwh2.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</TableCell>
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 text-right font-bold text-indigo-700 transition-colors duration-150 text-base md:text-sm",
+                                                            focusedCompressorRowDate === row.work_date ? "bg-indigo-50/30" : "bg-indigo-50/20"
+                                                        )}>
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="block md:hidden text-[9px] text-indigo-800 font-bold uppercase tracking-wider select-none mb-0.5">TT ĐH 2</span>
+                                                                <span>{row.kwh2 > 0 ? row.kwh2.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</span>
+                                                            </div>
+                                                        </TableCell>
 
-                                                        <TableCell className="border-r p-1 text-right font-bold text-indigo-700 bg-indigo-50/20">{row.kwh3 > 0 ? row.kwh3.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</TableCell>
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 text-right font-bold text-indigo-700 transition-colors duration-150 text-base md:text-sm",
+                                                            focusedCompressorRowDate === row.work_date ? "bg-indigo-50/30" : "bg-indigo-50/20"
+                                                        )}>
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="block md:hidden text-[9px] text-indigo-800 font-bold uppercase tracking-wider select-none mb-0.5">TT ĐH 3</span>
+                                                                <span>{row.kwh3 > 0 ? row.kwh3.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</span>
+                                                            </div>
+                                                        </TableCell>
 
-                                                        <TableCell className="p-1 text-right font-black text-rose-700 bg-rose-50/20">{row.total_kwh > 0 ? row.total_kwh.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</TableCell>
+                                                        <TableCell className={cn(
+                                                            "p-1 text-right font-black text-rose-700 transition-colors duration-150 text-base md:text-sm",
+                                                            focusedCompressorRowDate === row.work_date ? "bg-rose-50/30" : "bg-rose-50/20"
+                                                        )}>
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="block md:hidden text-[9px] text-rose-800 font-bold uppercase tracking-wider select-none mb-0.5">Tổng KWh</span>
+                                                                <span>{row.total_kwh > 0 ? row.total_kwh.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</span>
+                                                            </div>
+                                                        </TableCell>
 
                                                     </TableRow>
 
@@ -6156,7 +6321,7 @@ export default function InputPage() {
 
                                         </TableBody>
 
-                                    </Table>
+                                    </table>
 
                                 </div>
 
@@ -6188,29 +6353,29 @@ export default function InputPage() {
 
 
 
-                                <div className="rounded-md border overflow-x-auto min-w-full">
+                                <div className="overflow-auto w-full relative max-h-[60vh] md:max-h-[650px] custom-scrollbar border rounded-lg">
 
-                                    <Table className="min-w-[500px]">
+                                    <table className="w-full border-collapse text-sm min-w-[500px]">
 
-                                        <TableHeader>
+                                        <TableHeader className="sticky top-0 z-20 shadow-sm bg-slate-100">
 
-                                            <TableRow>
+                                            <TableRow className="border-b bg-slate-100">
 
-                                                <TableHead className="border-r w-[80px] text-center bg-gray-50 uppercase text-gray-500 font-semibold text-xs">Ngày</TableHead>
+                                                <TableHead className="border-r w-[80px] text-center bg-gray-50 uppercase text-gray-500 font-semibold text-xs sticky left-0 top-0 z-30 bg-slate-100">Ngày</TableHead>
 
-                                                <TableHead className="border-r text-center w-[120px] bg-amber-50/50 text-amber-700">Công tơ điện</TableHead>
+                                                <TableHead className="border-r text-center w-[120px] bg-amber-50/50 text-amber-700 font-bold text-xs">Công tơ điện</TableHead>
 
-                                                <TableHead className="border-r text-center w-[100px] bg-amber-50/50 text-amber-700 border-r-amber-100">Tiêu thụ (Lùi)</TableHead>
+                                                <TableHead className="border-r text-center w-[100px] bg-amber-50/50 text-amber-700 border-r-amber-100 font-bold text-xs">Tiêu thụ (Lùi)</TableHead>
 
-                                                <TableHead className="border-r text-center w-[120px] bg-gray-50 text-gray-700">Sản lượng <br /><span className="text-[10px] font-normal leading-none">(Ngày trước)</span></TableHead>
+                                                <TableHead className="border-r text-center w-[120px] bg-gray-50 text-gray-700 font-bold text-xs">Sản lượng <br /><span className="text-[10px] font-normal leading-none">(Ngày trước)</span></TableHead>
 
-                                                <TableHead className="text-center w-[100px] bg-gray-50 text-gray-700">kWh / Tấn</TableHead>
+                                                <TableHead className="text-center w-[100px] bg-gray-50 text-gray-700 font-bold text-xs">kWh / Tấn</TableHead>
 
                                             </TableRow>
 
                                         </TableHeader>
 
-                                        <TableBody>
+                                        <TableBody className="bg-white">
 
                                             {shellingMonthlyEnergyData.map((row, index) => {
 
@@ -6238,47 +6403,92 @@ export default function InputPage() {
 
                                                 return (
 
-                                                    <TableRow key={row.work_date}>
+                                                    <TableRow 
+                                                        key={row.work_date} 
+                                                        className={cn(
+                                                            "hover:bg-amber-50/20 transition-colors duration-150",
+                                                            focusedShellingEnergyRowDate === row.work_date && "bg-amber-50/30"
+                                                        )}
+                                                    >
 
-                                                        <TableCell className="border-r font-medium text-center">{format(parseISO(row.work_date), "dd/MM")}</TableCell>
+                                                        <TableCell className={cn(
+                                                            "font-medium border-r py-3 px-2 text-center text-xs sticky left-0 z-10 backdrop-blur-md transition-colors duration-150",
+                                                            focusedShellingEnergyRowDate === row.work_date
+                                                                ? "bg-amber-100 text-amber-900 font-bold"
+                                                                : "bg-slate-50/90 text-slate-700"
+                                                        )}>
+                                                            {format(parseISO(row.work_date), "dd/MM")}
+                                                        </TableCell>
 
-                                                        <TableCell className="border-r p-1 relative bg-transparent">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 relative transition-colors duration-150",
+                                                            focusedShellingEnergyRowDate === row.work_date ? "bg-amber-50/50" : "bg-transparent"
+                                                        )}>
 
-                                                            <input type="number" step="1" disabled={isSunday} title={isSunday ? "Chủ nhật không nhập, tự lấy chỉ số của Thứ 2" : undefined} className={cn("w-full text-right p-2 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent font-semibold shadow-inner", isSunday && "cursor-not-allowed bg-gray-100 text-gray-500")}
+                                                            <div className="flex flex-col gap-0.5 items-center">
+                                                                <span className="block md:hidden text-[9px] text-amber-800 font-bold uppercase tracking-wider select-none mb-0.5">Chỉ số</span>
+                                                                <input type="number" step="1" disabled={isSunday} title={isSunday ? "Chủ nhật không nhập, tự lấy chỉ số của Thứ 2" : undefined} 
+                                                                    className={cn(
+                                                                        "w-full text-right p-1.5 rounded border-gray-200 outline-none focus:ring-1 focus:ring-amber-400 bg-transparent font-semibold shadow-inner text-base md:text-sm", 
+                                                                        isSunday && "cursor-not-allowed bg-gray-100 text-gray-500"
+                                                                    )}
 
-                                                                value={row.electricity_meter_reading !== undefined ? row.electricity_meter_reading : ''}
+                                                                    value={row.electricity_meter_reading !== undefined ? row.electricity_meter_reading : ''}
 
-                                                                onChange={(e) => {
+                                                                    onFocus={() => setFocusedShellingEnergyRowDate(row.work_date)}
+                                                                    onBlur={() => setFocusedShellingEnergyRowDate(null)}
 
-                                                                    if (isSunday) return;
+                                                                    onChange={(e) => {
 
-                                                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                                                        if (isSunday) return;
 
-                                                                    handleMeterChange(val);
+                                                                        const val = e.target.value === '' ? undefined : Number(e.target.value);
 
-                                                                }} />
+                                                                        handleMeterChange(val);
 
-                                                            {isSunday && <div className="text-[10px] text-gray-500 text-center absolute top-0 left-0 right-0 opacity-80">Tự lấy chỉ số Thứ 2</div>}
+                                                                    }} />
+                                                            </div>
 
-                                                            {prevRowElec != null && <div className="text-[10px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-75">Trừ từ trước: {prevRowElec}</div>}
+                                                            {isSunday && <div className="text-[9px] text-gray-500 text-center absolute top-0 left-0 right-0 opacity-85">Tự lấy chỉ số Thứ 2</div>}
+
+                                                            {prevRowElec != null && <div className="text-[9px] text-amber-600 text-center absolute bottom-0 left-0 right-0 opacity-80">Trừ trước: {prevRowElec}</div>}
 
                                                         </TableCell>
 
-                                                        <TableCell className="border-r border-r-amber-100 p-1 text-right bg-amber-50 font-bold text-amber-800 align-middle">
+                                                        <TableCell className={cn(
+                                                            "border-r border-r-amber-100 p-1 text-right font-bold text-amber-800 align-middle text-base md:text-sm transition-colors duration-150",
+                                                            focusedShellingEnergyRowDate === row.work_date ? "bg-amber-50/60" : "bg-amber-50"
+                                                        )}>
 
-                                                            {row.electricity_kwh.toLocaleString()}
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="block md:hidden text-[9px] text-amber-800 font-bold uppercase tracking-wider select-none mb-0.5">Tiêu thụ</span>
+                                                                <span>{row.electricity_kwh.toLocaleString()}</span>
+                                                            </div>
 
                                                         </TableCell>
 
-                                                        <TableCell className="border-r p-1 text-center bg-gray-50 text-gray-700 font-semibold align-middle">
+                                                        <TableCell className={cn(
+                                                            "border-r p-1 text-center text-gray-700 font-semibold align-middle text-base md:text-sm transition-colors duration-150",
+                                                            focusedShellingEnergyRowDate === row.work_date ? "bg-slate-100" : "bg-gray-50"
+                                                        )}>
 
-                                                            {row.actual_ton > 0 ? row.actual_ton : "-"}
+                                                            <div className="flex flex-col items-center">
+                                                                <span className="block md:hidden text-[9px] text-gray-800 font-bold uppercase tracking-wider select-none mb-0.5">Sản lượng</span>
+                                                                <span>{row.actual_ton > 0 ? row.actual_ton : "-"}</span>
+                                                            </div>
 
                                                         </TableCell>
 
-                                                        <TableCell className={cn("p-1 text-right font-bold align-middle bg-gray-50", Number(intensity) > 0 ? "text-indigo-700" : "text-gray-400")}>
+                                                        <TableCell className={cn(
+                                                            "p-1 text-right font-bold align-middle transition-colors duration-150 text-base md:text-sm",
+                                                            focusedShellingEnergyRowDate === row.work_date ? "bg-slate-100" : "bg-gray-50",
+                                                            Number(intensity) > 0 ? "text-indigo-700" : "text-gray-400"
+                                                        )}>
 
-                                                            {intensity}
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="block md:hidden text-[9px] text-gray-800 font-bold uppercase tracking-wider select-none mb-0.5">kWh/Tấn</span>
+                                                                <span>{intensity}</span>
+                                                            </div>
 
                                                         </TableCell>
 
@@ -6290,7 +6500,7 @@ export default function InputPage() {
 
                                         </TableBody>
 
-                                    </Table>
+                                    </table>
 
                                 </div>
 
@@ -6346,29 +6556,29 @@ export default function InputPage() {
 
                             </div>
 
-                            <div className="overflow-x-auto w-full relative h-[650px] custom-scrollbar border bg-slate-50/50 rounded-lg">
+                            <div className="overflow-auto w-full relative max-h-[60vh] md:max-h-[650px] custom-scrollbar border bg-slate-50/50 rounded-lg">
 
-                                <Table className="w-full border-collapse">
+                                <table className="w-full border-collapse text-sm">
 
-                                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                                    <TableHeader className="sticky top-0 z-20 shadow-sm bg-emerald-50">
 
                                         <TableRow className="border-b bg-emerald-50">
 
-                                            <TableHead className="w-24 whitespace-nowrap text-emerald-800 font-bold border-r">Ngày</TableHead>
+                                            <TableHead className="w-24 whitespace-nowrap text-emerald-800 font-bold border-r sticky left-0 top-0 z-30 bg-emerald-50 text-center">Ngày</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Cooling Fan</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Cooling Fan</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Boiler</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Boiler</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Office</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Office</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">DB-AC HCA</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">DB-AC HCA</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">ECO2</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">ECO2</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">Canteen</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Canteen</TableHead>
 
-                                            <TableHead className="font-bold min-w-[120px] bg-emerald-100/30 text-emerald-700 text-center text-xs">ĐH Maint (HCA+Shell)</TableHead>
+                                            <TableHead className="font-bold min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">ĐH Maint (HCA+Shell)</TableHead>
 
                                         </TableRow>
 
@@ -6426,9 +6636,23 @@ export default function InputPage() {
 
                                             const renderInput = (label: string, field: 'cooling_fan' | 'boiler' | 'office' | 'db_ac_hca' | 'eco2' | 'canteen' | 'transformer' | 'maintenance', val: number | undefined, kwh: number) => (
 
-                                                <TableCell className="p-1 border-r bg-white" key={field}>
+                                                <TableCell 
+
+                                                    className={cn(
+
+                                                        "p-1 border-r transition-colors duration-150",
+
+                                                        focusedOtherElecRowDate === row.work_date ? "bg-emerald-50/50" : "bg-white"
+
+                                                    )} 
+
+                                                    key={field}
+
+                                                >
 
                                                     <div className="flex flex-col gap-1 items-center">
+
+                                                        <span className="block md:hidden text-[9px] text-emerald-800 font-bold uppercase tracking-wider select-none mb-0.5">{label}</span>
 
                                                         <Input
 
@@ -6441,6 +6665,10 @@ export default function InputPage() {
                                                             value={val === undefined ? "" : val}
 
                                                             onChange={(e) => handleChange(field, e.target.value ? Number(e.target.value) : undefined)}
+
+                                                            onFocus={() => setFocusedOtherElecRowDate(row.work_date)}
+
+                                                            onBlur={() => setFocusedOtherElecRowDate(null)}
 
                                                             placeholder={`${label}`}
 
@@ -6462,13 +6690,35 @@ export default function InputPage() {
 
                                             return (
 
-                                                <TableRow key={row.work_date} className="hover:bg-emerald-50/20">
+                                                <TableRow 
 
-                                                    <TableCell className="font-medium bg-emerald-50/30 border-r py-3 px-2 text-center text-xs sticky left-0 z-10 backdrop-blur-md">
+                                                    key={row.work_date} 
+
+                                                    className={cn(
+
+                                                        "hover:bg-emerald-50/20 transition-colors duration-150",
+
+                                                        focusedOtherElecRowDate === row.work_date && "bg-emerald-50/30"
+
+                                                    )}
+
+                                                >
+
+                                                    <TableCell className={cn(
+
+                                                        "font-medium border-r py-3 px-2 text-center text-xs sticky left-0 z-10 backdrop-blur-md transition-colors duration-150",
+
+                                                        focusedOtherElecRowDate === row.work_date
+
+                                                            ? "bg-emerald-100 text-emerald-900 font-bold"
+
+                                                            : "bg-emerald-50/40 text-slate-700"
+
+                                                    )}>
 
                                                         <div className="flex flex-col items-center">
 
-                                                            <span className="font-bold text-slate-700">{format(new Date(row.work_date), 'dd/MM/yyyy')}</span>
+                                                            <span className="font-bold">{format(new Date(row.work_date), 'dd/MM/yyyy')}</span>
 
                                                         </div>
 
@@ -6498,7 +6748,7 @@ export default function InputPage() {
 
                                     </TableBody>
 
-                                </Table>
+                                </table>
 
                             </div>
 

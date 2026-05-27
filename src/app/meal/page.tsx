@@ -1154,7 +1154,7 @@ export default function PublicMealPage() {
 
             <form onSubmit={handlePreview}>
                 <div style={{ padding: "16px", background: "#fff", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
-                    <div className="section-label">1{String.fromCharCode(65039)}{String.fromCharCode(8419)} {lockedByUrl ? "Danh t\u00ednh" : "Ch\u1ecdn b\u1ed9 ph\u1eadn"}</div>
+                    <div className="section-label">1{String.fromCharCode(65039)}{String.fromCharCode(8419)} {lockedByUrl ? "Danh tính" : "Chọn bộ phận"}</div>
                     {lockedByUrl ? (
                         /* Locked identity banner — shown when dept+sub pre-set via URL params */
                         <div style={{ background: "#f0fdf4", border: "2px solid #86efac", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
@@ -1162,13 +1162,13 @@ export default function PublicMealPage() {
                             <div>
                                 <div style={{ fontWeight: 800, color: "#15803d", fontSize: 15 }}>{getEffectiveDeptName()}</div>
                                 {hpeelSub && HPEEL_SUBGROUPS.find(s => s.key === hpeelSub) && (
-                                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>T\u1ed5 tr\u01b0\u1edfng: {HPEEL_SUBGROUPS.find(s => s.key === hpeelSub)!.label}</div>
+                                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>Tổ trưởng: {HPEEL_SUBGROUPS.find(s => s.key === hpeelSub)!.label}</div>
                                 )}
                             </div>
                         </div>
                     ) : (
                         <div className="field-sm">
-                            <label>B\u1ed9 ph\u1eadn <span className="req">*</span></label>
+                            <label>Bộ phận <span className="req">*</span></label>
                             <select value={deptId} onChange={e => {
                                 const newId = e.target.value
                                 const newDept = depts.find(d => d.id === newId)
@@ -1184,14 +1184,14 @@ export default function PublicMealPage() {
                                     setSingleData(blank())
                                 }
                             }} required>
-                                <option value="">&#x2014; Ch\u1ecdn b\u1ed9 ph\u1eadn &#x2014;</option>
+                                <option value="">&#x2014; Chọn bộ phận &#x2014;</option>
                                 {depts.map((d, idx) => <option key={d.id} value={d.id}>{idx + 1}. {d.name_en}</option>)}
                             </select>
                         </div>
                     )}
                     {isHpeel && !(lockedByUrl && !!hpeelSub) && (
                         <div className="field-sm" style={{ marginTop: 12 }}>
-                            <label>T\u1ed5 tr\u01b0\u1edfng <span className="req">*</span></label>
+                            <label>Tổ trưởng <span className="req">*</span></label>
                             <HpeelPicker value={hpeelSub} onChange={v => {
                                 setExistingRecord(null);
                                 setIsUpdate(false);

@@ -294,6 +294,7 @@ export default function RCNInventoryForm({ date, selectedDept, userId, isSaving,
                                             <input
                                                 title="Tồn Kho Thực Tế (Tấn)"
                                                 type="number" min="0" step="0.001"
+                                                inputMode="decimal"
                                                 value={row.closing_ton}
                                                 onChange={e => updateRow(size, 'closing_ton', Number(e.target.value) || 0)}
                                                 className="w-full text-right bg-white border border-blue-200 text-blue-700 font-bold rounded-md px-2 py-1.5 text-base focus:ring-2 focus:ring-blue-400 outline-none shadow-sm transition-all"

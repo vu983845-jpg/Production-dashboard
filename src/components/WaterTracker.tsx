@@ -86,6 +86,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
     const [isSaving, setIsSaving] = useState(false)
     const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle")
     const [saveMsg, setSaveMsg] = useState("")
+    const [focusedWaterRowDate, setFocusedWaterRowDate] = useState<string | null>(null)
 
     // Generate days for the current month
     const daysInMonth = useMemo(() => {
@@ -331,8 +332,14 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                         const isFuture = isAfter(new Date(dateStr), new Date(todayStr))
                                         const isModified = modifiedRows.includes(dateStr)
                                         return (
-                                            <tr key={dateStr} className={`group ${isFuture ? "bg-slate-50/50 opacity-60" : "hover:bg-sky-50/40"}`}>
-                                                <td className={`sticky left-0 z-10 border-b border-r border-slate-100 p-0 shadow-[1px_0_0_0_#f1f5f9] align-top ${isModified ? "bg-sky-50" : "bg-white group-hover:bg-sky-50/40"}`}>
+                                            <tr key={dateStr} className={`group transition-colors duration-150 ${isFuture ? "bg-slate-50/50 opacity-60" : "hover:bg-sky-50/40"} ${focusedWaterRowDate === dateStr ? "bg-sky-100/30" : ""}`}>
+                                                <td className={`sticky left-0 z-10 border-b border-r border-slate-100 p-0 shadow-[1px_0_0_0_#f1f5f9] align-top transition-colors duration-150 ${
+                                                    focusedWaterRowDate === dateStr
+                                                        ? "bg-sky-200 text-sky-950 font-bold"
+                                                        : isModified
+                                                            ? "bg-sky-50"
+                                                            : "bg-white group-hover:bg-sky-50/40"
+                                                }`}>
                                                     <div className="flex flex-col items-center justify-center h-full p-2">
                                                         <span className={`font-bold ${new Date(dateStr).getDay() === 0 ? "text-red-500" : "text-slate-700"}`}>
                                                             {format(new Date(dateStr), "dd/MM")}
@@ -345,8 +352,9 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                                 {WATER_METERS.map(m => {
                                                     const delta = getDelta(dateStr, m.key)
                                                     return (
-                                                        <td key={m.key} className="border-b border-r border-slate-100 p-1.5 align-top">
+                                                        <td key={m.key} className={`border-b border-r border-slate-100 p-1.5 align-top transition-colors duration-150 ${focusedWaterRowDate === dateStr ? "bg-sky-50/20" : ""}`}>
                                                             <div className="flex flex-col gap-1">
+                                                                <span className="block md:hidden text-[9px] text-sky-800 font-bold uppercase tracking-wider select-none mb-0.5">{m.shortLabel}</span>
                                                                 <input
                                                                     type="number"
                                                                     min="0"
@@ -355,7 +363,9 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                                                     disabled={!canEdit || isFuture}
                                                                     value={localData[dateStr]?.[m.key] ?? ""}
                                                                     onChange={e => onChangeCell(dateStr, m.key, e.target.value)}
-                                                                    className={`w-full border rounded-lg px-2 py-1.5 text-right font-mono text-sm font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition ${isFuture ? "bg-slate-100 text-slate-400 border-slate-100" :
+                                                                    onFocus={() => setFocusedWaterRowDate(dateStr)}
+                                                                    onBlur={() => setFocusedWaterRowDate(null)}
+                                                                    className={`w-full border rounded-lg px-2 py-1.5 text-right font-mono text-base md:text-sm font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition ${isFuture ? "bg-slate-100 text-slate-400 border-slate-100" :
                                                                         localData[dateStr]?.[m.key] !== originalData[dateStr]?.[m.key] ? "bg-sky-50 border-sky-300 text-sky-800" :
                                                                             "bg-white border-slate-200 text-slate-800 focus:border-sky-400"
                                                                         }`}
