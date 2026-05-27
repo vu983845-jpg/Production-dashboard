@@ -1155,7 +1155,7 @@ export default function PublicMealPage() {
             }}>
                 <span style={{ fontSize: "16px", flexShrink: 0 }}>☀️</span>
                 <Marquee scrollamount="4" style={{ fontSize: "13px", fontWeight: 700, color: "#c2410c", margin: 0 }}>
-                    Trời nắng nóng, nhắc mọi người nhớ uống nước để đảm bảo sức khỏe nhé. Chúc mọi người làm việc vui vẻ!
+                    🔥 Trời nắng nóng gay gắt, cả nhà mình nhớ uống nước đầy đủ để bảo vệ sức khỏe nhé! 🥤 Đặc biệt, đừng quên Thứ 5 ngày 28/05 hôm nay Công đoàn có phát nước giải nhiệt cho mọi người nè! Chúc cả nhà làm việc thật vui vẻ và tràn đầy năng lượng! ✨🍀
                 </Marquee>
             </div>
 
