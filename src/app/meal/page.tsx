@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { NeutralLogo } from "@/components/neutral-logo"
 
+const Marquee = "marquee" as any;
+
 interface Dept { id: string; code: string; name_en: string }
 
 const MULTI_SHIFT_CODES = new Set(["QC", "BOILER", "CLEAN", "MAINT_HCA"])
@@ -1140,6 +1142,23 @@ export default function PublicMealPage() {
                 )}
             </div>
 
+            {/* Announcement Banner */}
+            <div style={{
+                background: "linear-gradient(135deg, #fff7ed, #ffedd5)",
+                borderBottom: "1px solid #fed7aa",
+                padding: "8px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                overflow: "hidden",
+                whiteSpace: "nowrap"
+            }}>
+                <span style={{ fontSize: "16px", flexShrink: 0 }}>☀️</span>
+                <Marquee scrollamount="4" style={{ fontSize: "13px", fontWeight: 700, color: "#c2410c", margin: 0 }}>
+                    Trời nắng nóng, nhắc mọi người nhớ uống nước để đảm bảo sức khỏe nhé. Chúc mọi người làm việc vui vẻ!
+                </Marquee>
+            </div>
+
             <div className="mode-tabs">
                 <button type="button" className={`mode-tab ${pageMode === "report" ? "active" : ""}`} onClick={() => setPageMode("report")}>🍽️ Báo cơm</button>
                 <button type="button" className={`mode-tab ${(pageMode as string) === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
@@ -1290,82 +1309,6 @@ export default function PublicMealPage() {
                     </div>
                 )}
             </form>
-
-            <div style={{ margin: "16px 0 0 0", display: 'flex', justifyContent: 'center' }}>
-                <button
-                    type="button"
-                    onClick={() => setShowRecruit(true)}
-                    style={{
-                        background: 'linear-gradient(to right, #059669, #10b981)',
-                        color: 'white',
-                        border: 'none',
-                        padding: '10px 20px',
-                        borderRadius: '20px',
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)'
-                    }}>
-                    📢 Thông tin tuyển dụng
-                </button>
-            </div>
-
-            {showRecruit && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)', zIndex: 9999,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
-                }}>
-                    <div style={{
-                        background: 'white', borderRadius: 16, padding: '24px 20px',
-                        width: '100%', maxWidth: 400, position: 'relative',
-                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-                    }}>
-                        <button
-                            type="button"
-                            onClick={() => setShowRecruit(false)}
-                            style={{
-                                position: 'absolute', top: 12, right: 12,
-                                background: '#f1f5f9', border: 'none', borderRadius: '50%',
-                                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: '#475569', fontWeight: 'bold', cursor: 'pointer'
-                            }}>
-                            ✕
-                        </button>
-                        <h3 style={{ color: '#059669', fontSize: 18, fontWeight: 800, marginTop: 0, marginBottom: 8, textAlign: 'center' }}>
-                            📢 TUYỂN DỤNG NHÂN VIÊN QC
-                        </h3>
-                        <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.6 }}>
-                            <p style={{ fontWeight: 700, color: '#1e293b', marginBottom: 12, textAlign: 'center' }}>🏢 CÔNG TY TNHH ĐIỀU INTERSNACK VIỆT NAM</p>
-
-                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <li><strong>👨‍🏭 Số lượng:</strong> 04 Nhân viên QC</li>
-                                <li><strong>🎓 Yêu cầu:</strong> Tốt nghiệp ngành Công nghệ Thực phẩm</li>
-                                <li>
-                                    <strong>⏰ Thời gian làm việc:</strong><br />
-                                    <span style={{ paddingLeft: 12, display: 'inline-block' }}>• Thứ 2 – Thứ 7</span><br />
-                                    <span style={{ paddingLeft: 12, display: 'inline-block' }}>• Làm việc theo 3 ca (xoay ca hàng tuần)</span>
-                                </li>
-                                <li><strong>💰 Thu nhập:</strong> Thỏa thuận</li>
-                                <li><strong>⚡ Phỏng vấn – nhận việc ngay</strong></li>
-                            </ul>
-
-                            <div style={{ marginTop: 16, padding: '10px 12px', background: '#fef2f2', border: '1px dashed #fecaca', borderRadius: 8, color: '#dc2626', fontWeight: 600, textAlign: 'center', fontSize: 13, boxShadow: '0 1px 2px rgba(220, 38, 38, 0.05)' }}>
-                                🎁 Thưởng nóng 500.000 VNĐ nếu giới thiệu thành công ứng viên!
-                            </div>
-
-                            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px dashed #cbd5e1', textAlign: 'center' }}>
-                                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 4 }}>📞 Liên hệ (Zalo)</div>
-                                <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>0906 724 716</div>
-                                <div style={{ fontSize: 14, fontWeight: 600, color: '#0ea5e9' }}>Chị Quế Anh (Phòng Nhân sự)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {pageMode === "report" && (
                 <div className="info-banner" style={{ marginTop: 16, background: "#f0fdfa", color: "#0f766e", border: "1px solid #ccfbf1", borderRadius: 8, padding: 12 }}>
