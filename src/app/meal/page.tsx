@@ -1155,7 +1155,7 @@ export default function PublicMealPage() {
             }}>
                 <span style={{ fontSize: "16px", flexShrink: 0 }}>☀️</span>
                 <Marquee scrollamount="4" style={{ fontSize: "13px", fontWeight: 700, color: "#c2410c", margin: 0 }}>
-                    🔥 Trời nắng nóng gay gắt, cả nhà mình nhớ uống nước đầy đủ để bảo vệ sức khỏe nhé! 🥤 Đặc biệt, đừng quên Thứ 5 ngày 28/05 hôm nay Công đoàn có phát nước giải nhiệt cho mọi người nè! Chúc cả nhà làm việc thật vui vẻ và tràn đầy năng lượng! ✨🍀
+                    🔥 Trời nắng nóng gay gắt, cả nhà mình nhớ uống nước đầy đủ để bảo vệ sức khỏe nhé! 🥤 Đặc biệt, đừng quên Thứ 5 ngày 28/05 hôm nay Công đoàn có phát nước giải nhiệt cho mọi người nè! Chúc cả nhà làm việc thật vui vẻ và tràn đầy năng lượng! ✨🍀 | 📞 Sai sót/Trễ giờ, vui lòng liên hệ Ms. Chi
                 </Marquee>
             </div>
 
