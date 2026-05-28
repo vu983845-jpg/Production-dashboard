@@ -4,8 +4,6 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { NeutralLogo } from "@/components/neutral-logo"
 
-const Marquee = "marquee" as any;
-
 interface Dept { id: string; code: string; name_en: string }
 
 const MULTI_SHIFT_CODES = new Set(["QC", "BOILER", "CLEAN", "MAINT_HCA"])
@@ -1140,23 +1138,6 @@ export default function PublicMealPage() {
                         <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{format(now, 'dd/MM/yyyy')}</div>
                     </div>
                 )}
-            </div>
-
-            {/* Announcement Banner */}
-            <div style={{
-                background: "linear-gradient(135deg, #fff7ed, #ffedd5)",
-                borderBottom: "1px solid #fed7aa",
-                padding: "8px 16px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                overflow: "hidden",
-                whiteSpace: "nowrap"
-            }}>
-                <span style={{ fontSize: "16px", flexShrink: 0 }}>☀️</span>
-                <Marquee scrollamount="4" style={{ fontSize: "13px", fontWeight: 700, color: "#c2410c", margin: 0 }}>
-                    🔥 Trời nắng nóng gay gắt, cả nhà mình nhớ uống nước đầy đủ để bảo vệ sức khỏe nhé! 🥤 Đặc biệt, đừng quên Thứ 5 ngày 28/05 hôm nay Công đoàn có phát nước giải nhiệt cho mọi người nè! Chúc cả nhà làm việc thật vui vẻ và tràn đầy năng lượng! ✨🍀 | 📞 Sai sót/Trễ giờ, vui lòng liên hệ Ms. Chi
-                </Marquee>
             </div>
 
             <div className="mode-tabs">
