@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { NeutralLogo } from "@/components/neutral-logo"
+import { toast } from "sonner"
 
 interface Dept { id: string; code: string; name_en: string }
 
@@ -422,6 +423,71 @@ export default function PublicMealPage() {
     const [loading, setLoading] = useState(true)
     const [pageMode, setPageMode] = useState<PageMode>("report")
     const [showRecruit, setShowRecruit] = useState(false)
+
+    // Feedback state
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+    const [feedbackRating, setFeedbackRating] = useState(5)
+    const [feedbackComment, setFeedbackComment] = useState("")
+    const [feedbackIsAnonymous, setFeedbackIsAnonymous] = useState(true)
+    const [feedbackReporterName, setFeedbackReporterName] = useState("")
+    const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
+    const [feedbackStats, setFeedbackStats] = useState<{
+        average: number
+        total: number
+        distribution: Record<number, number>
+    }>({ average: 0, total: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } })
+    const [feedbackReviews, setFeedbackReviews] = useState<any[]>([])
+    const [feedbackLoading, setFeedbackLoading] = useState(false)
+
+    const fetchFeedbackData = async () => {
+        setFeedbackLoading(true)
+        try {
+            const res = await fetch("/api/canteen-feedback")
+            const data = await res.json()
+            if (data.stats) setFeedbackStats(data.stats)
+            if (data.reviews) setFeedbackReviews(data.reviews)
+        } catch (err) {
+            console.error("Error fetching feedback:", err)
+        } finally {
+            setFeedbackLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchFeedbackData()
+    }, [])
+
+    const handleFeedbackSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setFeedbackSubmitting(true)
+        try {
+            const res = await fetch("/api/canteen-feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    rating: feedbackRating,
+                    comment: feedbackComment,
+                    is_anonymous: feedbackIsAnonymous,
+                    reporter_name: feedbackReporterName
+                })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setFeedbackComment("")
+                setFeedbackReporterName("")
+                setFeedbackRating(5)
+                await fetchFeedbackData()
+                toast.success("Cảm ơn bạn đã gửi đánh giá chất lượng bữa ăn!")
+            } else {
+                toast.error("Lỗi: " + (data.error || "Không thể gửi đánh giá"))
+            }
+        } catch (err) {
+            console.error("Submit error:", err)
+            toast.error("Lỗi kết nối khi gửi đánh giá")
+        } finally {
+            setFeedbackSubmitting(false)
+        }
+    }
 
     // Report state
     const [deptId, setDeptId] = useState("")
@@ -1140,6 +1206,35 @@ export default function PublicMealPage() {
                 )}
             </div>
 
+            {/* Canteen Rating Trigger */}
+            <div style={{
+                margin: "12px 16px 4px 16px",
+                display: "flex",
+                justifyContent: "flex-end"
+            }}>
+                <button
+                    type="button"
+                    onClick={() => setShowFeedbackModal(true)}
+                    style={{
+                        background: "linear-gradient(135deg, #fef3c7, #fde68a)",
+                        border: "1.5px solid #fbbf24",
+                        color: "#78350f",
+                        padding: "8px 16px",
+                        borderRadius: "20px",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(245, 158, 11, 0.15)",
+                        transition: "transform 0.1s ease"
+                    }}
+                >
+                    ⭐ Đánh giá Canteen ({feedbackStats.average ? `${feedbackStats.average}/5` : "..."})
+                </button>
+            </div>
+
             <div className="mode-tabs">
                 <button type="button" className={`mode-tab ${pageMode === "report" ? "active" : ""}`} onClick={() => setPageMode("report")}>🍽️ Báo cơm</button>
                 <button type="button" className={`mode-tab ${(pageMode as string) === "edit-ot" ? "active" : ""}`} onClick={() => { setPageMode("edit-ot"); resetOt() }}>⏰ Sửa OT</button>
@@ -1303,6 +1398,221 @@ export default function PublicMealPage() {
                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #99f6e4", display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 16 }}>📞</span>
                         <span>Sai sót/Trễ giờ, liên hệ quản trị viên</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Canteen Feedback Modal */}
+            {showFeedbackModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+                    backdropFilter: 'blur(4px)'
+                }}>
+                    <div style={{
+                        background: 'white', borderRadius: 20, padding: '24px 20px',
+                        width: '100%', maxWidth: 500, position: 'relative',
+                        maxHeight: '90vh', overflowY: 'auto',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                        display: 'flex', flexDirection: 'column', gap: 20
+                    }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>
+                            <h3 style={{ color: '#1e293b', fontSize: 18, fontWeight: 800, margin: 0 }}>
+                                ⭐ Đánh giá chất lượng Canteen
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowFeedbackModal(false)}
+                                style={{
+                                    background: '#f1f5f9', border: 'none', borderRadius: '50%',
+                                    width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: '#64748b', fontWeight: 'bold', cursor: 'pointer', fontSize: 14
+                                }}>
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Google Maps Style Stats */}
+                        <div style={{
+                            background: '#f8fafc', borderRadius: 16, padding: 16,
+                            display: 'flex', gap: 20, alignItems: 'center'
+                        }}>
+                            {/* Left: Big score */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 100 }}>
+                                <div style={{ fontSize: 44, fontWeight: 900, color: '#1e293b', lineHeight: 1 }}>
+                                    {feedbackStats.average || "0.0"}
+                                </div>
+                                <div style={{ display: 'flex', gap: 2, margin: '6px 0 2px 0', color: '#f59e0b', fontSize: 14 }}>
+                                    {"★".repeat(Math.round(feedbackStats.average || 5)) + "☆".repeat(5 - Math.round(feedbackStats.average || 5))}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                                    {feedbackStats.total} lượt đánh giá
+                                </div>
+                            </div>
+                            
+                            {/* Right: Progress bars */}
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {[5, 4, 3, 2, 1].map(stars => {
+                                    const count = feedbackStats.distribution[stars] || 0;
+                                    const pct = feedbackStats.total > 0 ? (count / feedbackStats.total) * 100 : 0;
+                                    return (
+                                        <div key={stars} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#475569', fontWeight: 600 }}>
+                                            <span style={{ width: 10 }}>{stars}</span>
+                                            <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+                                                <div style={{ width: `${pct}%`, height: '100%', background: '#f59e0b', borderRadius: 3 }} />
+                                            </div>
+                                            <span style={{ width: 25, textAlign: 'right', color: '#94a3b8' }}>{count}</span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Form */}
+                        <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            {/* Star Selector */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Bấm chọn số sao để đánh giá:</div>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                    {[1, 2, 3, 4, 5].map(s => (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            onClick={() => setFeedbackRating(s)}
+                                            style={{
+                                                background: 'none', border: 'none', padding: 0,
+                                                fontSize: 32, cursor: 'pointer',
+                                                color: s <= feedbackRating ? '#f59e0b' : '#cbd5e1',
+                                                transition: 'transform 0.1s ease',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1.0)'}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                </div>
+                                <div style={{ fontSize: 13, fontWeight: 800, color: '#d97706' }}>
+                                    {feedbackRating === 1 && "😢 Rất tệ"}
+                                    {feedbackRating === 2 && "😟 Tệ"}
+                                    {feedbackRating === 3 && "😐 Bình thường"}
+                                    {feedbackRating === 4 && "😋 Ngon"}
+                                    {feedbackRating === 5 && "😍 Rất ngon"}
+                                </div>
+                            </div>
+
+                            {/* Comment Textarea */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Ý kiến nhận xét (nếu có):</label>
+                                <textarea
+                                    value={feedbackComment}
+                                    onChange={e => setFeedbackComment(e.target.value)}
+                                    placeholder="Hãy chia sẻ nhận xét của bạn về món ăn hôm nay, thái độ phục vụ, hay vấn đề vệ sinh của Canteen..."
+                                    style={{
+                                        width: '100%', height: 70, border: '1px solid #cbd5e1', borderRadius: 10,
+                                        padding: '8px 12px', fontSize: 13, outline: 'none', resize: 'none',
+                                        fontFamily: 'inherit'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Anon toggle + Name */}
+                            <div style={{ background: '#f8fafc', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Gửi dưới dạng ẩn danh?</span>
+                                    <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={feedbackIsAnonymous}
+                                            onChange={e => setFeedbackIsAnonymous(e.target.checked)}
+                                            style={{ opacity: 0, width: 0, height: 0 }}
+                                        />
+                                        <span style={{
+                                            position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                                            background: feedbackIsAnonymous ? '#10b981' : '#cbd5e1',
+                                            transition: '0.2s', borderRadius: 24,
+                                        }}>
+                                            <span style={{
+                                                position: 'absolute', content: '""', height: 16, width: 16, left: feedbackIsAnonymous ? 24 : 4, bottom: 4,
+                                                background: 'white', transition: '0.2s', borderRadius: '50%'
+                                            }} />
+                                        </span>
+                                    </label>
+                                </div>
+
+                                {!feedbackIsAnonymous && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Họ tên của bạn:</label>
+                                        <input
+                                            type="text"
+                                            value={feedbackReporterName}
+                                            onChange={e => setFeedbackReporterName(e.target.value)}
+                                            placeholder="Nhập tên của bạn"
+                                            style={{
+                                                border: '1px solid #cbd5e1', borderRadius: 8,
+                                                padding: '6px 10px', fontSize: 13, outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Submit button */}
+                            <button
+                                type="submit"
+                                disabled={feedbackSubmitting}
+                                style={{
+                                    background: 'linear-gradient(to right, #0284c7, #0ea5e9)',
+                                    color: 'white', border: 'none', padding: '10px', borderRadius: 10,
+                                    fontWeight: 'bold', fontSize: 14, cursor: 'pointer',
+                                    boxShadow: '0 4px 6px -1px rgba(14, 165, 233, 0.2)',
+                                    transition: 'opacity 0.2s'
+                                }}
+                            >
+                                {feedbackSubmitting ? "Đang gửi đánh giá..." : "Gửi Đánh Giá"}
+                            </button>
+                        </form>
+
+                        {/* Reviews Feed */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
+                            <h4 style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', margin: 0 }}>
+                                💬 Đánh giá gần đây
+                            </h4>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
+                                {feedbackReviews.length === 0 ? (
+                                    <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: '16px 0' }}>
+                                        Chưa có nhận xét nào. Hãy là người đầu tiên đánh giá!
+                                    </div>
+                                ) : (
+                                    feedbackReviews.map(r => (
+                                        <div key={r.id} style={{
+                                            background: '#f8fafc', border: '1px solid #f1f5f9',
+                                            borderRadius: 10, padding: 10, display: 'flex', flexDirection: 'column', gap: 4
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ color: '#f59e0b', fontSize: 12, fontWeight: 'bold' }}>
+                                                    {"★".repeat(r.rating) + "☆".repeat(5 - r.rating)}
+                                                </span>
+                                                <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                                                    {format(new Date(r.created_at), 'dd/MM/yyyy HH:mm')}
+                                                </span>
+                                            </div>
+                                            {r.comment && (
+                                                <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.4, fontStyle: 'italic' }}>
+                                                    "{r.comment}"
+                                                </div>
+                                            )}
+                                            <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, alignSelf: 'flex-end' }}>
+                                                — {r.is_anonymous ? "Ẩn danh" : (r.reporter_name || "Ẩn danh")}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
