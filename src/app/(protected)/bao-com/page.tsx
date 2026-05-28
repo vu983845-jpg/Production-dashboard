@@ -2274,9 +2274,11 @@ export default function BaoCom() {
                                                 <tbody className="divide-y">
                                                     {summaryData.map(r => {
                                                         const isEditing = editingRowId === r.id
-                                                        const deptName = r.department_id
-                                                            ? (deptList.find(d => d.id === r.department_id)?.name_en ?? r.department_name)
-                                                            : r.department_name
+                                                        const dept = r.department_id ? deptList.find(d => d.id === r.department_id) : null
+                                                        const deptCode = dept?.code ?? ''
+                                                        const deptName = (deptCode === 'HPEEL' || deptCode === 'HAND')
+                                                            ? r.department_name
+                                                            : (dept?.name_en ?? r.department_name)
                                                         return (
                                                             <tr key={r.id} className={isEditing ? "bg-blue-50" : "hover:bg-muted/30"}>
                                                                 <td className="px-3 py-2 font-medium whitespace-nowrap">{deptName}</td>
