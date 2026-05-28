@@ -438,6 +438,10 @@ export default function PublicMealPage() {
     }>({ average: 0, total: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } })
     const [feedbackReviews, setFeedbackReviews] = useState<any[]>([])
     const [feedbackLoading, setFeedbackLoading] = useState(false)
+    const [feedbackImage, setFeedbackImage] = useState<string | null>(null)
+    const [compressingImage, setCompressingImage] = useState(false)
+    const [feedbackSubmittedToday, setFeedbackSubmittedToday] = useState(false)
+    const [previewImageSrc, setPreviewImageSrc] = useState<string | null>(null)
 
     const fetchFeedbackData = async () => {
         setFeedbackLoading(true)
@@ -457,6 +461,76 @@ export default function PublicMealPage() {
         fetchFeedbackData()
     }, [])
 
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const today = format(new Date(), "yyyy-MM-dd")
+            const lastDate = localStorage.getItem("canteen_feedback_last_date")
+            if (lastDate === today) {
+                setFeedbackSubmittedToday(true)
+            } else {
+                setFeedbackSubmittedToday(false)
+            }
+        }
+    }, [showFeedbackModal])
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("Vui lòng chọn file hình ảnh")
+            return
+        }
+
+        setCompressingImage(true)
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            const img = new Image()
+            img.onload = () => {
+                const canvas = document.createElement("canvas")
+                let width = img.width
+                let height = img.height
+                const maxDim = 600
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width)
+                        width = maxDim
+                    } else {
+                        width = Math.round((width * maxDim) / height)
+                        height = maxDim
+                    }
+                }
+
+                canvas.width = width
+                canvas.height = height
+
+                const ctx = canvas.getContext("2d")
+                if (ctx) {
+                    ctx.fillStyle = "#FFFFFF"
+                    ctx.fillRect(0, 0, width, height)
+                    ctx.drawImage(img, 0, 0, width, height)
+                    
+                    const base64 = canvas.toDataURL("image/jpeg", 0.5)
+                    setFeedbackImage(base64)
+                } else {
+                    toast.error("Không thể xử lý hình ảnh")
+                }
+                setCompressingImage(false)
+            }
+            img.onerror = () => {
+                toast.error("Không thể tải hình ảnh")
+                setCompressingImage(false)
+            }
+            img.src = event.target?.result as string
+        }
+        reader.onerror = () => {
+            toast.error("Không thể đọc file")
+            setCompressingImage(false)
+        }
+        reader.readAsDataURL(file)
+    }
+
     const handleFeedbackSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setFeedbackSubmitting(true)
@@ -468,7 +542,8 @@ export default function PublicMealPage() {
                     rating: feedbackRating,
                     comment: feedbackComment,
                     is_anonymous: feedbackIsAnonymous,
-                    reporter_name: feedbackReporterName
+                    reporter_name: feedbackReporterName,
+                    image_base64: feedbackImage
                 })
             })
             const data = await res.json()
@@ -476,6 +551,12 @@ export default function PublicMealPage() {
                 setFeedbackComment("")
                 setFeedbackReporterName("")
                 setFeedbackRating(5)
+                setFeedbackImage(null)
+
+                const today = format(new Date(), "yyyy-MM-dd")
+                localStorage.setItem("canteen_feedback_last_date", today)
+                setFeedbackSubmittedToday(true)
+
                 await fetchFeedbackData()
                 toast.success("Cảm ơn bạn đã gửi đánh giá chất lượng bữa ăn!")
             } else {
@@ -1470,110 +1551,188 @@ export default function PublicMealPage() {
                             </div>
                         </div>
 
-                        {/* Form */}
-                        <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                            {/* Star Selector */}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Bấm chọn số sao để đánh giá:</div>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                    {[1, 2, 3, 4, 5].map(s => (
-                                        <button
-                                            key={s}
-                                            type="button"
-                                            onClick={() => setFeedbackRating(s)}
-                                            style={{
-                                                background: 'none', border: 'none', padding: 0,
-                                                fontSize: 32, cursor: 'pointer',
-                                                color: s <= feedbackRating ? '#f59e0b' : '#cbd5e1',
-                                                transition: 'transform 0.1s ease',
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1.0)'}
-                                        >
-                                            ★
-                                        </button>
-                                    ))}
+                        {feedbackSubmittedToday ? (
+                            <div style={{
+                                background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 16,
+                                padding: 20, textAlign: 'center', display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', gap: 12
+                            }}>
+                                <span style={{ fontSize: 36 }}>🎉</span>
+                                <div style={{ fontWeight: 800, color: '#16a34a', fontSize: 16 }}>
+                                    Hôm nay bạn đã gửi đánh giá rồi!
                                 </div>
-                                <div style={{ fontSize: 13, fontWeight: 800, color: '#d97706' }}>
-                                    {feedbackRating === 1 && "😢 Rất tệ"}
-                                    {feedbackRating === 2 && "😟 Tệ"}
-                                    {feedbackRating === 3 && "😐 Bình thường"}
-                                    {feedbackRating === 4 && "😋 Ngon"}
-                                    {feedbackRating === 5 && "😍 Rất ngon"}
+                                <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
+                                    Cảm ơn bạn đã đóng góp ý kiến giúp cải thiện chất lượng bữa ăn của canteen. Hẹn gặp lại bạn vào ngày mai!
                                 </div>
                             </div>
-
-                            {/* Comment Textarea */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Ý kiến nhận xét (nếu có):</label>
-                                <textarea
-                                    value={feedbackComment}
-                                    onChange={e => setFeedbackComment(e.target.value)}
-                                    placeholder="Hãy chia sẻ nhận xét của bạn về món ăn hôm nay, thái độ phục vụ, hay vấn đề vệ sinh của Canteen..."
-                                    style={{
-                                        width: '100%', height: 70, border: '1px solid #cbd5e1', borderRadius: 10,
-                                        padding: '8px 12px', fontSize: 13, outline: 'none', resize: 'none',
-                                        fontFamily: 'inherit'
-                                    }}
-                                />
-                            </div>
-
-                            {/* Anon toggle + Name */}
-                            <div style={{ background: '#f8fafc', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Gửi dưới dạng ẩn danh?</span>
-                                    <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24 }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={feedbackIsAnonymous}
-                                            onChange={e => setFeedbackIsAnonymous(e.target.checked)}
-                                            style={{ opacity: 0, width: 0, height: 0 }}
-                                        />
-                                        <span style={{
-                                            position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                                            background: feedbackIsAnonymous ? '#10b981' : '#cbd5e1',
-                                            transition: '0.2s', borderRadius: 24,
-                                        }}>
-                                            <span style={{
-                                                position: 'absolute', content: '""', height: 16, width: 16, left: feedbackIsAnonymous ? 24 : 4, bottom: 4,
-                                                background: 'white', transition: '0.2s', borderRadius: '50%'
-                                            }} />
-                                        </span>
-                                    </label>
-                                </div>
-
-                                {!feedbackIsAnonymous && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                        <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Họ tên của bạn:</label>
-                                        <input
-                                            type="text"
-                                            value={feedbackReporterName}
-                                            onChange={e => setFeedbackReporterName(e.target.value)}
-                                            placeholder="Nhập tên của bạn"
-                                            style={{
-                                                border: '1px solid #cbd5e1', borderRadius: 8,
-                                                padding: '6px 10px', fontSize: 13, outline: 'none'
-                                            }}
-                                        />
+                        ) : (
+                            /* Form */
+                            <form onSubmit={handleFeedbackSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                                {/* Star Selector */}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Bấm chọn số sao để đánh giá:</div>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        {[1, 2, 3, 4, 5].map(s => (
+                                            <button
+                                                key={s}
+                                                type="button"
+                                                onClick={() => setFeedbackRating(s)}
+                                                style={{
+                                                    background: 'none', border: 'none', padding: 0,
+                                                    fontSize: 32, cursor: 'pointer',
+                                                    color: s <= feedbackRating ? '#f59e0b' : '#cbd5e1',
+                                                    transition: 'transform 0.1s ease',
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1.0)'}
+                                            >
+                                                ★
+                                            </button>
+                                        ))}
                                     </div>
-                                )}
-                            </div>
+                                    <div style={{ fontSize: 13, fontWeight: 800, color: '#d97706' }}>
+                                        {feedbackRating === 1 && "😢 Rất tệ"}
+                                        {feedbackRating === 2 && "😟 Tệ"}
+                                        {feedbackRating === 3 && "😐 Bình thường"}
+                                        {feedbackRating === 4 && "😋 Ngon"}
+                                        {feedbackRating === 5 && "😍 Rất ngon"}
+                                    </div>
+                                </div>
 
-                            {/* Submit button */}
-                            <button
-                                type="submit"
-                                disabled={feedbackSubmitting}
-                                style={{
-                                    background: 'linear-gradient(to right, #0284c7, #0ea5e9)',
-                                    color: 'white', border: 'none', padding: '10px', borderRadius: 10,
-                                    fontWeight: 'bold', fontSize: 14, cursor: 'pointer',
-                                    boxShadow: '0 4px 6px -1px rgba(14, 165, 233, 0.2)',
-                                    transition: 'opacity 0.2s'
-                                }}
-                            >
-                                {feedbackSubmitting ? "Đang gửi đánh giá..." : "Gửi Đánh Giá"}
-                            </button>
-                        </form>
+                                {/* Comment Textarea */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Ý kiến nhận xét (nếu có):</label>
+                                    <textarea
+                                        value={feedbackComment}
+                                        onChange={e => setFeedbackComment(e.target.value)}
+                                        placeholder="Hãy chia sẻ nhận xét của bạn về món ăn hôm nay, thái độ phục vụ, hay vấn đề vệ sinh của Canteen..."
+                                        style={{
+                                            width: '100%', height: 70, border: '1px solid #cbd5e1', borderRadius: 10,
+                                            padding: '8px 12px', fontSize: 13, outline: 'none', resize: 'none',
+                                            fontFamily: 'inherit'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Image Upload Input */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        📸 Đính kèm hình ảnh thực tế (nếu có):
+                                    </label>
+                                    <div style={{
+                                        border: '1.5px dashed #cbd5e1', borderRadius: 10, padding: 12,
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                                        background: '#f8fafc', position: 'relative'
+                                    }}>
+                                        {compressingImage ? (
+                                            <div style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    width: 14,
+                                                    height: 14,
+                                                    border: '2px solid #ea580c',
+                                                    borderTopColor: 'transparent',
+                                                    borderRadius: '50%',
+                                                    animation: 'spin 1s linear infinite'
+                                                }} />
+                                                Đang xử lý & nén ảnh...
+                                            </div>
+                                        ) : feedbackImage ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                                                <img
+                                                    src={feedbackImage}
+                                                    alt="Preview"
+                                                    style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }}
+                                                />
+                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                    <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 'bold' }}>✓ Đã tải lên & tối ưu dung lượng</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFeedbackImage(null)}
+                                                        style={{
+                                                            alignSelf: 'flex-start', background: 'none', border: 'none',
+                                                            color: '#ef4444', fontSize: 11, fontWeight: 'bold', cursor: 'pointer',
+                                                            padding: 0
+                                                        }}
+                                                    >
+                                                        Gỡ bỏ ảnh
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleImageChange}
+                                                    id="feedback-image-upload"
+                                                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                                                />
+                                                <span style={{ fontSize: 24 }}>📷</span>
+                                                <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Bấm để chụp hoặc chọn ảnh</span>
+                                                <span style={{ fontSize: 10, color: '#94a3b8' }}>Ảnh tự động được nén gọn để tiết kiệm dung lượng</span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Anon toggle + Name */}
+                                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>Gửi dưới dạng ẩn danh?</span>
+                                        <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={feedbackIsAnonymous}
+                                                onChange={e => setFeedbackIsAnonymous(e.target.checked)}
+                                                style={{ opacity: 0, width: 0, height: 0 }}
+                                            />
+                                            <span style={{
+                                                position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                                                background: feedbackIsAnonymous ? '#10b981' : '#cbd5e1',
+                                                transition: '0.2s', borderRadius: 24,
+                                            }}>
+                                                <span style={{
+                                                    position: 'absolute', content: '""', height: 16, width: 16, left: feedbackIsAnonymous ? 24 : 4, bottom: 4,
+                                                    background: 'white', transition: '0.2s', borderRadius: '50%'
+                                                }} />
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    {!feedbackIsAnonymous && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>Họ tên của bạn:</label>
+                                            <input
+                                                type="text"
+                                                value={feedbackReporterName}
+                                                onChange={e => setFeedbackReporterName(e.target.value)}
+                                                placeholder="Nhập tên của bạn"
+                                                style={{
+                                                    border: '1px solid #cbd5e1', borderRadius: 8,
+                                                    padding: '6px 10px', fontSize: 13, outline: 'none'
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Submit button */}
+                                <button
+                                    type="submit"
+                                    disabled={feedbackSubmitting || compressingImage}
+                                    style={{
+                                        background: 'linear-gradient(to right, #0284c7, #0ea5e9)',
+                                        color: 'white', border: 'none', padding: '10px', borderRadius: 10,
+                                        fontWeight: 'bold', fontSize: 14, cursor: 'pointer',
+                                        boxShadow: '0 4px 6px -1px rgba(14, 165, 233, 0.2)',
+                                        transition: 'opacity 0.2s'
+                                    }}
+                                >
+                                    {feedbackSubmitting ? "Đang gửi đánh giá..." : "Gửi Đánh Giá"}
+                                </button>
+                            </form>
+                        )}
 
                         {/* Reviews Feed */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
@@ -1605,6 +1764,22 @@ export default function PublicMealPage() {
                                                     "{r.comment}"
                                                 </div>
                                             )}
+                                            {r.image_base64 && (
+                                                <div style={{ marginTop: 4 }}>
+                                                    <img
+                                                        src={r.image_base64}
+                                                        alt="Đính kèm"
+                                                        onClick={() => setPreviewImageSrc(r.image_base64)}
+                                                        style={{
+                                                            width: 50, height: 50, objectFit: 'cover',
+                                                            borderRadius: 6, border: '1px solid #e2e8f0',
+                                                            cursor: 'pointer', transition: 'transform 0.15s ease'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                                    />
+                                                </div>
+                                            )}
                                             <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, alignSelf: 'flex-end' }}>
                                                 — {r.is_anonymous ? "Ẩn danh" : (r.reporter_name || "Ẩn danh")}
                                             </div>
@@ -1613,6 +1788,44 @@ export default function PublicMealPage() {
                                 )}
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Fullscreen Image Preview Modal */}
+            {previewImageSrc && (
+                <div 
+                    onClick={() => setPreviewImageSrc(null)}
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.85)', zIndex: 10000,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: 16, cursor: 'zoom-out', backdropFilter: 'blur(4px)'
+                    }}
+                >
+                    <div style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%' }}>
+                        <img 
+                            src={previewImageSrc} 
+                            alt="Phóng to"
+                            style={{ 
+                                maxWidth: '100%', maxHeight: '85vh', 
+                                objectFit: 'contain', borderRadius: 12,
+                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)' 
+                            }} 
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setPreviewImageSrc(null)}
+                            style={{
+                                position: 'absolute', top: -40, right: 0,
+                                background: 'white', border: 'none', borderRadius: '50%',
+                                width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', fontSize: 16,
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                            }}
+                        >
+                            ✕
+                        </button>
                     </div>
                 </div>
             )}

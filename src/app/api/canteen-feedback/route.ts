@@ -6,7 +6,7 @@ const supabaseAdmin = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-async function sendTeamsFeedbackNotification(rating: number, comment: string, isAnonymous: boolean, reporterName: string) {
+async function sendTeamsFeedbackNotification(rating: number, comment: string, isAnonymous: boolean, reporterName: string, hasImage: boolean) {
     const webhookUrl = process.env.TEAMS_WEBHOOK_URL
     if (!webhookUrl) return
 
@@ -39,6 +39,7 @@ async function sendTeamsFeedbackNotification(rating: number, comment: string, is
             "facts": [
                 { "name": "Đánh giá:", "value": `**${rating}/5** (${stars})` },
                 { "name": "Người gửi:", "value": reporter },
+                { "name": "Hình ảnh:", "value": hasImage ? "📸 Có ảnh đính kèm (vui lòng kiểm tra trên web)" : "Không có ảnh" },
                 { "name": "Nhận xét:", "value": comment ? `*"${comment}"*` : "*(Không viết bình luận)*" }
             ],
             "markdown": true
@@ -68,10 +69,10 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: statsError.message }, { status: 500 })
         }
 
-        // Query top 50 recent reviews
+        // Query top 50 recent reviews (including image_base64)
         const { data: reviews, error: reviewsError } = await supabaseAdmin
             .from("canteen_feedback")
-            .select("id, rating, comment, is_anonymous, reporter_name, created_at")
+            .select("id, rating, comment, is_anonymous, reporter_name, image_base64, created_at")
             .order("created_at", { ascending: false })
             .limit(50)
 
@@ -109,7 +110,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
-        const { rating, comment, is_anonymous, reporter_name } = body
+        const { rating, comment, is_anonymous, reporter_name, image_base64 } = body
 
         if (rating === undefined || rating < 1 || rating > 5) {
             return NextResponse.json({ error: "Điểm đánh giá phải từ 1 đến 5 sao." }, { status: 400 })
@@ -120,6 +121,7 @@ export async function POST(req: NextRequest) {
             comment: comment ? comment.trim() : null,
             is_anonymous: is_anonymous !== false, // default true
             reporter_name: is_anonymous === false && reporter_name ? reporter_name.trim() : null,
+            image_base64: image_base64 || null,
             work_date: new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }).split(',')[0].split('/').reduce((acc, val, i, arr) => {
                 // Convert MM/DD/YYYY to YYYY-MM-DD
                 if (i === 2) return val + '-' + String(arr[0]).padStart(2, '0') + '-' + String(arr[1]).padStart(2, '0')
@@ -137,9 +139,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        // Trigger Teams Notification for negative reviews (<=2 stars) or optionally all feedbacks
-        // We trigger it for all reviews but mark negative ones as alarms
-        await sendTeamsFeedbackNotification(rating, comment, payload.is_anonymous, payload.reporter_name ?? "")
+        // Trigger Teams Notification for reviews
+        await sendTeamsFeedbackNotification(
+            rating,
+            comment,
+            payload.is_anonymous,
+            payload.reporter_name ?? "",
+            !!payload.image_base64
+        )
 
         return NextResponse.json({ success: true, data })
     } catch (err) {

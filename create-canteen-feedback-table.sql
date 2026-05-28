@@ -7,9 +7,13 @@ CREATE TABLE IF NOT EXISTS canteen_feedback (
     comment TEXT,
     is_anonymous BOOLEAN DEFAULT TRUE,
     reporter_name TEXT,
+    image_base64 TEXT,
     work_date DATE NOT NULL DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- In case your table already exists, run this command to add the column:
+-- ALTER TABLE canteen_feedback ADD COLUMN IF NOT EXISTS image_base64 TEXT;
 
 -- Indices for performance
 CREATE INDEX IF NOT EXISTS idx_canteen_feedback_date ON canteen_feedback(work_date);
