@@ -65,6 +65,12 @@ const T = {
     mode_enpi:   { vi: 'EnPI', en: 'EnPI' },
     mode_actual: { vi: 'Actual', en: 'Actual' },
     rcn_line:    { vi: 'RCN (kg)', en: 'RCN (kg)' },
+    tn_adjust_note: {
+        vi: 'RCN TN được loại trừ khỏi mẫu số EnPI cho Boiler/Củi và Shelling vì không qua 2 công đoạn này.',
+        en: 'TN RCN is excluded from Boiler/Wood and Shelling EnPI denominators because it does not pass those processes.',
+    },
+    tn_adjust_short: { vi: 'RCN TN loại trừ', en: 'TN RCN excluded' },
+    process_basis: { vi: 'RCN tính Boiler/Shell', en: 'Boiler/Shell basis' },
 }
 const t = (key: keyof typeof T, lang: Lang) => T[key][lang]
 
@@ -121,6 +127,18 @@ const BIG_CHART_IDS = [1, 2, 5]
 // SEUs shown as KPI cards (bottom)
 const KPI_CARD_IDS  = [3, 4]
 const ALL_SEU_IDS   = [1, 2, 3, 4, 5]
+
+// TN RCN received from another factory. It bypasses Boiler/Steaming and Shelling,
+// so it must be excluded only from EnPI denominators for SEU 2 and SEU 4.
+const TN_RCN_BY_MONTH_KG: Record<string, number> = {
+    '2026-05': 202_000,
+    '2026-06': 400_000,
+}
+const TN_ADJUSTED_SEU_IDS = new Set([2, 4])
+const getMonthKey = (monthYear?: string | null) => monthYear?.slice(0, 7) ?? ''
+const getTnRcnKg = (monthKey: string) => TN_RCN_BY_MONTH_KG[monthKey] ?? 0
+const getProcessRcnKg = (rawRcn: number | null | undefined, monthKey: string) =>
+    Math.max((rawRcn ?? 0) - getTnRcnKg(monthKey), 0)
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 const pctChange = (a: number | null, b: number | null) =>
@@ -526,10 +544,14 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
         return m
     }, [summaries])
 
-    // MNK (3) always per kg RCN peeled; Shelling (4) always per kg RCN; others follow toggle
+    // TN RCN bypasses Boiler/Steaming and Shelling, so only SEU 2 and 4
+    // use adjusted production = total RCN - TN RCN for EnPI/baseline math.
     const getProd = (h: MonthlyHistorical, id?: number): number => {
-        if (id === 3 || id === 4) return h.rcn_hap_duoc_kg ?? 0
-        return prodBase === 'rcn' ? (h.rcn_hap_duoc_kg ?? 0) : ((h.ck_obtained_mt ?? 0) * 1000)
+        const monthKey = getMonthKey(h.month_year)
+        const rawRcn = h.rcn_hap_duoc_kg ?? 0
+        if (id != null && TN_ADJUSTED_SEU_IDS.has(id)) return getProcessRcnKg(rawRcn, monthKey)
+        if (id === 3) return rawRcn
+        return prodBase === 'rcn' ? rawRcn : ((h.ck_obtained_mt ?? 0) * 1000)
     }
 
     const calcEnpi = (h: MonthlyHistorical | undefined, id?: number): number | null => {
@@ -574,13 +596,16 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
             const h = histMap[m]?.[seuId]
             const ep = calcEnpi(h, seuId)
             const actual = h?.actual_energy ?? null
+            const monthKey = getMonthKey(h?.month_year ?? `${m}-01`)
             const rcn = h?.rcn_hap_duoc_kg ?? null
+            const tnRcn = getTnRcnKg(monthKey)
+            const processRcn = rcn != null ? getProcessRcnKg(rcn, monthKey) : null
             let label = m
             try {
                 const parsed = parseISO(m + '-01')
                 if (!isNaN(parsed.getTime())) label = format(parsed, 'MM/yy')
             } catch { /* keep raw */ }
-            return { label, enpi: ep != null ? +ep.toFixed(6) : null, actual, rcn, ref, isCurrent: m === currKey }
+            return { label, enpi: ep != null ? +ep.toFixed(6) : null, actual, rcn, tnRcn, processRcn, ref, isCurrent: m === currKey }
         })
     }
 
@@ -606,6 +631,10 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
     })
 
     const refColorForBig = compareMode === 'avg2025' ? BRAND.refGreen : BRAND.refGold
+    const currentRawRcn = histMap[currKey]?.[1]?.rcn_hap_duoc_kg ?? histMap[currKey]?.[2]?.rcn_hap_duoc_kg ?? null
+    const currentTnRcn = getTnRcnKg(currKey)
+    const currentProcessRcn = currentRawRcn != null ? getProcessRcnKg(currentRawRcn, currKey) : null
+    const showTnAdjustment = currentTnRcn > 0
 
     return (
         <div
@@ -723,7 +752,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             </span>
                             <span style={{ fontSize: 9, color: '#94A3B8', fontWeight: 500 }}>
                                 {viewMode === 'enpi'
-                                    ? `— EnPI / ${prodBase === 'rcn' ? 'kg RCN' : 'MT CK'} · 10 tháng gần nhất`
+                                    ? `— EnPI / ${prodBase === 'rcn' ? 'kg RCN' : 'MT CK'} · Củi/Shell trừ RCN TN · 10 tháng gần nhất`
                                     : '— Actual: kWh / kg / m³ · 10 tháng gần nhất'
                                 }
                             </span>
@@ -734,7 +763,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                 const cfg = SEU_CFG[id]
                                 const h = histMap[currKey]?.[id]
                                 const actual = h?.actual_energy ?? null
-                                const enpi = calcEnpi(h)
+                                const enpi = calcEnpi(h, id)
                                 const ref = getRef(id)
                                 const delta = viewMode === 'enpi' ? pctChange(enpi, ref) : null
                                 return (
@@ -795,6 +824,20 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             showRef={viewMode === 'enpi'}
                         />
                     </div>
+
+                    {showTnAdjustment && (
+                        <div className="mx-4 mb-2 flex items-center justify-between rounded-lg px-3 py-1.5"
+                            style={{ background: 'linear-gradient(90deg, #FFF7ED 0%, #FFF1F2 100%)', border: '1px solid #FDBA7440', flexShrink: 0 }}>
+                            <div className="flex items-center gap-2">
+                                <span className="rounded-full px-2 py-0.5" style={{ background: '#B34A0015', color: '#B34A00', fontSize: 8, fontWeight: 900 }}>TN</span>
+                                <span style={{ fontSize: 9, color: '#7C2D12', fontWeight: 700 }}>{t('tn_adjust_note', lang)}</span>
+                            </div>
+                            <div className="flex items-center gap-3" style={{ fontSize: 9 }}>
+                                <span style={{ color: '#64748B', fontWeight: 700 }}>{t('tn_adjust_short', lang)}: <b style={{ color: '#B34A00' }}>{currentTnRcn.toLocaleString('vi-VN')} kg</b></span>
+                                {currentProcessRcn != null && <span style={{ color: '#64748B', fontWeight: 700 }}>{t('process_basis', lang)}: <b style={{ color: '#8E1E19' }}>{Math.round(currentProcessRcn).toLocaleString('vi-VN')} kg</b></span>}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Savings summary row — only in EnPI mode */}
                     {viewMode === 'enpi' && (
@@ -948,6 +991,12 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                                 </div>
                                             )}
                                         </div>
+                                        {showTnAdjustment && TN_ADJUSTED_SEU_IDS.has(id) && currentProcessRcn != null && (
+                                            <div className="mt-1 rounded px-1.5 py-0.5"
+                                                style={{ background: '#FFF7ED', border: '1px solid #FDBA7440', color: '#9A3412', fontSize: 6.8, fontWeight: 800, lineHeight: 1.2 }}>
+                                                TN -{Math.round(currentTnRcn / 1000).toLocaleString('vi-VN')}t · mẫu số {Math.round(currentProcessRcn / 1000).toLocaleString('vi-VN')}t
+                                            </div>
+                                        )}
 
                                         {/* Deviation bar */}
                                         {!noRef && delta != null && (
