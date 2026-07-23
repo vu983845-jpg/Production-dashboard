@@ -12,6 +12,7 @@ import {
     XAxis, YAxis, Tooltip, Legend
 } from "recharts"
 import { createClient } from "@/lib/supabase/client"
+import { toDisplayWaterDelta } from "@/lib/water-units"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
@@ -161,7 +162,6 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
 
         // Find the most recent date before `dateStr` that has a valid number for this meter
         // Search backwards in `daysInMonth` first, then in `fetchedRecords` if cross-month
-        let prevVal: number | null = null
 
         // Use a sorted list of all known dates (local modifications + fetched records)
         const allDates = Array.from(new Set([
@@ -176,10 +176,8 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
             if (pvStr && pvStr.trim() !== "") {
                 const pv = parseFloat(pvStr)
                 if (!isNaN(pv)) {
-                    // Normalize by diffDays
                     const diffDays = differenceInDays(new Date(dateStr), new Date(prevD)) || 1
-                    prevVal = pv
-                    return Math.max(0, (currentVal - prevVal) / diffDays)
+                    return Math.max(0, toDisplayWaterDelta(meterKey, (currentVal - pv) / diffDays))
                 }
             }
         }
@@ -374,7 +372,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                                                 <div className="h-4 flex items-center justify-end px-1">
                                                                     {delta != null && (
                                                                         <span className="text-[11px] font-mono font-bold text-emerald-600 bg-emerald-50 px-1 rounded">
-                                                                            +{delta.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}
+                                                                            +{delta.toLocaleString("vi-VN", { maximumFractionDigits: 3 })}
                                                                         </span>
                                                                     )}
                                                                 </div>
