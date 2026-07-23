@@ -12,18 +12,23 @@ import {
     XAxis, YAxis, Tooltip, Legend
 } from "recharts"
 import { createClient } from "@/lib/supabase/client"
-import { calculateWaterDelta } from "@/lib/water-units"
+import {
+    calculateCanteenTotal,
+    calculateOfficeConsumption,
+    calculateWaterDelta,
+} from "@/lib/water-units"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 const WATER_METERS = [
     { key: "tong", label: "Tổng", shortLabel: "Tổng", color: "#0ea5e9", zone: "Tổng" },
-    { key: "cap_vp", label: "Cấp VP", shortLabel: "VP", color: "#38bdf8", zone: "Văn phòng" },
+    { key: "cap_vp", label: "Cấp VP", shortLabel: "VP", resultLabel: "Văn phòng", color: "#38bdf8", zone: "Văn phòng" },
     { key: "lo_hoi", label: "Lò hơi", shortLabel: "Lò hơi", color: "#f97316", zone: "Lò hơi" },
     { key: "lo_hoi_shelling", label: "Lò hơi (Shelling)", shortLabel: "LH Shell", color: "#fb923c", zone: "Lò hơi" },
     { key: "ro_cap_vao", label: "RO vào", shortLabel: "RO vào", color: "#8b5cf6", zone: "RO" },
     { key: "ro_dau_ra", label: "RO ra", shortLabel: "RO ra", color: "#a78bfa", zone: "RO" },
-    { key: "canteen", label: "Canteen", shortLabel: "Canteen", color: "#10b981", zone: "Tiện ích" },
+    { key: "canteen", label: "Canteen 1", shortLabel: "Canteen 1", resultLabel: "Canteen tổng", color: "#10b981", zone: "Tiện ích" },
+    { key: "canteen_2", label: "Canteen 2", shortLabel: "Canteen 2", color: "#14b8a6", zone: "Tiện ích" },
     { key: "nha_xe", label: "Nhà xe", shortLabel: "Nhà xe", color: "#34d399", zone: "Tiện ích" },
     { key: "cooling", label: "Cooling", shortLabel: "Cooling", color: "#06b6d4", zone: "Tiện ích" },
     { key: "nuoc_thai", label: "Nước thải", shortLabel: "Nước thải", color: "#64748b", zone: "Thải" },
@@ -152,18 +157,16 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
 
     const hasChanges = modifiedRows.length > 0
 
-    // Compute Delta for a cell dynamically (even un-saved inputs recalculate immediately)
-    const getDelta = (dateStr: string, meterKey: MeterKey) => {
+    // Compute the physical consumption of one meter from consecutive readings.
+    const getMeterDelta = (dateStr: string, meterKey: MeterKey) => {
         const valStr = localData[dateStr]?.[meterKey]
         if (!valStr || valStr.trim() === "") return null
 
         const currentVal = parseFloat(valStr)
         if (isNaN(currentVal)) return null
 
-        // Find the most recent date before `dateStr` that has a valid number for this meter
-        // Search backwards in `daysInMonth` first, then in `fetchedRecords` if cross-month
-
-        // Use a sorted list of all known dates (local modifications + fetched records)
+        // Use all known dates so the first reading of a month can use the
+        // most recent valid reading from the previous month as its baseline.
         const allDates = Array.from(new Set([
             ...fetchedRecords.map(r => r.work_date),
             ...Object.keys(localData)
@@ -174,13 +177,33 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
             const prevD = allDates[i]
             const pvStr = localData[prevD]?.[meterKey] ?? (fetchedRecords.find(r => r.work_date === prevD)?.[meterKey]?.toString() || "")
             if (pvStr && pvStr.trim() !== "") {
-                const pv = parseFloat(pvStr)
-                if (!isNaN(pv)) {
-                    return calculateWaterDelta(meterKey, currentVal, pv)
+                const previousVal = parseFloat(pvStr)
+                if (!isNaN(previousVal)) {
+                    return calculateWaterDelta(meterKey, currentVal, previousVal)
                 }
             }
         }
-        return null // No previous record
+        return null
+    }
+
+    // Derived display values:
+    // Canteen = Canteen 1 + Canteen 2
+    // Office = VP supply - Garage - total Canteen
+    const getDelta = (dateStr: string, meterKey: MeterKey) => {
+        const canteenTotal = calculateCanteenTotal(
+            getMeterDelta(dateStr, "canteen"),
+            getMeterDelta(dateStr, "canteen_2"),
+        )
+
+        if (meterKey === "canteen") return canteenTotal
+        if (meterKey === "cap_vp") {
+            return calculateOfficeConsumption(
+                getMeterDelta(dateStr, "cap_vp"),
+                getMeterDelta(dateStr, "nha_xe"),
+                canteenTotal,
+            )
+        }
+        return getMeterDelta(dateStr, meterKey)
     }
 
     // Chart data based on LIVE values
@@ -370,8 +393,8 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                                                 />
                                                                 <div className="h-4 flex items-center justify-end px-1">
                                                                     {delta != null && (
-                                                                        <span className="text-[11px] font-mono font-bold text-emerald-600 bg-emerald-50 px-1 rounded">
-                                                                            +{delta.toLocaleString("vi-VN", { maximumFractionDigits: 3 })}
+                                                                        <span className="text-[11px] font-mono font-bold text-emerald-600 bg-emerald-50 px-1 rounded" title={"resultLabel" in m ? m.resultLabel : "Tiêu thụ"}>
+                                                                            {"resultLabel" in m ? `${m.resultLabel}: ` : "+"}{delta.toLocaleString("vi-VN", { maximumFractionDigits: 3 })}
                                                                         </span>
                                                                     )}
                                                                 </div>
@@ -437,7 +460,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                             <Tooltip content={<WaterTooltip />} />
                                             <Legend wrapperStyle={{ paddingTop: 12, fontSize: 11, fontWeight: 600, color: "#475569" }} iconType="circle" />
                                             {meters.map(m => (
-                                                <Line key={m.key} type="monotone" dataKey={m.key} name={m.shortLabel} stroke={m.color} strokeWidth={2.5}
+                                                <Line key={m.key} type="monotone" dataKey={m.key} name={"resultLabel" in m ? m.resultLabel : m.shortLabel} stroke={m.color} strokeWidth={2.5}
                                                     dot={{ r: 3, strokeWidth: 0, fill: m.color }}
                                                     activeDot={{ r: 6, strokeWidth: 0, fill: m.color }}
                                                     connectNulls={false} />

@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
         ro_cap_vao: row.ro_cap_vao ?? null,
         ro_dau_ra: row.ro_dau_ra ?? null,
         canteen: row.canteen ?? null,
+        canteen_2: row.canteen_2 ?? null,
         nha_xe: row.nha_xe ?? null,
         cooling: row.cooling ?? null,
         nuoc_thai: row.nuoc_thai ?? null,
