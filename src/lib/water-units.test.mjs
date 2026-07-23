@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 
-import { toDisplayWaterDelta } from "./water-units.ts"
+import { calculateWaterDelta, toDisplayWaterDelta } from "./water-units.ts"
 
 test("converts tenth-cubic-metre meter deltas to cubic metres", () => {
     assert.equal(toDisplayWaterDelta("cooling", 15), 1.5)
@@ -17,4 +17,9 @@ test("leaves other water meter deltas unchanged", () => {
     assert.equal(toDisplayWaterDelta("ro_dau_ra", 42), 42)
     assert.equal(toDisplayWaterDelta("canteen", 42), 42)
     assert.equal(toDisplayWaterDelta("nuoc_thai", 42), 42)
+})
+
+test("uses the full meter difference across a month boundary", () => {
+    assert.equal(calculateWaterDelta("tong", 15855, 15614), 241)
+    assert.equal(calculateWaterDelta("cap_vp", 26687, 26453), 23.4)
 })

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, addDays, differenceInDays, eachDayOfInterval, isAfter } from "date-fns"
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, addDays, eachDayOfInterval, isAfter } from "date-fns"
 import { vi } from "date-fns/locale"
 import {
     ChevronLeft, ChevronRight, CalendarIcon, Droplets, Save, Loader2,
@@ -12,7 +12,7 @@ import {
     XAxis, YAxis, Tooltip, Legend
 } from "recharts"
 import { createClient } from "@/lib/supabase/client"
-import { toDisplayWaterDelta } from "@/lib/water-units"
+import { calculateWaterDelta } from "@/lib/water-units"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
@@ -176,8 +176,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
             if (pvStr && pvStr.trim() !== "") {
                 const pv = parseFloat(pvStr)
                 if (!isNaN(pv)) {
-                    const diffDays = differenceInDays(new Date(dateStr), new Date(prevD)) || 1
-                    return Math.max(0, toDisplayWaterDelta(meterKey, (currentVal - pv) / diffDays))
+                    return calculateWaterDelta(meterKey, currentVal, pv)
                 }
             }
         }
