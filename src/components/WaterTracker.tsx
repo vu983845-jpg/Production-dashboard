@@ -5,7 +5,8 @@ import { format, startOfMonth, endOfMonth, subMonths, addMonths, addDays, eachDa
 import { vi } from "date-fns/locale"
 import {
     ChevronLeft, ChevronRight, CalendarIcon, Droplets, Save, Loader2,
-    CheckCircle2, AlertCircle, PenLine
+    CheckCircle2, AlertCircle, PenLine, Activity, TrendingDown, TrendingUp,
+    TriangleAlert,
 } from "lucide-react"
 import {
     LineChart, Line, ResponsiveContainer, CartesianGrid,
@@ -16,6 +17,9 @@ import {
     calculateCanteenTotal,
     calculateOfficeConsumption,
     calculateWaterDelta,
+    compareWaterPeriods,
+    getWaterAnomaly,
+    summarizeWaterPeriod,
 } from "@/lib/water-units"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -49,9 +53,12 @@ const ZONES = [
     { name: "Văn phòng", keys: ["cap_vp"] },
     { name: "Lò hơi", keys: ["lo_hoi", "lo_hoi_shelling"] },
     { name: "RO", keys: ["ro_cap_vao", "ro_dau_ra"] },
-    { name: "Tiện ích", keys: ["canteen", "nha_xe", "cooling"] },
+    { name: "Tiện ích", keys: ["canteen", "canteen_2", "nha_xe", "cooling"] },
     { name: "Nước thải", keys: ["nuoc_thai"] },
 ]
+
+const formatWaterValue = (value: number) =>
+    value.toLocaleString("vi-VN", { maximumFractionDigits: 2 })
 
 const WaterTooltip = ({ active, payload, label }: any) => {
     if (active && payload?.length) {
@@ -103,10 +110,11 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
 
     const todayStr = format(new Date(), "yyyy-MM-dd")
 
-    // Fetch data including 1 month prior for baseline
+    // Fetch two months of history: the extra month provides the baseline for
+    // day 1 of the comparison month.
     const fetchData = useCallback(async () => {
         setIsLoading(true)
-        const startDateStr = format(subMonths(startOfMonth(currentMonth), 1), "yyyy-MM-dd")
+        const startDateStr = format(subMonths(startOfMonth(currentMonth), 2), "yyyy-MM-dd")
         const endPlusOne = format(addDays(endOfMonth(currentMonth), 1), "yyyy-MM-dd")
 
         const { data, error } = await supabase
@@ -206,6 +214,41 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
         return getMeterDelta(dateStr, meterKey)
     }
 
+    const previousMonthDays = useMemo(() => {
+        const previousMonth = subMonths(currentMonth, 1)
+        return eachDayOfInterval({
+            start: startOfMonth(previousMonth),
+            end: endOfMonth(previousMonth),
+        }).map(d => format(d, "yyyy-MM-dd"))
+    }, [currentMonth])
+
+    const meterAnalytics = useMemo(() => WATER_METERS.map(meter => {
+        const currentValues = daysInMonth.map(date => getDelta(date, meter.key))
+        const previousValues = previousMonthDays.map(date => getDelta(date, meter.key))
+        const summary = summarizeWaterPeriod(currentValues)
+        const comparison = compareWaterPeriods(currentValues, previousValues)
+
+        return { meter, summary, comparison }
+    }), [daysInMonth, previousMonthDays, localData, fetchedRecords])
+
+    const anomalyMap = useMemo(() => {
+        const result = new Map<string, ReturnType<typeof getWaterAnomaly>>()
+
+        WATER_METERS.forEach(meter => {
+            const values = daysInMonth.map(date => getDelta(date, meter.key))
+            values.forEach((value, index) => {
+                const anomaly = getWaterAnomaly(value, values.slice(0, index))
+                if (anomaly) result.set(`${daysInMonth[index]}:${meter.key}`, anomaly)
+            })
+        })
+
+        return result
+    }, [daysInMonth, localData, fetchedRecords])
+
+    const totalAnalytics = meterAnalytics.find(item => item.meter.key === "tong")
+    const totalComparison = totalAnalytics?.comparison
+    const hasTotalComparison = totalComparison && totalComparison.previousTotal > 0
+
     // Chart data based on LIVE values
     const chartData = useMemo(() => {
         const result: any[] = []
@@ -216,13 +259,14 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                 const delta = getDelta(dateStr, m.key)
                 if (delta != null) {
                     row[m.key] = delta
+                    row[`${m.key}Anomaly`] = anomalyMap.has(`${dateStr}:${m.key}`)
                     hasAnyData = true
                 }
             })
             if (hasAnyData) result.push(row)
         })
         return result
-    }, [daysInMonth, localData, fetchedRecords])
+    }, [daysInMonth, localData, fetchedRecords, anomalyMap])
 
 
     // Save
@@ -305,6 +349,77 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                 </div>
             </div>
 
+            {/* Monthly operating snapshot */}
+            {!isLoading && totalAnalytics && (
+                <section aria-labelledby="water-month-summary" className="overflow-hidden rounded-2xl border border-sky-100 bg-white/95 shadow-[0_14px_35px_-22px_rgba(2,132,199,0.55)]">
+                    <div className="flex flex-col gap-1 border-b border-sky-100 bg-gradient-to-r from-sky-950 via-sky-800 to-cyan-700 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 id="water-month-summary" className="flex items-center gap-2 text-sm font-black tracking-wide">
+                                <Activity className="h-4 w-4 text-cyan-300" /> Tổng quan nước tháng {format(currentMonth, "MM/yyyy")}
+                            </h2>
+                            <p className="mt-0.5 text-[11px] text-sky-100">Cùng kỳ tính đến ngày có dữ liệu mới nhất · Đơn vị m³</p>
+                        </div>
+                        <span className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold sm:mt-0">
+                            <TriangleAlert className="h-3 w-3 text-amber-300" /> Đỏ = cao hơn AVG trước đó trên 50%
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                        <div className="px-5 py-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Từ đầu tháng</p>
+                            <p className="mt-1 text-2xl font-black tabular-nums text-sky-950">{formatWaterValue(totalAnalytics.summary.total)} <span className="text-xs text-slate-400">m³</span></p>
+                            <p className="mt-1 text-[11px] font-medium text-slate-500">{totalAnalytics.summary.recordedDays} ngày có số liệu</p>
+                        </div>
+                        <div className="px-5 py-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">AVG hiện tại</p>
+                            <p className="mt-1 text-2xl font-black tabular-nums text-sky-950">{formatWaterValue(totalAnalytics.summary.average)} <span className="text-xs text-slate-400">m³/ngày</span></p>
+                            <p className="mt-1 text-[11px] font-medium text-slate-500">Không tính ngày trống</p>
+                        </div>
+                        <div className={`px-5 py-4 ${hasTotalComparison && totalComparison.difference > 0 ? "bg-rose-50/70" : "bg-emerald-50/60"}`}>
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">So với cùng kỳ tháng trước</p>
+                            {hasTotalComparison ? (
+                                <>
+                                    <p className={`mt-1 flex items-center gap-1 text-2xl font-black tabular-nums ${totalComparison.difference > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                        {totalComparison.difference > 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+                                        {totalComparison.percentChange != null && `${Math.abs(totalComparison.percentChange).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`}
+                                    </p>
+                                    <p className="mt-1 text-[11px] font-bold text-slate-500">
+                                        {totalComparison.difference > 0 ? "Tăng" : "Giảm"} {formatWaterValue(Math.abs(totalComparison.difference))} m³ · kỳ trước {formatWaterValue(totalComparison.previousTotal)} m³
+                                    </p>
+                                </>
+                            ) : <p className="mt-2 text-sm font-bold text-slate-400">Chưa đủ dữ liệu tháng trước</p>}
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto border-t border-slate-100">
+                        <table className="w-full min-w-[760px] text-xs">
+                            <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                                <tr>
+                                    <th className="px-4 py-2 text-left">Đồng hồ / Khu vực</th>
+                                    <th className="px-3 py-2 text-right">Lũy kế</th>
+                                    <th className="px-3 py-2 text-right">AVG/ngày</th>
+                                    <th className="px-3 py-2 text-right">Cùng kỳ trước</th>
+                                    <th className="px-4 py-2 text-right">Chênh lệch</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {meterAnalytics.map(({ meter, summary, comparison }) => (
+                                    <tr key={meter.key} className="hover:bg-sky-50/50">
+                                        <td className="px-4 py-2 font-bold text-slate-700"><span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: meter.color }} />{"resultLabel" in meter ? meter.resultLabel : meter.shortLabel}</td>
+                                        <td className="px-3 py-2 text-right font-mono font-bold text-slate-700">{formatWaterValue(summary.total)}</td>
+                                        <td className="px-3 py-2 text-right font-mono text-slate-600">{formatWaterValue(summary.average)}</td>
+                                        <td className="px-3 py-2 text-right font-mono text-slate-500">{comparison.previousTotal > 0 ? formatWaterValue(comparison.previousTotal) : "—"}</td>
+                                        <td className={`px-4 py-2 text-right font-mono font-black ${comparison.previousTotal <= 0 ? "text-slate-300" : comparison.difference > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                            {comparison.previousTotal > 0 && comparison.percentChange != null ? `${comparison.difference > 0 ? "+" : ""}${comparison.percentChange.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%` : "—"}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            )}
+
             {!canEdit && viewMode === "table" && (
                 <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
                     <AlertCircle className="h-4 w-4 shrink-0" />
@@ -351,28 +466,33 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                     {daysInMonth.map((dateStr) => {
                                         const isFuture = isAfter(new Date(dateStr), new Date(todayStr))
                                         const isModified = modifiedRows.includes(dateStr)
+                                        const rowHasAnomaly = WATER_METERS.some(m => anomalyMap.has(`${dateStr}:${m.key}`))
                                         return (
-                                            <tr key={dateStr} className={`group transition-colors duration-150 ${isFuture ? "bg-slate-50/50 opacity-60" : "hover:bg-sky-50/40"} ${focusedWaterRowDate === dateStr ? "bg-sky-100/30" : ""}`}>
-                                                <td className={`sticky left-0 z-10 border-b border-r border-slate-100 p-0 shadow-[1px_0_0_0_#f1f5f9] align-top transition-colors duration-150 ${
+                                            <tr key={dateStr} className={`group transition-colors duration-150 ${isFuture ? "bg-slate-50/50 opacity-60" : rowHasAnomaly ? "bg-rose-50/55 hover:bg-rose-50" : "hover:bg-sky-50/40"} ${focusedWaterRowDate === dateStr ? "bg-sky-100/30" : ""}`}>
+                                                <td className={`sticky left-0 z-10 border-b border-r p-0 shadow-[1px_0_0_0_#f1f5f9] align-top transition-colors duration-150 ${
                                                     focusedWaterRowDate === dateStr
                                                         ? "bg-sky-200 text-sky-950 font-bold"
-                                                        : isModified
-                                                            ? "bg-sky-50"
-                                                            : "bg-white group-hover:bg-sky-50/40"
+                                                        : rowHasAnomaly
+                                                            ? "border-rose-200 bg-rose-100"
+                                                            : isModified
+                                                                ? "border-slate-100 bg-sky-50"
+                                                                : "border-slate-100 bg-white group-hover:bg-sky-50/40"
                                                 }`}>
-                                                    <div className="flex flex-col items-center justify-center h-full p-2">
-                                                        <span className={`font-bold ${new Date(dateStr).getDay() === 0 ? "text-red-500" : "text-slate-700"}`}>
+                                                    <div className="flex h-full flex-col items-center justify-center p-2">
+                                                        <span className={`flex items-center gap-1 font-bold ${rowHasAnomaly ? "text-rose-700" : new Date(dateStr).getDay() === 0 ? "text-red-500" : "text-slate-700"}`}>
+                                                            {rowHasAnomaly && <TriangleAlert className="h-3 w-3" />}
                                                             {format(new Date(dateStr), "dd/MM")}
                                                         </span>
-                                                        <span className="text-[10px] text-slate-400 capitalize">
+                                                        <span className={`text-[10px] capitalize ${rowHasAnomaly ? "font-bold text-rose-500" : "text-slate-400"}`}>
                                                             {format(new Date(dateStr), "EEE", { locale: vi })}
                                                         </span>
                                                     </div>
                                                 </td>
                                                 {WATER_METERS.map(m => {
                                                     const delta = getDelta(dateStr, m.key)
+                                                    const anomaly = anomalyMap.get(`${dateStr}:${m.key}`)
                                                     return (
-                                                        <td key={m.key} className={`border-b border-r border-slate-100 p-1.5 align-top transition-colors duration-150 ${focusedWaterRowDate === dateStr ? "bg-sky-50/20" : ""}`}>
+                                                        <td key={m.key} className={`border-b border-r p-1.5 align-top transition-colors duration-150 ${anomaly ? "border-rose-200 bg-rose-100/80" : "border-slate-100"} ${focusedWaterRowDate === dateStr ? "bg-sky-50/20" : ""}`}>
                                                             <div className="flex flex-col gap-1">
                                                                 <span className="block md:hidden text-[9px] text-sky-800 font-bold uppercase tracking-wider select-none mb-0.5">{m.shortLabel}</span>
                                                                 <input
@@ -393,7 +513,13 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                                                 />
                                                                 <div className="h-4 flex items-center justify-end px-1">
                                                                     {delta != null && (
-                                                                        <span className="text-[11px] font-mono font-bold text-emerald-600 bg-emerald-50 px-1 rounded" title={"resultLabel" in m ? m.resultLabel : "Tiêu thụ"}>
+                                                                        <span
+                                                                            className={`rounded px-1 font-mono text-[11px] font-bold ${anomaly ? "bg-rose-600 text-white shadow-sm" : "bg-emerald-50 text-emerald-600"}`}
+                                                                            title={anomaly
+                                                                                ? `Bất thường: cao hơn ${anomaly.percentAboveAverage.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% so với AVG trước đó (${formatWaterValue(anomaly.baselineAverage)} m³)`
+                                                                                : "resultLabel" in m ? m.resultLabel : "Tiêu thụ"}
+                                                                        >
+                                                                            {anomaly && <TriangleAlert className="mr-0.5 inline h-3 w-3" />}
                                                                             {"resultLabel" in m ? `${m.resultLabel}: ` : "+"}{delta.toLocaleString("vi-VN", { maximumFractionDigits: 3 })}
                                                                         </span>
                                                                     )}
@@ -461,7 +587,10 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                             <Legend wrapperStyle={{ paddingTop: 12, fontSize: 11, fontWeight: 600, color: "#475569" }} iconType="circle" />
                                             {meters.map(m => (
                                                 <Line key={m.key} type="monotone" dataKey={m.key} name={"resultLabel" in m ? m.resultLabel : m.shortLabel} stroke={m.color} strokeWidth={2.5}
-                                                    dot={{ r: 3, strokeWidth: 0, fill: m.color }}
+                                                    dot={(props: any) => {
+                                                        const isAnomaly = props.payload?.[`${m.key}Anomaly`]
+                                                        return <circle cx={props.cx} cy={props.cy} r={isAnomaly ? 5 : 3} fill={isAnomaly ? "#e11d48" : m.color} stroke={isAnomaly ? "#fff" : "none"} strokeWidth={isAnomaly ? 2 : 0} />
+                                                    }}
                                                     activeDot={{ r: 6, strokeWidth: 0, fill: m.color }}
                                                     connectNulls={false} />
                                             ))}

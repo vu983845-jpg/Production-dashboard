@@ -5,6 +5,9 @@ import {
     calculateCanteenTotal,
     calculateOfficeConsumption,
     calculateWaterDelta,
+    compareWaterPeriods,
+    getWaterAnomaly,
+    summarizeWaterPeriod,
     toDisplayWaterDelta,
 } from "./water-units.ts"
 
@@ -38,4 +41,45 @@ test("adds both canteen meter consumption values", () => {
 test("subtracts garage and total canteen from the VP supply meter", () => {
     assert.equal(calculateOfficeConsumption(23.4, 15.967, 6.8), 0.633)
     assert.equal(calculateOfficeConsumption(10, 8, 5), 0)
+})
+
+test("summarizes only valid recorded water days", () => {
+    assert.deepEqual(summarizeWaterPeriod([10, null, 20, undefined, Number.NaN, 0]), {
+        total: 30,
+        average: 10,
+        recordedDays: 3,
+    })
+})
+
+test("compares current month with the same recorded period last month", () => {
+    assert.deepEqual(compareWaterPeriods([10, 20, null], [8, 12, 100]), {
+        currentTotal: 30,
+        previousTotal: 20,
+        difference: 10,
+        percentChange: 50,
+        recordedDays: 2,
+    })
+})
+
+test("returns no percentage when the previous period is empty", () => {
+    assert.deepEqual(compareWaterPeriods([10], [0]), {
+        currentTotal: 10,
+        previousTotal: 0,
+        difference: 10,
+        percentChange: null,
+        recordedDays: 1,
+    })
+})
+
+test("requires three baseline days before flagging an anomaly", () => {
+    assert.equal(getWaterAnomaly(100, [10, 10]), null)
+})
+
+test("flags consumption above 150 percent of the previous-day average", () => {
+    assert.deepEqual(getWaterAnomaly(18, [10, 12, 8, null]), {
+        baselineAverage: 10,
+        percentAboveAverage: 80,
+    })
+    assert.equal(getWaterAnomaly(15, [10, 12, 8]), null)
+    assert.equal(getWaterAnomaly(0, [10, 12, 8]), null)
 })
