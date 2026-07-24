@@ -3016,9 +3016,12 @@ export default function InputPage() {
                 </div>
             )}
 
-            <div className="flex items-center justify-between space-y-2 border-b pb-4 mb-4">
+            <div className="mb-4 flex items-center justify-between border-b pb-3 sm:pb-4">
 
-                <h2 className="text-3xl font-bold tracking-tight">Nhập Liệu Báo Cáo</h2>
+                <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 sm:hidden">Vận hành nhà máy</p>
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Nhập Liệu Báo Cáo</h1>
+                </div>
 
             </div>
 
@@ -3040,7 +3043,7 @@ export default function InputPage() {
 
                                 className={cn(
 
-                                    "w-full justify-start text-left font-normal",
+                                    "min-h-11 w-full justify-start text-left text-base font-normal sm:text-sm",
 
                                     !date && "text-muted-foreground"
 
@@ -3090,21 +3093,23 @@ export default function InputPage() {
                 onValueChange={setActiveTab}
                 className="space-y-4">
 
-                <TabsList>
+                <div className="-mx-4 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:px-0">
+                    <TabsList className="inline-flex h-auto min-w-max justify-start gap-1 rounded-xl bg-slate-100 p-1">
 
-                    {role !== 'maint' && <TabsTrigger value="production">Sản Phẩm & KPI</TabsTrigger>}
+                        {role !== 'maint' && <TabsTrigger value="production" className="min-h-11 shrink-0 snap-start px-4 font-bold">Sản Phẩm & KPI</TabsTrigger>}
 
-                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="energy">Điện EVN & Củi</TabsTrigger>}
+                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="energy" className="min-h-11 shrink-0 snap-start px-4 font-bold">Điện EVN & Củi</TabsTrigger>}
 
-                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy">Điện Shelling (Tháng)</TabsTrigger>}
+                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy" className="min-h-11 shrink-0 snap-start px-4 font-bold">Điện Shelling (Tháng)</TabsTrigger>}
 
-                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="compressor">🌬️ Máy Nén Khí</TabsTrigger>}
+                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="compressor" className="min-h-11 shrink-0 snap-start px-4 font-bold">🌬️ Máy Nén Khí</TabsTrigger>}
 
-                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="other-elec">⚡ Điện Khác</TabsTrigger>}
+                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="other-elec" className="min-h-11 shrink-0 snap-start px-4 font-bold">⚡ Điện Khác</TabsTrigger>}
 
-                    {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="water">💧 Nước</TabsTrigger>}
+                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="water" className="min-h-11 shrink-0 snap-start px-4 font-bold">💧 Nước</TabsTrigger>}
 
-                </TabsList>
+                    </TabsList>
+                </div>
 
 
 
@@ -5539,13 +5544,16 @@ export default function InputPage() {
 
                         <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
 
-                            <div className="p-6">
+                            <div className="p-3 pb-0 md:p-6">
 
-                                <div className="flex justify-between items-center mb-4">
+                                <div className="mb-4 flex items-start justify-between gap-3">
 
-                                    <h3 className="font-semibold text-lg">Bảng Ghi Nhận Năng Lượng: Tháng {format(date, "MM/yyyy")}</h3>
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 md:hidden">Điện · Nước · Củi</p>
+                                        <h3 className="text-base font-semibold leading-tight md:text-lg">Bảng Ghi Nhận Năng Lượng: Tháng {format(date, "MM/yyyy")}</h3>
+                                    </div>
 
-                                    <Button onClick={saveEnergy} disabled={isSaving} size="sm">
+                                    <Button onClick={saveEnergy} disabled={isSaving} size="sm" className="hidden md:inline-flex">
 
                                         <Save className="mr-2 h-4 w-4" />
 
@@ -5559,21 +5567,22 @@ export default function InputPage() {
 
                                 {/* Quick Wood Distribution */}
 
-                                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                <div className="mb-4 rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-3">
 
-                                    <div className="flex flex-wrap items-end gap-3">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
 
-                                        <div className="flex-1 min-w-[180px]">
+                                        <div className="min-w-0 flex-1">
 
-                                            <Label className="text-sm font-bold text-orange-700 mb-1 block">🔥 Tổng Củi Tháng (kg)</Label>
+                                            <Label className="mb-1 block text-sm font-bold text-orange-700">🔥 Tổng Củi Tháng (kg)</Label>
 
-                                            <p className="text-[11px] text-orange-500 mb-1">Nhập tổng kg → hệ thống chia đều cho các ngày đến hôm nay</p>
+                                            <p className="mb-2 text-[11px] leading-relaxed text-orange-600/80">Nhập tổng kg → hệ thống chia đều cho các ngày đến hôm nay</p>
 
                                             <div className="flex gap-2">
 
                                                 <Input
 
                                                     type="number"
+                                                    inputMode="numeric"
 
                                                     step="1"
 
@@ -5581,7 +5590,7 @@ export default function InputPage() {
 
                                                     value={woodTotalInput}
 
-                                                    className="border-orange-300 focus-visible:ring-orange-400 flex-1"
+                                                    className="min-h-11 min-w-0 flex-1 border-orange-300 bg-white text-base focus-visible:ring-orange-400"
 
                                                     onChange={(e) => setWoodTotalInput(e.target.value)}
 
@@ -5631,7 +5640,7 @@ export default function InputPage() {
 
                                                     variant="outline"
 
-                                                    className="border-orange-400 text-orange-700 hover:bg-orange-100 whitespace-nowrap"
+                                                    className="min-h-11 shrink-0 whitespace-nowrap border-orange-400 bg-white px-3 text-orange-700 hover:bg-orange-100"
 
                                                     onClick={() => {
 
@@ -5679,7 +5688,7 @@ export default function InputPage() {
 
                                             </div>
 
-                                            <p className="text-[10px] text-orange-400 mt-1">Nhập số rồi nhấn Enter ↵ hoặc bấm Chia đều</p>
+                                            <p className="mt-1 hidden text-[10px] text-orange-500 sm:block">Nhập số rồi nhấn Enter ↵ hoặc bấm Chia đều</p>
 
                                         </div>
 
@@ -5689,7 +5698,102 @@ export default function InputPage() {
 
 
 
-                                <div className="overflow-auto w-full relative max-h-[60vh] md:max-h-[650px] custom-scrollbar border rounded-lg">
+                                <div className="space-y-3 md:hidden">
+                                    {monthlyEnergyData.filter(row => row.work_date <= format(new Date(), "yyyy-MM-dd")).map((row, index) => {
+                                        const nextRowWater = index < monthlyEnergyData.length - 1 ? monthlyEnergyData[index + 1].water_meter_reading : undefined;
+                                        const isWaterCalculated = row.water_meter_reading != null && nextRowWater != null;
+                                        const updateRow = (field: keyof typeof row, value: number | undefined, recalculate = false) => {
+                                            const newData = [...monthlyEnergyData];
+                                            newData[index] = { ...newData[index], [field]: value };
+                                            setMonthlyEnergyData(recalculate ? recalcEnergyData(newData, prevMonthLastMeter) : newData);
+                                        };
+                                        const mobileInputClass = "min-h-11 w-full rounded-lg border bg-white px-3 text-right text-base font-semibold tabular-nums outline-none transition-shadow focus:ring-2";
+
+                                        return (
+                                            <article key={`mobile-${row.work_date}`} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                                                <header className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2.5">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Ngày ghi nhận</p>
+                                                        <h4 className="text-base font-extrabold text-slate-800">{format(parseISO(row.work_date), "dd/MM/yyyy")}</h4>
+                                                    </div>
+                                                    <span className="rounded-full bg-slate-200/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">#{index + 1}</span>
+                                                </header>
+
+                                                <section className="border-b border-amber-100 bg-amber-50/45 p-3">
+                                                    <div className="mb-2 flex items-center justify-between">
+                                                        <h5 className="text-xs font-extrabold uppercase tracking-[0.12em] text-amber-700">⚡ Điện EVN</h5>
+                                                        <div className="text-right">
+                                                            <p className="text-[9px] font-bold uppercase text-amber-600/70">Tiêu thụ</p>
+                                                            <p className="text-sm font-black tabular-nums text-amber-800">{row.electricity_kwh != null ? `${row.electricity_kwh.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kWh` : '—'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {([
+                                                            ['Cao điểm', 'meter_peak'],
+                                                            ['Bình thường', 'meter_normal'],
+                                                            ['Thấp điểm', 'meter_offpeak'],
+                                                            ['Target', 'electricity_target_kwh'],
+                                                        ] as const).map(([label, field]) => (
+                                                            <label key={field} className="space-y-1">
+                                                                <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700/80">{label}</span>
+                                                                <input
+                                                                    type="number"
+                                                                    inputMode="decimal"
+                                                                    step="0.01"
+                                                                    className={cn(mobileInputClass, "border-amber-200 focus:ring-amber-400")}
+                                                                    value={row[field] ?? ''}
+                                                                    onChange={(e) => updateRow(field, e.target.value === '' ? undefined : Number(e.target.value), field !== 'electricity_target_kwh')}
+                                                                />
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </section>
+
+                                                <section className="border-b border-cyan-100 bg-cyan-50/35 p-3">
+                                                    <div className="mb-2 flex items-center justify-between">
+                                                        <h5 className="text-xs font-extrabold uppercase tracking-[0.12em] text-cyan-700">💧 Nước tổng</h5>
+                                                        <div className="text-right">
+                                                            <p className="text-[9px] font-bold uppercase text-cyan-600/70">Tiêu thụ</p>
+                                                            <p className="text-sm font-black tabular-nums text-cyan-800">{row.water_m3 != null ? `${row.water_m3.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} m³` : '—'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <label className="space-y-1">
+                                                            <span className="text-[10px] font-bold uppercase tracking-wide text-cyan-700/80">Chỉ số đồng hồ</span>
+                                                            <input type="number" inputMode="decimal" step="1" className={cn(mobileInputClass, "border-cyan-200 focus:ring-cyan-400")} value={row.water_meter_reading ?? ''} onChange={(e) => updateRow('water_meter_reading', e.target.value === '' ? undefined : Number(e.target.value), true)} />
+                                                        </label>
+                                                        <label className="space-y-1">
+                                                            <span className="text-[10px] font-bold uppercase tracking-wide text-cyan-700/80">Target</span>
+                                                            <input type="number" inputMode="decimal" step="0.01" className={cn(mobileInputClass, "border-cyan-200 focus:ring-cyan-400")} value={row.water_target_m3 ?? ''} onChange={(e) => updateRow('water_target_m3', e.target.value === '' ? undefined : Number(e.target.value))} />
+                                                        </label>
+                                                        {!isWaterCalculated && (
+                                                            <label className="col-span-2 space-y-1">
+                                                                <span className="text-[10px] font-bold uppercase tracking-wide text-cyan-700/80">Tiêu thụ nhập tay (m³)</span>
+                                                                <input type="number" inputMode="decimal" step="0.01" className={cn(mobileInputClass, "border-cyan-200 focus:ring-cyan-400")} value={row.water_m3 ?? ''} onChange={(e) => updateRow('water_m3', e.target.value === '' ? undefined : Number(e.target.value))} />
+                                                            </label>
+                                                        )}
+                                                    </div>
+                                                </section>
+
+                                                <section className="bg-orange-50/40 p-3">
+                                                    <h5 className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-orange-700">🔥 Củi</h5>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <label className="space-y-1">
+                                                            <span className="text-[10px] font-bold uppercase tracking-wide text-orange-700/80">Thực tế (kg)</span>
+                                                            <input type="number" inputMode="numeric" step="1" className={cn(mobileInputClass, "border-orange-200 focus:ring-orange-400")} value={row.wood_kg ?? ''} onChange={(e) => updateRow('wood_kg', e.target.value === '' ? undefined : Number(e.target.value))} />
+                                                        </label>
+                                                        <label className="space-y-1">
+                                                            <span className="text-[10px] font-bold uppercase tracking-wide text-orange-700/80">Target (kg)</span>
+                                                            <input type="number" inputMode="numeric" step="1" className={cn(mobileInputClass, "border-orange-200 focus:ring-orange-400")} value={row.wood_target_kg ?? ''} onChange={(e) => updateRow('wood_target_kg', e.target.value === '' ? undefined : Number(e.target.value))} />
+                                                        </label>
+                                                    </div>
+                                                </section>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="relative hidden max-h-[650px] w-full overflow-auto rounded-lg border custom-scrollbar md:block">
 
                                     <table className="w-full border-collapse text-sm">
 
@@ -6111,7 +6215,7 @@ export default function InputPage() {
 
 
 
-                                <div className="mt-6 flex justify-end">
+                                <div className="mt-6 hidden justify-end md:flex">
 
                                     <Button onClick={saveEnergy} disabled={isSaving}>
 
@@ -6121,6 +6225,13 @@ export default function InputPage() {
 
                                     </Button>
 
+                                </div>
+
+                                <div className="sticky bottom-0 z-30 -mx-3 mt-4 border-t border-slate-200 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
+                                    <Button onClick={saveEnergy} disabled={isSaving} className="min-h-12 w-full bg-slate-900 text-base font-bold text-white shadow-lg hover:bg-slate-800">
+                                        <Save className="mr-2 h-5 w-5" />
+                                        {isSaving ? 'Đang lưu dữ liệu...' : 'Lưu toàn bộ tháng'}
+                                    </Button>
                                 </div>
 
                             </div>

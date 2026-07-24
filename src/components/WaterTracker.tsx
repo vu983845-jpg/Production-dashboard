@@ -316,35 +316,37 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
     return (
         <div className="space-y-4">
             {/* ── Tab nav bar ─────────────────────────────────────────── */}
-            <div className="flex gap-2 flex-wrap items-center justify-between">
-                <div className="flex gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="grid min-h-11 grid-cols-2 gap-2 sm:flex">
                     {canEdit && (
                         <button
+                            id="water-view-table"
                             onClick={() => setViewMode("table")}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${viewMode === "table" ? "bg-sky-500 text-white shadow-md" : "bg-white/70 text-slate-600 border border-slate-200 hover:bg-sky-50"}`}
+                            className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-all duration-200 sm:px-4 ${viewMode === "table" ? "bg-sky-500 text-white shadow-md" : "border border-slate-200 bg-white/70 text-slate-600 hover:bg-sky-50"}`}
                         >
-                            <PenLine className="h-4 w-4" /> Bảng Nhập Liệu
+                            <PenLine className="h-4 w-4" /> Nhập liệu
                         </button>
                     )}
                     <button
+                        id="water-view-chart"
                         onClick={() => setViewMode("chart")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${viewMode === "chart" ? "bg-sky-500 text-white shadow-md" : "bg-white/70 text-slate-600 border border-slate-200 hover:bg-sky-50"}`}
+                        className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-all duration-200 sm:px-4 ${viewMode === "chart" ? "bg-sky-500 text-white shadow-md" : "border border-slate-200 bg-white/70 text-slate-600 hover:bg-sky-50"}`}
                     >
-                        <Droplets className="h-4 w-4" /> Biểu đồ Delta
+                        <Droplets className="h-4 w-4" /> Biểu đồ
                     </button>
                 </div>
 
                 {/* Month Picker */}
-                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-                    <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => subMonths(prev, 1))} className="h-8 w-8 hover:bg-slate-100">
-                        <ChevronLeft className="h-4 w-4" />
+                <div className="flex min-h-11 w-full items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:w-auto">
+                    <Button id="water-previous-month" aria-label="Tháng trước" variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => subMonths(prev, 1))} className="h-10 w-10 shrink-0 hover:bg-slate-100">
+                        <ChevronLeft className="h-5 w-5" />
                     </Button>
-                    <div className="flex items-center justify-center min-w-[130px] font-bold text-sm text-slate-700">
+                    <div className="flex flex-1 items-center justify-center font-bold text-slate-700 sm:min-w-[130px] sm:text-sm">
                         <CalendarIcon className="mr-2 h-4 w-4 text-sky-500" />
                         {format(currentMonth, "MM/yyyy")}
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => addMonths(prev, 1))} className="h-8 w-8 hover:bg-slate-100" disabled={currentMonth >= startOfMonth(new Date())}>
-                        <ChevronRight className="h-4 w-4" />
+                    <Button id="water-next-month" aria-label="Tháng sau" variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => addMonths(prev, 1))} className="h-10 w-10 shrink-0 hover:bg-slate-100" disabled={currentMonth >= startOfMonth(new Date())}>
+                        <ChevronRight className="h-5 w-5" />
                     </Button>
                 </div>
             </div>
@@ -391,7 +393,24 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto border-t border-slate-100">
+                    <div className="border-t border-slate-100 md:hidden">
+                        <div className="divide-y divide-slate-100">
+                            {meterAnalytics.map(({ meter, summary, comparison }) => (
+                                <div key={meter.key} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-4 py-3">
+                                    <div className="flex min-w-0 items-center gap-2 font-bold text-slate-700">
+                                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: meter.color }} />
+                                        <span className="truncate">{"resultLabel" in meter ? meter.resultLabel : meter.shortLabel}</span>
+                                    </div>
+                                    <span className="text-right font-mono font-black text-slate-800">{formatWaterValue(summary.total)} m³</span>
+                                    <span className="pl-[18px] text-[11px] text-slate-500">AVG {formatWaterValue(summary.average)} m³/ngày</span>
+                                    <span className={`text-right font-mono text-[11px] font-black ${comparison.previousTotal <= 0 ? "text-slate-300" : comparison.difference > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                        {comparison.previousTotal > 0 && comparison.percentChange != null ? `${comparison.difference > 0 ? "+" : ""}${comparison.percentChange.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% kỳ trước` : "Chưa có kỳ trước"}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="hidden overflow-x-auto border-t border-slate-100 md:block">
                         <table className="w-full min-w-[760px] text-xs">
                             <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
                                 <tr>
@@ -439,126 +458,106 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                 TABLE VIEW
             ════════════════════════════════════════════════════════════ */}
             {viewMode === "table" && (
-                <Card className="bg-white/90 shadow-lg border-sky-100/50 flex flex-col max-h-[70vh]">
-                    <div className="flex-1 overflow-auto rounded-t-xl relative border-b border-slate-100">
+                <>
+                    {/* Mobile day cards */}
+                    <div className="space-y-3 pb-24 md:hidden">
                         {isLoading ? (
-                            <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>
-                        ) : (
-                            <table className="w-full text-sm border-separate border-spacing-0">
-                                <thead>
-                                    <tr>
-                                        <th className="sticky top-0 left-0 z-30 bg-slate-100 border-b border-r border-slate-200 p-3 text-center w-[100px] shadow-[1px_1px_0_0_#e2e8f0]">
-                                            <span className="font-bold text-slate-700">Ngày</span>
-                                        </th>
-                                        {WATER_METERS.map(m => (
-                                            <th key={m.key} className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 p-2 min-w-[120px] shadow-[0_1px_0_0_#e2e8f0]">
-                                                <div className="flex flex-col items-center">
-                                                    <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
-                                                        {m.shortLabel}
+                            <div className="flex justify-center rounded-2xl border border-sky-100 bg-white py-20"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>
+                        ) : daysInMonth.filter(dateStr => !isAfter(new Date(dateStr), new Date(todayStr))).map(dateStr => {
+                            const isModified = modifiedRows.includes(dateStr)
+                            const rowHasAnomaly = WATER_METERS.some(m => anomalyMap.has(`${dateStr}:${m.key}`))
+                            return (
+                                <article key={dateStr} className={`overflow-hidden rounded-2xl border bg-white shadow-[0_12px_32px_-24px_rgba(15,23,42,0.7)] ${rowHasAnomaly ? "border-rose-300 ring-1 ring-rose-100" : isModified ? "border-sky-300 ring-1 ring-sky-100" : "border-slate-200"}`}>
+                                    <header className={`flex items-center justify-between px-4 py-3 ${rowHasAnomaly ? "bg-rose-50" : isModified ? "bg-sky-50" : "bg-slate-50"}`}>
+                                        <div>
+                                            <div className={`flex items-center gap-1.5 text-base font-black ${rowHasAnomaly ? "text-rose-700" : "text-slate-800"}`}>
+                                                {rowHasAnomaly && <TriangleAlert className="h-4 w-4" />}
+                                                {format(new Date(dateStr), "dd/MM/yyyy")}
+                                            </div>
+                                            <p className="text-[11px] font-bold capitalize text-slate-400">{format(new Date(dateStr), "EEEE", { locale: vi })}</p>
+                                        </div>
+                                        {isModified && <span className="rounded-full bg-sky-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Chưa lưu</span>}
+                                    </header>
+                                    <div className="divide-y divide-slate-100">
+                                        {ZONES.map(zone => {
+                                            const meters = WATER_METERS.filter(m => zone.keys.includes(m.key))
+                                            return (
+                                                <section key={zone.name} className="px-4 py-3" aria-label={`Khu vực ${zone.name}`}>
+                                                    <h3 className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: meters[0]?.color }} />{zone.name}
+                                                    </h3>
+                                                    <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
+                                                        {meters.map(m => {
+                                                            const delta = getDelta(dateStr, m.key)
+                                                            const anomaly = anomalyMap.get(`${dateStr}:${m.key}`)
+                                                            const changed = localData[dateStr]?.[m.key] !== originalData[dateStr]?.[m.key]
+                                                            return (
+                                                                <label key={m.key} className={`rounded-xl border p-2.5 ${anomaly ? "border-rose-300 bg-rose-50" : changed ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white"}`}>
+                                                                    <span className="mb-1.5 block text-xs font-bold text-slate-600">{m.shortLabel}</span>
+                                                                    <input
+                                                                        aria-label={`${m.label} ngày ${format(new Date(dateStr), "dd/MM/yyyy")}`}
+                                                                        type="number" min="0" step="any" inputMode="decimal"
+                                                                        disabled={!canEdit}
+                                                                        value={localData[dateStr]?.[m.key] ?? ""}
+                                                                        onChange={e => onChangeCell(dateStr, m.key, e.target.value)}
+                                                                        onFocus={() => setFocusedWaterRowDate(dateStr)}
+                                                                        onBlur={() => setFocusedWaterRowDate(null)}
+                                                                        className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-right font-mono text-base font-black text-slate-800 shadow-inner outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-300 disabled:bg-slate-100"
+                                                                        placeholder="—"
+                                                                    />
+                                                                    <span className={`mt-1.5 flex min-h-5 items-center justify-end text-[11px] font-black ${anomaly ? "text-rose-700" : delta != null ? "text-emerald-600" : "text-slate-300"}`}>
+                                                                        {anomaly && <TriangleAlert className="mr-1 h-3.5 w-3.5" />}
+                                                                        {delta != null ? `${"resultLabel" in m ? `${m.resultLabel}: ` : "+"}${delta.toLocaleString("vi-VN", { maximumFractionDigits: 3 })} m³` : "Chưa có delta"}
+                                                                    </span>
+                                                                </label>
+                                                            )
+                                                        })}
                                                     </div>
-                                                </div>
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {daysInMonth.map((dateStr) => {
-                                        const isFuture = isAfter(new Date(dateStr), new Date(todayStr))
-                                        const isModified = modifiedRows.includes(dateStr)
-                                        const rowHasAnomaly = WATER_METERS.some(m => anomalyMap.has(`${dateStr}:${m.key}`))
-                                        return (
-                                            <tr key={dateStr} className={`group transition-colors duration-150 ${isFuture ? "bg-slate-50/50 opacity-60" : rowHasAnomaly ? "bg-rose-50/55 hover:bg-rose-50" : "hover:bg-sky-50/40"} ${focusedWaterRowDate === dateStr ? "bg-sky-100/30" : ""}`}>
-                                                <td className={`sticky left-0 z-10 border-b border-r p-0 shadow-[1px_0_0_0_#f1f5f9] align-top transition-colors duration-150 ${
-                                                    focusedWaterRowDate === dateStr
-                                                        ? "bg-sky-200 text-sky-950 font-bold"
-                                                        : rowHasAnomaly
-                                                            ? "border-rose-200 bg-rose-100"
-                                                            : isModified
-                                                                ? "border-slate-100 bg-sky-50"
-                                                                : "border-slate-100 bg-white group-hover:bg-sky-50/40"
-                                                }`}>
-                                                    <div className="flex h-full flex-col items-center justify-center p-2">
-                                                        <span className={`flex items-center gap-1 font-bold ${rowHasAnomaly ? "text-rose-700" : new Date(dateStr).getDay() === 0 ? "text-red-500" : "text-slate-700"}`}>
-                                                            {rowHasAnomaly && <TriangleAlert className="h-3 w-3" />}
-                                                            {format(new Date(dateStr), "dd/MM")}
-                                                        </span>
-                                                        <span className={`text-[10px] capitalize ${rowHasAnomaly ? "font-bold text-rose-500" : "text-slate-400"}`}>
-                                                            {format(new Date(dateStr), "EEE", { locale: vi })}
-                                                        </span>
-                                                    </div>
-                                                </td>
+                                                </section>
+                                            )
+                                        })}
+                                    </div>
+                                </article>
+                            )
+                        })}
+                    </div>
+
+                    {/* Desktop data table */}
+                    <Card className="hidden max-h-[70vh] flex-col border-sky-100/50 bg-white/90 shadow-lg md:flex">
+                        <div className="relative flex-1 overflow-auto rounded-t-xl border-b border-slate-100">
+                            {isLoading ? (
+                                <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-sky-500" /></div>
+                            ) : (
+                                <table className="w-full text-sm border-separate border-spacing-0">
+                                    <thead>
+                                        <tr>
+                                            <th className="sticky top-0 left-0 z-30 bg-slate-100 border-b border-r border-slate-200 p-3 text-center w-[100px] shadow-[1px_1px_0_0_#e2e8f0]"><span className="font-bold text-slate-700">Ngày</span></th>
+                                            {WATER_METERS.map(m => <th key={m.key} className="sticky top-0 z-20 min-w-[120px] border-b border-r border-slate-200 bg-slate-50 p-2 shadow-[0_1px_0_0_#e2e8f0]"><div className="flex items-center justify-center gap-1.5 font-bold text-slate-700"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: m.color }} />{m.shortLabel}</div></th>)}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {daysInMonth.map(dateStr => {
+                                            const isFuture = isAfter(new Date(dateStr), new Date(todayStr))
+                                            const isModified = modifiedRows.includes(dateStr)
+                                            const rowHasAnomaly = WATER_METERS.some(m => anomalyMap.has(`${dateStr}:${m.key}`))
+                                            return <tr key={dateStr} className={`group transition-colors ${isFuture ? "bg-slate-50/50 opacity-60" : rowHasAnomaly ? "bg-rose-50/55" : "hover:bg-sky-50/40"}`}>
+                                                <td className={`sticky left-0 z-10 border-b border-r p-2 text-center shadow-[1px_0_0_0_#f1f5f9] ${rowHasAnomaly ? "bg-rose-100" : isModified ? "bg-sky-50" : "bg-white"}`}><span className={`flex items-center justify-center gap-1 font-bold ${rowHasAnomaly ? "text-rose-700" : new Date(dateStr).getDay() === 0 ? "text-red-500" : "text-slate-700"}`}>{rowHasAnomaly && <TriangleAlert className="h-3 w-3" />}{format(new Date(dateStr), "dd/MM")}</span><span className="block text-[10px] capitalize text-slate-400">{format(new Date(dateStr), "EEE", { locale: vi })}</span></td>
                                                 {WATER_METERS.map(m => {
                                                     const delta = getDelta(dateStr, m.key)
                                                     const anomaly = anomalyMap.get(`${dateStr}:${m.key}`)
-                                                    return (
-                                                        <td key={m.key} className={`border-b border-r p-1.5 align-top transition-colors duration-150 ${anomaly ? "border-rose-200 bg-rose-100/80" : "border-slate-100"} ${focusedWaterRowDate === dateStr ? "bg-sky-50/20" : ""}`}>
-                                                            <div className="flex flex-col gap-1">
-                                                                <span className="block md:hidden text-[9px] text-sky-800 font-bold uppercase tracking-wider select-none mb-0.5">{m.shortLabel}</span>
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    step="any"
-                                                                    inputMode="decimal"
-                                                                    disabled={!canEdit || isFuture}
-                                                                    value={localData[dateStr]?.[m.key] ?? ""}
-                                                                    onChange={e => onChangeCell(dateStr, m.key, e.target.value)}
-                                                                    onFocus={() => setFocusedWaterRowDate(dateStr)}
-                                                                    onBlur={() => setFocusedWaterRowDate(null)}
-                                                                    className={`w-full border rounded-lg px-2 py-1.5 text-right font-mono text-base md:text-sm font-bold shadow-inner focus:outline-none focus:ring-2 focus:ring-sky-400 transition ${isFuture ? "bg-slate-100 text-slate-400 border-slate-100" :
-                                                                        localData[dateStr]?.[m.key] !== originalData[dateStr]?.[m.key] ? "bg-sky-50 border-sky-300 text-sky-800" :
-                                                                            "bg-white border-slate-200 text-slate-800 focus:border-sky-400"
-                                                                        }`}
-                                                                    placeholder="-"
-                                                                />
-                                                                <div className="h-4 flex items-center justify-end px-1">
-                                                                    {delta != null && (
-                                                                        <span
-                                                                            className={`rounded px-1 font-mono text-[11px] font-bold ${anomaly ? "bg-rose-600 text-white shadow-sm" : "bg-emerald-50 text-emerald-600"}`}
-                                                                            title={anomaly
-                                                                                ? `Bất thường: cao hơn ${anomaly.percentAboveAverage.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% so với AVG trước đó (${formatWaterValue(anomaly.baselineAverage)} m³)`
-                                                                                : "resultLabel" in m ? m.resultLabel : "Tiêu thụ"}
-                                                                        >
-                                                                            {anomaly && <TriangleAlert className="mr-0.5 inline h-3 w-3" />}
-                                                                            {"resultLabel" in m ? `${m.resultLabel}: ` : "+"}{delta.toLocaleString("vi-VN", { maximumFractionDigits: 3 })}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    )
+                                                    return <td key={m.key} className={`border-b border-r p-1.5 align-top ${anomaly ? "border-rose-200 bg-rose-100/80" : "border-slate-100"}`}><div className="flex flex-col gap-1"><input type="number" min="0" step="any" inputMode="decimal" disabled={!canEdit || isFuture} value={localData[dateStr]?.[m.key] ?? ""} onChange={e => onChangeCell(dateStr, m.key, e.target.value)} onFocus={() => setFocusedWaterRowDate(dateStr)} onBlur={() => setFocusedWaterRowDate(null)} className={`w-full rounded-lg border px-2 py-1.5 text-right font-mono text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-sky-400 ${isFuture ? "border-slate-100 bg-slate-100 text-slate-400" : localData[dateStr]?.[m.key] !== originalData[dateStr]?.[m.key] ? "border-sky-300 bg-sky-50 text-sky-800" : "border-slate-200 bg-white text-slate-800"}`} placeholder="-" /><div className="flex h-4 items-center justify-end px-1">{delta != null && <span className={`rounded px-1 font-mono text-[11px] font-bold ${anomaly ? "bg-rose-600 text-white" : "bg-emerald-50 text-emerald-600"}`}>{anomaly && <TriangleAlert className="mr-0.5 inline h-3 w-3" />}{"resultLabel" in m ? `${m.resultLabel}: ` : "+"}{delta.toLocaleString("vi-VN", { maximumFractionDigits: 3 })}</span>}</div></div></td>
                                                 })}
                                             </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
-
-                    {/* Fixed Action Bar at bottom of table */}
-                    {canEdit && (
-                        <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between z-20">
-                            <div className="text-sm">
-                                {hasChanges ? (
-                                    <span className="font-bold text-amber-600 flex items-center gap-1">
-                                        <AlertCircle className="h-4 w-4" /> Đã sửa {modifiedRows.length} ngày chưa lưu
-                                    </span>
-                                ) : (
-                                    <span className="text-slate-500 font-medium">Bảng đã cập nhật hoàn toàn</span>
-                                )}
-                            </div>
-                            <Button
-                                onClick={handleSaveMulti}
-                                disabled={!hasChanges || isSaving}
-                                className={`gap-2 font-bold shadow-md transition-all ${hasChanges ? "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700" : "bg-slate-200 text-slate-400"}`}
-                            >
-                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                Lưu Thay Đổi
-                            </Button>
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
-                    )}
-                </Card>
+                        {canEdit && <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 p-3"><span className={hasChanges ? "flex items-center gap-1 font-bold text-amber-600" : "text-sm font-medium text-slate-500"}>{hasChanges ? <><AlertCircle className="h-4 w-4" /> Đã sửa {modifiedRows.length} ngày chưa lưu</> : "Bảng đã cập nhật hoàn toàn"}</span><Button id="water-save-desktop" onClick={handleSaveMulti} disabled={!hasChanges || isSaving} className="gap-2 font-bold"><Save className="h-4 w-4" />{isSaving ? "Đang lưu…" : "Lưu Thay Đổi"}</Button></div>}
+                    </Card>
+
+                    {canEdit && <div className="fixed inset-x-0 bottom-0 z-40 border-t border-sky-200 bg-white/95 px-3 pt-2 shadow-[0_-10px_30px_-18px_rgba(2,132,199,0.65)] backdrop-blur-xl md:hidden" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}><div className="mx-auto flex max-w-lg items-center gap-3"><div className="min-w-0 flex-1"><p className={`truncate text-xs font-black ${hasChanges ? "text-amber-600" : "text-slate-500"}`}>{hasChanges ? `${modifiedRows.length} ngày chưa lưu` : "Dữ liệu đã cập nhật"}</p><p className="text-[10px] text-slate-400">Tháng {format(currentMonth, "MM/yyyy")}</p></div><Button id="water-save-mobile" onClick={handleSaveMulti} disabled={!hasChanges || isSaving} className="h-12 min-w-[150px] gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 font-black shadow-lg"><>{isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}{isSaving ? "Đang lưu…" : "Lưu thay đổi"}</></Button></div></div>}
+                </>
             )}
 
             {/* ════════════════════════════════════════════════════════════
