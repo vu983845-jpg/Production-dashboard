@@ -365,6 +365,7 @@ export default function InputPage() {
 
     const [role, setRole] = useState("")
     const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'production')
+    const [pageMode, setPageMode] = useState<'entry' | 'history'>('entry')
 
     const [userId, setUserId] = useState("")
 
@@ -3037,17 +3038,36 @@ export default function InputPage() {
                 </div>
             )}
 
-            <div className="mb-4 flex items-center justify-between border-b pb-3 sm:pb-4">
-
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 sm:hidden">Vận hành nhà máy</p>
-                    <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Nhập Liệu Báo Cáo</h1>
-                </div>
-
+            <div className="mb-6 grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1.5 shadow-inner sm:w-fit sm:min-w-[360px]">
+                <Button
+                    id="input-mode-entry"
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setPageMode('entry')}
+                    className={cn(
+                        "min-h-11 rounded-xl font-bold transition-all",
+                        pageMode === 'entry' ? "bg-white text-primary shadow-sm hover:bg-white" : "text-slate-500 hover:text-slate-800"
+                    )}
+                >
+                    ✍️ Nhập liệu
+                </Button>
+                {role !== 'maint' && (
+                    <Button
+                        id="input-mode-history"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setPageMode('history')}
+                        className={cn(
+                            "min-h-11 rounded-xl font-bold transition-all",
+                            pageMode === 'history' ? "bg-white text-primary shadow-sm hover:bg-white" : "text-slate-500 hover:text-slate-800"
+                        )}
+                    >
+                        🕘 Lịch sử
+                    </Button>
+                )}
             </div>
 
-
-
+            {pageMode === 'entry' ? <>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
 
                 <div className="space-y-2 lg:col-span-2">
@@ -5413,139 +5433,6 @@ export default function InputPage() {
 
 
 
-                            {/* Recent History Table */}
-
-                            <div className="mt-12 space-y-4">
-
-                                <div className="flex items-center justify-between">
-
-                                    <h3 className="text-lg font-bold">Lịch sử nhập liệu gần đây</h3>
-
-                                    <p className="text-sm text-muted-foreground italic">Hiển thị 10 ngày gần nhất của bộ phận</p>
-
-                                </div>
-
-                                <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-
-                                    <Table>
-
-                                        <TableHeader>
-
-                                            <TableRow className="bg-muted/50">
-
-                                                <TableHead className="w-[120px]">Ngày</TableHead>
-
-                                                <TableHead className="text-right">Sản lượng (T)</TableHead>
-
-                                                <TableHead className="text-right">Input/Output (T)</TableHead>
-
-                                                <TableHead className="text-right">Downtime</TableHead>
-
-                                                <TableHead>Ghi chú</TableHead>
-
-                                                <TableHead className="w-[80px] text-center">Thao tác</TableHead>
-
-                                            </TableRow>
-
-                                        </TableHeader>
-
-                                        <TableBody>
-
-                                            {recentRecords.length === 0 ? (
-
-                                                <TableRow>
-
-                                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground whitespace-nowrap">
-
-                                                        Chưa có dữ liệu lịch sử cho bộ phận này.
-
-                                                    </TableCell>
-
-                                                </TableRow>
-
-                                            ) : (
-
-                                                recentRecords.map((r) => (
-
-                                                    <TableRow key={r.work_date} className={format(date, "yyyy-MM-dd") === r.work_date ? "bg-primary/5 font-medium" : ""}>
-
-                                                        <TableCell className="font-medium whitespace-nowrap">
-
-                                                            {format(parseISO(r.work_date), "dd/MM/yyyy")}
-
-                                                        </TableCell>
-
-                                                        <TableCell className="text-right">
-
-                                                            <div className="font-bold text-primary">{Number(r.actual_ton).toFixed(2)} T</div>
-
-                                                            {departments.find(d => d.id === selectedDept)?.code === "PACK" && (
-
-                                                                <div className="text-[10px] text-muted-foreground">{Number(r.actual_container || 0).toFixed(2)} Cont</div>
-
-                                                            )}
-
-                                                        </TableCell>
-
-                                                        <TableCell className="text-right text-muted-foreground">
-
-                                                            {r.kpi ? `${Number(r.kpi.input_ton).toFixed(1)} / ${Number(r.kpi.good_output_ton).toFixed(1)}` : "-"}
-
-                                                        </TableCell>
-
-                                                        <TableCell className="text-right whitespace-nowrap">
-
-                                                            {r.kpi ? `${r.kpi.downtime_min}p` : "-"}
-
-                                                        </TableCell>
-
-                                                        <TableCell className="max-w-[200px] truncate" title={r.note || (r.kpi?.note)}>
-
-                                                            {r.note || r.kpi?.note || "-"}
-
-                                                        </TableCell>
-
-                                                        <TableCell className="text-center">
-
-                                                            <Button
-
-                                                                variant="ghost"
-
-                                                                size="icon"
-
-                                                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-
-                                                                onClick={() => {
-
-                                                                    const recordDate = parseISO(r.work_date)
-
-                                                                    setDate(recordDate)
-
-                                                                    window.scrollTo({ top: 0, behavior: 'smooth' })
-
-                                                                }}
-
-                                                            >
-
-                                                                <Edit2 className="h-4 w-4" />
-
-                                                            </Button>
-
-                                                        </TableCell>
-
-                                                    </TableRow>
-
-                                                ))
-
-                                            )}
-
-                                        </TableBody>
-
-                                    </Table>
-
-                                </div>
-
-                            </div>
 
                         </div>
 
@@ -7031,6 +6918,132 @@ export default function InputPage() {
                 )}
 
             </Tabs>
+            </> : (
+                <section className="space-y-5" aria-labelledby="history-heading">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 shadow-sm">
+                        <div className="border-b border-slate-100 p-4 sm:p-6">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Dữ liệu đã lưu</p>
+                                    <h2 id="history-heading" className="mt-1 text-2xl font-black tracking-tight text-slate-900">Lịch sử nhập liệu</h2>
+                                    <p className="mt-1 text-sm text-slate-500">10 ngày gần nhất của bộ phận được chọn.</p>
+                                </div>
+                                <div className="w-full space-y-2 sm:w-72">
+                                    <Label htmlFor="history-department">Bộ phận</Label>
+                                    <Select value={selectedDept} onValueChange={setSelectedDept} disabled={role === "dept_user" && allowedDeptIds.size <= 1}>
+                                        <SelectTrigger id="history-department" className="min-h-11 bg-white">
+                                            <SelectValue placeholder="Chọn bộ phận" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(role === "dept_user" ? departments.filter(d => allowedDeptIds.has(d.id)) : departments).map((d) => (
+                                                <SelectItem key={d.id} value={d.id}>{d.name_en}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {!selectedDept || recentRecords.length === 0 ? (
+                            <div className="flex min-h-56 flex-col items-center justify-center px-6 py-12 text-center">
+                                <div className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-xl">🗂️</div>
+                                <p className="font-bold text-slate-700">Chưa có dữ liệu lịch sử</p>
+                                <p className="mt-1 text-sm text-slate-500">Hãy chọn bộ phận khác hoặc nhập dữ liệu mới.</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div id="recent-history-mobile" className="space-y-3 p-3 sm:hidden">
+                                    {recentRecords.map((r) => (
+                                        <article key={r.work_date} className={cn("rounded-2xl border bg-white p-4 shadow-sm", format(date, "yyyy-MM-dd") === r.work_date && "border-primary/40 ring-2 ring-primary/10")}>
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Ngày làm việc</p>
+                                                    <h3 className="mt-1 text-lg font-black text-slate-900">{format(parseISO(r.work_date), "dd/MM/yyyy")}</h3>
+                                                </div>
+                                                <div className="rounded-xl bg-primary/10 px-3 py-2 text-right">
+                                                    <p className="text-[10px] font-bold uppercase text-primary/70">Sản lượng</p>
+                                                    <p className="font-black text-primary">{Number(r.actual_ton).toFixed(2)} T</p>
+                                                </div>
+                                            </div>
+                                            <dl className="mt-4 grid grid-cols-2 gap-2">
+                                                <div className="rounded-xl bg-slate-50 p-3">
+                                                    <dt className="text-[11px] font-bold uppercase text-slate-400">Input / Output</dt>
+                                                    <dd className="mt-1 font-bold text-slate-700">{r.kpi ? `${Number(r.kpi.input_ton).toFixed(1)} / ${Number(r.kpi.good_output_ton).toFixed(1)} T` : "-"}</dd>
+                                                </div>
+                                                <div className="rounded-xl bg-slate-50 p-3">
+                                                    <dt className="text-[11px] font-bold uppercase text-slate-400">Downtime</dt>
+                                                    <dd className="mt-1 font-bold text-slate-700">{r.kpi ? `${r.kpi.downtime_min} phút` : "-"}</dd>
+                                                </div>
+                                            </dl>
+                                            <div className="mt-3 rounded-xl border border-slate-100 p-3">
+                                                <p className="text-[11px] font-bold uppercase text-slate-400">Ghi chú</p>
+                                                <p className="mt-1 line-clamp-2 text-sm text-slate-600">{r.note || r.kpi?.note || "Không có ghi chú"}</p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="mt-4 min-h-11 w-full border-primary/20 font-bold text-primary hover:bg-primary/5"
+                                                onClick={() => {
+                                                    const recordDate = parseISO(r.work_date)
+                                                    setPageMode('entry')
+                                                    setActiveTab('production')
+                                                    setDate(recordDate)
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                                                }}
+                                            >
+                                                <Edit2 className="mr-2 h-4 w-4" /> Chỉnh sửa ngày này
+                                            </Button>
+                                        </article>
+                                    ))}
+                                </div>
+
+                                <div id="recent-history-desktop" className="hidden overflow-x-auto sm:block">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-slate-50/80">
+                                                <TableHead>Ngày</TableHead>
+                                                <TableHead className="text-right">Sản lượng (T)</TableHead>
+                                                <TableHead className="text-right">Input / Output (T)</TableHead>
+                                                <TableHead className="text-right">Downtime</TableHead>
+                                                <TableHead>Ghi chú</TableHead>
+                                                <TableHead className="text-center">Thao tác</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {recentRecords.map((r) => (
+                                                <TableRow key={r.work_date} className={format(date, "yyyy-MM-dd") === r.work_date ? "bg-primary/5" : ""}>
+                                                    <TableCell className="font-bold">{format(parseISO(r.work_date), "dd/MM/yyyy")}</TableCell>
+                                                    <TableCell className="text-right font-bold text-primary">{Number(r.actual_ton).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right text-slate-600">{r.kpi ? `${Number(r.kpi.input_ton).toFixed(1)} / ${Number(r.kpi.good_output_ton).toFixed(1)}` : "-"}</TableCell>
+                                                    <TableCell className="text-right">{r.kpi ? `${r.kpi.downtime_min}p` : "-"}</TableCell>
+                                                    <TableCell className="max-w-[260px] truncate" title={r.note || r.kpi?.note}>{r.note || r.kpi?.note || "-"}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="font-bold text-primary hover:bg-primary/10 hover:text-primary"
+                                                            onClick={() => {
+                                                                const recordDate = parseISO(r.work_date)
+                                                                setPageMode('entry')
+                                                                setActiveTab('production')
+                                                                setDate(recordDate)
+                                                                window.scrollTo({ top: 0, behavior: 'smooth' })
+                                                            }}
+                                                        >
+                                                            <Edit2 className="mr-2 h-4 w-4" /> Chỉnh sửa
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </section>
+            )}
 
         </div >
 
