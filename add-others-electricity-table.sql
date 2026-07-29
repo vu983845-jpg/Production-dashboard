@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS daily_electricity_others (
     canteen NUMERIC DEFAULT 0,
     transformer NUMERIC DEFAULT 0,
     maintenance NUMERIC DEFAULT 0,
+    db_hvac NUMERIC DEFAULT 0,
+    vent_1 NUMERIC DEFAULT 0,
+    ac_2_panel NUMERIC DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

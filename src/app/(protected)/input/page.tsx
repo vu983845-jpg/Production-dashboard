@@ -23,6 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 
 
 import { cn } from "@/lib/utils"
+import { calculateMeterConsumption } from "@/lib/electricity-meters"
 
 
 
@@ -455,6 +456,12 @@ export default function InputPage() {
 
         maintenance?: number;
 
+        db_hvac?: number;
+
+        vent_1?: number;
+
+        ac_2_panel?: number;
+
         kwh_cooling_fan: number;
 
         kwh_boiler: number;
@@ -470,6 +477,12 @@ export default function InputPage() {
         kwh_transformer: number;
 
         kwh_maintenance: number;
+
+        kwh_db_hvac: number;
+
+        kwh_vent_1: number;
+
+        kwh_ac_2_panel: number;
 
     };
 
@@ -1526,7 +1539,13 @@ export default function InputPage() {
 
                     maintenance: existing?.maintenance !== null && existing?.maintenance !== undefined ? Number(existing.maintenance) : undefined,
 
-                    kwh_cooling_fan: 0, kwh_boiler: 0, kwh_office: 0, kwh_db_ac_hca: 0, kwh_eco2: 0, kwh_canteen: 0, kwh_transformer: 0, kwh_maintenance: 0
+                    db_hvac: existing?.db_hvac !== null && existing?.db_hvac !== undefined ? Number(existing.db_hvac) : undefined,
+
+                    vent_1: existing?.vent_1 !== null && existing?.vent_1 !== undefined ? Number(existing.vent_1) : undefined,
+
+                    ac_2_panel: existing?.ac_2_panel !== null && existing?.ac_2_panel !== undefined ? Number(existing.ac_2_panel) : undefined,
+
+                    kwh_cooling_fan: 0, kwh_boiler: 0, kwh_office: 0, kwh_db_ac_hca: 0, kwh_eco2: 0, kwh_canteen: 0, kwh_transformer: 0, kwh_maintenance: 0, kwh_db_hvac: 0, kwh_vent_1: 0, kwh_ac_2_panel: 0
 
                 };
 
@@ -1536,35 +1555,31 @@ export default function InputPage() {
 
             // Calculate daily consumption
 
-            const calc = (curr: number | undefined, prev: number | undefined) => {
-
-                if (curr === undefined || prev === undefined) return 0;
-
-                return Math.max(0, curr - prev); // Result directly in kWh
-
-            };
-
-
-
             for (let i = 1; i < compiled.length; i++) {
 
                 const prev = compiled[i - 1];
 
-                compiled[i].kwh_cooling_fan = calc(compiled[i].cooling_fan, prev.cooling_fan);
+                compiled[i].kwh_cooling_fan = calculateMeterConsumption(compiled[i].cooling_fan, prev.cooling_fan);
 
-                compiled[i].kwh_boiler = calc(compiled[i].boiler, prev.boiler);
+                compiled[i].kwh_boiler = calculateMeterConsumption(compiled[i].boiler, prev.boiler);
 
-                compiled[i].kwh_office = calc(compiled[i].office, prev.office);
+                compiled[i].kwh_office = calculateMeterConsumption(compiled[i].office, prev.office);
 
-                compiled[i].kwh_db_ac_hca = calc(compiled[i].db_ac_hca, prev.db_ac_hca);
+                compiled[i].kwh_db_ac_hca = calculateMeterConsumption(compiled[i].db_ac_hca, prev.db_ac_hca);
 
-                compiled[i].kwh_eco2 = calc(compiled[i].eco2, prev.eco2);
+                compiled[i].kwh_eco2 = calculateMeterConsumption(compiled[i].eco2, prev.eco2);
 
-                compiled[i].kwh_canteen = calc(compiled[i].canteen, prev.canteen);
+                compiled[i].kwh_canteen = calculateMeterConsumption(compiled[i].canteen, prev.canteen);
 
-                compiled[i].kwh_transformer = calc(compiled[i].transformer, prev.transformer);
+                compiled[i].kwh_transformer = calculateMeterConsumption(compiled[i].transformer, prev.transformer);
 
-                compiled[i].kwh_maintenance = calc(compiled[i].maintenance, prev.maintenance);
+                compiled[i].kwh_maintenance = calculateMeterConsumption(compiled[i].maintenance, prev.maintenance);
+
+                compiled[i].kwh_db_hvac = calculateMeterConsumption(compiled[i].db_hvac, prev.db_hvac);
+
+                compiled[i].kwh_vent_1 = calculateMeterConsumption(compiled[i].vent_1, prev.vent_1);
+
+                compiled[i].kwh_ac_2_panel = calculateMeterConsumption(compiled[i].ac_2_panel, prev.ac_2_panel);
 
             }
 
@@ -2007,7 +2022,7 @@ export default function InputPage() {
 
         const payload = otherElecData
 
-            .filter(r => r.cooling_fan !== undefined || r.boiler !== undefined || r.office !== undefined || r.db_ac_hca !== undefined || r.eco2 !== undefined || r.canteen !== undefined || r.transformer !== undefined || r.maintenance !== undefined)
+            .filter(r => r.cooling_fan !== undefined || r.boiler !== undefined || r.office !== undefined || r.db_ac_hca !== undefined || r.eco2 !== undefined || r.canteen !== undefined || r.transformer !== undefined || r.maintenance !== undefined || r.db_hvac !== undefined || r.vent_1 !== undefined || r.ac_2_panel !== undefined)
 
             .map(r => ({
 
@@ -2028,6 +2043,12 @@ export default function InputPage() {
                 transformer: r.transformer,
 
                 maintenance: r.maintenance,
+
+                db_hvac: r.db_hvac,
+
+                vent_1: r.vent_1,
+
+                ac_2_panel: r.ac_2_panel,
 
                 updated_at: new Date().toISOString()
 
@@ -3098,13 +3119,9 @@ export default function InputPage() {
 
                         {role !== 'maint' && <TabsTrigger value="production" className="min-h-11 shrink-0 snap-start px-4 font-bold">Sản Phẩm & KPI</TabsTrigger>}
 
-                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="energy" className="min-h-11 shrink-0 snap-start px-4 font-bold">Điện EVN & Củi</TabsTrigger>}
+                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="electricity-meters" className="min-h-11 shrink-0 snap-start px-4 font-bold">⚡ Đồng hồ điện</TabsTrigger>}
 
                         {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy" className="min-h-11 shrink-0 snap-start px-4 font-bold">Điện Shelling (Tháng)</TabsTrigger>}
-
-                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="compressor" className="min-h-11 shrink-0 snap-start px-4 font-bold">🌬️ Máy Nén Khí</TabsTrigger>}
-
-                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="other-elec" className="min-h-11 shrink-0 snap-start px-4 font-bold">⚡ Điện Khác</TabsTrigger>}
 
                         {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="water" className="min-h-11 shrink-0 snap-start px-4 font-bold">💧 Nước</TabsTrigger>}
 
@@ -5540,7 +5557,7 @@ export default function InputPage() {
 
                 {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && (
 
-                    <TabsContent value="energy" className="space-y-4">
+                    <TabsContent value="electricity-meters" className="space-y-4">
 
                         <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
 
@@ -5549,8 +5566,8 @@ export default function InputPage() {
                                 <div className="mb-4 flex items-start justify-between gap-3">
 
                                     <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 md:hidden">Điện · Nước · Củi</p>
-                                        <h3 className="text-base font-semibold leading-tight md:text-lg">Bảng Ghi Nhận Năng Lượng: Tháng {format(date, "MM/yyyy")}</h3>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 md:hidden">Đồng hồ điện · Củi</p>
+                                        <h3 className="text-base font-semibold leading-tight md:text-lg">Đồng hồ Tổng giao: Tháng {format(date, "MM/yyyy")}</h3>
                                     </div>
 
                                     <Button onClick={saveEnergy} disabled={isSaving} size="sm" className="hidden md:inline-flex">
@@ -6246,7 +6263,7 @@ export default function InputPage() {
 
                 {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && (
 
-                    <TabsContent value="compressor" className="space-y-4">
+                    <TabsContent value="electricity-meters" className="space-y-4">
 
                         <div className="rounded-xl border bg-card text-card-foreground shadow">
 
@@ -6286,17 +6303,17 @@ export default function InputPage() {
 
                                             <TableRow className="border-b bg-slate-100">
 
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">ĐH 1</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">MNK Số 1 (×1000)</TableHead>
 
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">ĐH 2</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">MNK Số 2 (×1000)</TableHead>
 
-                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">ĐH 3</TableHead>
+                                                <TableHead className="border-r text-center bg-purple-50/40 w-[90px] text-xs">MNK Số 3 (×1000)</TableHead>
 
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">ĐH 1</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">MNK Số 1</TableHead>
 
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">ĐH 2</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">MNK Số 2</TableHead>
 
-                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">ĐH 3</TableHead>
+                                                <TableHead className="border-r text-center bg-indigo-50/40 w-[80px] text-xs">MNK Số 3</TableHead>
 
                                                 <TableHead className="text-center bg-rose-50/40 w-[90px] font-bold text-xs">Tổng</TableHead>
 
@@ -6314,21 +6331,17 @@ export default function InputPage() {
 
                                                     newData[index][field] = val;
 
-                                                    // Recalculate kWh chain (input is MWh)
-
-                                                    const calcKwh = (curr: number | undefined, prev: number | undefined) =>
-
-                                                        curr !== undefined && prev !== undefined ? Math.max(0, (curr - prev) * 1000) : 0;
+                                                    // Recalculate kWh chain (input is MWh, consumption is kWh)
 
                                                     for (let i = 0; i < newData.length; i++) {
 
                                                         const prevRec = i === 0 ? null : newData[i - 1];
 
-                                                        newData[i].kwh1 = calcKwh(newData[i].meter1, prevRec?.meter1);
+                                                        newData[i].kwh1 = calculateMeterConsumption(newData[i].meter1, prevRec?.meter1, 1000);
 
-                                                        newData[i].kwh2 = calcKwh(newData[i].meter2, prevRec?.meter2);
+                                                        newData[i].kwh2 = calculateMeterConsumption(newData[i].meter2, prevRec?.meter2, 1000);
 
-                                                        newData[i].kwh3 = calcKwh(newData[i].meter3, prevRec?.meter3);
+                                                        newData[i].kwh3 = calculateMeterConsumption(newData[i].meter3, prevRec?.meter3, 1000);
 
                                                         newData[i].total_kwh = newData[i].kwh1 + newData[i].kwh2 + newData[i].kwh3;
 
@@ -6365,7 +6378,7 @@ export default function InputPage() {
                                                             )}>
 
                                                                 <div className="flex flex-col gap-0.5 items-center">
-                                                                    <span className="block md:hidden text-[9px] text-purple-800 font-bold uppercase tracking-wider select-none mb-0.5">{`ĐH ${idx + 1}`}</span>
+                                                                    <span className="block md:hidden text-[9px] text-purple-800 font-bold uppercase tracking-wider select-none mb-0.5">{`MNK Số ${idx + 1} (×1000)`}</span>
                                                                     <input type="number" step="0.01"
 
                                                                         className="w-full text-right p-1 rounded border-gray-200 outline-none focus:ring-1 focus:ring-purple-400 bg-transparent text-base md:text-sm font-semibold"
@@ -6641,7 +6654,7 @@ export default function InputPage() {
 
                 {/* OTHER ELECTRICITY METER TAB */}
 
-                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsContent value="other-elec" className="space-y-4">
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsContent value="electricity-meters" className="space-y-4">
 
                     <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative">
 
@@ -6649,7 +6662,7 @@ export default function InputPage() {
 
                             <div className="flex justify-between items-center mb-4">
 
-                                <h3 className="font-semibold text-lg text-emerald-800">⚡ Điện Khác (HCA) — Nhập Chỉ số KWh: Tháng {format(date, "MM/yyyy")}</h3>
+                                <h3 className="font-semibold text-lg text-emerald-800">⚡ Đồng hồ điện khu vực — Tháng {format(date, "MM/yyyy")}</h3>
 
                                 <Button onClick={saveOtherElec} disabled={isSaving} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
 
@@ -6677,19 +6690,25 @@ export default function InputPage() {
 
                                             <TableHead className="w-24 whitespace-nowrap text-emerald-800 font-bold border-r sticky left-0 top-0 z-30 bg-emerald-50 text-center">Ngày</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Cooling Fan</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[130px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ Transformer</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Boiler</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[130px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ Maint</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Office</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ ECO2</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">DB-AC HCA</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ DB-HVAC</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">ECO2</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[145px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ DB-Color Sorter</TableHead>
 
-                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Canteen</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ Vent 1</TableHead>
 
-                                            <TableHead className="font-bold min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">ĐH Maint (HCA+Shell)</TableHead>
+                                            <TableHead className="font-bold border-r min-w-[130px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ AC 2. Panel</TableHead>
+
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ Cooling</TableHead>
+
+                                            <TableHead className="font-bold border-r min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ Lò hơi</TableHead>
+
+                                            <TableHead className="font-bold min-w-[120px] bg-emerald-50 text-emerald-700 text-center text-xs">Đồng hồ DB-Office</TableHead>
 
                                         </TableRow>
 
@@ -6699,43 +6718,37 @@ export default function InputPage() {
 
                                         {otherElecData.map((row, index) => {
 
-                                            const handleChange = (field: 'cooling_fan' | 'boiler' | 'office' | 'db_ac_hca' | 'eco2' | 'canteen' | 'transformer' | 'maintenance', val: number | undefined) => {
+                                            const handleChange = (field: 'cooling_fan' | 'boiler' | 'office' | 'db_ac_hca' | 'eco2' | 'canteen' | 'transformer' | 'maintenance' | 'db_hvac' | 'vent_1' | 'ac_2_panel', val: number | undefined) => {
 
                                                 const newData = [...otherElecData];
 
                                                 newData[index][field] = val;
 
-
-
-                                                const calc = (curr: number | undefined, prev: number | undefined) => {
-
-                                                    if (curr === undefined || prev === undefined) return 0;
-
-                                                    return Math.max(0, curr - prev);
-
-                                                };
-
-
-
                                                 for (let i = index > 0 ? index : 1; i < newData.length; i++) {
 
                                                     const prevRec = newData[i - 1];
 
-                                                    newData[i].kwh_cooling_fan = calc(newData[i].cooling_fan, prevRec?.cooling_fan);
+                                                    newData[i].kwh_cooling_fan = calculateMeterConsumption(newData[i].cooling_fan, prevRec?.cooling_fan);
 
-                                                    newData[i].kwh_boiler = calc(newData[i].boiler, prevRec?.boiler);
+                                                    newData[i].kwh_boiler = calculateMeterConsumption(newData[i].boiler, prevRec?.boiler);
 
-                                                    newData[i].kwh_office = calc(newData[i].office, prevRec?.office);
+                                                    newData[i].kwh_office = calculateMeterConsumption(newData[i].office, prevRec?.office);
 
-                                                    newData[i].kwh_db_ac_hca = calc(newData[i].db_ac_hca, prevRec?.db_ac_hca);
+                                                    newData[i].kwh_db_ac_hca = calculateMeterConsumption(newData[i].db_ac_hca, prevRec?.db_ac_hca);
 
-                                                    newData[i].kwh_eco2 = calc(newData[i].eco2, prevRec?.eco2);
+                                                    newData[i].kwh_eco2 = calculateMeterConsumption(newData[i].eco2, prevRec?.eco2);
 
-                                                    newData[i].kwh_canteen = calc(newData[i].canteen, prevRec?.canteen);
+                                                    newData[i].kwh_canteen = calculateMeterConsumption(newData[i].canteen, prevRec?.canteen);
 
-                                                    newData[i].kwh_transformer = calc(newData[i].transformer, prevRec?.transformer);
+                                                    newData[i].kwh_transformer = calculateMeterConsumption(newData[i].transformer, prevRec?.transformer);
 
-                                                    newData[i].kwh_maintenance = calc(newData[i].maintenance, prevRec?.maintenance);
+                                                    newData[i].kwh_maintenance = calculateMeterConsumption(newData[i].maintenance, prevRec?.maintenance);
+
+                                                    newData[i].kwh_db_hvac = calculateMeterConsumption(newData[i].db_hvac, prevRec?.db_hvac);
+
+                                                    newData[i].kwh_vent_1 = calculateMeterConsumption(newData[i].vent_1, prevRec?.vent_1);
+
+                                                    newData[i].kwh_ac_2_panel = calculateMeterConsumption(newData[i].ac_2_panel, prevRec?.ac_2_panel);
 
                                                 }
 
@@ -6745,7 +6758,7 @@ export default function InputPage() {
 
 
 
-                                            const renderInput = (label: string, field: 'cooling_fan' | 'boiler' | 'office' | 'db_ac_hca' | 'eco2' | 'canteen' | 'transformer' | 'maintenance', val: number | undefined, kwh: number) => (
+                                            const renderInput = (label: string, field: 'cooling_fan' | 'boiler' | 'office' | 'db_ac_hca' | 'eco2' | 'canteen' | 'transformer' | 'maintenance' | 'db_hvac' | 'vent_1' | 'ac_2_panel', val: number | undefined, kwh: number) => (
 
                                                 <TableCell 
 
@@ -6835,21 +6848,25 @@ export default function InputPage() {
 
                                                     </TableCell>
 
-                                                    {renderInput("Fan", 'cooling_fan', row.cooling_fan, row.kwh_cooling_fan)}
+                                                    {renderInput("Transformer", 'transformer', row.transformer, row.kwh_transformer)}
 
-                                                    {renderInput("Boiler", 'boiler', row.boiler, row.kwh_boiler)}
-
-                                                    {renderInput("Office", 'office', row.office, row.kwh_office)}
-
-                                                    {renderInput("DB-AC", 'db_ac_hca', row.db_ac_hca, row.kwh_db_ac_hca)}
+                                                    {renderInput("Maint", 'maintenance', row.maintenance, row.kwh_maintenance)}
 
                                                     {renderInput("ECO2", 'eco2', row.eco2, row.kwh_eco2)}
 
-                                                    {renderInput("Canteen", 'canteen', row.canteen, row.kwh_canteen)}
+                                                    {renderInput("DB-HVAC", 'db_hvac', row.db_hvac, row.kwh_db_hvac)}
 
-                                                    {renderInput("Transf", 'transformer', row.transformer, row.kwh_transformer)}
+                                                    {renderInput("DB-Color Sorter", 'db_ac_hca', row.db_ac_hca, row.kwh_db_ac_hca)}
 
-                                                    {renderInput("Maint", 'maintenance', row.maintenance, row.kwh_maintenance)}
+                                                    {renderInput("Vent 1", 'vent_1', row.vent_1, row.kwh_vent_1)}
+
+                                                    {renderInput("AC 2. Panel", 'ac_2_panel', row.ac_2_panel, row.kwh_ac_2_panel)}
+
+                                                    {renderInput("Cooling", 'cooling_fan', row.cooling_fan, row.kwh_cooling_fan)}
+
+                                                    {renderInput("Lò hơi", 'boiler', row.boiler, row.kwh_boiler)}
+
+                                                    {renderInput("DB-Office", 'office', row.office, row.kwh_office)}
 
                                                 </TableRow>
 
