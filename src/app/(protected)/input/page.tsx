@@ -6283,7 +6283,62 @@ export default function InputPage() {
 
                                 </div>
 
-                                <div className="overflow-auto w-full relative max-h-[60vh] md:max-h-[650px] custom-scrollbar border rounded-lg">
+                                <div className="space-y-3 md:hidden">
+                                    {compressorData.filter(row => row.work_date <= format(new Date(), "yyyy-MM-dd")).map((row) => {
+                                        const index = compressorData.findIndex(item => item.work_date === row.work_date);
+                                        const updateMeter = (field: 'meter1' | 'meter2' | 'meter3', value: number | undefined) => {
+                                            const newData = compressorData.map(item => ({ ...item }));
+                                            newData[index][field] = value;
+                                            for (let i = 0; i < newData.length; i++) {
+                                                const previous = i === 0 ? undefined : newData[i - 1];
+                                                newData[i].kwh1 = calculateMeterConsumption(newData[i].meter1, previous?.meter1, 1000);
+                                                newData[i].kwh2 = calculateMeterConsumption(newData[i].meter2, previous?.meter2, 1000);
+                                                newData[i].kwh3 = calculateMeterConsumption(newData[i].meter3, previous?.meter3, 1000);
+                                                newData[i].total_kwh = newData[i].kwh1 + newData[i].kwh2 + newData[i].kwh3;
+                                            }
+                                            setCompressorData(newData);
+                                        };
+
+                                        return (
+                                            <article key={`compressor-mobile-${row.work_date}`} className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
+                                                <header className="flex items-center justify-between bg-gradient-to-r from-purple-50 to-indigo-50 px-4 py-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-purple-500">Máy nén khí</p>
+                                                        <h4 className="text-base font-black text-slate-800">{format(parseISO(row.work_date), "dd/MM/yyyy")}</h4>
+                                                    </div>
+                                                    <div className="rounded-xl bg-white px-3 py-1.5 text-right shadow-sm ring-1 ring-purple-100">
+                                                        <p className="text-[9px] font-bold uppercase text-slate-400">Tổng tiêu thụ</p>
+                                                        <p className="text-sm font-black tabular-nums text-rose-700">{row.total_kwh > 0 ? `${row.total_kwh.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} kWh` : '—'}</p>
+                                                    </div>
+                                                </header>
+                                                <div className="space-y-2 p-3">
+                                                    {(['meter1', 'meter2', 'meter3'] as const).map((field, meterIndex) => {
+                                                        const consumption = field === 'meter1' ? row.kwh1 : field === 'meter2' ? row.kwh2 : row.kwh3;
+                                                        return (
+                                                            <label key={field} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                                                                <span className="min-w-0 flex-1">
+                                                                    <span className="block text-xs font-extrabold text-slate-700">Đồng hồ MNK Số {meterIndex + 1} (×1000)</span>
+                                                                    <span className="mt-0.5 block text-[11px] font-semibold text-indigo-600">{consumption > 0 ? `${consumption.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} kWh tiêu thụ` : 'Chưa đủ chỉ số để tính'}</span>
+                                                                </span>
+                                                                <input
+                                                                    type="number"
+                                                                    inputMode="decimal"
+                                                                    step="0.01"
+                                                                    aria-label={`Đồng hồ MNK Số ${meterIndex + 1} ngày ${format(parseISO(row.work_date), "dd/MM/yyyy")}`}
+                                                                    className="min-h-11 w-28 rounded-xl border border-purple-200 bg-white px-3 text-right text-base font-bold tabular-nums outline-none focus:ring-2 focus:ring-purple-400"
+                                                                    value={row[field] ?? ''}
+                                                                    onChange={(event) => updateMeter(field, event.target.value === '' ? undefined : Number(event.target.value))}
+                                                                />
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="relative hidden max-h-[650px] w-full overflow-auto rounded-lg border custom-scrollbar md:block">
 
                                     <table className="w-full border-collapse text-sm">
 
@@ -6447,6 +6502,13 @@ export default function InputPage() {
 
                                     </table>
 
+                                </div>
+
+                                <div className="sticky bottom-0 z-30 -mx-3 mt-4 border-t border-purple-100 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
+                                    <Button onClick={saveCompressor} disabled={isSaving} className="min-h-12 w-full bg-purple-700 text-base font-bold text-white shadow-lg hover:bg-purple-800">
+                                        <Save className="mr-2 h-5 w-5" />
+                                        {isSaving ? 'Đang lưu dữ liệu...' : 'Lưu đồng hồ máy nén khí'}
+                                    </Button>
                                 </div>
 
                             </div>
@@ -6680,7 +6742,76 @@ export default function InputPage() {
 
                             </div>
 
-                            <div className="overflow-auto w-full relative max-h-[60vh] md:max-h-[650px] custom-scrollbar border bg-slate-50/50 rounded-lg">
+                            <div className="space-y-3 md:hidden">
+                                {otherElecData.filter(row => row.work_date <= format(new Date(), "yyyy-MM-dd")).map((row) => {
+                                    const index = otherElecData.findIndex(item => item.work_date === row.work_date);
+                                    const meters = [
+                                        ['Đồng hồ Transformer', 'transformer', 'kwh_transformer'],
+                                        ['Đồng hồ Maint', 'maintenance', 'kwh_maintenance'],
+                                        ['Đồng hồ ECO2', 'eco2', 'kwh_eco2'],
+                                        ['Đồng hồ DB-HVAC', 'db_hvac', 'kwh_db_hvac'],
+                                        ['Đồng hồ DB-Color Sorter', 'db_ac_hca', 'kwh_db_ac_hca'],
+                                        ['Đồng hồ Vent 1', 'vent_1', 'kwh_vent_1'],
+                                        ['Đồng hồ AC 2. Panel', 'ac_2_panel', 'kwh_ac_2_panel'],
+                                        ['Đồng hồ Cooling', 'cooling_fan', 'kwh_cooling_fan'],
+                                        ['Đồng hồ Lò hơi', 'boiler', 'kwh_boiler'],
+                                        ['Đồng hồ DB-Office', 'office', 'kwh_office'],
+                                    ] as const;
+                                    const updateMeter = (field: typeof meters[number][1], value: number | undefined) => {
+                                        const newData = otherElecData.map(item => ({ ...item }));
+                                        newData[index][field] = value;
+                                        for (let i = 1; i < newData.length; i++) {
+                                            const current = newData[i];
+                                            const previous = newData[i - 1];
+                                            current.kwh_cooling_fan = calculateMeterConsumption(current.cooling_fan, previous.cooling_fan);
+                                            current.kwh_boiler = calculateMeterConsumption(current.boiler, previous.boiler);
+                                            current.kwh_office = calculateMeterConsumption(current.office, previous.office);
+                                            current.kwh_db_ac_hca = calculateMeterConsumption(current.db_ac_hca, previous.db_ac_hca);
+                                            current.kwh_eco2 = calculateMeterConsumption(current.eco2, previous.eco2);
+                                            current.kwh_canteen = calculateMeterConsumption(current.canteen, previous.canteen);
+                                            current.kwh_transformer = calculateMeterConsumption(current.transformer, previous.transformer);
+                                            current.kwh_maintenance = calculateMeterConsumption(current.maintenance, previous.maintenance);
+                                            current.kwh_db_hvac = calculateMeterConsumption(current.db_hvac, previous.db_hvac);
+                                            current.kwh_vent_1 = calculateMeterConsumption(current.vent_1, previous.vent_1);
+                                            current.kwh_ac_2_panel = calculateMeterConsumption(current.ac_2_panel, previous.ac_2_panel);
+                                        }
+                                        setOtherElecData(newData);
+                                    };
+
+                                    return (
+                                        <article key={`other-meter-mobile-${row.work_date}`} className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
+                                            <header className="flex items-center justify-between bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3">
+                                                <div>
+                                                    <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-emerald-600">Đồng hồ khu vực</p>
+                                                    <h4 className="text-base font-black text-slate-800">{format(parseISO(row.work_date), "dd/MM/yyyy")}</h4>
+                                                </div>
+                                                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-emerald-700 shadow-sm ring-1 ring-emerald-100">10 đồng hồ</span>
+                                            </header>
+                                            <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
+                                                {meters.map(([label, field, kwhField]) => (
+                                                    <label key={field} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                                                        <span className="min-w-0 flex-1">
+                                                            <span className="block text-xs font-extrabold leading-tight text-slate-700">{label}</span>
+                                                            <span className="mt-1 block text-[11px] font-semibold tabular-nums text-emerald-600">{row[kwhField] > 0 ? `${row[kwhField].toLocaleString('vi-VN', { maximumFractionDigits: 1 })} kWh` : 'Chưa có tiêu thụ'}</span>
+                                                        </span>
+                                                        <input
+                                                            type="number"
+                                                            inputMode="decimal"
+                                                            step="0.01"
+                                                            aria-label={`${label} ngày ${format(parseISO(row.work_date), "dd/MM/yyyy")}`}
+                                                            className="min-h-11 w-28 rounded-xl border border-emerald-200 bg-white px-3 text-right text-base font-bold tabular-nums outline-none focus:ring-2 focus:ring-emerald-400"
+                                                            value={row[field] ?? ''}
+                                                            onChange={(event) => updateMeter(field, event.target.value === '' ? undefined : Number(event.target.value))}
+                                                        />
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="relative hidden max-h-[650px] w-full overflow-auto rounded-lg border bg-slate-50/50 custom-scrollbar md:block">
 
                                 <table className="w-full border-collapse text-sm">
 
@@ -6878,6 +7009,13 @@ export default function InputPage() {
 
                                 </table>
 
+                            </div>
+
+                            <div className="sticky bottom-0 z-30 -mx-6 mt-4 border-t border-emerald-100 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
+                                <Button onClick={saveOtherElec} disabled={isSaving} className="min-h-12 w-full bg-emerald-700 text-base font-bold text-white shadow-lg hover:bg-emerald-800">
+                                    <Save className="mr-2 h-5 w-5" />
+                                    {isSaving ? 'Đang lưu dữ liệu...' : 'Lưu đồng hồ khu vực'}
+                                </Button>
                             </div>
 
                         </div>
