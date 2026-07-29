@@ -5454,14 +5454,14 @@ export default function InputPage() {
 
                                     <div>
                                         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600 md:hidden">Đồng hồ điện · Củi</p>
-                                        <h3 className="text-base font-semibold leading-tight md:text-lg">Đồng hồ Tổng giao: Tháng {format(date, "MM/yyyy")}</h3>
+                                        <h3 className="text-base font-semibold leading-tight md:text-lg">Đồng hồ Tổng giao · {format(date, "dd/MM/yyyy")}</h3>
                                     </div>
 
                                     <Button onClick={saveEnergy} disabled={isSaving} size="sm" className="hidden md:inline-flex">
 
                                         <Save className="mr-2 h-4 w-4" />
 
-                                        {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Tháng'}
+                                        {isSaving ? 'Đang lưu...' : 'Lưu ngày đang chọn'}
 
                                     </Button>
 
@@ -5603,7 +5603,8 @@ export default function InputPage() {
 
 
                                 <div className="space-y-3 md:hidden">
-                                    {monthlyEnergyData.filter(row => row.work_date <= format(new Date(), "yyyy-MM-dd")).map((row, index) => {
+                                    {monthlyEnergyData.filter(row => row.work_date === format(date, "yyyy-MM-dd")).map((row) => {
+                                        const index = monthlyEnergyData.findIndex(item => item.work_date === row.work_date);
                                         const nextRowWater = index < monthlyEnergyData.length - 1 ? monthlyEnergyData[index + 1].water_meter_reading : undefined;
                                         const isWaterCalculated = row.water_meter_reading != null && nextRowWater != null;
                                         const updateRow = (field: keyof typeof row, value: number | undefined, recalculate = false) => {
@@ -5749,8 +5750,9 @@ export default function InputPage() {
 
                                         <TableBody className="bg-white">
 
-                                            {monthlyEnergyData.map((row, index) => {
+                                            {monthlyEnergyData.filter(row => row.work_date === format(date, "yyyy-MM-dd")).map((row) => {
 
+                                                const index = monthlyEnergyData.findIndex(item => item.work_date === row.work_date);
                                                 const prevRowElec = index > 0 ? monthlyEnergyData[index - 1].electricity_meter_reading : prevMonthLastMeter?.elec;
 
                                                 const prevRowWater = index > 0 ? monthlyEnergyData[index - 1].water_meter_reading : prevMonthLastMeter?.water;
@@ -6125,7 +6127,7 @@ export default function InputPage() {
 
                                         <Save className="mr-2 h-4 w-4" />
 
-                                        {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Tháng'}
+                                        {isSaving ? 'Đang lưu...' : 'Lưu ngày đang chọn'}
 
                                     </Button>
 
@@ -6134,7 +6136,7 @@ export default function InputPage() {
                                 <div className="sticky bottom-0 z-30 -mx-3 mt-4 border-t border-slate-200 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
                                     <Button onClick={saveEnergy} disabled={isSaving} className="min-h-12 w-full bg-slate-900 text-base font-bold text-white shadow-lg hover:bg-slate-800">
                                         <Save className="mr-2 h-5 w-5" />
-                                        {isSaving ? 'Đang lưu dữ liệu...' : 'Lưu toàn bộ tháng'}
+                                        {isSaving ? 'Đang lưu dữ liệu...' : 'Lưu dữ liệu ngày này'}
                                     </Button>
                                 </div>
 
@@ -6158,20 +6160,20 @@ export default function InputPage() {
 
                                 <div className="flex justify-between items-center mb-4">
 
-                                    <h3 className="font-semibold text-lg text-purple-800">🌬️ Máy nén khí — Chỉ số Điện: Tháng {format(date, "MM/yyyy")}</h3>
+                                    <h3 className="font-semibold text-lg text-purple-800">🌬️ Máy nén khí — {format(date, "dd/MM/yyyy")}</h3>
 
                                     <Button onClick={saveCompressor} disabled={isSaving} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
 
                                         <Save className="mr-2 h-4 w-4" />
 
-                                        {isSaving ? 'Đang lưu...' : 'Lưu toàn bộ tháng'}
+                                        {isSaving ? 'Đang lưu...' : 'Lưu ngày đang chọn'}
 
                                     </Button>
 
                                 </div>
 
                                 <div className="space-y-3 md:hidden">
-                                    {compressorData.filter(row => row.work_date <= format(new Date(), "yyyy-MM-dd")).map((row) => {
+                                    {compressorData.filter(row => row.work_date === format(date, "yyyy-MM-dd")).map((row) => {
                                         const index = compressorData.findIndex(item => item.work_date === row.work_date);
                                         const updateMeter = (field: 'meter1' | 'meter2' | 'meter3', value: number | undefined) => {
                                             const newData = compressorData.map(item => ({ ...item }));
@@ -6265,8 +6267,9 @@ export default function InputPage() {
 
                                         <TableBody className="bg-white">
 
-                                            {compressorData.map((row, index) => {
+                                            {compressorData.filter(row => row.work_date === format(date, "yyyy-MM-dd")).map((row) => {
 
+                                                const index = compressorData.findIndex(item => item.work_date === row.work_date);
                                                 const handleMeterChange = (field: 'meter1' | 'meter2' | 'meter3', val: number | undefined) => {
 
                                                     const newData = [...compressorData];
@@ -6418,9 +6421,9 @@ export default function InputPage() {
 
                                 <h3 className="text-lg font-semibold mb-6 flex justify-between items-center text-amber-800">
 
-                                    <span>⚡ Nhập liệu Chỉ số Điện Shelling (Toàn tháng)</span>
+                                    <span>⚡ Nhập chỉ số điện Shelling</span>
 
-                                    <span className="text-sm font-normal text-muted-foreground">{date ? format(date, "MM/yyyy") : ''}</span>
+                                    <span className="text-sm font-normal text-muted-foreground">{date ? format(date, "dd/MM/yyyy") : ''}</span>
 
                                 </h3>
 
@@ -6450,8 +6453,9 @@ export default function InputPage() {
 
                                         <TableBody className="bg-white">
 
-                                            {shellingMonthlyEnergyData.map((row, index) => {
+                                            {shellingMonthlyEnergyData.filter(row => row.work_date === format(date, "yyyy-MM-dd")).map((row) => {
 
+                                                const index = shellingMonthlyEnergyData.findIndex(item => item.work_date === row.work_date);
                                                 const prevRowElec = index > 0 ? shellingMonthlyEnergyData[index - 1].electricity_meter_reading : prevMonthLastMeter?.elec;
 
                                                 const intensity = row.actual_ton > 0 ? (row.electricity_kwh / row.actual_ton).toFixed(2) : "0.00";
@@ -6585,7 +6589,7 @@ export default function InputPage() {
 
                                         <Save className="mr-2 h-4 w-4" />
 
-                                        {isSaving ? 'Đang lưu...' : 'Lưu Toàn Bộ Điện Shelling'}
+                                        {isSaving ? 'Đang lưu...' : 'Lưu điện Shelling ngày này'}
 
                                     </Button>
 
@@ -6611,13 +6615,13 @@ export default function InputPage() {
 
                             <div className="flex justify-between items-center mb-4">
 
-                                <h3 className="font-semibold text-lg text-emerald-800">⚡ Đồng hồ điện khu vực — Tháng {format(date, "MM/yyyy")}</h3>
+                                <h3 className="font-semibold text-lg text-emerald-800">⚡ Đồng hồ điện khu vực · {format(date, "dd/MM/yyyy")}</h3>
 
                                 <Button onClick={saveOtherElec} disabled={isSaving} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
 
                                     <Save className="mr-2 h-4 w-4" />
 
-                                    {isSaving ? 'Đang lưu...' : 'Lưu toàn bộ tháng'}
+                                    {isSaving ? 'Đang lưu...' : 'Lưu ngày đang chọn'}
 
                                 </Button>
 
@@ -6630,7 +6634,7 @@ export default function InputPage() {
                             </div>
 
                             <div className="space-y-3 md:hidden">
-                                {otherElecData.filter(row => row.work_date <= format(new Date(), "yyyy-MM-dd")).map((row) => {
+                                {otherElecData.filter(row => row.work_date === format(date, "yyyy-MM-dd")).map((row) => {
                                     const index = otherElecData.findIndex(item => item.work_date === row.work_date);
                                     const meters = [
                                         ['Đồng hồ Transformer', 'transformer', 'kwh_transformer'],
@@ -6734,8 +6738,9 @@ export default function InputPage() {
 
                                     <TableBody>
 
-                                        {otherElecData.map((row, index) => {
+                                        {otherElecData.filter(row => row.work_date === format(date, "yyyy-MM-dd")).map((row) => {
 
+                                            const index = otherElecData.findIndex(item => item.work_date === row.work_date);
                                             const handleChange = (field: 'cooling_fan' | 'boiler' | 'office' | 'db_ac_hca' | 'eco2' | 'canteen' | 'transformer' | 'maintenance' | 'db_hvac' | 'vent_1' | 'ac_2_panel', val: number | undefined) => {
 
                                                 const newData = [...otherElecData];
