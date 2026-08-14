@@ -55,7 +55,8 @@ test("compares current month with the same recorded period last month", () => {
     assert.deepEqual(compareWaterPeriods([10, 20, null], [8, 12, 100]), {
         currentTotal: 30,
         previousTotal: 20,
-        previousAverage: 10,
+        previousAverage: 10,       // avg of days 1-2 last month: (8+12)/2
+        previousFullAverage: 40,   // avg of all 3 days last month: (8+12+100)/3
         difference: 10,
         percentChange: 50,
         recordedDays: 2,
@@ -67,6 +68,7 @@ test("returns no percentage when the previous period is empty", () => {
         currentTotal: 10,
         previousTotal: 0,
         previousAverage: 0,
+        previousFullAverage: 0,
         difference: 10,
         percentChange: null,
         recordedDays: 1,

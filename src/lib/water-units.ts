@@ -41,7 +41,8 @@ export interface WaterPeriodSummary {
 export interface WaterPeriodComparison {
     currentTotal: number
     previousTotal: number
-    previousAverage: number
+    previousAverage: number      // avg of same period (days 1–N) last month
+    previousFullAverage: number  // avg of entire previous month
     difference: number
     percentChange: number | null
     recordedDays: number
@@ -79,10 +80,13 @@ export function compareWaterPeriods(
     const previous = summarizeWaterPeriod(previousPeriod)
     const difference = roundWaterValue(current.total - previous.total)
 
+    const previousFull = summarizeWaterPeriod(previousValues)
+
     return {
         currentTotal: current.total,
         previousTotal: previous.total,
         previousAverage: previous.average,
+        previousFullAverage: previousFull.average,
         difference,
         percentChange: previous.total > 0
             ? roundWaterValue((difference / previous.total) * 100)

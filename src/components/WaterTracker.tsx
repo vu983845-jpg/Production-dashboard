@@ -100,6 +100,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
     const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle")
     const [saveMsg, setSaveMsg] = useState("")
     const [focusedWaterRowDate, setFocusedWaterRowDate] = useState<string | null>(null)
+    const [compMode, setCompMode] = useState<"full" | "same">("full")
 
     // Generate days for the current month
     const daysInMonth = useMemo(() => {
@@ -247,12 +248,15 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
 
     const totalAnalytics = meterAnalytics.find(item => item.meter.key === "tong")
     const totalComparison = totalAnalytics?.comparison
-    const hasTotalComparison = totalComparison && totalComparison.previousAverage > 0
+    const prevAvgTotal = compMode === "full"
+        ? (totalComparison?.previousFullAverage ?? 0)
+        : (totalComparison?.previousAverage ?? 0)
+    const hasTotalComparison = totalComparison != null && prevAvgTotal > 0
     const totalAvgDiff = totalAnalytics && hasTotalComparison
-        ? totalAnalytics.summary.average - totalComparison.previousAverage
+        ? totalAnalytics.summary.average - prevAvgTotal
         : 0
-    const totalAvgPct = hasTotalComparison && totalComparison.previousAverage > 0
-        ? Math.round((totalAvgDiff / totalComparison.previousAverage) * 1000) / 10
+    const totalAvgPct = hasTotalComparison && prevAvgTotal > 0
+        ? Math.round((totalAvgDiff / prevAvgTotal) * 1000) / 10
         : null
 
     // Chart data based on LIVE values
@@ -360,16 +364,32 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
             {/* Monthly operating snapshot */}
             {!isLoading && totalAnalytics && (
                 <section aria-labelledby="water-month-summary" className="overflow-hidden rounded-2xl border border-sky-100 bg-white/95 shadow-[0_14px_35px_-22px_rgba(2,132,199,0.55)]">
-                    <div className="flex flex-col gap-1 border-b border-sky-100 bg-gradient-to-r from-sky-950 via-sky-800 to-cyan-700 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-2 border-b border-sky-100 bg-gradient-to-r from-sky-950 via-sky-800 to-cyan-700 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 id="water-month-summary" className="flex items-center gap-2 text-sm font-black tracking-wide">
                                 <Activity className="h-4 w-4 text-cyan-300" /> Tổng quan nước tháng {format(currentMonth, "MM/yyyy")}
                             </h2>
                             <p className="mt-0.5 text-[11px] text-sky-100">Cùng kỳ tính đến ngày có dữ liệu mới nhất · Đơn vị m³</p>
                         </div>
-                        <span className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold sm:mt-0">
-                            <TriangleAlert className="h-3 w-3 text-amber-300" /> Đỏ = cao hơn AVG trước đó trên 50%
-                        </span>
+                        <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                            <div className="flex items-center gap-0.5 rounded-md border border-white/20 bg-white/10 p-0.5 text-[10px] font-bold">
+                                <button
+                                    onClick={() => setCompMode("full")}
+                                    className={`rounded px-2.5 py-0.5 transition-colors ${compMode === "full" ? "bg-white text-sky-900" : "text-white/60 hover:text-white"}`}
+                                >
+                                    Cả tháng trước
+                                </button>
+                                <button
+                                    onClick={() => setCompMode("same")}
+                                    className={`rounded px-2.5 py-0.5 transition-colors ${compMode === "same" ? "bg-white text-sky-900" : "text-white/60 hover:text-white"}`}
+                                >
+                                    Cùng kỳ
+                                </button>
+                            </div>
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold">
+                                <TriangleAlert className="h-3 w-3 text-amber-300" /> Đỏ = cao hơn AVG trước đó trên 50%
+                            </span>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
@@ -384,7 +404,9 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                             <p className="mt-1 text-[11px] font-medium text-slate-500">Không tính ngày trống</p>
                         </div>
                         <div className={`px-5 py-4 ${hasTotalComparison && totalAvgDiff > 0 ? "bg-rose-50/70" : "bg-emerald-50/60"}`}>
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">So với AVG tháng trước</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                So với AVG {compMode === "full" ? "cả tháng trước" : "cùng kỳ trước"}
+                            </p>
                             {hasTotalComparison ? (
                                 <>
                                     <p className={`mt-1 flex items-center gap-1 text-2xl font-black tabular-nums ${totalAvgDiff > 0 ? "text-rose-600" : "text-emerald-600"}`}>
@@ -392,7 +414,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                         {totalAvgPct != null && `${Math.abs(totalAvgPct).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`}
                                     </p>
                                     <p className="mt-1 text-[11px] font-bold text-slate-500">
-                                        {totalAvgDiff > 0 ? "Tăng" : "Giảm"} {formatWaterValue(Math.abs(totalAvgDiff))} m³/ngày · kỳ trước {formatWaterValue(totalComparison.previousAverage)} m³/ngày
+                                        {totalAvgDiff > 0 ? "Tăng" : "Giảm"} {formatWaterValue(Math.abs(totalAvgDiff))} m³/ngày · kỳ trước {formatWaterValue(prevAvgTotal)} m³/ngày
                                     </p>
                                 </>
                             ) : <p className="mt-2 text-sm font-bold text-slate-400">Chưa đủ dữ liệu tháng trước</p>}
@@ -409,9 +431,11 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                     </div>
                                     <span className="text-right font-mono font-black text-slate-800">{formatWaterValue(summary.total)} m³</span>
                                     <span className="pl-[18px] text-[11px] text-slate-500">AVG {formatWaterValue(summary.average)} m³/ngày</span>
-                                    <span className={`text-right font-mono text-[11px] font-black ${comparison.previousAverage <= 0 ? "text-slate-300" : summary.average > comparison.previousAverage ? "text-rose-600" : "text-emerald-600"}`}>
-                                        {comparison.previousAverage > 0 ? (() => { const d = summary.average - comparison.previousAverage; const p = Math.round((d / comparison.previousAverage) * 1000) / 10; return `${d > 0 ? "+" : ""}${p.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% AVG kỳ trước` })() : "Chưa có kỳ trước"}
+                                    {(() => { const pv = compMode === "full" ? comparison.previousFullAverage : comparison.previousAverage; const d = summary.average - pv; const p = pv > 0 ? Math.round((d / pv) * 1000) / 10 : null; return (
+                                    <span className={`text-right font-mono text-[11px] font-black ${pv <= 0 ? "text-slate-300" : d > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                        {pv > 0 && p != null ? `${d > 0 ? "+" : ""}${p.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% AVG kỳ trước` : "Chưa có kỳ trước"}
                                     </span>
+                                    ) })()}
                                 </div>
                             ))}
                         </div>
@@ -423,7 +447,7 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                     <th className="px-4 py-2 text-left">Đồng hồ / Khu vực</th>
                                     <th className="px-3 py-2 text-right">Lũy kế</th>
                                     <th className="px-3 py-2 text-right">AVG/ngày</th>
-                                    <th className="px-3 py-2 text-right">AVG kỳ trước</th>
+                                    <th className="px-3 py-2 text-right">{compMode === "full" ? "AVG cả tháng trước" : "AVG cùng kỳ trước"}</th>
                                     <th className="px-4 py-2 text-right">Chênh lệch AVG</th>
                                 </tr>
                             </thead>
@@ -433,10 +457,12 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                         <td className="px-4 py-2 font-bold text-slate-700"><span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: meter.color }} />{"resultLabel" in meter ? meter.resultLabel : meter.shortLabel}</td>
                                         <td className="px-3 py-2 text-right font-mono font-bold text-slate-700">{formatWaterValue(summary.total)}</td>
                                         <td className="px-3 py-2 text-right font-mono text-slate-600">{formatWaterValue(summary.average)}</td>
-                                        <td className="px-3 py-2 text-right font-mono text-slate-500">{comparison.previousAverage > 0 ? formatWaterValue(comparison.previousAverage) : "—"}</td>
-                                        <td className={`px-4 py-2 text-right font-mono font-black ${comparison.previousAverage <= 0 ? "text-slate-300" : summary.average > comparison.previousAverage ? "text-rose-600" : "text-emerald-600"}`}>
-                                            {comparison.previousAverage > 0 ? (() => { const d = summary.average - comparison.previousAverage; const p = Math.round((d / comparison.previousAverage) * 1000) / 10; return `${d > 0 ? "+" : ""}${p.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%` })() : "—"}
+                                        {(() => { const pv = compMode === "full" ? comparison.previousFullAverage : comparison.previousAverage; const d = summary.average - pv; const p = pv > 0 ? Math.round((d / pv) * 1000) / 10 : null; return (<>
+                                        <td className="px-3 py-2 text-right font-mono text-slate-500">{pv > 0 ? formatWaterValue(pv) : "—"}</td>
+                                        <td className={`px-4 py-2 text-right font-mono font-black ${pv <= 0 ? "text-slate-300" : d > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                            {pv > 0 && p != null ? `${d > 0 ? "+" : ""}${p.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%` : "—"}
                                         </td>
+                                        </>) })()}
                                     </tr>
                                 ))}
                             </tbody>
