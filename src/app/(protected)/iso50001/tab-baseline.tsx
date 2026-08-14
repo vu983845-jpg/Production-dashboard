@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { format, parseISO } from "date-fns"
 import {
     ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, AlertTriangle, CheckCircle2, Calculator, Zap, Flame, Trash2, Save, RefreshCw } from "lucide-react"
+import { Loader2, AlertTriangle, CheckCircle2, Calculator, Zap, Flame, Trash2, Save, RefreshCw, Paperclip, Upload, Eye, FileText, X } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 import { SeuMaster, MonthlyHistorical, BaselineModel, calcLinearRegression, fmtNum } from "./types"
 
 interface Props {
@@ -69,6 +70,154 @@ function EditCell({
                 : <span className="text-muted-foreground/40">—</span>
             }
         </div>
+    )
+}
+
+// ─── Evidence Button ─────────────────────────────────────────────
+const EVIDENCE_BUCKET = 'iso50001-evidence'
+
+function EvidenceButton({ monthYear }: { monthYear: string }) {
+    const supabase = useMemo(() => createClient(), [])
+    const monthKey = monthYear.slice(0, 7)
+    const monthLabel = useMemo(() => {
+        try { return format(parseISO(monthYear), 'MM/yyyy') } catch { return monthYear }
+    }, [monthYear])
+
+    const [open, setOpen] = useState(false)
+    const [files, setFiles] = useState<{ name: string; size: number }[]>([])
+    const [loadingFiles, setLoadingFiles] = useState(false)
+    const [uploading, setUploading] = useState(false)
+    const [hasEvidence, setHasEvidence] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        supabase.storage.from(EVIDENCE_BUCKET).list(monthKey, { limit: 1 })
+            .then(({ data }) => {
+                const real = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder')
+                setHasEvidence(real.length > 0)
+            })
+            .catch(() => {})
+    }, [monthKey, supabase])
+
+    const loadFiles = async () => {
+        setLoadingFiles(true)
+        const { data } = await supabase.storage.from(EVIDENCE_BUCKET).list(monthKey)
+        const cleaned = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder')
+        setFiles(cleaned.map(f => ({ name: f.name, size: (f as any).metadata?.size ?? 0 })))
+        setHasEvidence(cleaned.length > 0)
+        setLoadingFiles(false)
+    }
+
+    const handleOpen = () => { setOpen(true); loadFiles() }
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files?.[0]
+        if (!f) return
+        setUploading(true)
+        const path = `${monthKey}/${Date.now()}_${f.name}`
+        await supabase.storage.from(EVIDENCE_BUCKET).upload(path, f, { upsert: false })
+        await loadFiles()
+        setUploading(false)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+
+    const handleView = async (filename: string) => {
+        const { data } = await supabase.storage.from(EVIDENCE_BUCKET).createSignedUrl(`${monthKey}/${filename}`, 120)
+        if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+    }
+
+    const handleDeleteFile = async (filename: string) => {
+        if (!confirm(`Xóa file "${filename.replace(/^\d+_/, '')}"?`)) return
+        await supabase.storage.from(EVIDENCE_BUCKET).remove([`${monthKey}/${filename}`])
+        await loadFiles()
+    }
+
+    const fmtSize = (bytes: number) => {
+        if (bytes <= 0) return ''
+        if (bytes < 1024) return `${bytes}B`
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`
+        return `${(bytes / 1024 / 1024).toFixed(1)}MB`
+    }
+
+    return (
+        <>
+            <button
+                onClick={handleOpen}
+                title={hasEvidence ? `Có evidence — tháng ${monthLabel}` : `Thêm evidence tháng ${monthLabel}`}
+                className={`relative inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition-colors ${hasEvidence ? 'text-blue-500' : 'text-slate-300 hover:text-slate-400'}`}
+            >
+                <Paperclip className="h-3.5 w-3.5" />
+                {hasEvidence && (
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                )}
+            </button>
+
+            {open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+                    onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="bg-slate-700 px-5 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <Paperclip className="h-4 w-4 text-white/70" />
+                                <div>
+                                    <p className="text-white font-semibold text-sm">Evidence — Tháng {monthLabel}</p>
+                                    <p className="text-white/55 text-xs">Chứng từ · hóa đơn · biên bản xác nhận</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-3">
+                            <input ref={fileInputRef} type="file" accept="image/*,.pdf" hidden onChange={handleUpload} />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-blue-200 rounded-xl py-3 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                            >
+                                {uploading
+                                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang upload...</>
+                                    : <><Upload className="h-3.5 w-3.5" /> Upload hình ảnh / PDF</>
+                                }
+                            </button>
+
+                            {loadingFiles ? (
+                                <div className="flex justify-center py-6">
+                                    <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
+                                </div>
+                            ) : files.length === 0 ? (
+                                <p className="text-center text-xs text-muted-foreground py-6">
+                                    Chưa có evidence — upload file để bắt đầu
+                                </p>
+                            ) : (
+                                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                                    {files.map(f => (
+                                        <div key={f.name} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+                                            <FileText className="h-4 w-4 text-slate-400 shrink-0" />
+                                            <span className="flex-1 text-xs text-slate-700 truncate min-w-0" title={f.name.replace(/^\d+_/, '')}>
+                                                {f.name.replace(/^\d+_/, '')}
+                                            </span>
+                                            {fmtSize(f.size) && (
+                                                <span className="text-[10px] text-slate-400 shrink-0">{fmtSize(f.size)}</span>
+                                            )}
+                                            <button onClick={() => handleView(f.name)}
+                                                className="text-blue-400 hover:text-blue-700 shrink-0 transition-colors" title="Xem / tải về">
+                                                <Eye className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button onClick={() => handleDeleteFile(f.name)}
+                                                className="text-red-200 hover:text-red-600 shrink-0 transition-colors" title="Xóa file">
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     )
 }
 
@@ -455,10 +604,13 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                             {isSaving
                                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400 inline" />
                                                 : (
-                                                    <button onClick={() => handleDeleteMonth(row)}
-                                                        className="text-red-200 hover:text-red-500 transition-colors">
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </button>
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <EvidenceButton monthYear={row.month_year} />
+                                                        <button onClick={() => handleDeleteMonth(row)}
+                                                            className="text-red-200 hover:text-red-500 transition-colors">
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
                                                 )}
                                         </td>
                                     </tr>
