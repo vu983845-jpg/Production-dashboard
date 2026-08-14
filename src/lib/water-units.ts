@@ -41,6 +41,7 @@ export interface WaterPeriodSummary {
 export interface WaterPeriodComparison {
     currentTotal: number
     previousTotal: number
+    previousAverage: number
     difference: number
     percentChange: number | null
     recordedDays: number
@@ -81,6 +82,7 @@ export function compareWaterPeriods(
     return {
         currentTotal: current.total,
         previousTotal: previous.total,
+        previousAverage: previous.average,
         difference,
         percentChange: previous.total > 0
             ? roundWaterValue((difference / previous.total) * 100)

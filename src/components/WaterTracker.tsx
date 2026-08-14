@@ -247,7 +247,13 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
 
     const totalAnalytics = meterAnalytics.find(item => item.meter.key === "tong")
     const totalComparison = totalAnalytics?.comparison
-    const hasTotalComparison = totalComparison && totalComparison.previousTotal > 0
+    const hasTotalComparison = totalComparison && totalComparison.previousAverage > 0
+    const totalAvgDiff = totalAnalytics && hasTotalComparison
+        ? totalAnalytics.summary.average - totalComparison.previousAverage
+        : 0
+    const totalAvgPct = hasTotalComparison && totalComparison.previousAverage > 0
+        ? Math.round((totalAvgDiff / totalComparison.previousAverage) * 1000) / 10
+        : null
 
     // Chart data based on LIVE values
     const chartData = useMemo(() => {
@@ -377,16 +383,16 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                             <p className="mt-1 text-2xl font-black tabular-nums text-sky-950">{formatWaterValue(totalAnalytics.summary.average)} <span className="text-xs text-slate-400">m³/ngày</span></p>
                             <p className="mt-1 text-[11px] font-medium text-slate-500">Không tính ngày trống</p>
                         </div>
-                        <div className={`px-5 py-4 ${hasTotalComparison && totalComparison.difference > 0 ? "bg-rose-50/70" : "bg-emerald-50/60"}`}>
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">So với cùng kỳ tháng trước</p>
+                        <div className={`px-5 py-4 ${hasTotalComparison && totalAvgDiff > 0 ? "bg-rose-50/70" : "bg-emerald-50/60"}`}>
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">So với AVG tháng trước</p>
                             {hasTotalComparison ? (
                                 <>
-                                    <p className={`mt-1 flex items-center gap-1 text-2xl font-black tabular-nums ${totalComparison.difference > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                                        {totalComparison.difference > 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
-                                        {totalComparison.percentChange != null && `${Math.abs(totalComparison.percentChange).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`}
+                                    <p className={`mt-1 flex items-center gap-1 text-2xl font-black tabular-nums ${totalAvgDiff > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                        {totalAvgDiff > 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+                                        {totalAvgPct != null && `${Math.abs(totalAvgPct).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`}
                                     </p>
                                     <p className="mt-1 text-[11px] font-bold text-slate-500">
-                                        {totalComparison.difference > 0 ? "Tăng" : "Giảm"} {formatWaterValue(Math.abs(totalComparison.difference))} m³ · kỳ trước {formatWaterValue(totalComparison.previousTotal)} m³
+                                        {totalAvgDiff > 0 ? "Tăng" : "Giảm"} {formatWaterValue(Math.abs(totalAvgDiff))} m³/ngày · kỳ trước {formatWaterValue(totalComparison.previousAverage)} m³/ngày
                                     </p>
                                 </>
                             ) : <p className="mt-2 text-sm font-bold text-slate-400">Chưa đủ dữ liệu tháng trước</p>}
@@ -403,8 +409,8 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                     </div>
                                     <span className="text-right font-mono font-black text-slate-800">{formatWaterValue(summary.total)} m³</span>
                                     <span className="pl-[18px] text-[11px] text-slate-500">AVG {formatWaterValue(summary.average)} m³/ngày</span>
-                                    <span className={`text-right font-mono text-[11px] font-black ${comparison.previousTotal <= 0 ? "text-slate-300" : comparison.difference > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                                        {comparison.previousTotal > 0 && comparison.percentChange != null ? `${comparison.difference > 0 ? "+" : ""}${comparison.percentChange.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% kỳ trước` : "Chưa có kỳ trước"}
+                                    <span className={`text-right font-mono text-[11px] font-black ${comparison.previousAverage <= 0 ? "text-slate-300" : summary.average > comparison.previousAverage ? "text-rose-600" : "text-emerald-600"}`}>
+                                        {comparison.previousAverage > 0 ? (() => { const d = summary.average - comparison.previousAverage; const p = Math.round((d / comparison.previousAverage) * 1000) / 10; return `${d > 0 ? "+" : ""}${p.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% AVG kỳ trước` })() : "Chưa có kỳ trước"}
                                     </span>
                                 </div>
                             ))}
@@ -417,8 +423,8 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                     <th className="px-4 py-2 text-left">Đồng hồ / Khu vực</th>
                                     <th className="px-3 py-2 text-right">Lũy kế</th>
                                     <th className="px-3 py-2 text-right">AVG/ngày</th>
-                                    <th className="px-3 py-2 text-right">Cùng kỳ trước</th>
-                                    <th className="px-4 py-2 text-right">Chênh lệch</th>
+                                    <th className="px-3 py-2 text-right">AVG kỳ trước</th>
+                                    <th className="px-4 py-2 text-right">Chênh lệch AVG</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -427,9 +433,9 @@ export function WaterTracker({ userRole }: { userRole?: string }) {
                                         <td className="px-4 py-2 font-bold text-slate-700"><span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: meter.color }} />{"resultLabel" in meter ? meter.resultLabel : meter.shortLabel}</td>
                                         <td className="px-3 py-2 text-right font-mono font-bold text-slate-700">{formatWaterValue(summary.total)}</td>
                                         <td className="px-3 py-2 text-right font-mono text-slate-600">{formatWaterValue(summary.average)}</td>
-                                        <td className="px-3 py-2 text-right font-mono text-slate-500">{comparison.previousTotal > 0 ? formatWaterValue(comparison.previousTotal) : "—"}</td>
-                                        <td className={`px-4 py-2 text-right font-mono font-black ${comparison.previousTotal <= 0 ? "text-slate-300" : comparison.difference > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                                            {comparison.previousTotal > 0 && comparison.percentChange != null ? `${comparison.difference > 0 ? "+" : ""}${comparison.percentChange.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%` : "—"}
+                                        <td className="px-3 py-2 text-right font-mono text-slate-500">{comparison.previousAverage > 0 ? formatWaterValue(comparison.previousAverage) : "—"}</td>
+                                        <td className={`px-4 py-2 text-right font-mono font-black ${comparison.previousAverage <= 0 ? "text-slate-300" : summary.average > comparison.previousAverage ? "text-rose-600" : "text-emerald-600"}`}>
+                                            {comparison.previousAverage > 0 ? (() => { const d = summary.average - comparison.previousAverage; const p = Math.round((d / comparison.previousAverage) * 1000) / 10; return `${d > 0 ? "+" : ""}${p.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%` })() : "—"}
                                         </td>
                                     </tr>
                                 ))}
