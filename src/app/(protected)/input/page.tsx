@@ -397,6 +397,10 @@ export default function InputPage() {
 
     const [prevMonthLastMeter, setPrevMonthLastMeter] = useState<any>({ elec: null, water: null, peak: null, normal: null, offpeak: null })
 
+    const [prevMonthEnergyData, setPrevMonthEnergyData] = useState<{ work_date: string; electricity_kwh: number; wood_kg: number }[]>([])
+
+    const [elecCompMode, setElecCompMode] = useState<"full" | "same">("full")
+
     const [prevMeterReading, setPrevMeterReading] = useState<number | null>(null)
 
     const [prevDayActual, setPrevDayActual] = useState<number | null>(null)
@@ -1325,6 +1329,20 @@ export default function InputPage() {
             const prevMonthObj = { elec: pElec, water: pWater, peak: pPeak, normal: pNormal, offpeak: pOffpeak };
 
             setPrevMonthLastMeter(prevMonthObj);
+
+            // Fetch full previous month daily data for comparison panel
+            const prevMonthStart = format(startOfMonth(prevDateObj), "yyyy-MM-dd");
+            const { data: prevMonthRows } = await supabase
+                .from('daily_energy')
+                .select('work_date, electricity_kwh, wood_kg')
+                .gte('work_date', prevMonthStart)
+                .lte('work_date', prevDateStr)
+                .order('work_date');
+            setPrevMonthEnergyData((prevMonthRows ?? []).map((r: any) => ({
+                work_date: r.work_date,
+                electricity_kwh: Number(r.electricity_kwh || 0),
+                wood_kg: Number(r.wood_kg || 0),
+            })));
 
 
 
@@ -5468,6 +5486,69 @@ export default function InputPage() {
                                 </div>
 
 
+
+                                {/* Monthly electricity summary panel */}
+                                {(() => {
+                                    const _today = format(new Date(), "yyyy-MM-dd");
+                                    const currentRows = monthlyEnergyData.filter(r => r.electricity_kwh > 0 && r.work_date <= _today);
+                                    if (currentRows.length === 0) return null;
+                                    const currentTotal = currentRows.reduce((s, r) => s + r.electricity_kwh, 0);
+                                    const currentAvg = currentTotal / currentRows.length;
+                                    const prevRows = prevMonthEnergyData.filter(r => r.electricity_kwh > 0);
+                                    const samePeriodRows = prevRows.slice(0, currentRows.length);
+                                    const samePeriodAvg = samePeriodRows.length > 0 ? samePeriodRows.reduce((s, r) => s + r.electricity_kwh, 0) / samePeriodRows.length : 0;
+                                    const fullPrevAvg = prevRows.length > 0 ? prevRows.reduce((s, r) => s + r.electricity_kwh, 0) / prevRows.length : 0;
+                                    const prevAvg = elecCompMode === "full" ? fullPrevAvg : samePeriodAvg;
+                                    const hasPrev = prevAvg > 0;
+                                    const avgDiff = currentAvg - prevAvg;
+                                    const avgPct = hasPrev ? Math.round((avgDiff / prevAvg) * 1000) / 10 : null;
+                                    const woodRows = monthlyEnergyData.filter(r => r.wood_kg > 0 && r.work_date <= _today);
+                                    const woodTotal = woodRows.reduce((s, r) => s + r.wood_kg, 0);
+                                    return (
+                                        <section className="mb-4 overflow-hidden rounded-2xl border border-amber-100 bg-white shadow-[0_8px_24px_-12px_rgba(245,158,11,0.4)]">
+                                            <div className="flex flex-col gap-2 border-b border-amber-100 bg-gradient-to-r from-amber-900 via-amber-700 to-yellow-600 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+                                                <div>
+                                                    <h3 className="flex items-center gap-2 text-sm font-black tracking-wide">
+                                                        ⚡ Tổng quan điện tháng {format(date, "MM/yyyy")}
+                                                    </h3>
+                                                    <p className="mt-0.5 text-[11px] text-amber-100">Lũy kế đến ngày {format(new Date(), "dd/MM")} · Đơn vị kWh</p>
+                                                </div>
+                                                <div className="flex items-center gap-0.5 rounded-md border border-white/20 bg-white/10 p-0.5 text-[10px] font-bold">
+                                                    <button onClick={() => setElecCompMode("full")} className={`rounded px-2.5 py-0.5 transition-colors ${elecCompMode === "full" ? "bg-white text-amber-900" : "text-white/60 hover:text-white"}`}>Cả tháng trước</button>
+                                                    <button onClick={() => setElecCompMode("same")} className={`rounded px-2.5 py-0.5 transition-colors ${elecCompMode === "same" ? "bg-white text-amber-900" : "text-white/60 hover:text-white"}`}>Cùng kỳ</button>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 sm:grid-cols-4 sm:divide-y-0">
+                                                <div className="px-4 py-3">
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Từ đầu tháng</p>
+                                                    <p className="mt-1 text-xl font-black tabular-nums text-amber-900">{Math.round(currentTotal).toLocaleString("vi-VN")} <span className="text-xs text-slate-400">kWh</span></p>
+                                                    <p className="mt-0.5 text-[11px] text-slate-500">{currentRows.length} ngày có số liệu</p>
+                                                </div>
+                                                <div className="px-4 py-3">
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">AVG hiện tại</p>
+                                                    <p className="mt-1 text-xl font-black tabular-nums text-amber-900">{Math.round(currentAvg).toLocaleString("vi-VN")} <span className="text-xs text-slate-400">kWh/ngày</span></p>
+                                                    <p className="mt-0.5 text-[11px] text-slate-500">Không tính ngày 0</p>
+                                                </div>
+                                                <div className={`px-4 py-3 ${hasPrev && avgDiff > 0 ? "bg-rose-50/70" : hasPrev ? "bg-emerald-50/60" : ""}`}>
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">So với AVG {elecCompMode === "full" ? "cả tháng trước" : "cùng kỳ trước"}</p>
+                                                    {hasPrev ? (
+                                                        <>
+                                                            <p className={`mt-1 text-xl font-black tabular-nums ${avgDiff > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                                                {avgPct != null && `${avgDiff > 0 ? "+" : ""}${avgPct.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`}
+                                                            </p>
+                                                            <p className="mt-0.5 text-[11px] font-bold text-slate-500">Kỳ trước {Math.round(prevAvg).toLocaleString("vi-VN")} kWh/ngày</p>
+                                                        </>
+                                                    ) : <p className="mt-2 text-sm font-bold text-slate-400">Chưa đủ dữ liệu</p>}
+                                                </div>
+                                                <div className="px-4 py-3">
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Củi tháng này</p>
+                                                    <p className="mt-1 text-xl font-black tabular-nums text-orange-800">{Math.round(woodTotal).toLocaleString("vi-VN")} <span className="text-xs text-slate-400">kg</span></p>
+                                                    <p className="mt-0.5 text-[11px] text-slate-500">{woodRows.length} ngày có số liệu</p>
+                                                </div>
+                                            </div>
+                                        </section>
+                                    );
+                                })()}
 
                                 {/* Quick Wood Distribution */}
 
