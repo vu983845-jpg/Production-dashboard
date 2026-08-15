@@ -267,6 +267,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import RCNInventoryForm from "@/components/RCNInventoryForm"
 import { WaterTracker } from "@/components/WaterTracker"
 import { ElectricMeterTracker } from "@/components/ElectricMeterTracker"
+import { CompressorTracker } from "@/components/CompressorTracker"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -6231,8 +6232,14 @@ export default function InputPage() {
 
 
                 {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && (
-
                     <TabsContent value="electricity-meters" className="space-y-4">
+                        <CompressorTracker userRole={role ?? undefined} />
+                    </TabsContent>
+                )}
+
+                {false && (
+
+                    <TabsContent value="electricity-meters-compressor-old" className="space-y-4">
 
                         <div className="rounded-xl border bg-card text-card-foreground shadow">
 
