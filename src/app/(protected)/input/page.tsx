@@ -266,6 +266,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import RCNInventoryForm from "@/components/RCNInventoryForm"
 import { WaterTracker } from "@/components/WaterTracker"
+import { ElectricMeterTracker } from "@/components/ElectricMeterTracker"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -3157,9 +3158,7 @@ export default function InputPage() {
 
                         {role !== 'maint' && <TabsTrigger value="production" className="min-h-11 shrink-0 snap-start px-4 font-bold">Sản Phẩm & KPI</TabsTrigger>}
 
-                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="electricity-meters" className="min-h-11 shrink-0 snap-start px-4 font-bold">⚡ Đồng hồ điện</TabsTrigger>}
-
-                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="shelling-energy" className="min-h-11 shrink-0 snap-start px-4 font-bold">Điện Shelling (Tháng)</TabsTrigger>}
+                        {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && <TabsTrigger value="electricity-meters" className="min-h-11 shrink-0 snap-start px-4 font-bold">⚡ Đồng hồ điện</TabsTrigger>}
 
                         {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsTrigger value="water" className="min-h-11 shrink-0 snap-start px-4 font-bold">💧 Nước</TabsTrigger>}
 
@@ -6492,7 +6491,7 @@ export default function InputPage() {
 
 
 
-                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
+                {false && (
 
                     <TabsContent value="shelling-energy" className="space-y-4">
 
@@ -6686,9 +6685,15 @@ export default function InputPage() {
 
 
 
-                {/* OTHER ELECTRICITY METER TAB */}
+                {/* ELECTRIC METER TRACKER (combined area meters + shelling) */}
 
-                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint') && <TabsContent value="electricity-meters" className="space-y-4">
+                {(role === 'admin' || role === 'HSE' || role === 'hse_admin' || role === 'maint' || Array.from(allowedDeptIds).some(id => departments.find(d => d.id === id)?.code === 'SHELL')) && (
+                    <TabsContent value="electricity-meters" className="space-y-4">
+                        <ElectricMeterTracker userRole={role ?? undefined} />
+                    </TabsContent>
+                )}
+
+                {false && <TabsContent value="electricity-meters-old" className="space-y-4">
 
                     <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden relative">
 
