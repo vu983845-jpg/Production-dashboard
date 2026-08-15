@@ -85,7 +85,7 @@ function recomputeShellingKwh(records: DayRecord[]) {
         const today = records[i].shelling_meter
         const tomorrow = records[i + 1]?.shelling_meter
         records[i].shelling_kwh = today != null && tomorrow != null
-            ? Math.max(0, tomorrow - today) : 0
+            ? Math.max(0, (tomorrow - today) * 1_000_000) : 0
     }
 }
 
