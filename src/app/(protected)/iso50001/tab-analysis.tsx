@@ -572,6 +572,15 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
         return res
     }, [histMap, allMonths, prodBase])
 
+    // Absolute average water (m³) in 2025 — used instead of EnPI-based savings for SEU 5
+    const avgActualWater2025 = useMemo<number | null>(() => {
+        const vals = allMonths
+            .filter(m => m.startsWith('2025'))
+            .map(m => histMap[m]?.[5]?.actual_energy ?? null)
+            .filter((v): v is number => v != null)
+        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
+    }, [histMap, allMonths])
+
     const baselineEnpi = useMemo<Record<number, number | null>>(() => {
         const res: Record<number, number | null> = {}
         for (const id of ALL_SEU_IDS) {
@@ -843,7 +852,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                     {viewMode === 'enpi' && (
                     <div className="flex items-center gap-6 px-4 py-2"
                         style={{ borderTop: '1px solid #F1F5F9', background: '#FAFAFA', flexShrink: 0 }}>
-                        {BIG_CHART_IDS.map(id => {
+                        {BIG_CHART_IDS.filter(id => id !== 5).map(id => {
                             const cfg = SEU_CFG[id]
                             const h = histMap[currKey]?.[id]
                             const enpi = calcEnpi(h, id)
@@ -927,11 +936,11 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             const saved = sv != null && sv >= 0
                             const noRef = isNoRef(id)
                             const rawTrend = trendFor(id)
-                            // In actual mode, override enpi with actual value so mini charts show actual
+                            // Water (SEU 5): always show absolute m³ vs 2025 avg in mini chart
                             const trend = rawTrend.map(p => ({
                                 ...p,
-                                enpi: viewMode === 'actual' ? p.actual : p.enpi,
-                                ref:  viewMode === 'actual' ? null : p.ref,
+                                enpi: id === 5 ? p.actual : (viewMode === 'actual' ? p.actual : p.enpi),
+                                ref:  id === 5 ? avgActualWater2025 : (viewMode === 'actual' ? null : p.ref),
                             }))
                             const clampedAbs = delta != null ? Math.min(Math.abs(delta), 25) : 0
                             const barW = (clampedAbs / 25) * 100
@@ -952,7 +961,17 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                             </div>
                                             <span style={{ fontSize: 10, fontWeight: 800, color: '#1E293B' }}>{cfg.short}</span>
                                         </div>
-                                        {noRef ? (
+                                        {id === 5 ? (
+                                            actual != null && avgActualWater2025 != null && avgActualWater2025 > 0 ? (
+                                                <span style={{
+                                                    fontSize: 8.5, fontWeight: 800, padding: '1px 5px', borderRadius: 4,
+                                                    background: actual > avgActualWater2025 ? '#FEE2E2' : '#D1FAE5',
+                                                    color: actual > avgActualWater2025 ? '#991B1B' : '#065F46',
+                                                }}>
+                                                    {actual > avgActualWater2025 ? '▲' : '▼'} {Math.abs((actual - avgActualWater2025) / avgActualWater2025 * 100).toFixed(1)}%
+                                                </span>
+                                            ) : <span style={{ fontSize: 7.5, color: '#94A3B8' }}>—</span>
+                                        ) : noRef ? (
                                             <span style={{ fontSize: 7.5, color: '#94A3B8' }}>N/A</span>
                                         ) : delta != null ? (
                                             <span style={{
@@ -974,7 +993,25 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                     </div>
 
                                     <div className="px-2 pb-1">
-                                        {/* EnPI actual vs Baseline – 2 columns */}
+                                        {/* EnPI actual vs Baseline – 2 columns (water shows absolute instead) */}
+                                        {id === 5 ? (
+                                            <div className="flex items-center justify-between" style={{ fontSize: 7, marginTop: 3, gap: 4 }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TB 2025</div>
+                                                    <div style={{ fontWeight: 700, color: '#64748B', fontSize: 8.5, fontVariantNumeric: 'tabular-nums' }}>
+                                                        {avgActualWater2025 != null ? Math.round(avgActualWater2025).toLocaleString('vi-VN') : '—'}
+                                                    </div>
+                                                </div>
+                                                {actual != null && avgActualWater2025 != null && (
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lệch</div>
+                                                        <div style={{ fontWeight: 800, fontSize: 8.5, fontVariantNumeric: 'tabular-nums', color: actual > avgActualWater2025 ? '#DC2626' : '#059669' }}>
+                                                            {actual > avgActualWater2025 ? '+' : ''}{Math.round(actual - avgActualWater2025).toLocaleString('vi-VN')}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
                                         <div className="flex items-center justify-between" style={{ fontSize: 7, marginTop: 3, gap: 4 }}>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>EnPI</div>
@@ -991,6 +1028,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                                 </div>
                                             )}
                                         </div>
+                                        )}
                                         {showTnAdjustment && TN_ADJUSTED_SEU_IDS.has(id) && currentProcessRcn != null && (
                                             <div className="mt-1 rounded px-1.5 py-0.5"
                                                 style={{ background: '#FFF7ED', border: '1px solid #FDBA7440', color: '#9A3412', fontSize: 6.8, fontWeight: 800, lineHeight: 1.2 }}>
@@ -998,15 +1036,15 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                             </div>
                                         )}
 
-                                        {/* Deviation bar */}
-                                        {!noRef && delta != null && (
+                                        {/* Deviation bar — not for water */}
+                                        {id !== 5 && !noRef && delta != null && (
                                             <div style={{ height: 2.5, background: '#F1F5F9', borderRadius: 2, marginTop: 4 }}>
                                                 <div style={{ height: '100%', width: `${barW}%`, borderRadius: 2, background: delta > 0 ? '#EF4444' : '#10B981' }} />
                                             </div>
                                         )}
 
-                                        {/* Saving / Over */}
-                                        {!noRef && sv != null && (
+                                        {/* Saving / Over — not for water */}
+                                        {id !== 5 && !noRef && sv != null && (
                                             <div className="flex items-center gap-1 mt-1 rounded px-1.5 py-0.5"
                                                 style={{ background: saved ? '#D1FAE520' : '#FEE2E220', border: `1px solid ${saved ? '#10B98140' : '#EF444440'}` }}>
                                                 <span style={{ fontSize: 8, fontWeight: 900, color: saved ? '#059669' : '#DC2626' }}>
@@ -1018,7 +1056,24 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                                 <span style={{ fontSize: 6.5, color: saved ? '#059669' : '#DC2626', opacity: 0.8 }}>{cfg.unit}</span>
                                             </div>
                                         )}
-                                        {noRef && (
+                                        {/* Water: deviation bar vs absolute avg */}
+                                        {id === 5 && actual != null && avgActualWater2025 != null && (() => {
+                                            const diff = actual - avgActualWater2025
+                                            const pct = avgActualWater2025 > 0 ? (diff / avgActualWater2025) * 100 : 0
+                                            const over = diff > 0
+                                            const barPct = Math.min(Math.abs(pct), 25) / 25 * 100
+                                            return (
+                                                <>
+                                                    <div style={{ height: 2.5, background: '#F1F5F9', borderRadius: 2, marginTop: 4 }}>
+                                                        <div style={{ height: '100%', width: `${barPct}%`, borderRadius: 2, background: over ? '#EF4444' : '#10B981' }} />
+                                                    </div>
+                                                    <div style={{ fontSize: 7, marginTop: 3, color: '#64748B', fontStyle: 'italic' }}>
+                                                        {over ? '↑ Cao hơn' : '↓ Thấp hơn'} TB {Math.abs(pct).toFixed(1)}%
+                                                    </div>
+                                                </>
+                                            )
+                                        })()}
+                                        {id !== 5 && noRef && (
                                             <div style={{ fontSize: 7, color: '#CBD5E1', marginTop: 4, fontStyle: 'italic' }}>
                                                 {lang === 'vi' ? 'Chưa có baseline' : 'No baseline'}
                                             </div>
@@ -1042,7 +1097,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                     &nbsp;· Operations DDS ·&nbsp;{format(new Date(), 'dd/MM/yyyy')}
                 </span>
                 <div className="flex items-center gap-4">
-                    {ALL_SEU_IDS.map(id => {
+                    {ALL_SEU_IDS.filter(id => id !== 5).map(id => {
                         const cfg = SEU_CFG[id]
                         const h = histMap[currKey]?.[id]
                         const enpi = calcEnpi(h, id)
@@ -1060,6 +1115,27 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             </div>
                         )
                     })}
+                    {/* Water: show absolute m³ vs 2025 avg in footer */}
+                    {(() => {
+                        const cfg = SEU_CFG[5]
+                        const actual = histMap[currKey]?.[5]?.actual_energy ?? null
+                        if (actual == null) return null
+                        const diff = avgActualWater2025 != null ? actual - avgActualWater2025 : null
+                        return (
+                            <div key={5} className="flex items-center gap-1">
+                                <cfg.Icon className="h-2.5 w-2.5" style={{ color: 'rgba(255,255,255,0.6)' }} />
+                                <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.5)' }}>Nước:</span>
+                                <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>
+                                    {Math.round(actual).toLocaleString('vi-VN')} m³
+                                    {diff != null && (
+                                        <span style={{ color: diff > 0 ? '#FCA5A5' : '#86EFAC' }}>
+                                            {' '}{diff > 0 ? '↑' : '↓'}{Math.abs(Math.round(diff)).toLocaleString('vi-VN')} vs TB
+                                        </span>
+                                    )}
+                                </span>
+                            </div>
+                        )
+                    })()}
                     <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.4)', paddingLeft: 8, borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
                         <span style={{ color: compareMode === 'avg2025' ? '#86EFAC' : BRAND.refGold }}>— — </span>
                         {compareMode === 'avg2025' ? t('avg2025', lang) : t('baseline', lang)}
