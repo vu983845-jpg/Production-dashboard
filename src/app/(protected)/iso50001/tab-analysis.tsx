@@ -959,82 +959,33 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             if (id === 5) {
                                 const comp = compareWaterEnpi(enpi, ref)
                                 const delta = comp?.deltaPct ?? null
-                                const sv = (enpi != null && ref != null && h?.rcn_hap_duoc_kg != null) ? (ref - enpi) * h.rcn_hap_duoc_kg : null
-                                const saved = sv != null && sv >= 0
-                                const clampedAbs = delta != null ? Math.min(Math.abs(delta), 25) : 0
-                                const barW = (clampedAbs / 25) * 100
+                                const rcnKg = h?.rcn_hap_duoc_kg ?? null
+                                const waterPiPerTon = enpi != null ? enpi * 1000 : null
+                                const referencePerTon = ref != null ? ref * 1000 : null
+                                const actualWater = actual != null ? Number(actual) : null
+                                const savedM3 = enpi != null && ref != null && rcnKg != null ? (ref - enpi) * rcnKg : null
+                                const isSaving = savedM3 != null && savedM3 >= 0
 
                                 return (
-                                    <div key={id} className="rounded-lg flex flex-col overflow-hidden"
-                                        style={{
-                                            background: '#FFFFFF',
-                                            border: `1.5px solid ${cfg.border}`,
-                                            boxShadow: '0 1px 3px rgba(142,30,25,0.07)',
-                                        }}>
-                                        <div className="flex items-center justify-between px-2 pt-1.5 pb-1"
-                                            style={{ borderBottom: `1.5px solid ${cfg.color}18` }}>
+                                    <div key={id} className="rounded-lg flex flex-col overflow-hidden" style={{ background: '#FFFFFF', border: `1.5px solid ${cfg.border}`, boxShadow: '0 1px 3px rgba(142,30,25,0.07)' }}>
+                                        <div className="flex items-center justify-between px-2 pt-1.5 pb-1" style={{ borderBottom: `1.5px solid ${cfg.color}18` }}>
                                             <div className="flex items-center gap-1.5">
-                                                <div style={{ width: 18, height: 18, borderRadius: 5, background: cfg.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <cfg.Icon className="h-2.5 w-2.5" style={{ color: cfg.color }} />
-                                                </div>
-                                                <span style={{ fontSize: 10, fontWeight: 800, color: '#1E293B' }}>{cfg.short}</span>
+                                                <div style={{ width: 18, height: 18, borderRadius: 5, background: cfg.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><cfg.Icon className="h-2.5 w-2.5" style={{ color: cfg.color }} /></div>
+                                                <span style={{ fontSize: 10, fontWeight: 800, color: '#1E293B' }}>N??c</span>
                                             </div>
-                                            {delta != null ? (
-                                                <span style={{
-                                                    fontSize: 8.5, fontWeight: 800, padding: '1px 5px', borderRadius: 4,
-                                                    background: delta > 0 ? '#FEE2E2' : '#D1FAE5',
-                                                    color: delta > 0 ? '#991B1B' : '#065F46',
-                                                }}>
-                                                    {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
-                                                </span>
-                                            ) : <span style={{ fontSize: 7.5, color: '#94A3B8' }}>—</span>}
+                                            {delta != null ? <span style={{ fontSize: 8.5, fontWeight: 800, padding: '1px 5px', borderRadius: 4, background: delta > 0 ? '#FEE2E2' : '#D1FAE5', color: delta > 0 ? '#991B1B' : '#065F46' }}>{delta > 0 ? '?' : '?'} {Math.abs(delta).toFixed(1)}%</span> : <span style={{ fontSize: 7.5, color: '#94A3B8' }}>Ch?a c? ref</span>}
                                         </div>
-
                                         <div className="px-2 pt-1">
-                                            <div style={{ fontSize: 15, fontWeight: 900, color: cfg.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                                                {enpi != null ? enpi.toFixed(4) : '—'}
-                                            </div>
-                                            <div style={{ fontSize: 7, color: '#94A3B8', marginTop: 1 }}>m³ / kg RCN</div>
+                                            <div style={{ fontSize: 15, fontWeight: 900, color: cfg.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{waterPiPerTon != null ? waterPiPerTon.toFixed(3) : '?'}</div>
+                                            <div style={{ fontSize: 7, color: '#0F766E', marginTop: 1, fontWeight: 700 }}>Water PI ? m? / t?n RCN</div>
                                         </div>
-
                                         <div className="px-2 pb-1">
                                             <div className="flex items-center justify-between" style={{ fontSize: 7, marginTop: 3, gap: 4 }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>EnPI</div>
-                                                    <div style={{ fontWeight: 800, color: enpi != null && ref != null ? (enpi > ref ? '#DC2626' : '#059669') : '#334155', fontSize: 8.5, fontVariantNumeric: 'tabular-nums' }}>
-                                                        {enpi != null ? enpi.toFixed(4) : '—'}
-                                                    </div>
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ref 2025</div>
-                                                    <div style={{ fontWeight: 700, color: '#64748B', fontSize: 8.5, fontVariantNumeric: 'tabular-nums' }}>
-                                                        {ref != null ? ref.toFixed(4) : '—'}
-                                                    </div>
-                                                </div>
+                                                <div style={{ flex: 1 }}><div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TH?NG N?Y</div><div style={{ fontWeight: 800, color: '#334155', fontSize: 8.5 }}>{waterPiPerTon != null ? waterPiPerTon.toFixed(3) : '?'}</div></div>
+                                                <div style={{ flex: 1 }}><div style={{ color: '#94A3B8', fontSize: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TB 2025</div><div style={{ fontWeight: 700, color: '#64748B', fontSize: 8.5 }}>{referencePerTon != null ? referencePerTon.toFixed(3) : '?'}</div></div>
                                             </div>
-
-                                            <div style={{ fontSize: 6.5, color: '#64748B', marginTop: 3 }}>
-                                                N??c {actual != null ? Math.round(actual).toLocaleString('vi-VN') : '?'} m? ? RCN {h?.rcn_hap_duoc_kg != null ? (h.rcn_hap_duoc_kg / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 3 }) : '?'} t?n
-                                            </div>
-
-                                            {delta != null && (
-                                                <div style={{ height: 2.5, background: '#F1F5F9', borderRadius: 2, marginTop: 4 }}>
-                                                    <div style={{ height: '100%', width: `${barW}%`, borderRadius: 2, background: delta > 0 ? '#EF4444' : '#10B981' }} />
-                                                </div>
-                                            )}
-
-                                            {sv != null && (
-                                                <div className="flex items-center gap-1 mt-1 rounded px-1.5 py-0.5"
-                                                    style={{ background: saved ? '#D1FAE520' : '#FEE2E220', border: `1px solid ${saved ? '#10B98140' : '#EF444440'}` }}>
-                                                    <span style={{ fontSize: 8, fontWeight: 900, color: saved ? '#059669' : '#DC2626' }}>
-                                                        {saved ? '↓ Tiết kiệm' : '↑ Vượt mức'}
-                                                    </span>
-                                                    <span style={{ fontSize: 8, fontWeight: 800, color: saved ? '#059669' : '#DC2626', marginLeft: 2, fontVariantNumeric: 'tabular-nums' }}>
-                                                        {Math.abs(Math.round(sv)).toLocaleString('vi-VN')}
-                                                    </span>
-                                                    <span style={{ fontSize: 6.5, color: saved ? '#059669' : '#DC2626', opacity: 0.8 }}>m³</span>
-                                                </div>
-                                            )}
+                                            <div style={{ fontSize: 6.5, color: '#64748B', marginTop: 3 }}>N??c {actualWater != null ? Math.round(actualWater).toLocaleString('vi-VN') : '?'} m? ? RCN {rcnKg != null ? (rcnKg / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 3 }) : '?'} t?n</div>
+                                            {savedM3 != null && <div className="mt-1 rounded px-1.5 py-0.5" style={{ background: isSaving ? '#D1FAE520' : '#FEE2E220', border: `1px solid ${isSaving ? '#10B98140' : '#EF444440'}` }}><span style={{ fontSize: 8, fontWeight: 900, color: isSaving ? '#059669' : '#DC2626' }}>{isSaving ? '? Ti?t ki?m' : '? V??t m?c'} {Math.abs(Math.round(savedM3)).toLocaleString('vi-VN')} m?</span></div>}
                                         </div>
                                     </div>
                                 )
