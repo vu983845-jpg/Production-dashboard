@@ -1013,6 +1013,10 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                                 </div>
                                             </div>
 
+                                            <div style={{ fontSize: 6.5, color: '#64748B', marginTop: 3 }}>
+                                                N??c {actual != null ? Math.round(actual).toLocaleString('vi-VN') : '?'} m? ? RCN {h?.rcn_hap_duoc_kg != null ? (h.rcn_hap_duoc_kg / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 3 }) : '?'} t?n
+                                            </div>
+
                                             {delta != null && (
                                                 <div style={{ height: 2.5, background: '#F1F5F9', borderRadius: 2, marginTop: 4 }}>
                                                     <div style={{ height: '100%', width: `${barW}%`, borderRadius: 2, background: delta > 0 ? '#EF4444' : '#10B981' }} />
