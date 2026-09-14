@@ -140,8 +140,7 @@ const WOOD_SEU_ID = 2
 const WOOD_COMPARISON_CUTOFF = '2026-06'
 const getMonthKey = (monthYear?: string | null) => monthYear?.slice(0, 7) ?? ''
 const getTnRcnKg = (monthKey: string) => TN_RCN_BY_MONTH_KG[monthKey] ?? 0
-const isWoodComparisonSuppressed = (seuId: number, monthKey: string) =>
-    seuId === WOOD_SEU_ID && monthKey >= WOOD_COMPARISON_CUTOFF
+const isWoodComparisonSuppressed = (_seuId: number, _monthKey: string) => false
 const getProcessRcnKg = (rawRcn: number | null | undefined, monthKey: string) =>
     Math.max((rawRcn ?? 0) - getTnRcnKg(monthKey), 0)
 
@@ -1032,6 +1031,11 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                             </span>
                                         ) : null}
                                     </div>
+                                    {id === WOOD_SEU_ID && (
+                                        <div className="px-2 py-0.5 bg-amber-50 border-b border-amber-200 text-[8px] font-semibold text-amber-800">
+                                            Baseline củi hiện hữu (tạm thời)
+                                        </div>
+                                    )}
 
                                     {/* Actual value */}
                                     <div className="px-2 pt-1">

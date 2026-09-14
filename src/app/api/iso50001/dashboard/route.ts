@@ -224,8 +224,7 @@ export async function GET(request: Request) {
                 const rcn = Number(h.rcn_hap_duoc_kg) || 0
                 const ck = h.ck_obtained_mt != null ? Number(h.ck_obtained_mt) : 0
                 const xVal = isCk ? ck : rcn
-                const isPostTransitionWood = h.seu?.energy_type === 'wood' && h.month_year.slice(0, 7) >= '2026-06'
-                const expected = (!isPostTransitionWood && bl && xVal > 0)
+                const expected = (bl && xVal > 0)
                     ? Number(bl.slope) * xVal + Number(bl.intercept)
                     : null
                 const devPct = (expected && expected > 0)
@@ -294,7 +293,7 @@ export async function GET(request: Request) {
             // Chart-only: slope * xDay (no intercept per day to avoid overcounting)
             return {
                 ...e,
-                expected_energy: e.seu?.energy_type === 'wood' ? null : (bl ? Number(bl.slope) * xVal : null),
+                expected_energy: bl ? Number(bl.slope) * xVal : null,
                 deviation_pct: null, saving: null,
                 enpi_actual: xVal > 0 ? actual / xVal : null,
                 enpi_baseline: null,
@@ -312,10 +311,7 @@ export async function GET(request: Request) {
             let total_saving: number | null = null
             let monthly_deviation_pct: number | null = null
 
-            if (s.energy_type === 'wood') {
-                total_expected = null
-                total_saving = null
-            } else if (bl && s.days > 0 && totalX > 0) {
+            if (bl && s.days > 0 && totalX > 0) {
                 total_expected = Number(bl.slope) * totalX + Number(bl.intercept)
                 if (total_expected > 0) {
                     total_saving = total_expected - s.total_actual

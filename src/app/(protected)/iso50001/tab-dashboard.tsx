@@ -18,6 +18,7 @@ export function TabDashboard({ entries, summaries, historical, currentMonth, boi
   const wood = summaries.find(s => s.energy_type === 'wood')
   const water = summaries.find(s => s.energy_type === 'water')
   const electricityChart = entries.filter(e => e.seu?.energy_type === 'electricity').map(e => ({ date: format(new Date(e.entry_date), 'dd/MM'), actual: e.actual_energy, expected: e.expected_energy }))
+  const woodChart = entries.filter(e => e.seu?.energy_type === 'wood').map(e => ({ date: format(new Date(e.entry_date), 'dd/MM'), actual: e.actual_energy, expected: e.expected_energy }))
   const missingBaseline = summaries.some(s => s.energy_type !== 'wood' && !s.has_baseline)
 
   return <div className="space-y-4">
@@ -37,21 +38,59 @@ export function TabDashboard({ entries, summaries, historical, currentMonth, boi
 
     {missingBaseline && <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"><AlertTriangle className="h-4 w-4 shrink-0"/>Một hoặc nhiều SEU (không gồm củi đang tính lại) chưa có đường cơ sở được kích hoạt.</div>}
 
-    <Card><CardHeader><CardTitle className="text-sm">Tổng hợp kết quả SEU trong tháng</CardTitle><CardDescription>Thực tế và so sánh với đường cơ sở; riêng củi tạm ngừng so sánh trong giai đoạn tính lại.</CardDescription></CardHeader><CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="border-y bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3 text-left">SEU</th><th className="px-4 py-3 text-right">Thực tế</th><th className="px-4 py-3 text-right">Dự kiến</th><th className="px-4 py-3 text-right">Đánh giá</th></tr></thead><tbody className="divide-y">{summaries.map(s => <SummaryRow key={s.seu_id} summary={s}/>)}</tbody></table></div></CardContent></Card>
+    <Card><CardHeader><CardTitle className="text-sm">Tổng hợp kết quả SEU trong tháng</CardTitle><CardDescription>Thực tế và so sánh với đường cơ sở; riêng củi đang dùng Baseline củi hiện hữu (tạm thời) chờ đường cơ sở mới.</CardDescription></CardHeader><CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="border-y bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3 text-left">SEU</th><th className="px-4 py-3 text-right">Thực tế</th><th className="px-4 py-3 text-right">Dự kiến</th><th className="px-4 py-3 text-right">Đánh giá</th></tr></thead><tbody className="divide-y">{summaries.map(s => <SummaryRow key={s.seu_id} summary={s}/>)}</tbody></table></div></CardContent></Card>
 
     <div className="grid gap-3 md:grid-cols-3"><Kpi icon={<Zap className="h-4 w-4"/>} label="Điện thực tế" value={electricity?.total_actual} unit="kWh"/><Kpi icon={<Flame className="h-4 w-4"/>} label="Củi thực tế" value={wood?.total_actual} unit="kg"/><Kpi icon={<Droplets className="h-4 w-4"/>} label="Nước thực tế" value={water?.total_actual} unit="m³"/></div>
 
-    <div className="grid gap-3 md:grid-cols-3"><DeviationCard label="Lệch chuẩn điện" pct={electricity?.monthly_deviation_pct}/><DeviationCard label="Lệch chuẩn nước" pct={water?.monthly_deviation_pct}/><div className="rounded-xl border border-amber-200 bg-amber-50 p-3"><p className="text-xs text-amber-800">Lệch chuẩn củi</p><p className="mt-1 text-sm font-semibold text-amber-900">Đang tính lại đường cơ sở</p></div></div>
+    <div className="grid gap-3 md:grid-cols-3"><DeviationCard label="Lệch chuẩn điện" pct={electricity?.monthly_deviation_pct}/><DeviationCard label="Lệch chuẩn nước" pct={water?.monthly_deviation_pct}/><DeviationCard label="Lệch chuẩn củi (tạm thời)" pct={wood?.monthly_deviation_pct}/></div>
     <div className="grid gap-3 md:grid-cols-2"><EnpiCard title="EnPI điện" unit="kWh / kg sản lượng" actual={electricity?.monthly_enpi_actual} baseline={electricity?.monthly_enpi_baseline}/><WaterEnpiCard current={water?.monthly_enpi_actual} reference={waterEnpiReference}/></div>
 
-    <Card><CardHeader><CardTitle className="text-sm">Lịch sử năng lượng gần đây</CardTitle><CardDescription>Dữ liệu tổng hợp theo tháng. Các dòng củi không có giá trị dự kiến sẽ không hiển thị kết luận tiết kiệm.</CardDescription></CardHeader><CardContent className="p-0"><div className="max-h-[500px] overflow-auto"><table className="w-full text-sm"><thead className="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3 text-left">Tháng</th><th className="px-4 py-3 text-left">SEU</th><th className="px-4 py-3 text-right">Sản lượng</th><th className="px-4 py-3 text-right">Thực tế</th><th className="px-4 py-3 text-right">Dự kiến</th><th className="px-4 py-3 text-right">Chênh lệch</th></tr></thead><tbody className="divide-y">{historical.slice(0,120).map(row => <HistoryRow key={row.id} row={row} summary={summaries.find(s=>s.seu_id===row.seu_id)}/>)}</tbody></table></div></CardContent></Card>
+    <Card><CardHeader><CardTitle className="text-sm">Lịch sử năng lượng gần đây</CardTitle><CardDescription>Dữ liệu tổng hợp theo tháng. Củi hiển thị so sánh với Baseline củi hiện hữu (tạm thời).</CardDescription></CardHeader><CardContent className="p-0"><div className="max-h-[500px] overflow-auto"><table className="w-full text-sm"><thead className="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3 text-left">Tháng</th><th className="px-4 py-3 text-left">SEU</th><th className="px-4 py-3 text-right">Sản lượng</th><th className="px-4 py-3 text-right">Thực tế</th><th className="px-4 py-3 text-right">Dự kiến</th><th className="px-4 py-3 text-right">Chênh lệch</th></tr></thead><tbody className="divide-y">{historical.slice(0,120).map(row => <HistoryRow key={row.id} row={row} summary={summaries.find(s=>s.seu_id===row.seu_id)}/>)}</tbody></table></div></CardContent></Card>
 
     {electricityChart.length > 0 && <Card><CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-blue-600"/>Điện: thực tế và đường cơ sở (kWh/ngày)</CardTitle></CardHeader><CardContent className="h-[280px]"><ActualChart data={electricityChart}/></CardContent></Card>}
-    <Card className="border-orange-200 bg-orange-50/40"><CardContent className="py-6"><div className="flex gap-3"><Flame className="h-5 w-5 text-orange-600"/><div><p className="font-semibold">Biểu đồ so sánh củi tạm thời không hiển thị</p><p className="mt-1 text-sm text-muted-foreground">Không có giá trị củi dự kiến hợp lệ trong thời gian tính lại đường cơ sở. Dữ liệu củi thực tế vẫn được ghi nhận, nhưng không được diễn giải là tiết kiệm hoặc vượt chuẩn.</p></div></div></CardContent></Card>
+    {woodChart.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/20">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm">
+                    <Flame className="h-4 w-4 text-orange-600"/>
+                    Củi: thực tế và Baseline củi hiện hữu (tạm thời) (kg/ngày)
+                </CardTitle>
+                <CardDescription>
+                    ⚠️ Sử dụng đường cơ sở cũ tạm thời trong thời gian chờ dữ liệu đường cơ sở đa biến mới. Không phải tiết kiệm chính thức được phê duyệt.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="h-[280px]">
+                <ActualChart data={woodChart}/>
+            </CardContent>
+        </Card>
+    )}
   </div>
 }
 
-function SummaryRow({summary:s}:{summary:SeuSummary}) { const wood=s.energy_type==='wood', noData=s.days===0, pct=s.monthly_deviation_pct; return <tr><td className="px-4 py-3 font-medium">{s.seu_name}</td><td className="px-4 py-3 text-right font-mono">{noData?'Chưa có dữ liệu':`${fmtNum(s.total_actual)} ${s.unit}`}</td><td className="px-4 py-3 text-right font-mono">{wood?'Đang tính lại':(!s.has_baseline?'Chưa có đường cơ sở':noData?'—':`${fmtNum(s.total_expected)} ${s.unit}`)}</td><td className="px-4 py-3 text-right">{wood?<span className="text-xs font-medium text-amber-700">Chưa kết luận tiết kiệm</span>:pct==null?'—':<Badge className={`${deviationBg(pct)} ${deviationColor(pct)}`} variant="outline">{pct<=0?<TrendingDown className="mr-1 inline h-3 w-3"/>:<TrendingUp className="mr-1 inline h-3 w-3"/>}{pct>0?'+':''}{fmtNum(pct)}%</Badge>}</td></tr> }
+function SummaryRow({summary:s}:{summary:SeuSummary}) {
+    const wood=s.energy_type==='wood', noData=s.days===0, pct=s.monthly_deviation_pct;
+    return (
+        <tr>
+            <td className="px-4 py-3 font-medium">
+                {s.seu_name}
+                {wood && <span className="block text-[10px] text-amber-700 font-semibold">Baseline củi hiện hữu (tạm thời)</span>}
+            </td>
+            <td className="px-4 py-3 text-right font-mono">{noData?'Chưa có dữ liệu':`${fmtNum(s.total_actual)} ${s.unit}`}</td>
+            <td className="px-4 py-3 text-right font-mono">{(!s.has_baseline?'Chưa có đường cơ sở':noData?'—':`${fmtNum(s.total_expected)} ${s.unit}`)}</td>
+            <td className="px-4 py-3 text-right">
+                {pct==null?'—': (
+                    <div>
+                        <Badge className={`${deviationBg(pct)} ${deviationColor(pct)}`} variant="outline">
+                            {pct<=0?<TrendingDown className="mr-1 inline h-3 w-3"/>:<TrendingUp className="mr-1 inline h-3 w-3"/>}
+                            {pct>0?'+':''}{fmtNum(pct)}%
+                        </Badge>
+                        {wood && <span className="block text-[9px] text-amber-800 mt-0.5">Tạm thời, chưa chính thức</span>}
+                    </div>
+                )}
+            </td>
+        </tr>
+    )
+}
 function MixMetric({label,value,unit='kg'}:{label:string;value?:number|null;unit?:string}) { const shown=value==null?'Chưa nhập':unit==='kg'?`${fmtNum(value/1000)} tấn`:`${fmtNum(value)} ${unit}`; return <div><p className="text-xs text-muted-foreground">{label}</p><p className="font-semibold">{shown}</p></div> }
 function Kpi({icon,label,value,unit}:{icon:React.ReactNode;label:string;value?:number|null;unit:string}) { return <div className="rounded-xl border bg-slate-50 p-3"><div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label} (MTD)</div><p className="text-xl font-black">{fmtNum(value)} <span className="text-xs">{unit}</span></p></div> }
 function DeviationCard({label,pct}:{label:string;pct?:number|null}) { const saving=pct!=null&&pct<=0; return <div className={`rounded-xl border p-3 ${deviationBg(pct)}`}><p className="text-xs text-muted-foreground">{label}</p>{pct==null?<p className="mt-1 text-sm text-muted-foreground">Chưa có đường cơ sở</p>:<p className={`mt-1 text-xl font-black ${deviationColor(pct)}`}>{saving?<TrendingDown className="mr-1 inline h-4 w-4"/>:<TrendingUp className="mr-1 inline h-4 w-4"/>}{pct>0?'+':''}{fmtNum(pct)}%</p>}</div> }
