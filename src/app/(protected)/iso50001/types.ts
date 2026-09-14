@@ -50,6 +50,22 @@ export interface DailyEntry {
     seu?: { name: string; energy_type: string; unit: string }
 }
 
+export type WoodSavingStatus = 'not-comparable' | 'missing-data'
+
+export interface BoilerProcessMix {
+    month_year: string
+    self_steamed_rcn_kg: number | null
+    received_precut_rcn_kg: number | null
+    received_precut_basis: 'unknown' | 'rcn-equivalent' | 'kernel-mass'
+    borma_input_kg: number | null
+    borma_input_basis: 'unknown' | 'rcn-equivalent' | 'kernel-mass'
+    borma_runtime_hours: number | null
+    moisture_in_pct: number | null
+    moisture_out_pct: number | null
+    data_quality_status: 'draft' | 'verified' | 'estimated'
+    notes?: string | null
+}
+
 export interface SeuSummary {
     seu_id: number
     seu_name: string

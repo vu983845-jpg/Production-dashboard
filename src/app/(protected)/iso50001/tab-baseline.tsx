@@ -30,6 +30,10 @@ const SEU_BOILER = 2    // Củi — rcn = RCN hấp
 const SEU_MNK = 3       // Máy nén khí / Peeling — rcn = SL Peeling
 const SEU_SHELLING = 4  // Shelling — rcn = SL Shelling
 const SEU_WATER = 5     // Nước — rcn = RCN hấp (hoặc CK)
+const WOOD_COMPARISON_CUTOFF = '2026-06-01'
+
+const isPreTransitionWoodReference = (seuId: number, monthYear: string) =>
+    seuId !== SEU_BOILER || monthYear < WOOD_COMPARISON_CUTOFF
 
 // ─── Inline editable cell ────────────────────────────────────────
 function EditCell({
@@ -310,11 +314,14 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
     const seuHistorical = historical.filter(h => h.seu_id === activeSeu).sort((a, b) => a.month_year.localeCompare(b.month_year))
     const seuBaselines = baselines.filter(b => b.seu_id === activeSeu).sort((a, b) => b.created_at.localeCompare(a.created_at))
     const activeBaseline = seuBaselines.find(b => b.is_active)
+    const isWoodPostTransition = activeSeu === SEU_BOILER && seuHistorical.some(h => h.month_year >= WOOD_COMPARISON_CUTOFF)
 
     const selectedPoints = useMemo(() => {
-        if (!periodFrom || !periodTo) return seuHistorical
-        return seuHistorical.filter(h => h.month_year >= periodFrom && h.month_year <= periodTo)
-    }, [seuHistorical, periodFrom, periodTo])
+        const periodPoints = !periodFrom || !periodTo
+            ? seuHistorical
+            : seuHistorical.filter(h => h.month_year >= periodFrom && h.month_year <= periodTo)
+        return periodPoints.filter(h => isPreTransitionWoodReference(activeSeu, h.month_year))
+    }, [seuHistorical, periodFrom, periodTo, activeSeu])
 
     const getX = (h: MonthlyHistorical) => xVar === 'ck' ? (h as any).ck_obtained_mt ?? 0 : h.rcn_hap_duoc_kg
     const xLabel = xVar === 'ck' ? 'CK (MT)' : 'Sản lượng (kg)'
@@ -441,7 +448,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
     }
 
     const handleSaveBaseline = async () => {
-        if (!regression || !baselineLabel) return
+        if (!regression || !baselineLabel || activeSeu === SEU_BOILER) return
         setComputing(true)
         const from = periodFrom || seuHistorical[0]?.month_year || ''
         const to = periodTo || seuHistorical[seuHistorical.length - 1]?.month_year || ''
@@ -460,6 +467,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
     }
 
     const handleActivate = async (baselineId: number) => {
+        if (activeSeu === SEU_BOILER) return
         await fetch('/api/iso50001/baseline', {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'activate', seu_id: activeSeu, baseline_id: baselineId }),
@@ -734,6 +742,7 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                                     <p className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
                                         <CheckCircle2 className="h-4 w-4" /> Đường cơ sở đang kích hoạt
+                                        {activeSeu === SEU_BOILER && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">Tham chiếu legacy trước chuyển đổi</Badge>}
                                     </p>
                                     <p className="text-lg font-black text-emerald-900 mt-0.5">{ab.label}</p>
                                     <p className="text-sm font-mono text-emerald-800 mt-1">
@@ -749,6 +758,12 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                                 </div>
                             )
                         })()}
+
+                        {isWoodPostTransition && (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                Từ 06/2026, Củi/Boiler chỉ lưu dữ liệu thực tế; không tạo, kích hoạt hoặc hiển thị so sánh tiết kiệm/đường cơ sở. Các điểm trước chuyển đổi được giữ làm tham chiếu legacy.
+                            </div>
+                        )}
 
                         {/* Period */}
                         <div className="grid grid-cols-2 gap-3">
@@ -780,11 +795,11 @@ export function TabBaseline({ seus, historical, baselines, onRefresh }: Props) {
                             </div>
                         </div>
 
-                        <Button onClick={handleComputeRegression} disabled={selectedPoints.length < 2} className="h-9 gap-2">
+                        <Button onClick={handleComputeRegression} disabled={selectedPoints.length < 2 || activeSeu === SEU_BOILER} className="h-9 gap-2">
                             <Calculator className="h-4 w-4" /> Tính đường cơ sở
                         </Button>
 
-                        {regression && (
+                        {regression && activeSeu !== SEU_BOILER && (
                             <div className="space-y-3 mt-2">
                                 <div className="rounded-xl border bg-slate-50 p-4">
                                     <p className="text-xs text-muted-foreground mb-1">Kết quả — X = {xLabel}</p>

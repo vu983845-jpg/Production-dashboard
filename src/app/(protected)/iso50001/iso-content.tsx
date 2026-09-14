@@ -1,167 +1,22 @@
-"use client"
-
-import { useState, useEffect, useCallback } from "react"
-import { startOfMonth, subMonths, addMonths, format } from "date-fns"
-import { vi } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, CalendarIcon, ShieldCheck, Loader2 } from "lucide-react"
+﻿"use client"
+import { useCallback, useEffect, useState } from "react"
+import { addMonths, format, startOfMonth, subMonths } from "date-fns"
+import { CalendarIcon, ChevronLeft, ChevronRight, Loader2, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-import { TabDashboard } from "./tab-dashboard"
 import { TabAnalysis } from "./tab-analysis"
 import { TabBaseline } from "./tab-baseline"
-import { TabInput } from "./tab-input"
-import { SeuMaster, MonthlyHistorical, BaselineModel, DailyEntry, SeuSummary } from "./types"
-
-interface ISOProps {
-    userRole: string;
-    userEmail: string;
-}
-
-export function ISO50001Content({ userRole, userEmail }: ISOProps) {
-    const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()))
-    const [isLoading, setIsLoading] = useState(true)
-    const [blLoading, setBlLoading] = useState(true)
-
-    // Dashboard data
-    const [entries, setEntries] = useState<DailyEntry[]>([])
-    const [summaries, setSummaries] = useState<SeuSummary[]>([])
-    const [dashboardHistorical, setDashboardHistorical] = useState<MonthlyHistorical[]>([])
-
-    // Baseline engine data  
-    const [seus, setSeus] = useState<SeuMaster[]>([])
-    const [historical, setHistorical] = useState<MonthlyHistorical[]>([])
-    const [baselines, setBaselines] = useState<BaselineModel[]>([])
-
-    const monthStr = format(currentMonth, 'yyyy-MM')
-
-    const fetchDashboard = useCallback(async () => {
-        setIsLoading(true)
-        try {
-            const res = await fetch(`/api/iso50001/dashboard?month=${monthStr}`)
-            const json = await res.json()
-            setEntries(json.entries || [])
-            setSummaries(json.summaries || [])
-            setDashboardHistorical(json.historicalData || [])
-        } catch (e) {
-            console.error('ISO dashboard fetch error:', e)
-        } finally {
-            setIsLoading(false)
-        }
-    }, [monthStr])
-
-    const fetchBaseline = useCallback(async () => {
-        setBlLoading(true)
-        try {
-            const res = await fetch('/api/iso50001/baseline')
-            const json = await res.json()
-            setSeus(json.seus || [])
-            setHistorical(json.historical || [])
-            setBaselines(json.baselines || [])
-        } catch (e) {
-            console.error('ISO baseline fetch error:', e)
-        } finally {
-            setBlLoading(false)
-        }
-    }, [])
-
-    const handleRefresh = useCallback(() => {
-        fetchDashboard()
-        fetchBaseline()
-    }, [fetchDashboard, fetchBaseline])
-
-    useEffect(() => { fetchDashboard() }, [fetchDashboard])
-    useEffect(() => { fetchBaseline() }, [fetchBaseline])
-
-    return (
-        <div className="flex-1 space-y-4 md:space-y-5 w-full">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                    <h2 className="text-xl font-bold tracking-tight flex items-center gap-2 text-primary">
-                        <ShieldCheck className="h-5 w-5" />
-                        Energy Management System (ISO 50001)
-                    </h2>
-                    <p className="text-muted-foreground text-xs mt-0.5">
-                        Performance monitoring and energy baseline tracking.
-                    </p>
-                    {/* DEBUG: xóa sau khi fix xong */}
-                    <p className="text-xs mt-1 font-mono bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded inline-block">
-                        🔍 role=&quot;{userRole}&quot; | email=&quot;{userEmail}&quot;
-                    </p>
-                </div>
-
-                {/* Month selector */}
-                <div className="flex items-center gap-1.5 bg-background border rounded-md p-1 shadow-sm">
-                    <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(m => subMonths(m, 1))} className="h-7 w-7">
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <div className="flex items-center justify-center min-w-[130px] text-sm font-semibold">
-                        <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                        {format(currentMonth, 'MM/yyyy')}
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(m => addMonths(m, 1))} className="h-7 w-7"
-                        disabled={currentMonth >= startOfMonth(new Date())}>
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
-
-            {/* Tabs */}
-            <Tabs defaultValue="dashboard" className="space-y-4">
-                <TabsList className="flex flex-wrap gap-1 p-1 h-auto bg-slate-50 border shadow-sm">
-                    <TabsTrigger value="dashboard" className="text-xs data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow">📊 Dashboard</TabsTrigger>
-
-                    <TabsTrigger value="seu" className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow">📈 Phân Tích</TabsTrigger>
-                    {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
-                        <TabsTrigger value="baseline" className="text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow">📐 Baseline</TabsTrigger>
-                    )}
-                </TabsList>
-
-                <TabsContent value="dashboard">
-                    {isLoading ? (
-                        <div className="flex justify-center items-center h-48">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        </div>
-                    ) : (
-                        <TabDashboard entries={entries} summaries={summaries} historical={dashboardHistorical} currentMonth={currentMonth} />
-                    )}
-                </TabsContent>
-
-
-
-
-
-
-
-
-
-
-
-                <TabsContent value="seu">
-                    {blLoading ? (
-                        <div className="flex justify-center items-center h-48">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        </div>
-                    ) : (
-                        <TabAnalysis summaries={summaries} historical={historical} currentMonth={currentMonth} />
-                    )}
-                </TabsContent>
-
-
-
-                {(userRole === 'admin' || userRole === 'HSE' || userRole === 'hse' || userRole === 'hse_admin') && userEmail !== 'admin@dds.com' && (
-                    <TabsContent value="baseline">
-                        {blLoading ? (
-                            <div className="flex justify-center items-center h-48">
-                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <TabBaseline seus={seus} historical={historical} baselines={baselines} onRefresh={handleRefresh} />
-                        )}
-                    </TabsContent>
-                )}
-            </Tabs>
-        </div>
-    )
+import { TabBoilerMix } from "./tab-boiler-mix"
+import { TabDashboard } from "./tab-dashboard"
+import { BaselineModel, BoilerProcessMix, DailyEntry, MonthlyHistorical, SeuMaster, SeuSummary, WoodSavingStatus } from "./types"
+const editorRoles=['admin','hse','hse_admin']
+export function ISO50001Content({ userRole }: {userRole:string;userEmail:string}) {
+ const [currentMonth,setCurrentMonth]=useState(startOfMonth(new Date())),[isLoading,setIsLoading]=useState(true),[blLoading,setBlLoading]=useState(true)
+ const [entries,setEntries]=useState<DailyEntry[]>([]),[summaries,setSummaries]=useState<SeuSummary[]>([]),[dashboardHistorical,setDashboardHistorical]=useState<MonthlyHistorical[]>([]),[boilerMix,setBoilerMix]=useState<BoilerProcessMix|null>(null),[woodSavingStatus,setWoodSavingStatus]=useState<WoodSavingStatus>('missing-data')
+ const [seus,setSeus]=useState<SeuMaster[]>([]),[historical,setHistorical]=useState<MonthlyHistorical[]>([]),[baselines,setBaselines]=useState<BaselineModel[]>([])
+ const monthStr=format(currentMonth,'yyyy-MM'),isEditor=editorRoles.includes(userRole.toLowerCase())
+ const fetchDashboard=useCallback(async()=>{setIsLoading(true);try{const r=await fetch(`/api/iso50001/dashboard?month=${monthStr}`);const j=await r.json();if(!r.ok) throw new Error(j.error ?? 'Unable to load dashboard');setEntries(j.entries||[]);setSummaries(j.summaries||[]);setDashboardHistorical(j.historicalData||[]);setBoilerMix(j.boilerMix||null);setWoodSavingStatus(j.woodSavingStatus||'missing-data')}finally{setIsLoading(false)}},[monthStr])
+ const fetchBaseline=useCallback(async()=>{setBlLoading(true);try{const r=await fetch('/api/iso50001/baseline');const j=await r.json();if(!r.ok) throw new Error(j.error ?? 'Unable to load baseline data');setSeus(j.seus||[]);setHistorical(j.historical||[]);setBaselines(j.baselines||[])}finally{setBlLoading(false)}},[])
+ const refresh=useCallback(()=>{void fetchDashboard();void fetchBaseline()},[fetchDashboard,fetchBaseline]);useEffect(()=>{void fetchDashboard()},[fetchDashboard]);useEffect(()=>{void fetchBaseline()},[fetchBaseline])
+ return <div className="flex-1 space-y-4 md:space-y-5 w-full"><div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight flex items-center gap-2 text-primary"><ShieldCheck className="h-5 w-5"/>Energy Management System (ISO 50001)</h2><p className="text-muted-foreground text-xs mt-0.5">Performance monitoring and energy baseline tracking.</p></div><div className="flex items-center gap-1.5 bg-background border rounded-md p-1 shadow-sm"><Button variant="ghost" size="icon" onClick={()=>setCurrentMonth(m=>subMonths(m,1))}><ChevronLeft/></Button><div className="min-w-[130px] text-sm font-semibold"><CalendarIcon className="inline mr-1.5 h-3.5 w-3.5"/>{format(currentMonth,'MM/yyyy')}</div><Button variant="ghost" size="icon" onClick={()=>setCurrentMonth(m=>addMonths(m,1))} disabled={currentMonth>=startOfMonth(new Date())}><ChevronRight/></Button></div></div><Tabs defaultValue="dashboard"><TabsList><TabsTrigger value="dashboard">Dashboard</TabsTrigger><TabsTrigger value="seu">Phân Tích</TabsTrigger>{isEditor&&<><TabsTrigger value="boiler-mix">Mix hấp & Borma</TabsTrigger><TabsTrigger value="baseline">Baseline</TabsTrigger></>}</TabsList><TabsContent value="dashboard">{isLoading?<div className="flex justify-center h-48"><Loader2 className="animate-spin"/></div>:<TabDashboard entries={entries} summaries={summaries} historical={dashboardHistorical} currentMonth={currentMonth} boilerMix={boilerMix} woodSavingStatus={woodSavingStatus}/>}</TabsContent><TabsContent value="seu">{blLoading?<Loader2 className="animate-spin"/>:<TabAnalysis summaries={summaries} historical={historical} currentMonth={currentMonth}/>}</TabsContent>{isEditor&&<TabsContent value="boiler-mix"><TabBoilerMix currentMonth={currentMonth} mix={boilerMix} onSaved={refresh}/></TabsContent>}{isEditor&&<TabsContent value="baseline">{blLoading?<Loader2 className="animate-spin"/>:<TabBaseline seus={seus} historical={historical} baselines={baselines} onRefresh={refresh}/>}</TabsContent>}</Tabs></div>
 }

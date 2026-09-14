@@ -128,15 +128,19 @@ const BIG_CHART_IDS = [1, 2, 5]
 const KPI_CARD_IDS  = [3, 4]
 const ALL_SEU_IDS   = [1, 2, 3, 4, 5]
 
-// TN RCN received from another factory. It bypasses Boiler/Steaming and Shelling,
-// so it must be excluded only from EnPI denominators for SEU 2 and SEU 4.
+// TN RCN received from another factory. It bypasses Shelling only;
+// Boiler serves both steaming and Borma, so Boiler production remains unadjusted.
+// Keep the pre-transition May 2026 reference from actual history; do not assume June volume.
 const TN_RCN_BY_MONTH_KG: Record<string, number> = {
     '2026-05': 202_000,
-    '2026-06': 400_000,
 }
-const TN_ADJUSTED_SEU_IDS = new Set([2, 4])
+const TN_ADJUSTED_SEU_IDS = new Set([4])
+const WOOD_SEU_ID = 2
+const WOOD_COMPARISON_CUTOFF = '2026-06'
 const getMonthKey = (monthYear?: string | null) => monthYear?.slice(0, 7) ?? ''
 const getTnRcnKg = (monthKey: string) => TN_RCN_BY_MONTH_KG[monthKey] ?? 0
+const isWoodComparisonSuppressed = (seuId: number, monthKey: string) =>
+    seuId === WOOD_SEU_ID && monthKey >= WOOD_COMPARISON_CUTOFF
 const getProcessRcnKg = (rawRcn: number | null | undefined, monthKey: string) =>
     Math.max((rawRcn ?? 0) - getTnRcnKg(monthKey), 0)
 
@@ -544,8 +548,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
         return m
     }, [summaries])
 
-    // TN RCN bypasses Boiler/Steaming and Shelling, so only SEU 2 and 4
-    // use adjusted production = total RCN - TN RCN for EnPI/baseline math.
+    // TN RCN affects Shelling only; Boiler serves both steaming and Borma and stays on total RCN.
     const getProd = (h: MonthlyHistorical, id?: number): number => {
         const monthKey = getMonthKey(h.month_year)
         const rawRcn = h.rcn_hap_duoc_kg ?? 0
@@ -597,10 +600,12 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
     }, [histMap, currKey, summaryMap, prodBase, avg2025])
 
     const getRef = (id: number): number | null =>
-        compareMode === 'avg2025' ? avg2025[id] : baselineEnpi[id]
+        isWoodComparisonSuppressed(id, currKey)
+            ? null
+            : compareMode === 'avg2025' ? avg2025[id] : baselineEnpi[id]
 
     const trendFor = (seuId: number) => {
-        const ref = getRef(seuId)
+        const ref = isWoodComparisonSuppressed(seuId, currKey) ? null : getRef(seuId)
         return allMonths.slice(-10).map(m => {
             const h = histMap[m]?.[seuId]
             const ep = calcEnpi(h, seuId)
@@ -619,7 +624,8 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
     }
 
     const isNoRef = (id: number) =>
-        compareMode === 'baseline' && id !== 5 && !summaryMap[id]?.baseline
+        isWoodComparisonSuppressed(id, currKey) ||
+        (compareMode === 'baseline' && id !== 5 && !summaryMap[id]?.baseline)
 
     // Build big chart series for EVN (1), Củi (2), Nước (5)
     const bigSeries: BigBarSeries[] = BIG_CHART_IDS.map(id => {
@@ -761,7 +767,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                             </span>
                             <span style={{ fontSize: 9, color: '#94A3B8', fontWeight: 500 }}>
                                 {viewMode === 'enpi'
-                                    ? `— EnPI / ${prodBase === 'rcn' ? 'kg RCN' : 'MT CK'} · Củi/Shell trừ RCN TN · 10 tháng gần nhất`
+                                    ? `— EnPI / ${prodBase === 'rcn' ? 'kg RCN' : 'MT CK'} · Shell trừ RCN TN · 10 tháng gần nhất`
                                     : '— Actual: kWh / kg / m³ · 10 tháng gần nhất'
                                 }
                             </span>
@@ -852,7 +858,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                     {viewMode === 'enpi' && (
                     <div className="flex items-center gap-6 px-4 py-2"
                         style={{ borderTop: '1px solid #F1F5F9', background: '#FAFAFA', flexShrink: 0 }}>
-                        {BIG_CHART_IDS.filter(id => id !== 5).map(id => {
+                        {BIG_CHART_IDS.filter(id => id !== 5 && !isWoodComparisonSuppressed(id, currKey)).map(id => {
                             const cfg = SEU_CFG[id]
                             const h = histMap[currKey]?.[id]
                             const enpi = calcEnpi(h, id)
@@ -1036,15 +1042,15 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                                             </div>
                                         )}
 
-                                        {/* Deviation bar — not for water */}
-                                        {id !== 5 && !noRef && delta != null && (
+                                        {/* Deviation bar — not for water or post-transition wood */}
+                                        {id !== 5 && !isWoodComparisonSuppressed(id, currKey) && !noRef && delta != null && (
                                             <div style={{ height: 2.5, background: '#F1F5F9', borderRadius: 2, marginTop: 4 }}>
                                                 <div style={{ height: '100%', width: `${barW}%`, borderRadius: 2, background: delta > 0 ? '#EF4444' : '#10B981' }} />
                                             </div>
                                         )}
 
-                                        {/* Saving / Over — not for water */}
-                                        {id !== 5 && !noRef && sv != null && (
+                                        {/* Saving / Over — not for water or post-transition wood */}
+                                        {id !== 5 && !isWoodComparisonSuppressed(id, currKey) && !noRef && sv != null && (
                                             <div className="flex items-center gap-1 mt-1 rounded px-1.5 py-0.5"
                                                 style={{ background: saved ? '#D1FAE520' : '#FEE2E220', border: `1px solid ${saved ? '#10B98140' : '#EF444440'}` }}>
                                                 <span style={{ fontSize: 8, fontWeight: 900, color: saved ? '#059669' : '#DC2626' }}>
@@ -1097,7 +1103,7 @@ function TabAnalysisInner({ summaries, historical, currentMonth, lang: externalL
                     &nbsp;· Operations DDS ·&nbsp;{format(new Date(), 'dd/MM/yyyy')}
                 </span>
                 <div className="flex items-center gap-4">
-                    {ALL_SEU_IDS.filter(id => id !== 5).map(id => {
+                    {ALL_SEU_IDS.filter(id => id !== 5 && !isWoodComparisonSuppressed(id, currKey)).map(id => {
                         const cfg = SEU_CFG[id]
                         const h = histMap[currKey]?.[id]
                         const enpi = calcEnpi(h, id)
