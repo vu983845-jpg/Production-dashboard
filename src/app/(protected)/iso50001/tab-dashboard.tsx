@@ -1,414 +1,61 @@
 "use client"
 
-import { useMemo } from "react"
 import { format } from "date-fns"
 import { vi } from "date-fns/locale"
-import {
-    ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-    Legend, ResponsiveContainer, ReferenceLine, ScatterChart, Scatter,
-} from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { AlertTriangle, Droplets, Flame, TrendingDown, TrendingUp, Zap } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, TrendingDown, TrendingUp, Zap, Flame, Droplets } from "lucide-react"
-import { BoilerProcessMix, DailyEntry, SeuSummary, MonthlyHistorical, WoodSavingStatus, fmtNum, deviationColor, deviationBg } from "./types"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { BoilerProcessMix, DailyEntry, MonthlyHistorical, SeuSummary, WaterEnpiReference, WoodSavingStatus, deviationBg, deviationColor, fmtNum } from "./types"
 
 interface Props {
-    entries: DailyEntry[]
-    summaries: SeuSummary[]
-    historical: MonthlyHistorical[]
-    currentMonth: Date
-    boilerMix: BoilerProcessMix | null
-    woodSavingStatus: WoodSavingStatus
+  entries: DailyEntry[]; summaries: SeuSummary[]; historical: MonthlyHistorical[]; currentMonth: Date
+  boilerMix: BoilerProcessMix | null; woodSavingStatus: WoodSavingStatus; waterEnpiReference: WaterEnpiReference | null
 }
 
-export function TabDashboard({ entries, summaries, historical, currentMonth, boilerMix, woodSavingStatus }: Props) {
-    const elecSummary = summaries.find(s => s.energy_type === 'electricity')
-    const woodSummary = summaries.find(s => s.energy_type === 'wood')
-    const waterSummary = summaries.find(s => s.energy_type === 'water')
+export function TabDashboard({ entries, summaries, historical, currentMonth, boilerMix, woodSavingStatus, waterEnpiReference }: Props) {
+  const electricity = summaries.find(s => s.energy_type === 'electricity')
+  const wood = summaries.find(s => s.energy_type === 'wood')
+  const water = summaries.find(s => s.energy_type === 'water')
+  const electricityChart = entries.filter(e => e.seu?.energy_type === 'electricity').map(e => ({ date: format(new Date(e.entry_date), 'dd/MM'), actual: e.actual_energy, expected: e.expected_energy }))
+  const missingBaseline = summaries.some(s => s.energy_type !== 'wood' && !s.has_baseline)
 
-    const elecEntries = entries.filter(e => e.seu?.energy_type === 'electricity')
-    const woodEntries = entries.filter(e => e.seu?.energy_type === 'wood')
+  return <div className="space-y-4">
+    <p className="text-sm text-muted-foreground">Tháng: <span className="font-semibold text-foreground">{format(currentMonth, 'MMMM yyyy', { locale: vi })}</span></p>
 
-    // Chart data â€” daily actual vs expected
-    const elecChartData = elecEntries.map(e => ({
-        date: format(new Date(e.entry_date), 'dd/MM'),
-        actual: e.actual_energy,
-        expected: e.expected_energy,
-        saving: e.saving,
-    }))
-    const woodChartData = woodEntries.map(e => ({
-        date: format(new Date(e.entry_date), 'dd/MM'),
-        actual: e.actual_energy,
-        expected: e.expected_energy,
-        saving: e.saving,
-    }))
+    <Card className="border-2 border-amber-400 bg-amber-50 shadow-sm">
+      <CardHeader className="pb-2"><div className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-700"/><Badge className="bg-amber-700">ĐANG TÍNH LẠI ĐƯỜNG CƠ SỞ CỦI</Badge></div>
+        <CardTitle className="text-lg text-amber-950">Chưa công bố mức tiết kiệm củi chính thức</CardTitle>
+        <CardDescription className="text-amber-900">Cơ cấu sản xuất đã thay đổi và một lò hơi dùng chung đang cấp hơi cho cả công đoạn hấp và Borma. Đường cơ sở cũ không còn đủ tính so sánh; chỉ công bố tiết kiệm sau khi đường cơ sở đa biến mới được phê duyệt.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3"><div className="rounded-lg border border-amber-200 bg-white/70 p-3 text-sm"><strong>Khái niệm công thức đang xây dựng:</strong> Củi dự kiến = f(RCN tự hấp, RCN chẻ sẵn nhận vào, đầu vào Borma, giờ chạy Borma, độ ẩm vào/ra)</div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <MixMetric label="RCN tự hấp" value={boilerMix?.self_steamed_rcn_kg}/><MixMetric label="RCN chẻ sẵn nhận vào" value={boilerMix?.received_precut_rcn_kg}/><MixMetric label="Đầu vào Borma" value={boilerMix?.borma_input_kg}/><MixMetric label="Giờ chạy Borma" value={boilerMix?.borma_runtime_hours} unit="giờ"/><MixMetric label="Độ ẩm đầu vào" value={boilerMix?.moisture_in_pct} unit="%"/><MixMetric label="Độ ẩm đầu ra" value={boilerMix?.moisture_out_pct} unit="%"/>
+        </div><p className="text-xs text-amber-800">Trạng thái dữ liệu: {woodSavingStatus === 'missing-data' ? 'còn thiếu đầu vào theo dõi.' : 'đang theo dõi, chưa đủ điều kiện so sánh chính thức.'} Lượng nhận chẻ sẵn và đầu vào Borma được theo dõi độc lập.</p>
+      </CardContent>
+    </Card>
 
-    const noBaseline = summaries.some(s => !s.has_baseline)
-    const hideWoodComparison = true
+    {missingBaseline && <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"><AlertTriangle className="h-4 w-4 shrink-0"/>Một hoặc nhiều SEU (không gồm củi đang tính lại) chưa có đường cơ sở được kích hoạt.</div>}
 
-    return (
-        <div className="space-y-4">
-            {/* Month label */}
-            <p className="text-sm text-muted-foreground">
-                ThÃ¡ng: <span className="font-semibold text-foreground">
-                    {format(currentMonth, "MMMM yyyy", { locale: vi })}
-                </span>
-            </p>
+    <Card><CardHeader><CardTitle className="text-sm">Tổng hợp kết quả SEU trong tháng</CardTitle><CardDescription>Thực tế và so sánh với đường cơ sở; riêng củi tạm ngừng so sánh trong giai đoạn tính lại.</CardDescription></CardHeader><CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="border-y bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3 text-left">SEU</th><th className="px-4 py-3 text-right">Thực tế</th><th className="px-4 py-3 text-right">Dự kiến</th><th className="px-4 py-3 text-right">Đánh giá</th></tr></thead><tbody className="divide-y">{summaries.map(s => <SummaryRow key={s.seu_id} summary={s}/>)}</tbody></table></div></CardContent></Card>
 
-            <Card className="border-amber-200 bg-amber-50/40"><CardHeader className="pb-2"><CardTitle className="text-sm">Wood and production mix</CardTitle><CardDescription>{woodSavingStatus === 'missing-data' ? 'Mix inputs are missing; wood saving cannot be concluded.' : 'Transition tracking: the shared boiler serves steaming and Borma. No approved comparable wood baseline is available.'}</CardDescription></CardHeader><CardContent className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4"><MixMetric label="Self-steamed RCN" value={boilerMix?.self_steamed_rcn_kg}/><MixMetric label="Pre-cut receipt" value={boilerMix?.received_precut_rcn_kg}/><MixMetric label="Actual Borma input" value={boilerMix?.borma_input_kg}/><MixMetric label="Borma runtime" value={boilerMix?.borma_runtime_hours} unit="hours"/><p className="col-span-full text-xs text-muted-foreground">Receipt and Borma input are independently tracked; no relationship is inferred.</p></CardContent></Card>
+    <div className="grid gap-3 md:grid-cols-3"><Kpi icon={<Zap className="h-4 w-4"/>} label="Điện thực tế" value={electricity?.total_actual} unit="kWh"/><Kpi icon={<Flame className="h-4 w-4"/>} label="Củi thực tế" value={wood?.total_actual} unit="kg"/><Kpi icon={<Droplets className="h-4 w-4"/>} label="Nước thực tế" value={water?.total_actual} unit="m³"/></div>
 
-            {noBaseline && (
-                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    Má»™t hoáº·c nhiá»u SEU chÆ°a cÃ³ <strong>Ä‘Æ°á»ng cÆ¡ sá»Ÿ kÃ­ch hoáº¡t</strong>.
-                    Vui lÃ²ng vÃ o tab "Baseline Engine" Ä‘á»ƒ thiáº¿t láº­p.
-                </div>
-            )}
+    <div className="grid gap-3 md:grid-cols-3"><DeviationCard label="Lệch chuẩn điện" pct={electricity?.monthly_deviation_pct}/><DeviationCard label="Lệch chuẩn nước" pct={water?.monthly_deviation_pct}/><div className="rounded-xl border border-amber-200 bg-amber-50 p-3"><p className="text-xs text-amber-800">Lệch chuẩn củi</p><p className="mt-1 text-sm font-semibold text-amber-900">Đang tính lại đường cơ sở</p></div></div>
+    <div className="grid gap-3 md:grid-cols-2"><EnpiCard title="EnPI điện" unit="kWh / kg sản lượng" actual={electricity?.monthly_enpi_actual} baseline={electricity?.monthly_enpi_baseline}/><WaterEnpiCard current={water?.monthly_enpi_actual} reference={waterEnpiReference}/></div>
 
-            {/* Báº¢NG Tá»”NG Há»¢P SEU */}
-            <Card className="shadow-sm border-blue-100">
-                <CardHeader className="bg-slate-50/50 border-b pb-3">
-                    <CardTitle className="text-sm">Báº£ng Tá»•ng Há»£p Káº¿t Quáº£ SEU (MTD)</CardTitle>
-                    <CardDescription className="text-xs flex items-center gap-2 flex-wrap">
-                        <span>Káº¿t quáº£ thá»±c táº¿, dá»± bÃ¡o dá»±a vÃ o há»“i quy vÃ  % tiáº¿t kiá»‡m cá»§a tá»«ng khu vá»±c</span>
-                        {summaries.length > 0 && (
-                            summaries[0].data_source === 'historical'
-                                ? <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5 text-[10px] font-semibold">
-                                    ðŸ“¦ ThÃ¡ng Ä‘Ã£ qua Â· Nguá»“n: Baseline Model (Ä‘Ã£ chá»‘t)
-                                  </span>
-                                : <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 text-[10px] font-semibold">
-                                    ðŸ“¡ ThÃ¡ng hiá»‡n táº¡i Â· Nguá»“n: Data Input (hÃ ng ngÃ y)
-                                  </span>
-                        )}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-100/50 text-xs uppercase text-slate-500 border-b">
-                                <tr>
-                                    <th className="px-4 py-3 font-semibold">TÃªn SEU</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Thá»±c táº¿</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Dá»± bÃ¡o (Baseline)</th>
-                                    <th className="px-4 py-3 font-semibold text-right">% Tiáº¿t kiá»‡m / VÆ°á»£t</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {summaries.map(s => {
-                                    const devPct = s.monthly_deviation_pct
-                                    const noData = s.days === 0
-                                    const saving = devPct != null && devPct <= 0
-                                    const color = deviationColor(devPct)
-                                    const bg = deviationBg(devPct)
+    <Card><CardHeader><CardTitle className="text-sm">Lịch sử năng lượng gần đây</CardTitle><CardDescription>Dữ liệu tổng hợp theo tháng. Các dòng củi không có giá trị dự kiến sẽ không hiển thị kết luận tiết kiệm.</CardDescription></CardHeader><CardContent className="p-0"><div className="max-h-[500px] overflow-auto"><table className="w-full text-sm"><thead className="sticky top-0 bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3 text-left">Tháng</th><th className="px-4 py-3 text-left">SEU</th><th className="px-4 py-3 text-right">Sản lượng</th><th className="px-4 py-3 text-right">Thực tế</th><th className="px-4 py-3 text-right">Dự kiến</th><th className="px-4 py-3 text-right">Chênh lệch</th></tr></thead><tbody className="divide-y">{historical.slice(0,120).map(row => <HistoryRow key={row.id} row={row} summary={summaries.find(s=>s.seu_id===row.seu_id)}/>)}</tbody></table></div></CardContent></Card>
 
-                                    return (
-                                        <tr key={s.seu_id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-4 py-3 font-medium flex items-center gap-2">
-                                                {s.energy_type === 'electricity'
-                                                    ? <Zap className="h-4 w-4 text-blue-500" />
-                                                    : s.energy_type === 'water'
-                                                        ? <Droplets className="h-4 w-4 text-teal-500" />
-                                                        : <Flame className="h-4 w-4 text-orange-500" />
-                                                }
-                                                {s.seu_name}
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-mono">
-                                                {noData
-                                                    ? <span className="text-xs text-muted-foreground italic">ChÆ°a cÃ³ data</span>
-                                                    : <>{fmtNum(s.total_actual)} <span className="text-xs text-muted-foreground">{s.unit}</span></>
-                                                }
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-mono">
-                                                {s.energy_type === 'wood' && hideWoodComparison ? <span className="text-xs text-muted-foreground italic">Kh?ng so s?nh</span> : s.has_baseline ? (
-                                                    noData
-                                                        ? <span className="text-xs text-muted-foreground italic">â€” (cáº§n data)</span>
-                                                        : <>{fmtNum(s.total_expected)} <span className="text-xs text-muted-foreground">{s.unit}</span></>
-                                                ) : <span className="text-xs text-muted-foreground italic">N/A</span>}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                {s.energy_type === 'wood' && hideWoodComparison
-                                                    ? <span className="text-xs text-amber-700 italic">Ch?a k?t lu?n saving</span>
-                                                    : !s.has_baseline
-                                                    ? <span className="text-xs text-muted-foreground italic">ChÆ°a cÃ³ baseline</span>
-                                                    : noData
-                                                        ? <span className="text-xs text-muted-foreground italic">â€”</span>
-                                                        : devPct != null ? (
-                                                            <Badge variant="outline" className={`font-mono text-xs ${bg} ${color} border-transparent`}>
-                                                                {saving ? <TrendingDown className="h-3 w-3 mr-1 inline" /> : <TrendingUp className="h-3 w-3 mr-1 inline" />}
-                                                                {saving ? '' : '+'}{fmtNum(devPct)}%
-                                                            </Badge>
-                                                        ) : <span className="text-xs text-muted-foreground italic">â€”</span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Báº¢NG 12 THÃNG Lá»ŠCH Sá»¬ CHO Táº¤T Cáº¢ SEU */}
-            <Card className="shadow-sm">
-                <CardHeader className="bg-slate-50/50 border-b pb-3">
-                    <CardTitle className="text-sm">Lá»‹ch Sá»­ NÄƒng LÆ°á»£ng (12 ThÃ¡ng Gáº§n Nháº¥t)</CardTitle>
-                    <CardDescription className="text-xs">
-                        Dá»¯ liá»‡u nháº­p tá»« tab Data Input (tá»•ng há»£p theo thÃ¡ng), so sÃ¡nh vá»›i Ä‘Æ°á»ng cÆ¡ sá»Ÿ hiá»‡n táº¡i
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto max-h-[500px]">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-100/50 text-xs uppercase text-slate-500 border-b sticky top-0 z-10">
-                                <tr>
-                                    <th className="px-4 py-3 font-semibold">ThÃ¡ng</th>
-                                    <th className="px-4 py-3 font-semibold">Khu vá»±c / SEU</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Sáº£n lÆ°á»£ng</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Thá»±c táº¿</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Dá»± bÃ¡o</th>
-                                    <th className="px-4 py-3 font-semibold text-right">% Tiáº¿t kiá»‡m</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {historical.slice(0, 120).map(row => {
-                                    // Use pre-calculated values from API (same source as summary âˆ’
-                                    // both now come from iso50001_daily_entry aggregated by month)
-                                    const seuSum = summaries.find(s => s.seu_id === row.seu_id)
-                                    const actual  = Number(row.actual_energy) || 0
-                                    const expected = row.expected_energy != null ? Number(row.expected_energy) : null
-                                    const devPct   = (row as any).deviation_pct != null
-                                        ? Number((row as any).deviation_pct)
-                                        : (expected && expected > 0 ? ((actual - expected) / expected) * 100 : null)
-                                    const rcn      = Number(row.rcn_hap_duoc_kg) || 0
-
-                                    const isPostMixTransition = ((row as any).seu?.energy_type === 'wood' || seuSum?.energy_type === 'wood') && row.month_year.slice(0, 7) >= '2026-06'
-                                    const safeDevPct = isPostMixTransition ? null : devPct
-                                    const saving = safeDevPct != null && safeDevPct <= 0
-                                    const color  = deviationColor(devPct)
-                                    const bg     = deviationBg(devPct)
-                                    const unit   = seuSum?.unit || (row as any).seu?.unit || ''
-
-                                    return (
-                                        <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-4 py-2 font-mono text-muted-foreground whitespace-nowrap">
-                                                {format(new Date(row.month_year), 'MM/yyyy')}
-                                                {(row as any).days > 0 && (
-                                                    <span className="text-[10px] text-muted-foreground/50 ml-1">({(row as any).days}d)</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-2 font-medium flex items-center gap-2 whitespace-nowrap">
-                                                {seuSum?.energy_type === 'electricity' || (row as any).seu?.energy_type === 'electricity'
-                                                    ? <Zap className="h-3.5 w-3.5 text-blue-500" />
-                                                    : seuSum?.energy_type === 'water' || (row as any).seu?.energy_type === 'water'
-                                                        ? <Droplets className="h-3.5 w-3.5 text-teal-500" />
-                                                        : <Flame className="h-3.5 w-3.5 text-orange-500" />
-                                                }
-                                                {seuSum?.seu_name || (row as any).seu?.name}
-                                            </td>
-                                            <td className="px-4 py-2 text-right font-mono text-muted-foreground">
-                                                {fmtNum(rcn)} <span className="text-[10px]">kg</span>
-                                            </td>
-                                            <td className="px-4 py-2 text-right font-mono font-semibold">
-                                                {fmtNum(actual)} <span className="text-[10px] text-muted-foreground font-normal">{unit}</span>
-                                            </td>
-                                            <td className="px-4 py-2 text-right font-mono">
-                                                {expected != null ? (
-                                                    <>{fmtNum(expected)} <span className="text-[10px] text-muted-foreground font-normal">{unit}</span></>
-                                                ) : <span className="text-xs text-muted-foreground italic">N/A</span>}
-                                            </td>
-                                            <td className="px-4 py-2 text-right">
-                                                {safeDevPct != null ? (
-                                                    <Badge variant="outline" className={`font-mono px-1.5 py-0 text-[11px] ${bg} ${color} border-transparent`}>
-                                                        {saving ? '' : '+'}{fmtNum(devPct)}%
-                                                    </Badge>
-                                                ) : <span className="text-xs text-muted-foreground italic">N/A</span>}
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Summary KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                <KpiCard
-                    icon={<Zap className="h-4 w-4 text-blue-600" />}
-                    label="Äiá»‡n thá»±c táº¿ (MTD)"
-                    value={fmtNum(elecSummary?.total_actual)}
-                    unit="kWh"
-                    color="blue"
-                />
-                <KpiCard
-                    icon={<Flame className="h-4 w-4 text-orange-600" />}
-                    label="Cá»§i thá»±c táº¿ (MTD)"
-                    value={fmtNum(woodSummary?.total_actual)}
-                    unit="kg"
-                    color="orange"
-                />
-                <KpiCard
-                    icon={<Droplets className="h-4 w-4 text-teal-600" />}
-                    label="NÆ°á»›c thá»±c táº¿ (MTD)"
-                    value={fmtNum(waterSummary?.total_actual)}
-                    unit="mÂ³"
-                    color="teal"
-                />
-            </div>
-
-            {/* Deviation KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                <DeviationCard label="Lá»‡ch chuáº©n Ä‘iá»‡n" pct={elecSummary?.monthly_deviation_pct} />
-                <DeviationCard label="Lá»‡ch chuáº©n cá»§i" pct={woodSummary?.monthly_deviation_pct} />
-                <DeviationCard label="Lá»‡ch chuáº©n nÆ°á»›c" pct={waterSummary?.monthly_deviation_pct} />
-            </div>
-
-            {/* EnPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                <EnpiCard
-                    title="EnPI â€” Äiá»‡n"
-                    unit="kWh / kg Sáº£n lÆ°á»£ng"
-                    actual={elecSummary?.monthly_enpi_actual}
-                    baseline={elecSummary?.monthly_enpi_baseline}
-                />
-                <EnpiCard
-                    title="EnPI â€” Cá»§i"
-                    unit="kg cá»§i / kg Sáº£n lÆ°á»£ng"
-                    actual={woodSummary?.monthly_enpi_actual}
-                    baseline={woodSummary?.monthly_enpi_baseline}
-                />
-                <EnpiCard
-                    title="EnPI â€” NÆ°á»›c"
-                    unit="mÂ³ / kg Sáº£n lÆ°á»£ng"
-                    actual={waterSummary?.monthly_enpi_actual}
-                    baseline={waterSummary?.monthly_enpi_baseline}
-                />
-            </div>
-
-            {/* Electricity Chart */}
-            {elecChartData.length > 0 && (
-                <Card className="shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-blue-600" /> Äiá»‡n: Thá»±c táº¿ vs ÄÆ°á»ng cÆ¡ sá»Ÿ (kWh/ngÃ y)
-                        </CardTitle>
-                        <CardDescription>Thanh xanh = tiáº¿t kiá»‡m, thanh Ä‘á» = vÆ°á»£t chuáº©n</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[280px]">
-                        <ActualVsExpectedChart data={elecChartData} color="#3B82F6" />
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Wood/Boiler Chart */}
-            {woodChartData.length > 0 && (
-                <Card className="shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                            <Flame className="h-4 w-4 text-orange-600" /> Cá»§i: Thá»±c táº¿ vs ÄÆ°á»ng cÆ¡ sá»Ÿ (kg/ngÃ y)
-                        </CardTitle>
-                        <CardDescription>Thanh xanh = tiáº¿t kiá»‡m, thanh Ä‘á» = vÆ°á»£t chuáº©n</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[280px]">
-                        <ActualVsExpectedChart data={woodChartData} color="#F97316" />
-                    </CardContent>
-                </Card>
-            )}
-
-            {elecChartData.length === 0 && woodChartData.length === 0 && (
-                <Card>
-                    <CardContent className="flex items-center justify-center h-48 text-muted-foreground text-sm">
-                        ChÆ°a cÃ³ dá»¯ liá»‡u cho thÃ¡ng nÃ y. Vui lÃ²ng nháº­p dá»¯ liá»‡u á»Ÿ tab "Nháº­p liá»‡u".
-                    </CardContent>
-                </Card>
-            )}
-        </div>
-    )
+    {electricityChart.length > 0 && <Card><CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-blue-600"/>Điện: thực tế và đường cơ sở (kWh/ngày)</CardTitle></CardHeader><CardContent className="h-[280px]"><ActualChart data={electricityChart}/></CardContent></Card>}
+    <Card className="border-orange-200 bg-orange-50/40"><CardContent className="py-6"><div className="flex gap-3"><Flame className="h-5 w-5 text-orange-600"/><div><p className="font-semibold">Biểu đồ so sánh củi tạm thời không hiển thị</p><p className="mt-1 text-sm text-muted-foreground">Không có giá trị củi dự kiến hợp lệ trong thời gian tính lại đường cơ sở. Dữ liệu củi thực tế vẫn được ghi nhận, nhưng không được diễn giải là tiết kiệm hoặc vượt chuẩn.</p></div></div></CardContent></Card>
+  </div>
 }
 
-// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-function MixMetric({ label, value, unit = 'kg' }: { label: string; value?: number | null; unit?: string }) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="font-semibold">{value == null ? 'Ch?a nh?p' : `${fmtNum(value / (unit === 'kg' ? 1000 : 1))} ${unit === 'kg' ? 't?n' : unit}`}</p></div> }
-
-function KpiCard({ icon, label, value, unit, color }: any) {
-    const borderColor = color === 'blue' ? 'border-blue-100' : color === 'teal' ? 'border-teal-100' : 'border-orange-100'
-    const bgColor = color === 'blue' ? 'bg-blue-50/40' : color === 'teal' ? 'bg-teal-50/40' : 'bg-orange-50/40'
-    const textColor = color === 'blue' ? 'text-blue-700' : color === 'teal' ? 'text-teal-700' : 'text-orange-700'
-    return (
-        <div className={`rounded-xl border ${borderColor} ${bgColor} p-3`}>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">{icon}{label}</div>
-            <p className={`text-xl font-black ${textColor}`}>
-                {value} <span className="text-xs font-semibold">{unit}</span>
-            </p>
-        </div>
-    )
-}
-
-function DeviationCard({ label, pct }: { label: string; pct?: number | null }) {
-    const isNull = pct == null
-    const saving = !isNull && pct <= 0
-    const color = deviationColor(pct)
-    const bg = deviationBg(pct)
-    return (
-        <div className={`rounded-xl border ${bg} p-3`}>
-            <p className="text-xs text-muted-foreground mb-1">{label}</p>
-            {isNull
-                ? <p className="text-sm text-muted-foreground">ChÆ°a cÃ³ baseline</p>
-                : <div className={`flex items-center gap-1.5 text-xl font-black ${color}`}>
-                    {saving ? <TrendingDown className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />}
-                    {saving ? '' : '+'}{fmtNum(pct)}%
-                </div>
-            }
-        </div>
-    )
-}
-
-function EnpiCard({ title, unit, actual, baseline }: { title: string; unit: string; actual?: number | null; baseline?: number | null }) {
-    const better = actual != null && baseline != null && actual < baseline
-    return (
-        <Card className="shadow-sm">
-            <CardHeader className="pb-1 pt-3 px-4">
-                <CardTitle className="text-xs text-muted-foreground">{title}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-3">
-                <div className="flex items-end justify-between">
-                    <div>
-                        <p className="text-2xl font-black text-foreground">{fmtNum(actual, 4)}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{unit} â€” thá»±c táº¿</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-muted-foreground">{fmtNum(baseline, 4)}</p>
-                        <p className="text-xs text-muted-foreground">baseline</p>
-                    </div>
-                </div>
-                {actual != null && baseline != null && (
-                    <Badge variant="outline" className={`mt-2 text-xs ${better ? 'border-emerald-300 text-emerald-700 bg-emerald-50' : 'border-red-300 text-red-700 bg-red-50'}`}>
-                        {better ? 'âœ“ Tá»‘t hÆ¡n baseline' : 'âš  KÃ©m hÆ¡n baseline'}
-                    </Badge>
-                )}
-            </CardContent>
-        </Card>
-    )
-}
-
-function ActualVsExpectedChart({ data, color }: { data: any[]; color: string }) {
-    return (
-        <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
-                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }}
-                    tickFormatter={v => v.toLocaleString('en-US')} width={60} />
-                <Tooltip
-                    formatter={(val: any, name: any) => [Number(val).toLocaleString('vi-VN'), name]}
-                />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <ReferenceLine y={0} stroke="#9CA3AF" />
-                <Bar dataKey="actual" name="Thá»±c táº¿" fill={color} opacity={0.85} radius={[3, 3, 0, 0]} maxBarSize={40} />
-                <Line dataKey="expected" name="ÄÆ°á»ng cÆ¡ sá»Ÿ" stroke="#6B7280" strokeWidth={2} dot={{ r: 2 }} strokeDasharray="5 3" />
-            </ComposedChart>
-        </ResponsiveContainer>
-    )
-}
+function SummaryRow({summary:s}:{summary:SeuSummary}) { const wood=s.energy_type==='wood', noData=s.days===0, pct=s.monthly_deviation_pct; return <tr><td className="px-4 py-3 font-medium">{s.seu_name}</td><td className="px-4 py-3 text-right font-mono">{noData?'Chưa có dữ liệu':`${fmtNum(s.total_actual)} ${s.unit}`}</td><td className="px-4 py-3 text-right font-mono">{wood?'Đang tính lại':(!s.has_baseline?'Chưa có đường cơ sở':noData?'—':`${fmtNum(s.total_expected)} ${s.unit}`)}</td><td className="px-4 py-3 text-right">{wood?<span className="text-xs font-medium text-amber-700">Chưa kết luận tiết kiệm</span>:pct==null?'—':<Badge className={`${deviationBg(pct)} ${deviationColor(pct)}`} variant="outline">{pct<=0?<TrendingDown className="mr-1 inline h-3 w-3"/>:<TrendingUp className="mr-1 inline h-3 w-3"/>}{pct>0?'+':''}{fmtNum(pct)}%</Badge>}</td></tr> }
+function MixMetric({label,value,unit='kg'}:{label:string;value?:number|null;unit?:string}) { const shown=value==null?'Chưa nhập':unit==='kg'?`${fmtNum(value/1000)} tấn`:`${fmtNum(value)} ${unit}`; return <div><p className="text-xs text-muted-foreground">{label}</p><p className="font-semibold">{shown}</p></div> }
+function Kpi({icon,label,value,unit}:{icon:React.ReactNode;label:string;value?:number|null;unit:string}) { return <div className="rounded-xl border bg-slate-50 p-3"><div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label} (MTD)</div><p className="text-xl font-black">{fmtNum(value)} <span className="text-xs">{unit}</span></p></div> }
+function DeviationCard({label,pct}:{label:string;pct?:number|null}) { const saving=pct!=null&&pct<=0; return <div className={`rounded-xl border p-3 ${deviationBg(pct)}`}><p className="text-xs text-muted-foreground">{label}</p>{pct==null?<p className="mt-1 text-sm text-muted-foreground">Chưa có đường cơ sở</p>:<p className={`mt-1 text-xl font-black ${deviationColor(pct)}`}>{saving?<TrendingDown className="mr-1 inline h-4 w-4"/>:<TrendingUp className="mr-1 inline h-4 w-4"/>}{pct>0?'+':''}{fmtNum(pct)}%</p>}</div> }
+function EnpiCard({title,unit,actual,baseline}:{title:string;unit:string;actual?:number|null;baseline?:number|null}) { const comparison=actual!=null&&baseline!=null&&baseline>0?((actual-baseline)/baseline)*100:null; const better=comparison!=null&&comparison<0; return <Card><CardHeader className="pb-1"><CardTitle className="text-sm">{title}</CardTitle><CardDescription>{unit}</CardDescription></CardHeader><CardContent><div className="flex items-end justify-between"><div><p className="text-2xl font-black">{fmtNum(actual,6)}</p><p className="text-xs text-muted-foreground">Thực tế</p></div><div className="text-right"><p className="font-semibold">{fmtNum(baseline,6)}</p><p className="text-xs text-muted-foreground">Đường cơ sở</p></div></div>{comparison!=null&&<Badge variant="outline" className={`mt-2 ${better?'border-emerald-300 bg-emerald-50 text-emerald-700':'border-red-300 bg-red-50 text-red-700'}`}>{better?'Tốt hơn':'Kém hơn'} {comparison>0?'+':''}{fmtNum(comparison)}%</Badge>}</CardContent></Card> }function WaterEnpiCard({current,reference}:{current?:number|null;reference:WaterEnpiReference|null}) { const c=reference?.comparison; const good=c?.status==='better'; return <Card className="border-teal-200"><CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Droplets className="h-4 w-4 text-teal-600"/>EnPI nước — tháng đã chọn so với tham chiếu năm 2025</CardTitle><CardDescription>Chỉ số thấp hơn là tốt hơn. Tham chiếu gia quyền = tổng nước (m³) / tổng RCN hấp được (kg), không phải trung bình các tỷ lệ tháng.</CardDescription></CardHeader><CardContent><div className="grid gap-4 sm:grid-cols-3"><Metric label="Tháng đã chọn" value={current}/><Metric label="Tham chiếu gia quyền 2025" value={reference?.value}/><div><p className="text-xs text-muted-foreground">So với tham chiếu</p>{c?<><p className={`text-2xl font-black ${good?'text-emerald-700':c.status==='worse'?'text-red-700':'text-slate-700'}`}>{c.deltaPct>0?'+':''}{fmtNum(c.deltaPct)}%</p><p className="text-xs font-medium">{good?'Tốt hơn (dùng ít nước hơn)':c.status==='worse'?'Kém hơn (dùng nhiều nước hơn)':'Tương đương'}</p></>:<p className="font-semibold text-muted-foreground">Chưa đủ dữ liệu</p>}</div></div><p className="mt-3 text-xs text-muted-foreground">Độ phủ tham chiếu: <strong>{reference?.coverageCount ?? 0} tháng hợp lệ</strong> trong năm 2025.</p></CardContent></Card> }
+function Metric({label,value}:{label:string;value?:number|null}) { return <div><p className="text-xs text-muted-foreground">{label}</p><p className="text-2xl font-black">{fmtNum(value,6)}</p><p className="text-xs text-muted-foreground">m³ / kg RCN hấp được</p></div> }
+function HistoryRow({row,summary}:{row:MonthlyHistorical;summary?:SeuSummary}) { const expected=row.expected_energy==null?null:Number(row.expected_energy), actual=Number(row.actual_energy)||0, pct=expected&&expected>0?((actual-expected)/expected)*100:null; return <tr><td className="px-4 py-2 font-mono">{format(new Date(row.month_year),'MM/yyyy')}</td><td className="px-4 py-2">{summary?.seu_name||row.seu?.name}</td><td className="px-4 py-2 text-right font-mono">{fmtNum(Number(row.rcn_hap_duoc_kg)||0)} kg</td><td className="px-4 py-2 text-right font-mono">{fmtNum(actual)} {summary?.unit||row.seu?.unit}</td><td className="px-4 py-2 text-right font-mono">{expected==null?'Không so sánh':fmtNum(expected)}</td><td className="px-4 py-2 text-right">{pct==null?'—':`${pct>0?'+':''}${fmtNum(pct)}%`}</td></tr> }
+function ActualChart({data}:{data:{date:string;actual:number;expected?:number|null}[]}) { return <ResponsiveContainer width="100%" height="100%"><ComposedChart data={data}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="date"/><YAxis/><Tooltip formatter={(v:any)=>Number(v).toLocaleString('vi-VN')}/><Legend/><Bar dataKey="actual" name="Thực tế" fill="#3B82F6"/><Line dataKey="expected" name="Đường cơ sở" stroke="#6B7280" strokeDasharray="5 3"/></ComposedChart></ResponsiveContainer> }

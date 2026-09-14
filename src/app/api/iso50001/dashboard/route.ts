@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { classifyWoodSaving } from '@/lib/iso50001-boiler-mix'
+import { calculateWeightedWaterEnpi, compareWaterEnpi } from '@/lib/iso50001-water-enpi'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,12 +38,17 @@ export async function GET(request: Request) {
         const baselineMap: Record<number, any> = {}
         for (const b of (baselines || [])) baselineMap[b.seu_id] = b
 
-        // 2. Fetch ALL SEUs
-        const { data: allSeus } = await supabase.from('iso50001_seu_master').select('*')
+        // 2. Fetch all SEUs and the full 2025 finalized-water reference independently of chart range.
+        const [{ data: allSeus }, { data: waterReferenceRows, error: waterReferenceErr }] = await Promise.all([
+            supabase.from('iso50001_seu_master').select('*'),
+            supabase.from('iso50001_monthly_historical').select('actual_energy, rcn_hap_duoc_kg').eq('seu_id', 5).gte('month_year', '2025-01-01').lte('month_year', '2025-12-31'),
+        ])
+        if (waterReferenceErr) throw waterReferenceErr
+        const waterEnpiReference = calculateWeightedWaterEnpi(waterReferenceRows || [])
 
-        // â”€â”€ Historical chart data (12 months) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // Rule: past months â†’ monthly_historical (finalized);
-        //       current month â†’ daily_entry aggregated (in-progress)
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Historical chart data (12 months) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        // Rule: past months Ã¢â€ â€™ monthly_historical (finalized);
+        //       current month Ã¢â€ â€™ daily_entry aggregated (in-progress)
         const histStart = (() => {
             const d = new Date(year, mon - 1 - 17, 1)
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
@@ -66,7 +72,7 @@ export async function GET(request: Request) {
             const prevDate = prevDateObj.toISOString().slice(0, 10);
 
             const [{ data: eData, error: eErr }, { data: kData, error: kErr }, { data: cData, error: cErr }, { data: wData, error: wErr }, { data: oData, error: oErr }] = await Promise.all([
-                supabase.from('daily_energy').select('work_date, electricity_kwh, wood_kg, rcn_hap_duoc_kg').gte('work_date', startDate).lte('work_date', endDate),
+                supabase.from('daily_energy').select('work_date, electricity_kwh, wood_kg').gte('work_date', startDate).lte('work_date', endDate),
                 supabase.from('daily_kpi').select('work_date, department_id, good_output_ton, actual_output').in('department_id', ['22a1f57a-6267-4442-9aba-d465cf7810f9', '4156ac1a-96e0-4966-a3ee-8ec7884d6349', '4dafa191-cb40-4ff4-9156-4a3f93d338f8']).gte('work_date', startDate).lte('work_date', endDate),
                 supabase.from('daily_compressor').select('work_date, meter1, meter2, meter3').gte('work_date', prevDate).lte('work_date', endDate).order('work_date'),
                 supabase.from('daily_water').select('work_date, tong').gte('work_date', prevDate).lte('work_date', endDate).order('work_date'),
@@ -108,9 +114,9 @@ export async function GET(request: Request) {
                 }
             });
 
-            // SEU 4 uses Shelling (Khu vá»±c Cáº¯t/Cháº») -> where is Shelling Electricity?
+            // SEU 4 uses Shelling (Khu vÃ¡Â»Â±c CÃ¡ÂºÂ¯t/ChÃ¡ÂºÂ») -> where is Shelling Electricity?
             // "Shelling" is a separate meter or part of 'otherElecData'?
-            // In energy/page.tsx, shelling is calculated differently. Let's provide a basic approximation or 0 for now since we're using "ToÃ n nhÃ  mÃ¡y Ä‘iá»‡n" which covers everything.
+            // In energy/page.tsx, shelling is calculated differently. Let's provide a basic approximation or 0 for now since we're using "ToÃƒÂ n nhÃƒÂ  mÃƒÂ¡y Ã„â€˜iÃ¡Â»â€¡n" which covers everything.
             // Wait, Shelling electricity kwh was stored in some place but I can hardcode it as 0 here if it's missing. Actually user only cares about the 5 SEUs! Shelling is SEU 4!
 
             const ST_ELEC = 1;
@@ -127,16 +133,16 @@ export async function GET(request: Request) {
                 const kpiSHELL = (kpiMap[date] || {})['4156ac1a-96e0-4966-a3ee-8ec7884d6349'] || {};
                 const kpiPEEL = (kpiMap[date] || {})['4dafa191-cb40-4ff4-9156-4a3f93d338f8'] || {};
 
-                // SEU 1: ToÃ n nhÃ  mÃ¡y Ä‘iá»‡n / Packing
+                // SEU 1: ToÃƒÂ n nhÃƒÂ  mÃƒÂ¡y Ã„â€˜iÃ¡Â»â€¡n / Packing
                 dailyHist.push({
                     seu_id: ST_ELEC, entry_date: date, actual_energy: ed.electricity_kwh || 0,
-                    rcn_hap_duoc_kg: ed.rcn_hap_duoc_kg || 0, ck_obtained_mt: kpiPACK.good_output_ton || 0
+                    rcn_hap_duoc_kg: 0, ck_obtained_mt: kpiPACK.good_output_ton || 0
                 });
 
                 // SEU 2: Boiler / Steaming
                 dailyHist.push({
                     seu_id: ST_WOOD, entry_date: date, actual_energy: ed.wood_kg || 0,
-                    rcn_hap_duoc_kg: ed.rcn_hap_duoc_kg || 0, ck_obtained_mt: 0
+                    rcn_hap_duoc_kg: 0, ck_obtained_mt: 0
                 });
 
                 // SEU 3: Peeling MC
@@ -147,16 +153,16 @@ export async function GET(request: Request) {
 
                 // SEU 4: Shelling
                 // Need shelling KWH: we can get it from ... wait, Shelling KWH is calculated from sum(shell lines) + cooling_fan + etc.? 
-                // In my energy dashboard, shelling KWH is 5.23 * Shelling KPI (good_output_ton). Or whatever. Let's set it to 0 for now since it's "ChÆ°a cÃ³ data".
+                // In my energy dashboard, shelling KWH is 5.23 * Shelling KPI (good_output_ton). Or whatever. Let's set it to 0 for now since it's "ChÃ†Â°a cÃƒÂ³ data".
                 dailyHist.push({
                     seu_id: ST_SHEL, entry_date: date, actual_energy: 0,
                     rcn_hap_duoc_kg: (kpiSHELL.good_output_ton || 0) * 1000, ck_obtained_mt: 0
                 });
 
-                // SEU 5: NÆ°á»›c
+                // SEU 5: NÃ†Â°Ã¡Â»â€ºc
                 dailyHist.push({
                     seu_id: ST_WATR, entry_date: date, actual_energy: waterMap[date] || 0,
-                    rcn_hap_duoc_kg: ed.rcn_hap_duoc_kg || 0, ck_obtained_mt: 0
+                    rcn_hap_duoc_kg: 0, ck_obtained_mt: 0
                 });
             }
 
@@ -222,9 +228,9 @@ export async function GET(request: Request) {
                 return { ...h, total_energy: actual, expected_energy: expected, deviation_pct: devPct }
             })
 
-        // â”€â”€ Summary for selected month (MTD table) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // Current month â†’ aggregate from iso50001_daily_entry (live data)
-        // Past month    â†’ use iso50001_monthly_historical (finalized)
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Summary for selected month (MTD table) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        // Current month Ã¢â€ â€™ aggregate from iso50001_daily_entry (live data)
+        // Past month    Ã¢â€ â€™ use iso50001_monthly_historical (finalized)
 
         // Initialize summary slots for all SEUs
         const summaryBySeu: Record<number, any> = {}
@@ -239,10 +245,10 @@ export async function GET(request: Request) {
             }
         }
 
-        let entries: any[] = [] // daily entries (for per-day chart â€” current month only)
+        let entries: any[] = [] // daily entries (for per-day chart Ã¢â‚¬â€ current month only)
 
         if (isCurrentMonth) {
-            // â”€â”€ CURRENT MONTH: aggregate from daily_entry â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ CURRENT MONTH: aggregate from daily_entry Ã¢â€â‚¬Ã¢â€â‚¬
             // dailyHist already fetched for current month above
             entries = dailyHist || []
             for (const e of entries) {
@@ -254,7 +260,7 @@ export async function GET(request: Request) {
                 s.days++
             }
         } else if (isPastMonth) {
-            // â”€â”€ PAST MONTH: use iso50001_monthly_historical (finalized) â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ PAST MONTH: use iso50001_monthly_historical (finalized) Ã¢â€â‚¬Ã¢â€â‚¬
             const { data: pastMonthHist, error: pmErr } = await supabase
                 .from('iso50001_monthly_historical')
                 .select('*, seu:iso50001_seu_master(name, energy_type, unit)')
@@ -323,12 +329,16 @@ export async function GET(request: Request) {
             }
         })
 
+        const waterSummary = summaries.find((summary: any) => summary.seu_id === 5)
+        const waterEnpiComparison = compareWaterEnpi(waterSummary?.monthly_enpi_actual, waterEnpiReference.value)
+
         return NextResponse.json({
             entries: enrichedEntries,
             summaries,
             historicalData: enrichedHistorical,
             boilerMix: mixErr ? null : processMix,
             woodSavingStatus,
+            waterEnpiReference: { ...waterEnpiReference, comparison: waterEnpiComparison },
             meta: { isCurrentMonth, isPastMonth, dataSource: isCurrentMonth ? 'daily_entry' : 'monthly_historical', boilerMixAvailable: !mixErr }
         })
 

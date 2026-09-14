@@ -51,6 +51,13 @@ export interface DailyEntry {
 }
 
 export type WoodSavingStatus = 'not-comparable' | 'missing-data'
+export interface WaterEnpiReference {
+    value: number | null
+    coverageCount: number
+    totalWaterM3: number
+    totalProductionKg: number
+    comparison: { deltaPct: number; status: 'better' | 'worse' | 'equal' } | null
+}
 
 export interface BoilerProcessMix {
     month_year: string
@@ -100,7 +107,7 @@ export function calcLinearRegression(points: { x: number; y: number }[]) {
     const slope = (n * sumXY - sumX * sumY) / denom
     const intercept = (sumY - slope * sumX) / n
 
-    // R²
+    // RÂ²
     const meanY = sumY / n
     const ssTot = points.reduce((acc, p) => acc + (p.y - meanY) ** 2, 0)
     const ssRes = points.reduce((acc, p) => acc + (p.y - (slope * p.x + intercept)) ** 2, 0)
@@ -110,7 +117,7 @@ export function calcLinearRegression(points: { x: number; y: number }[]) {
 }
 
 export function fmtNum(v: number | null | undefined, decimals = 1): string {
-    if (v == null || isNaN(v)) return '—'
+    if (v == null || isNaN(v)) return 'â€”'
     return v.toLocaleString('vi-VN', { maximumFractionDigits: decimals })
 }
 
